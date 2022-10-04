@@ -14,22 +14,23 @@ function usage()
 {
   { sed -E 's/^\s+://' | tee /dev/null; } <<-END
   :-- Usage:
-  :  $0 --name="game name" --dir=src-directory --boot=startup-file
+  :  $(basename "$0") --name="game name" --dir=src-directory --boot=startup-file
   :  - "game name": The name of the game.
   :  - "src-directory": The directory with the bios, rom, etc.
   :  - "startup-file": The name (not the path) of the file inside the
-  :                    rom folder to start in retroarch by default.
+  :                    rom folder to start by default, i.e., you can choose
+  :                    'disc 1' to start by default.
   :  The source directory must have this structure (files can have any name):
-  :    source-directory
+  :    src-directory
   :    ├─rom
   :    │ ├─rom-disc-1.[bin,cue,wbfs,...]
   :    │ ├─rom-disc-2.[bin,cue,wbfs,...]
   :    │ ├─...
   :    │ └─rom-disc-n.[bin,cue,wbfs,...]
-  :    ├─core
+  :    ├─core # for retroarch
   :    │ └─core.so
-  :    ├─bios [optional]
-  :    │ └─bios.bin
+  :    ├─bios # for retroarch (psone), rpcs3
+  :    │ └─bios.[bin,PUP]
   :    └─icon
   :      └─icon.[png,svg,jpg]
 	END
@@ -66,6 +67,7 @@ function main()
     "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
     "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
     "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
+    *) die;;
   esac
 }
 
