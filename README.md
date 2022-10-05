@@ -1,92 +1,180 @@
-# Agatha - AppImage Game Packer
+# Agape - AppImage Game Packer
 
+[[_TOC_]]
 
+Game emulation is on the rise, with years of contribution from the community and
+now with Valve's portable handheld, the `steam deck`. The fragmentation with
+several platform emulators is daunting, especially since it requires repetitive
+configuration for the first time or if the config files go missing. Agape is a
+tool to pack a runner (such as an emulator), a game, and it's configs in a
+single `appimage` package.
 
-## Getting started
+## Supported applications for packaging
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+<a href="https://www.retroarch.com/" target="_blank">
+  <img src="doc/retroarch.png"  width="120" height="120">
+</a>
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+<a href="https://pcsx2.net/" target="_blank">
+<img src="doc/pcsx2.webp"  width="120" height="120">
+</a>
 
-## Add your files
+<a href="https://rpcs3.net/" target="_blank">
+<img src="doc/rpcs3.jpg"  width="120" height="120">
+</a>
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Install
 
-```
-cd existing_repo
-git remote add origin https://gitlab.com/formigoni/agatha.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.com/formigoni/agatha/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Clone the repository and start the application with `./src/main.sh`.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Agape requires a directory set-up with the required files for the target
+platform, `./src/main.sh` displays the following example:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```
+-- Usage:
+  main.sh --name="game name" --dir=src-directory --boot=startup-file
+  - "game name": The name of the game.
+  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
+  - "startup-file": The name (not the path) of the file inside the
+                    rom folder to start by default, i.e., you can choose
+                    'disc 1' to start by default, use the PUP file for rpcs3.
+  The source directory must have this structure (files can have any name):
+    src-directory
+    ├─rom
+    │ ├─rom-disc-1.[bin,cue,wbfs,...]
+    │ ├─rom-disc-2.[bin,cue,wbfs,...]
+    │ ├─...
+    │ └─rom-disc-n.[bin,cue,wbfs,...]
+    ├─core # for retroarch
+    │ └─core.so
+    ├─bios # for retroarch (psone), pcsx2, rpcs3
+    │ └─bios.[bin,PUP]
+    └─icon
+      └─icon.[png,svg,jpg]
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+---
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+<details>
+<summary>rpcs3 example</summary>
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+For `rpcs3` you can set up:
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```
+my-game-dir
+├── bios
+│   └── bios.PUP
+├── icon
+│   └── my-game-cover.png
+└── rom
+    ├── PS3_DISC.SFB
+    └── PS3_GAME
+```
 
-## License
-For open source projects, say how it is licensed.
+and run:
+```
+./src/main.sh --platform=rpcs3 \
+   --name="My cool game" \
+   --dir=./my-game-dir \
+   --boot="PS3_DISC.SFB"
+```
+</details>
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+---
+
+<details>
+<summary>pcsx2 example</summary>
+
+Similarly for `pcsx2`:
+
+```
+my-game-dir
+├── bios
+│   └── my-ripped-bios.bin
+├── icon
+│   └── my-game-cover.jpg
+└── rom
+    └── my-game.iso
+```
+
+and run:
+```
+./src/main.sh --platform=pcsx2 \
+  --name="My cool game" \
+  --dir=./my-game-dir
+  --boot="my-game.iso"
+```
+</details>
+
+---
+
+<details>
+<summary>retroarch example</summary>
+
+And for `retroarch`:
+
+```
+my-game-dir
+├── bios
+│   └── my-ripped-bios.bin
+├── core
+│   └── swanstation_libretro.so
+├── icon
+│   └── my-game-cover.png
+└── rom
+    ├── my-game-disc-1.bin
+    ├── my-game-disc-1.cue
+    ├── my-game-disc-2.bin
+    ├── my-game-disc-2.cue
+    ├── my-game-disc-3.bin
+    ├── my-game-disc-3.cue
+    ├── my-game-disc-4.bin
+    └── my-game-disc-4.cue
+```
+
+and run:
+
+```
+./src/main.sh --platform=retroarch \
+  --name="My cool game" \
+  --dir=./my-game-dir
+  --boot="my-game-disc-1.cue"
+```
+
+This defaults the disc 1 to start with the appimage, you can open retroarch
+interface with `F1` or other key you configured it with. And change discs in
+there. Remove the `bios` folder for platforms that do not require it.
+</details>
+
+---
+
+## Showcase
+
+Files displayed on the `thunar` file manager.
+
+<img src="doc/wall-ps1.png"  width="720">
+<img src="doc/wall-pcsx2.png"  width="720">
+<img src="doc/wall-rpcs3.png"  width="720">
+<img src="doc/wall-snes.png"  width="720">
+
+## Tutorial on how to show icons for generated AppImages
+
+1. Install the `tumbler` thumbnailers application for your linux distribution.
+  - `sudo apt install tumbler`
+  - `sudo pacman -S tumbler`
+
+2. Install an appimage thumbnailer, preferably from linux mint.
+  - TODO
+
+3. Allow icons on files over 2GB
+  - TODO
+
+3. Install a supported file manager, you can find a list
+<a href="https://github.com/linuxmint/xapp-thumbnailers" target="_blank">here</a>.
+
+---
+
+> Disclaimer: This project does not endorse piracy, buy your games and console
+> to use this software.
