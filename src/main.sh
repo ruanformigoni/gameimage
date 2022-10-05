@@ -16,10 +16,10 @@ function usage()
   :-- Usage:
   :  $(basename "$0") --name="game name" --dir=src-directory --boot=startup-file
   :  - "game name": The name of the game.
-  :  - "src-directory": The directory with the bios, rom, etc.
+  :  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
   :  - "startup-file": The name (not the path) of the file inside the
   :                    rom folder to start by default, i.e., you can choose
-  :                    'disc 1' to start by default.
+  :                    'disc 1' to start by default, use the PUP file for rpcs3.
   :  The source directory must have this structure (files can have any name):
   :    src-directory
   :    ├─rom
@@ -29,7 +29,7 @@ function usage()
   :    │ └─rom-disc-n.[bin,cue,wbfs,...]
   :    ├─core # for retroarch
   :    │ └─core.so
-  :    ├─bios # for retroarch (psone), rpcs3
+  :    ├─bios # for retroarch (psone), pcsx2, rpcs3
   :    │ └─bios.[bin,PUP]
   :    └─icon
   :      └─icon.[png,svg,jpg]
@@ -40,6 +40,11 @@ function die()
 {
   usage
   exit 1
+}
+
+function msg()
+{
+  echo "-- $*" >&2
 }
 
 function deps()
@@ -54,20 +59,23 @@ function deps()
 
 function main()
 {
+  [ $# -eq 4 ] || { msg "Invalid number of arguments"; die; }
+
   declare -A args
 
   for i; do
-    [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}"
-    [[ "$i" =~ --name=(.*) ]] && args[--name]="${BASH_REMATCH[1]}"
-    [[ "$i" =~ --dir=(.*) ]] && args[--dir]="${BASH_REMATCH[1]}"
-    [[ "$i" =~ --boot=(.*) ]] && args[--boot]="${BASH_REMATCH[1]}"
+    [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}" && continue
+    [[ "$i" =~ --name=(.*) ]] && args[--name]="${BASH_REMATCH[1]}" && continue
+    [[ "$i" =~ --dir=(.*) ]] && args[--dir]="${BASH_REMATCH[1]}" && continue
+    [[ "$i" =~ --boot=(.*) ]] && args[--boot]="${BASH_REMATCH[1]}" && continue
+    msg "Invalid Argument '$i'"; die
   done
 
   case "${args[--platform]}" in
     "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
     "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
     "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
-    *) die;;
+    *) msg "Invalid platform '${args[--platform]}'"; die;;
   esac
 }
 
