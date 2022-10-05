@@ -23,7 +23,12 @@ function retroarch_download()
   if [ ! -f "AppDir/usr/bin/retroarch" ]; then
     if [ ! -f "RetroArch-x86_64.AppImage" ]; then
       # Get AppImage of retroarch
-      wget -q --show-progress --progress=bar:noscroll -O retroarch.AppImage "https://github.com/hizzlekizzle/RetroArch-AppImage/releases/download/Linux_LTS_Nightlies/RetroArch-Linux-x86_64-Nightly.AppImage"
+      wget -q --show-progress --progress=bar:noscroll \
+        "https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
+
+      # Extract and move
+      7z x "RetroArch.7z"
+      mv RetroArch*/RetroArch*.AppImage retroarch.AppImage
 
       # Make executable
       chmod +x ./retroarch.AppImage
@@ -92,7 +97,7 @@ function main()
   local rom="${ret[5]}"
 
   # Create dirs
-  build_dir="$(dir_build_create)"; cd "${build_dir}"
+  cd "$(dir_build_create)"
 
   dir_appdir_create
 
