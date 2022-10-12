@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+######################################################################
+# @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
+# @file        : test
+# @created     : Wednesday Sep 14, 2022 19:59:11 -03
+######################################################################
+
+set -e
+
+# Create tmp dir to extract icon
+tmpdir="$(mktemp -d)"
+
+# Remove tmp dir in case of success or failure
+function clean()
+{
+  rm -rf "$tmpdir"
+}
+
+trap clean EXIT ERR SIGINT
+
+cd "$tmpdir"
+
+# Shortcut for list files command
+cmd_list="unsquashfs -o $("$2" --appimage-offset 2>/dev/null) -ll \"$2\" "
+
+# Get icon path inside appimage
+thumbnail="$(eval "$cmd_list" | grep .DirIcon)"
+
+# Check if is symlink
+if [[ "$thumbnail" =~ -\> ]]; then
+  thumbnail="$(echo "$thumbnail" | awk -F" -> " '{print $2}')"
+else
+  thumbnail=".DirIcon"
+fi
+
+# Resolve symlinks (option -L in unsquashfs does not work for this)
+while eval "$cmd_list $thumbnail" | grep "$thumbnail -> "; do
+  thumbnail=$(eval "$cmd_list" | pcregrep -o1 "$thumbnail -> (.*)")
+  # Some appimages use local apppimage paths, e.g., ./usr/applications/...
+  thumbnail="${thumbnail#./}"
+done
+
+# Extract icon
+unsquashfs -o "$("$2" --appimage-offset 2>/dev/null)" "$2" "$thumbnail" 2>&1
+
+# Update icon path to extracted path
+thumbnail="./squashfs-root/${thumbnail}"
+
+if [ -f "$thumbnail" ]; then
+  if ! convert -thumbnail "$1" "./$thumbnail" "$3"; then
+    gdbus call --session \
+      --dest=org.freedesktop.thumbnails.Cache1 \
+      --object-path /org/freedesktop/thumbnails/Cache1 \
+      --method org.freedesktop.thumbnails.Cache1.Delete "['$4']" >/dev/null
+  fi
+fi

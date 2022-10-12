@@ -161,18 +161,38 @@ Files displayed on the `thunar` file manager.
 
 ## Tutorial on how to show icons for generated AppImages
 
-1. Install the `tumbler` thumbnailers application for your linux distribution.
-  - `sudo apt install tumbler`
-  - `sudo pacman -S tumbler`
 
-2. Install an appimage thumbnailer, preferably from linux mint.
-  - TODO
+The following methods use thunar, other supported file managers are listed
+<a href="https://github.com/linuxmint/xapp-thumbnailers" target="_blank">here</a>. Note that the `appimage` must be set as executable for the thumbnail generation.
+
+<details>
+<summary>Automatic Method</summary>
+Execute the install script:
+
+```sh
+curl https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/install.sh | bash
+```
+</details>
+
+<details>
+<summary>Manual Method</summary>
+
+1. Install the required packages
+  - `sudo apt install tumbler squashfs-tools thunar`
+  - `sudo pacman -S tumbler squashfs-tools thunar`
+
+2. Copy the thumbnailer files
+  - `sudo cp thumbnailer-appimage /usr/bin`
+  - `sudo chmod +x /usr/bin/thumbnailer-appimage`
+  - `mkdir -p ~/.local/share/thumbnailers`
+  - `cp appimage.thumbnailer ~/.local/share/thumbnailers`
 
 3. Allow icons on files over 2GB
-  - TODO
+  - `mkdir -p ~/.config/tumbler`
+  - `cp /etc/xdg/tumbler/tumbler.rc ~/.config/tumbler/`
+  - `awk -i inplace '/\[DesktopThumbnailer\]/,/MaxFileSize=(.*)/ { sub("MaxFileSize=.*", "MaxFileSize="); } 1' ~/.config/tumbler/tumbler.rc`
 
-3. Install a supported file manager, you can find a list
-<a href="https://github.com/linuxmint/xapp-thumbnailers" target="_blank">here</a>.
+</details>
 
 ---
 
