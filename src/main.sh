@@ -14,10 +14,11 @@ function usage()
 {
   { sed -E 's/^\s+://' | tee /dev/null; } <<-END
   :-- Usage:
-  :  $(basename "$0") --name="game name" --dir=src-directory --boot=startup-file
+  :  $(basename "$0") --platform="target-platform" --name="game name" --dir=src-directory --boot=startup-file
+  :  - "platform": [retroarch,pcsx2,rpcs3,wine]
   :  - "game name": The name of the game.
   :  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
-  :  - "startup-file": The name (not the path) of the file inside the
+  :  - "startup-file": The path of the file inside the
   :                    rom folder to start by default, i.e., you can choose
   :                    'disc 1' to start by default, use the PUP file for rpcs3.
   :  The source directory must have this structure (files can have any name):
@@ -59,22 +60,22 @@ function deps()
 
 function main()
 {
-  [ $# -eq 4 ] || { msg "Invalid number of arguments"; die; }
-
   declare -A args
 
   for i; do
     [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}" && continue
     [[ "$i" =~ --name=(.*) ]] && args[--name]="${BASH_REMATCH[1]}" && continue
     [[ "$i" =~ --dir=(.*) ]] && args[--dir]="${BASH_REMATCH[1]}" && continue
-    [[ "$i" =~ --boot=(.*) ]] && args[--boot]="${BASH_REMATCH[1]}" && continue
     msg "Invalid Argument '$i'"; die
   done
 
+  [[ $# -eq 3 ]] || { msg "Invalid number of arguments"; die; }
+
   case "${args[--platform]}" in
-    "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
-    "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
-    "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}" "${args[--boot]}";;
+    "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}";;
+    "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}";;
+    "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}";;
+    "wine") "${SCRIPT_DIR}/wine.sh" "${args[--name]}" "${args[--dir]}";;
     *) msg "Invalid platform '${args[--platform]}'"; die;;
   esac
 }

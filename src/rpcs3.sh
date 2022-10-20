@@ -45,16 +45,24 @@ function runner_create()
     :
     :set -e
     :
-    :# Check if config dir is set
-    :[ -n "\${XDG_CONFIG_HOME}" ] || XDG_CONFIG_HOME="\$HOME/.config"
+    :# Set cfg dir
+    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
+    :  # Set global
+    :  export XDG_CONFIG_HOME="\$HOME/.config"
+    :else
+    :  # Set local
+    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
+    :fi
+    :
+    :mkdir -p "\$XDG_CONFIG_HOME"
+    :
+    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :echo "bios: ${bios}"
     :
     :# Check if bios is installed
     :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
     :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/${bios}"
     :fi
-    :
-    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
-    :echo "bios: ${bios}"
     :
     :"\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app"
 	END

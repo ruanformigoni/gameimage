@@ -40,6 +40,7 @@ function runner_create()
   local rom="$(basename "$3")"
 
   [ "$bios" == "null" ] && local bios=""
+  [ "$rom" == "null" ] && { msg "Invalid rom file"; die; }
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
@@ -47,8 +48,14 @@ function runner_create()
     :
     :set -e
     :
-    :# Check if config dir is set
-    :[ -n "\${XDG_CONFIG_HOME}" ] || XDG_CONFIG_HOME="\$HOME/.config"
+    :# Set cfg dir
+    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
+    :  # Set global
+    : export XDG_CONFIG_HOME="\$HOME/.config"
+    :else
+    :  # Set local
+    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
+    :fi
     :
     :# Bios path
     :bios_path="\${XDG_CONFIG_HOME}/PCSX2/bios"

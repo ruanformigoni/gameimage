@@ -17,14 +17,16 @@ function die()
 
 function msg()
 {
-  echo "-- $*" >&2
+  # Test for color support
+  if [ "$(tput colors)" -ge 8 ]; then
+    echo -e "[\033[32m*\033[m] $*" >&2
+  else
+    echo "[*] $*" >&2
+  fi
 }
 
 function params_validate()
 {
-  # Check params and validate files
-  [ $# -eq 3 ] || { msg "Invalid number of arguments"; die; }
-
   # Convert path to absolute
   local src_dir="$(readlink -f "$2")"
 
@@ -37,8 +39,19 @@ function params_validate()
     :[ -f "{}" ] || { msg "Invalid file: {}"; die; }\0
 	END
 
-  local rom="$(basename "$3")"
-  eval "${f_validate//"{}"/"$src_dir/rom/$rom"}"
+  local rom
+  if [ ! -d "$src_dir/rom" ]; then
+    msg "Directory \"$src_dir/rom\" not found"; die; 
+  else
+    msg "Select the rom file to boot when the appimage is clicked"
+    declare -a files
+    readarray -t files <<<"$(find "$src_dir/rom" -maxdepth 1 -type f -regextype posix-extended -iregex ".*\.(SFB|bin|cue|iso)")"
+    select i in "${files[@]}"; do
+      rom="rom/${i//*rom\/}"
+      msg "Selected $rom"
+      break
+    done
+  fi
 
   local core
   if [ -d "$src_dir/core" ]; then
@@ -49,8 +62,12 @@ function params_validate()
   fi
 
   local cover
-  read -r cover <<< "$(find "$src_dir/icon" -regextype posix-extended -iregex ".*(jpg|png|svg)" -print -quit)"
-  eval "${f_validate//"{}"/"${cover}"}"
+  if [ ! -d "$src_dir/icon" ]; then
+    msg "Directory \"$src_dir/icon\" not found"; die; 
+  else
+    read -r cover <<< "$(find "$src_dir/icon" -regextype posix-extended -iregex ".*(jpg|png|svg)" -print -quit)"
+    eval "${f_validate//"{}"/"${cover}"}"
+  fi
 
   local bios
   if [ -d "$src_dir/bios" ]; then
@@ -84,7 +101,9 @@ function dir_appdir_create()
   local appdir="AppDir"
 
   if [ -d "$appdir" ]; then
-    rm -rf "$appdir";
+    echo -n "AppDir from previous run found, remove it? [y/N]: "
+    read -r opt
+    [ "$opt" = "y" ] && rm -rf "$appdir";
   fi
 
   mkdir -p AppDir
@@ -129,12 +148,19 @@ function files_copy()
 
 function desktop_entry_create()
 {
-  local name="$1"
+  local name
+
+  # Make alt name capital, space separated
+  name="$1"
+  name="${name//-/ }"
+  declare -a name_alt
+  for i in $name; do name_alt+=("${i^}"); done
+  name="$1"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/"${name}.desktop"; } <<-END
     :[Desktop Entry]
-    :Name=${name}
+    :Name=${name_alt[*]}
     :Exec=/usr/bin/bash
     :Icon=${name}
     :Type=Application

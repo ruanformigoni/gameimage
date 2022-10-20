@@ -64,8 +64,14 @@ function runner_create()
     :
     :set -e
     :
-    :# Check if config dir is set
-    :[ -n "\${XDG_CONFIG_HOME}" ] || XDG_CONFIG_HOME="\$HOME/.config"
+    :# Set cfg dir
+    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
+    :  # Set global
+    :  export XDG_CONFIG_HOME="\$HOME/.config"
+    :else
+    :  # Set local
+    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
+    :fi
     :
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :
