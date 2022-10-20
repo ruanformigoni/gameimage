@@ -81,7 +81,7 @@ function runner_create()
 function main()
 {
   # Validate params
-  readarray -t ret <<< "$(params_validate "$@")"
+  readarray -t ret <<< "$(params_validate "pcsx2" "$@")"
 
   local name="${ret[0]}"
   local dir="${ret[1]}"

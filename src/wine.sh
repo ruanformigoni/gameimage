@@ -101,7 +101,7 @@ function wine_configure()
     [ "$args" ] || break
     # Check if is bash cmd
     for i in "${args[@]}"; do
-      [ "${opts[$i]}" ] || { eval "${args[*]}"; continue 2; }
+      [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
     done
     # If not call winetricks
     "$WINETRICKS" "$args" || continue
@@ -120,7 +120,7 @@ function wine_install()
     # Check if config
     [ "${args[*]}" = "config" ] && { "$WINE"; continue; }
     # Check if is bash cmd
-    [[ ! "${args[*]}" =~ .*\.exe ]] && { eval "${args[*]}"; continue; }
+    [[ ! "${args[*]}" =~ .*\.exe ]] && { eval "${args[*]}" || true; continue; }
     # Exec as wine arg
     "$WINE" "$args"
   done
@@ -216,7 +216,7 @@ function runner_create()
 function main()
 {
   # Validate params
-  readarray -t ret <<< "$(params_validate "$@")"
+  readarray -t ret <<< "$(params_validate "wine" "$@")"
 
   [ "${ret[*]}" ] || exit 1
 

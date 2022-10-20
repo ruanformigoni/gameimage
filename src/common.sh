@@ -27,6 +27,8 @@ function msg()
 
 function params_validate()
 {
+  local platform="$1"; shift
+
   # Convert path to absolute
   local src_dir="$(readlink -f "$2")"
 
@@ -40,7 +42,9 @@ function params_validate()
 	END
 
   local rom
-  if [ ! -d "$src_dir/rom" ]; then
+  if [ "$platform" = "wine" ]; then
+    rom="null"
+  elif [ ! -d "$src_dir/rom" ]; then
     msg "Directory \"$src_dir/rom\" not found"; die; 
   else
     msg "Select the rom file to boot when the appimage is clicked"

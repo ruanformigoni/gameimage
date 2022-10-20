@@ -89,10 +89,7 @@ my-game-dir
 
 and run:
 ```
-agape.AppImage --platform=rpcs3 \
-   --name="My cool game" \
-   --dir=./my-game-dir \
-   --boot="PS3_DISC.SFB"
+agape.AppImage --platform=rpcs3 --name="My cool game" --dir=./my-game-dir \
 ```
 </details>
 
@@ -115,10 +112,7 @@ my-game-dir
 
 and run:
 ```
-./agape.AppImage --platform=pcsx2 \
-  --name="My cool game" \
-  --dir=./my-game-dir
-  --boot="my-game.iso"
+./agape.AppImage --platform=pcsx2 --name="My cool game" --dir=./my-game-dir
 ```
 </details>
 
@@ -151,10 +145,7 @@ my-game-dir
 and run:
 
 ```
-./agape.AppImage --platform=retroarch \
-  --name="My cool game" \
-  --dir=./my-game-dir
-  --boot="my-game-disc-1.cue"
+./agape.AppImage --platform=retroarch --name="My cool game" --dir=./my-game-dir
 ```
 
 This defaults the disc 1 to start with the appimage, you can open retroarch

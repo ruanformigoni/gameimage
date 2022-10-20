@@ -82,7 +82,7 @@ function appimagebuilder_download()
 function main()
 {
   # Validate params
-  readarray -t ret <<< "$(params_validate "$@")"
+  readarray -t ret <<< "$(params_validate "rpcs3" "$@")"
 
   local name="${ret[0]}"
   local dir="${ret[1]}"

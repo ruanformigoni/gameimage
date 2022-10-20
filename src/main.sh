@@ -14,13 +14,10 @@ function usage()
 {
   { sed -E 's/^\s+://' | tee /dev/null; } <<-END
   :-- Usage:
-  :  $(basename "$0") --platform="target-platform" --name="game name" --dir=src-directory --boot=startup-file
+  :  $(basename "$0") --platform="target-platform" --name="game name" --dir=src-directory
   :  - "platform": [retroarch,pcsx2,rpcs3,wine]
   :  - "game name": The name of the game.
   :  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
-  :  - "startup-file": The path of the file inside the
-  :                    rom folder to start by default, i.e., you can choose
-  :                    'disc 1' to start by default, use the PUP file for rpcs3.
   :  The source directory must have this structure (files can have any name):
   :    src-directory
   :    ├─rom
