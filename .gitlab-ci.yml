@@ -1,0 +1,10 @@
+stages:
+  - deploy
+
+create-appimage:
+  stage: deploy
+  script:
+    - ./deploy/deploy.sh
+  artifacts:
+    paths:
+      - ./build/Agape-x86_64.AppImage
