@@ -50,12 +50,10 @@ platform, `./agape.AppImage` displays the following example:
 
 ```
 -- Usage:
-  ./agape.AppImage --name="game name" --dir=src-directory --boot=startup-file
-  - "game name": The name of the game.
-  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
-  - "startup-file": The name (not the path) of the file inside the
-                    rom folder to start by default, i.e., you can choose
-                    'disc 1' to start by default, use the PUP file for rpcs3.
+  main.sh --platform="target-platform" --name="game name" --dir=src-directory
+  - "platform": [retroarch,pcsx2,rpcs3,wine]
+  - "name": The name of the game.
+  - "dir": The directory with the bios, rom, etc. May be absolute or relative.
   The source directory must have this structure (files can have any name):
     src-directory
     ├─rom

@@ -26,7 +26,7 @@ done
 { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
   :#!/usr/bin/env bash
   :
-  :\$APPDIR/usr/bin/main.sh \$@
+  :\$APPDIR/usr/bin/main.sh "\$@"
 END
 chmod +x AppDir/AppRun
 
