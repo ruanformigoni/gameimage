@@ -9,6 +9,18 @@ configuration for the first time or if the config files go missing. Agape is a
 tool to pack a runner (such as an emulator), a game, and it's configs in a
 single `appimage` package.
 
+Advantages:
+
+- [x] Simplicity:
+  - [x] No need to install an emulator or wine to run your games,
+      they are downloaded as appimages and packaged with the game.
+  - [x] Each game config/saves are in the same folder as the appimage by
+      default (it can be changed to use global ~/.config). Which simplifies
+      backups.
+- [x] Usability: get your game running with a double click on a fresh linux
+    install, no dependencies required.
+- [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
+
 ## Supported applications for packaging
 
 <a href="https://www.retroarch.com/" target="_blank">
@@ -23,18 +35,22 @@ single `appimage` package.
 <img src="doc/rpcs3.jpg"  width="120" height="120">
 </a>
 
+<a href="https://www.winehq.org/" target="_blank">
+<img src="doc/wine.svg"  width="120" height="120">
+</a>
+
 ## Install
 
-Clone the repository and start the application with `./src/main.sh`.
+Download the appimage in the releases page.
 
 ## Usage
 
 Agape requires a directory set-up with the required files for the target
-platform, `./src/main.sh` displays the following example:
+platform, `./agape.AppImage` displays the following example:
 
 ```
 -- Usage:
-  main.sh --name="game name" --dir=src-directory --boot=startup-file
+  ./agape.AppImage --name="game name" --dir=src-directory --boot=startup-file
   - "game name": The name of the game.
   - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
   - "startup-file": The name (not the path) of the file inside the
@@ -75,7 +91,7 @@ my-game-dir
 
 and run:
 ```
-./src/main.sh --platform=rpcs3 \
+agape.AppImage --platform=rpcs3 \
    --name="My cool game" \
    --dir=./my-game-dir \
    --boot="PS3_DISC.SFB"
@@ -101,7 +117,7 @@ my-game-dir
 
 and run:
 ```
-./src/main.sh --platform=pcsx2 \
+./agape.AppImage --platform=pcsx2 \
   --name="My cool game" \
   --dir=./my-game-dir
   --boot="my-game.iso"
@@ -137,7 +153,7 @@ my-game-dir
 and run:
 
 ```
-./src/main.sh --platform=retroarch \
+./agape.AppImage --platform=retroarch \
   --name="My cool game" \
   --dir=./my-game-dir
   --boot="my-game-disc-1.cue"
