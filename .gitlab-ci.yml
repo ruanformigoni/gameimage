@@ -19,6 +19,10 @@ deploy-appimage:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
     - if: $CI_COMMIT_TAG # Run this job when a tag is created
+  script:
+    - echo 'running release_job'
+    - echo 'Previous Job ID is printed below'
+    - echo $GE_JOB_ID
   release: # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
@@ -26,7 +30,6 @@ deploy-appimage:
       links:
         - name: 'agape.AppImage'
           url: 'https://gitlab.com/formigoni/agape/-/jobs/${GE_JOB_ID}/artifacts/file/build/Agape-x86_64.AppImage'
-          filepath: './build/Agape-x86_64.AppImage'
   needs:
     - job: create-appimage
       artifacts: true
