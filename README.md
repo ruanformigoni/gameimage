@@ -89,7 +89,7 @@ my-game-dir
 
 and run:
 ```
-agape.AppImage --platform=rpcs3 --name="My cool game" --dir=./my-game-dir \
+agape.AppImage --platform=rpcs3 --name="My cool game" --dir=./my-game-dir
 ```
 </details>
 
@@ -156,7 +156,9 @@ there. Remove the `bios` folder for platforms that do not require it.
 ---
 
 <details>
-<summary>wine example</summary>
+<summary>wine example with video</summary>
+
+![agape-wine-example](doc/agape-wine-example.mp4)
 
 And for `wine`:
 
