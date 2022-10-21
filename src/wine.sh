@@ -48,7 +48,7 @@ function winetricks_download()
 
 function arch_select()
 {
-  echo "Please select the architecture" >&2
+  msg "Please select the architecture" >&2
   select i in "win32" "win64"; do
     echo "$i"; break
   done
@@ -93,7 +93,7 @@ function wine_configure()
   done
 
   pwd
-  echo "Starting winetricks, use it to install dependencies"
+  msg "winetricks, use it to install dependencies, leave it blank to continue"
   while :; do
     echo -n "winetricks> "
     read -r args
@@ -111,7 +111,7 @@ function wine_configure()
 function wine_install()
 {
   pwd
-  echo "Install desired applications in the prefix"
+  msg "wine, install desired applications, leave it blank to continue"
   while :; do
     echo -n "wine> "
     read -r args

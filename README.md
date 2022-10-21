@@ -121,7 +121,7 @@ and run:
 <details>
 <summary>retroarch example</summary>
 
-And for `retroarch`:
+For `retroarch`:
 
 ```
 my-game-dir
@@ -155,17 +155,41 @@ there. Remove the `bios` folder for platforms that do not require it.
 
 ---
 
+<details>
+<summary>wine example</summary>
+
+And for `wine`:
+
+```
+my-game-dir
+├── icon
+│   └── my-game-cover.png
+└── rom
+    ├── my-game-installer-1.bin
+    ├── my-game-installer-2.bin
+    ├── my-game-installer-3.bin
+    └── my-game-installer.exe
+```
+
+and run:
+
+```
+./agape.AppImage --platform=wine --name="My cool game" --dir=./my-game-dir
+```
+
+During the installation, you will select the architecture (32 or 64) bit, and
+use wine to install the desired game from it's gog's `.exe`, in the rom folder.
+</details>
+
+---
+
 ## Showcase
 
 Files displayed on the `thunar` file manager.
 
-<img src="doc/wall-ps1.png"  width="720">
-<img src="doc/wall-pcsx2.png"  width="720">
-<img src="doc/wall-rpcs3.png"  width="720">
-<img src="doc/wall-snes.png"  width="720">
+<img src="doc/wall.png"  width="720">
 
 ## Tutorial on how to show icons for generated AppImages
-
 
 The following methods use thunar, other supported file managers are listed
 <a href="https://github.com/linuxmint/xapp-thumbnailers" target="_blank">here</a>. Note that the `appimage` must be set as executable for the thumbnail generation.
