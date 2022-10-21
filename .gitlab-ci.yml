@@ -1,10 +1,32 @@
 stages:
-  - deploy
+  - build
+  - release
 
 create-appimage:
-  stage: deploy
+  stage: build
+  before_script:
+    - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
     - ./deploy/deploy.sh
   artifacts:
     paths:
       - ./build/Agape-x86_64.AppImage
+    reports:
+      dotenv: generate_executables.env
+
+deploy-appimage:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG # Run this job when a tag is created
+  release: # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
+    tag_name: '$CI_COMMIT_TAG'
+    description: '$CI_COMMIT_TAG'
+    assets:
+      links:
+        - name: 'agape.AppImage'
+          url: 'https://gitlab.com/formigoni/agape/-/jobs/${GE_JOB_ID}/artifacts/file/build/Agape-x86_64.AppImage'
+          filepath: './build/Agape-x86_64.AppImage'
+  needs:
+    - job: create-appimage
+      artifacts: true
