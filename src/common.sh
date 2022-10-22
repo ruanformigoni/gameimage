@@ -10,8 +10,11 @@
 
 set -e
 
+PID="$$"
+
 function die()
 {
+  kill -s SIGTERM "$PID"
   exit 1
 }
 

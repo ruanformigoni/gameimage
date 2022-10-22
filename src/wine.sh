@@ -218,8 +218,6 @@ function main()
   # Validate params
   readarray -t ret <<< "$(params_validate "wine" "$@")"
 
-  [ "${ret[*]}" ] || exit 1
-
   local name="${ret[0]}"
   local cover="${ret[4]}"
 
