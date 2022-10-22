@@ -49,7 +49,7 @@ function params_validate()
   else
     msg "Select the rom file to boot when the appimage is clicked"
     declare -a files
-    readarray -t files <<<"$(find "$src_dir/rom" -maxdepth 1 -type f -regextype posix-extended -iregex ".*\.(SFB|bin|cue|iso)")"
+    readarray -t files <<<"$(find "$src_dir/rom" -maxdepth 1 -type f)"
     select i in "${files[@]}"; do
       rom="rom/${i//*rom\/}"
       msg "Selected $rom"
