@@ -39,6 +39,22 @@ Advantages:
 <img src="doc/wine.svg"  width="120" height="120">
 </a>
 
+## Build Dependencies
+
+There are packages that need to be installed to generate the `AppImage`
+
+For arch-based systems
+
+```
+sudo pacman -S imagemagick
+```
+
+For debian-based systems
+
+```
+sudo apt install imagemagick
+```
+
 ## Install
 
 Download the appimage in the releases page.
@@ -158,9 +174,27 @@ there. Remove the `bios` folder for platforms that do not require it.
 <details>
 <summary>wine example with video</summary>
 
+Requires manjaro or archlinux to build, you may use a virtual machine. On a
+fresh install install the packages:
+
+```sh
+sudo pacman -S cabextract wine
+```
+
+Wine is required to build the AppImages, but not to run them. You can remove it
+afterwards.
+
+In the `winetricks` stage, some applications might required `dotnet45`
+
+---
+
+Video tutorial
+
 ![agape-wine-example](doc/agape-wine-example.mp4)
 
-And for `wine`:
+---
+
+Directory structure:
 
 ```
 my-game-dir
