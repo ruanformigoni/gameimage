@@ -39,6 +39,11 @@ Advantages:
 <img src="doc/wine.svg"  width="120" height="120">
 </a>
 
+## Todo
+
+- [ ] Open yad GUI, when no arguments are passed
+- [ ] Include yuzu
+
 ## Build Dependencies
 
 There are packages that need to be installed to generate the `AppImage`
