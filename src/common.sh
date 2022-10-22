@@ -34,13 +34,6 @@ function params_validate()
 
   [ -d "$src_dir" ] || { msg "Invalid src dir ${src_dir}"; die; }
 
-  # Functor to check file validity
-  local f_validate
-
-  { read -r -d '\0' f_validate < <(sed -E 's/^\s+://'); } <<-END
-    :[ -f "{}" ] || { msg "Invalid file: {}"; die; }\0
-	END
-
   local rom
   if [ "$platform" = "wine" ]; then
     rom="null"
@@ -51,8 +44,9 @@ function params_validate()
     declare -a files
     readarray -t files <<<"$(find "$src_dir/rom" -maxdepth 1 -type f)"
     select i in "${files[@]}"; do
-      rom="rom/${i//*rom\/}"
-      msg "Selected $rom"
+      rom="$i"
+      msg "Selected rom: $rom"
+      [ -f "$rom" ] || { msg "Invalid rom file: $rom"; die; }
       break
     done
   fi
@@ -60,7 +54,8 @@ function params_validate()
   local core
   if [ -d "$src_dir/core" ]; then
     read -r core <<< "$(find "$src_dir/core" -regextype posix-extended -iregex ".*so")"
-    eval "${f_validate//"{}"/"${core}"}"
+    [ -f "$core" ] || { msg "Invalid core file: $core"; die; }
+    msg "Selected core: $core"
   else
     core="null"
   fi
@@ -70,13 +65,15 @@ function params_validate()
     msg "Directory \"$src_dir/icon\" not found"; die; 
   else
     read -r cover <<< "$(find "$src_dir/icon" -regextype posix-extended -iregex ".*(jpg|png|svg)" -print -quit)"
-    eval "${f_validate//"{}"/"${cover}"}"
+    [ -f "$cover" ] || { msg "Invalid cover file: $cover"; die; }
+    msg "Selected cover: $cover"
   fi
 
   local bios
   if [ -d "$src_dir/bios" ]; then
     read -r bios <<< "$(find "$src_dir/bios" -regextype posix-extended -iregex ".*(bin|pup)")"
-    eval "${f_validate//"{}"/"${bios}"}"
+    [ -f "$bios" ] || { msg "Invalid bios file: $bios"; die; }
+    msg "Selected bios: $bios"
   else
     bios="null"
   fi
