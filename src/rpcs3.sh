@@ -84,6 +84,8 @@ function main()
   # Validate params
   readarray -t ret <<< "$(params_validate "rpcs3" "$@")"
 
+  [ "${ret[*]}" ] || exit 1
+
   local name="${ret[0]}"
   local dir="${ret[1]}"
   local bios="${ret[2]}"
