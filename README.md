@@ -44,22 +44,6 @@ Advantages:
 - [ ] Open yad GUI, when no arguments are passed
 - [ ] Include yuzu
 
-## Build Dependencies
-
-There are packages that need to be installed to generate the `AppImage`
-
-For arch-based systems
-
-```
-sudo pacman -S imagemagick
-```
-
-For debian-based systems
-
-```
-sudo apt install imagemagick
-```
-
 ## Install
 
 Download the appimage in the releases page.

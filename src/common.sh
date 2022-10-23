@@ -154,7 +154,11 @@ function files_copy()
   cp -r "$dir"/rom/* AppDir/app/
 
   # Copy image to AppDir
-  convert "$cover" AppDir/"${name}".png
+  ## Get imagemagick
+  wget -q --show-progress --progress=bar:noscroll -O imagemagick https://imagemagick.org/archive/binaries/magick
+  chmod +x imagemagick
+  ## Convert image to png
+  ./imagemagick "$cover" AppDir/"${name}".png
 
   # Bios
   if [ "$bios" != "null" ]; then
