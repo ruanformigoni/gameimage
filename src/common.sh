@@ -28,6 +28,11 @@ function msg()
   fi
 }
 
+function is_digit()
+{
+  [[ "${*}" =~ [0-9]+ ]] && echo true || echo false
+}
+
 function params_validate()
 {
   local platform="$1"; shift
@@ -43,20 +48,32 @@ function params_validate()
   elif [ ! -d "$src_dir/rom" ]; then
     msg "Directory \"$src_dir/rom\" not found"; die; 
   else
-    msg "Select the rom file to boot when the appimage is clicked"
     declare -a files
-    readarray -t files <<<"$(find "$src_dir/rom" -maxdepth 1 -type f)"
-    select i in "${files[@]}"; do
-      rom="$i"
-      msg "Selected rom: $rom"
-      [ -f "$rom" ] || { msg "Invalid rom file: $rom"; die; }
-      break
-    done
+
+    readarray -t files < <(find "$src_dir/rom" -maxdepth 1 -type f)
+    [[ "${#files[@]}" -ne 0 ]] || { msg "No file found in rom directory $src_dir/rom"; die; }
+
+    if [[ "${#files[@]}" -eq 1 ]]; then
+      rom="${files[0]}"
+    else
+      msg "Select the rom file to boot when the appimage is clicked"
+      msg "It must be a number between 1 and ${#files[@]}"
+      msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
+
+      select i in "${files[@]}"; do
+        [[ "$(is_digit "$i")" = "true" ]] || continue
+        rom="$i"
+        break
+      done
+    fi
+
+    msg "Selected rom: $rom"
+    [ -f "$rom" ] || { msg "Invalid rom file: $rom"; die; }
   fi
 
   local core
   if [ -d "$src_dir/core" ]; then
-    read -r core <<< "$(find "$src_dir/core" -regextype posix-extended -iregex ".*so")"
+    read -r core <<< "$(find "$src_dir/core" -regextype posix-extended -iregex ".*so" -print -quit)"
     [ -f "$core" ] || { msg "Invalid core file: $core"; die; }
     msg "Selected core: $core"
   else
@@ -74,7 +91,7 @@ function params_validate()
 
   local bios
   if [ -d "$src_dir/bios" ]; then
-    read -r bios <<< "$(find "$src_dir/bios" -regextype posix-extended -iregex ".*(bin|pup)")"
+    read -r bios <<< "$(find "$src_dir/bios" -regextype posix-extended -iregex ".*(bin|pup)" -print -quit)"
     [ -f "$bios" ] || { msg "Invalid bios file: $bios"; die; }
     msg "Selected bios: $bios"
   else
