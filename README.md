@@ -252,10 +252,10 @@ curl https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/install.sh | ba
   - `sudo pacman -S tumbler squashfs-tools thunar`
 
 2. Copy the thumbnailer files
-  - `sudo cp thumbnailer-appimage /usr/bin`
+  - `sudo curl --output /usr/bin/thumbnailer-appimage https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/thumbnailer-appimage`
   - `sudo chmod +x /usr/bin/thumbnailer-appimage`
   - `mkdir -p ~/.local/share/thumbnailers`
-  - `cp appimage.thumbnailer ~/.local/share/thumbnailers`
+  - `curl --output ~/.local/share/thumbnailers/appimage.thumbnailer https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/appimage.thumbnailer`
 
 3. Allow icons on files over 2GB
   - `mkdir -p ~/.config/tumbler`
