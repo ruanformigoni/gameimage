@@ -28,11 +28,6 @@ function msg()
   fi
 }
 
-function is_digit()
-{
-  [[ "${*}" =~ [0-9]+ ]] && echo true || echo false
-}
-
 function params_validate()
 {
   local platform="$1"; shift
@@ -61,14 +56,13 @@ function params_validate()
       msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
 
       select i in "${files[@]}"; do
-        [[ "$(is_digit "$i")" = "true" ]] || continue
+        [ -f "$i" ] || { msg "Invalid selection"; continue; }
         rom="$i"
         break
       done
     fi
 
     msg "Selected rom: $rom"
-    [ -f "$rom" ] || { msg "Invalid rom file: $rom"; die; }
   fi
 
   local core
