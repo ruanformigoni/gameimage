@@ -99,7 +99,11 @@ To configure the emulator bundled the appimage:
 ```
 my-cool-game.AppImage --config
 ```
-In the case of wine if you pass any parameters, they be executed as
+
+Change the `global` settings, and it will only apply to the game in the
+`.AppImage`.
+
+In the case of wine if you pass any parameters, they'll be executed as
 `wine args...`
 
 ---
@@ -108,14 +112,14 @@ To make the AppImage use the global configuration directory `~/.config`
 
 Just include an extra `.` in the extension, as:
 
-From `my-cool-game.AppImage` to `my-cool-game.AppImage`
+From `my-cool-game.AppImage` to `my-cool-game..AppImage`
 
 ---
 
 In the case of emulators you can also pass any arguments.
 
 ```
-my-cool-game.AppImage -L "/path/to/my/core.so" "my-cool-rom"
+my-cool-game.AppImage -L "/path/to/my/core.so" "my-other-cool-rom"
 ```
 
 ---
