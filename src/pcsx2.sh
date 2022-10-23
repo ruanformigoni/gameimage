@@ -71,7 +71,13 @@ function runner_create()
     :  cp "\$APPDIR/app/${bios}" "\${bios_path}/${bios}"
     :fi
     :
-    :"\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/$rom"
+    :if [[ "\$@" = "--config" ]]; then
+    :  "\$APPDIR/usr/bin/pcsx2"
+    :elif [[ "\$@" ]]; then
+    :  "\$APPDIR/usr/bin/pcsx2" "\$@"
+    :else
+    :  "\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/$rom"
+    :fi
 	END
 
   # Allow execute

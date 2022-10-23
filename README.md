@@ -89,8 +89,38 @@ platform, `./agape.AppImage` displays the following example:
     └─icon
       └─icon.[png,svg,jpg]
 ```
+## Configuration
+
+Consire an AppImage named `my-cool-game.AppImage`:
 
 ---
+To configure the emulator bundled the appimage:
+
+```
+my-cool-game.AppImage --config
+```
+In the case of wine if you pass any parameters, they be executed as
+`wine args...`
+
+---
+
+To make the AppImage use the global configuration directory `~/.config`
+
+Just include an extra `.` in the extension, as:
+
+From `my-cool-game.AppImage` to `my-cool-game.AppImage`
+
+---
+
+In the case of emulators you can also pass any arguments.
+
+```
+my-cool-game.AppImage -L "/path/to/my/core.so" "my-cool-rom"
+```
+
+---
+
+## Examples
 
 <details>
 <summary>rpcs3 example</summary>

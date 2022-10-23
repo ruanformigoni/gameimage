@@ -64,7 +64,13 @@ function runner_create()
     :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/${bios}"
     :fi
     :
-    :"\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app"
+    :if [[ "\$@" = "--config" ]]; then
+    :  "\$APPDIR/usr/bin/rpcs3"
+    :elif [[ "\$@" ]]; then
+    :  "\$APPDIR/usr/bin/rpcs3" "\$@"
+    :else
+    :  "\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app"
+    :fi
 	END
 
   # Allow executable
