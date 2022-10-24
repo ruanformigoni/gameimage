@@ -44,6 +44,22 @@ Advantages:
 - [ ] Open yad GUI, when no arguments are passed
 - [ ] Include yuzu
 
+## Build Dependencies
+
+Required packages to build:
+
+For arch-based systems:
+```
+sudo pacman -S p7zip
+```
+
+For debian-based systems:
+```
+sudo add-apt-repository universe
+sudo apt update
+sudo apt install p7zip-full p7zip-rar
+```
+
 ## Install
 
 Download the appimage in the releases page.
