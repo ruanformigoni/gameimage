@@ -91,10 +91,9 @@ platform, `./agape.AppImage` displays the following example:
 ```
 ## Configuration
 
-Consire an AppImage named `my-cool-game.AppImage`:
+Consider an AppImage named `my-cool-game.AppImage`:
 
----
-To configure the emulator bundled the appimage:
+### Configure the emulator bundled inside the appimage
 
 ```
 my-cool-game.AppImage --config
@@ -106,17 +105,16 @@ Change the `global` settings, and it will only apply to the game in the
 In the case of wine if you pass any parameters, they'll be executed as
 `wine args...`
 
----
+### Make the AppImage use the global configuration directory `~/.config`
 
-To make the AppImage use the global configuration directory `~/.config`
 
-Just include an extra `.` in the extension, as:
+Include an extra `.` in the extension:
 
 From `my-cool-game.AppImage` to `my-cool-game..AppImage`
 
----
+### Test the emulator inside the appimage
 
-In the case of emulators you can also pass any arguments.
+You can also pass any arguments to the emulator directly:
 
 ```
 my-cool-game.AppImage -L "/path/to/my/core.so" "my-other-cool-rom"
