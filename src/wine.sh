@@ -21,7 +21,7 @@ function wine_download()
   declare -a url
 
   url+=("https://github.com/mmtrt/WINE_AppImage/releases/download/")
-  url+=("continuous-staging/wine-staging_7.18-x86_64.AppImage")
+  url+=("continuous-staging/wine-staging_7.19-x86_64.AppImage")
 
   [ ! -f "AppDir/usr/bin/wine" ] && \
     wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "$(printf %s "${url[@]}")"
