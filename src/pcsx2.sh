@@ -19,11 +19,18 @@ source "$SCRIPT_DIR/common.sh"
 
 function pcsx2_download()
 {
+  local url
+
+  url="$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
+    grep -o "https://.*AVX2-Qt\.AppImage" | sort | tail -n1)"
+
+  msg "pcsx2: ${url}"
+
   # Get pcsx2
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
     if [ ! -f "pcsx2.AppImage" ]; then
       # Get AppImage of pcsx2
-      wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "https://github.com/PCSX2/pcsx2/releases/download/v1.7.3339/pcsx2-v1.7.3339-linux-AppImage-64bit-AVX2-Qt.AppImage"
+      wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "$url"
 
       # Make executable
       chmod +x ./pcsx2.AppImage

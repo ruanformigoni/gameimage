@@ -18,13 +18,16 @@ source "$SCRIPT_DIR/common.sh"
 # Get wine appimage and define wine alias
 function wine_download()
 {
-  declare -a url
+  local url
 
-  url+=("https://github.com/mmtrt/WINE_AppImage/releases/download/")
-  url+=("continuous-staging/wine-staging_7.19-x86_64.AppImage")
+  url=$(curl -H "Accept: application/vnd.github+json" \
+    https://api.github.com/repos/mmtrt/WINE_AppImage/releases 2>&1 |
+    grep -Eo "https://.*continuous-staging/wine-staging_.*\.AppImage\"")
+
+  msg "wine: ${url%\"}"
 
   [ ! -f "AppDir/usr/bin/wine" ] && \
-    wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "$(printf %s "${url[@]}")"
+    wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
 
   chmod +x AppDir/usr/bin/wine
   # shellcheck disable=2139
@@ -35,7 +38,10 @@ function wine_download()
 function winetricks_download()
 {
   local url
+
   url="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
+
+  msg "winetricks: $url"
 
   [ ! -f "$(pwd)/winetricks" ] && \
     wget -q --show-progress --progress=bar:noscroll -O winetricks "$url"
@@ -57,7 +63,13 @@ function arch_select()
 function dxvk_install()
 {
   local url
-  url="https://github.com/doitsujin/dxvk/releases/download/v1.10.3/dxvk-1.10.3.tar.gz"
+
+  url=$(curl -H "Accept: application/vnd.github+json" \
+    https://api.github.com/repos/doitsujin/dxvk/releases/latest 2>&1 |
+    grep -Eo "https://.*\.tar\.gz")
+
+  msg "dxvk: $url"
+
   local filename="dxvk.tar.gz"
 
   [ ! -f "$(pwd)/$filename" ] && \

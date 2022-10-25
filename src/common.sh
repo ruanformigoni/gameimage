@@ -129,8 +129,14 @@ function dir_appdir_create()
 
 function appimagetool_download()
 {
+  local url
+
+  url="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+
+  msg "appimagetool: $url"
+
   # Get appimagetool
-  [ ! -f "./appimagetool" ] && wget -q --show-progress --progress=bar:noscroll -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+  [ ! -f "./appimagetool" ] && wget -q --show-progress --progress=bar:noscroll -O appimagetool "$url"
 
   # Make executable
   chmod +x appimagetool
@@ -148,8 +154,10 @@ function files_copy()
   cp -r "$dir"/rom/* AppDir/app/
 
   # Copy image to AppDir
+  local url="https://imagemagick.org/archive/binaries/magick"
+  msg "imagemagick: ${url}"
   ## Get imagemagick
-  wget -q --show-progress --progress=bar:noscroll -O imagemagick https://imagemagick.org/archive/binaries/magick
+  wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
   chmod +x imagemagick
   ## Convert image to png
   ./imagemagick "$cover" AppDir/"${name}".png

@@ -20,11 +20,19 @@ source "$SCRIPT_DIR/common.sh"
 
 function rpcs3_download()
 {
+  local url
+
+  url="$(curl -H "Accept: application/vnd.github+json" \
+    https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest 2>&1 |
+    grep -o "https://.*\.AppImage")"
+
+  msg "rpcs3: ${url}"
+
   # Get rpcs3
   if [ ! -f "AppDir/usr/bin/rpcs3" ]; then
     if [ ! -f "rpcs3.AppImage" ]; then
       # Get AppImage of rpcs3
-      wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "https://github.com/RPCS3/rpcs3-binaries-linux/releases/download/build-67c02e3522a576d1d739fa130f484ab9a64b5d62/rpcs3-v0.0.24-14195-67c02e35_linux64.AppImage"
+      wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "$url"
 
       # Make executable
       chmod +x ./rpcs3.AppImage
@@ -75,14 +83,6 @@ function runner_create()
 
   # Allow executable
   chmod +x AppDir/AppRun
-}
-
-function appimagebuilder_download()
-{
-  # Get appimagebuilder
-  [ ! -f "./appimagebuilder.AppImage" ] && wget -q --show-progress --progress=bar:noscroll -O appimagebuilder.AppImage "https://github.com/AppImageCrafters/appimage-builder/releases/download/v1.1.0/appimage-builder-1.1.0-x86_64.AppImage"
-
-  chmod +x ./appimagebuilder.AppImage
 }
 
 function main()
