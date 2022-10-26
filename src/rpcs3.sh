@@ -69,7 +69,7 @@ function runner_create()
     :
     :# Check if bios is installed
     :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
-    :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/${bios}"
+    :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/bios/${bios}"
     :fi
     :
     :if [[ "\$@" = "--config" ]]; then
@@ -77,7 +77,7 @@ function runner_create()
     :elif [[ "\$@" ]]; then
     :  "\$APPDIR/usr/bin/rpcs3" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app"
+    :  "\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app/rom"
     :fi
 	END
 
@@ -107,7 +107,7 @@ function main()
   rpcs3_download
 
   # Populate appdir
-  files_copy "$name" "$dir" "$bios" "$core" "$cover"
+  files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
   runner_create "$bios"
 

@@ -50,13 +50,15 @@ function deps()
 
   local has_deps="y"
   for i; do
-    command -v "$i" || { has_deps="n"; echo "Missing executable $i, please install it before usage"; }
+    command -v "$i" &>/dev/null || { has_deps="n"; echo "Missing executable $i, please install it before usage"; }
   done
   [[ "${has_deps}" = "y" ]] || die
 }
 
 function main()
 {
+  deps "7z" "unzip"
+
   declare -A args
 
   for i; do
@@ -72,6 +74,7 @@ function main()
     "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}";;
     "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}";;
     "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}";;
+    "yuzu") "${SCRIPT_DIR}/yuzu.sh" "${args[--name]}" "${args[--dir]}";;
     "wine") "${SCRIPT_DIR}/wine.sh" "${args[--name]}" "${args[--dir]}";;
     *) msg "Invalid platform '${args[--platform]}'"; die;;
   esac

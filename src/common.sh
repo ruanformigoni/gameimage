@@ -28,6 +28,36 @@ function msg()
   fi
 }
 
+function extract()
+{
+  msg "Extracting $1 file '$2' to $3"
+
+  if [ "$1" = ".zip" ]; then
+    unzip -q -o "$2" -d "$3"
+  elif [ "$1" = ".7z" ]; then
+    7z -aoa x "$2" -o"$3"
+  else
+    msg "Invalid extract file format"
+    die
+  fi
+}
+
+function param_validate()
+{
+  local directory="$1"
+  local pattern="$2"
+  local required="$3"
+
+  if [ -d "$src_dir/$directory" ]; then
+    read -r query <<< "$(find "$src_dir/$directory" -regextype posix-extended -iregex "$pattern" -print -quit)"
+    [ -f "$query" ] || { msg "Invalid $directory file"; die; }
+    msg "Selected $directory: $query"
+    echo "$query"
+  else
+    [ "$required" ] && die || echo "null"
+  fi
+}
+
 function params_validate()
 {
   local platform="$1"; shift
@@ -65,39 +95,20 @@ function params_validate()
     msg "Selected rom: $rom"
   fi
 
-  local core
-  if [ -d "$src_dir/core" ]; then
-    read -r core <<< "$(find "$src_dir/core" -regextype posix-extended -iregex ".*so" -print -quit)"
-    [ -f "$core" ] || { msg "Invalid core file: $core"; die; }
-    msg "Selected core: $core"
-  else
-    core="null"
-  fi
+  local core="$(param_validate "core" ".*\.so")"
 
-  local cover
-  if [ ! -d "$src_dir/icon" ]; then
-    msg "Directory \"$src_dir/icon\" not found"; die; 
-  else
-    read -r cover <<< "$(find "$src_dir/icon" -regextype posix-extended -iregex ".*(jpg|png|svg)" -print -quit)"
-    [ -f "$cover" ] || { msg "Invalid cover file: $cover"; die; }
-    msg "Selected cover: $cover"
-  fi
+  local cover="$(param_validate "icon" ".*(\.jpg|\.png|\.svg)" "required")"
 
-  local bios
-  if [ -d "$src_dir/bios" ]; then
-    read -r bios <<< "$(find "$src_dir/bios" -regextype posix-extended -iregex ".*(bin|pup)" -print -quit)"
-    [ -f "$bios" ] || { msg "Invalid bios file: $bios"; die; }
-    msg "Selected bios: $bios"
-  else
-    bios="null"
-  fi
+  local bios="$(param_validate "bios" ".*(\.bin|\.pup|\.zip|\.7z)")"
+
+  local keys="$(param_validate "keys" ".*(\.zip|\.7z)")"
 
   # Get name and normalize to dash separated lowercase
   local name="${1// /-}"
   local name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
 
   # Return
-  echo -e "$name\n$src_dir\n$bios\n$core\n$cover\n$rom"
+  echo -e "$name\n$src_dir\n$bios\n$core\n$cover\n$rom\n$keys"
 }
 
 function dir_build_create()
@@ -149,27 +160,47 @@ function files_copy()
   local bios="$3"
   local core="$4"
   local cover="$5"
+  local keys="$6"
 
   # Rom
-  cp -r "$dir"/rom/* AppDir/app/
+  mkdir -p AppDir/app/rom
+  cp -r "$dir"/rom/* AppDir/app/rom
 
   # Copy image to AppDir
   local url="https://imagemagick.org/archive/binaries/magick"
   msg "imagemagick: ${url}"
   ## Get imagemagick
-  wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
-  chmod +x imagemagick
+  if [ ! -f "imagemagick" ]; then
+    wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
+    chmod +x imagemagick
+  fi
   ## Convert image to png
   ./imagemagick "$cover" AppDir/"${name}".png
 
   # Bios
   if [ "$bios" != "null" ]; then
-    cp "$bios" AppDir/app/
+    mkdir -p AppDir/app/bios
+    if [[ "$bios" =~ (\.zip|\.7z) ]]; then
+      extract "${BASH_REMATCH[1]}" "$bios" AppDir/app/bios
+    else
+      cp "$bios" AppDir/app/bios
+    fi
+  fi
+
+  # Keys [yuzu]
+  if [ "$keys" != "null" ]; then
+    mkdir -p AppDir/app/keys
+    if [[ "$keys" =~ (\.zip|\.7z) ]]; then
+      extract "${BASH_REMATCH[1]}" "$keys" AppDir/app/keys
+    else
+      cp "$keys" AppDir/app/keys
+    fi
   fi
 
   # Core
   if [ "$core" != "null" ]; then
-    cp "$core" AppDir/app/
+    mkdir -p AppDir/app/core
+    cp "$core" AppDir/app/core
   fi
 }
 

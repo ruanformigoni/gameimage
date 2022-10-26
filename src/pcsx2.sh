@@ -75,7 +75,7 @@ function runner_create()
     :echo "bios_path: \${bios_path}"
     :
     :if [ ! -f "\${bios_path}/${bios}" ]; then
-    :  cp "\$APPDIR/app/${bios}" "\${bios_path}/${bios}"
+    :  cp "\$APPDIR/app/bios/${bios}" "\${bios_path}/${bios}"
     :fi
     :
     :if [[ "\$@" = "--config" ]]; then
@@ -83,7 +83,7 @@ function runner_create()
     :elif [[ "\$@" ]]; then
     :  "\$APPDIR/usr/bin/pcsx2" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/$rom"
+    :  "\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/rom/$rom"
     :fi
 	END
 
@@ -114,7 +114,7 @@ function main()
   pcsx2_download
 
   # Populate appdir
-  files_copy "$name" "$dir" "$bios" "$core" "$cover"
+  files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
   runner_create "$bios" "$core" "$rom"
 

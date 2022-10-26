@@ -22,9 +22,14 @@ function retroarch_download()
   # Get retroarch
   if [ ! -f "AppDir/usr/bin/retroarch" ]; then
     if [ ! -f "RetroArch-x86_64.AppImage" ]; then
+      local url
+
+      url="https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
+
+      msg "retroarch: $url"
+
       # Get AppImage of retroarch
-      wget -q --show-progress --progress=bar:noscroll \
-        "https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
+      wget -q --show-progress --progress=bar:noscroll "$url"
 
       # Extract and move
       7z x "RetroArch.7z"
@@ -80,7 +85,7 @@ function runner_create()
     :if [ "$bios" ] && [ ! -f "\${path_bios}/$bios" ]; then
     :  echo "bios: ${bios}"
     :  mkdir -p "\$path_bios"
-    :  cp "\$APPDIR/app/$bios" "\$path_bios"
+    :  cp "\$APPDIR/app/bios/$bios" "\$path_bios"
     :fi
     :
     :if [[ "\$@" = "--config" ]]; then
@@ -88,7 +93,7 @@ function runner_create()
     :elif [[ "\$@" ]]; then
     :  "\$APPDIR/usr/bin/retroarch" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/retroarch" -L "\$APPDIR/app/${core}" "\$APPDIR/app/${rom}"
+    :  "\$APPDIR/usr/bin/retroarch" -L "\$APPDIR/app/core/${core}" "\$APPDIR/app/rom/${rom}"
     :fi
 	END
 
@@ -119,7 +124,7 @@ function main()
   retroarch_download
 
   # Populate appdir
-  files_copy "$name" "$dir" "$bios" "$core" "$cover"
+  files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
   runner_create "$bios" "$core" "$rom"
 

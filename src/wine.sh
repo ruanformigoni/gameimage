@@ -56,6 +56,7 @@ function arch_select()
 {
   msg "Please select the architecture" >&2
   select i in "win32" "win64"; do
+    [ "$i" ] || continue;
     echo "$i"; break
   done
 }
@@ -145,6 +146,7 @@ function wine_executable_select()
 
   local executable
   select i in "${files[@]}"; do
+    [ "$i" ] || continue;
     executable="$i"; break
   done
 
