@@ -65,7 +65,7 @@ sudo apt install p7zip-full p7zip-rar
 
 ## Install
 
-Download the appimage in the releases page.
+Download the appimage in the [releases](https://gitlab.com/formigoni/agape/-/releases) page.
 
 ## Usage
 
