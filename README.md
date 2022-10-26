@@ -39,10 +39,13 @@ Advantages:
 <img src="doc/wine.svg"  width="120" height="120">
 </a>
 
+<a href="https://yuzu-emu.org/" target="_blank">
+<img src="doc/yuzu.jpg"  width="120" height="120">
+</a>
+
 ## Todo
 
 - [ ] Open yad GUI, when no arguments are passed
-- [ ] Include yuzu
 
 ## Build Dependencies
 
@@ -204,6 +207,44 @@ and run:
 This defaults the disc 1 to start with the appimage, you can open retroarch
 interface with `F1` or other key you configured it with. And change discs in
 there. Remove the `bios` folder for platforms that do not require it.
+</details>
+
+---
+
+<details>
+<summary>yuzu example with video</summary>
+
+Video tutorial:
+
+![agape-yuzu-example](doc/yuzu.mp4)
+
+For `yuzu`:
+
+```
+my-game-dir
+├── bios
+│   └── my-firmware.[zip,7z]
+├── keys
+│   └── my-keys.[zip,7z]
+├── icon
+│   └── my-game-cover.png
+├── rom
+│   └── my-game.nsp
+└── update # This folder is optional
+    ├── my-dlc-1.nsp
+    ├── my-dlc-2.nsp
+    └── my-update.nsp
+```
+
+and run:
+
+```
+./agape.AppImage --platform=yuzu --name="My cool game" --dir=./my-game-dir
+```
+
+During the install, yuzu will open to install the updates in the `update`
+folder.
+
 </details>
 
 ---
