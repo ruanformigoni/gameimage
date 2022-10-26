@@ -255,8 +255,9 @@ folder.
 Since version `0.1.9` wine is not required to build. No need to install it on
 your system.
 
-Requires manjaro or archlinux to build, you may use a virtual machine. Required
-packages:
+Tested to work on `linux mint` and `arch linux`:
+- For `debian-based` distros you need to install `libc6-i386` and `libfreetype6:i386`
+- For `arch-based` distros, you need to install `lib32-freetype2` and `lib32-glibc`
 
 In the `winetricks` stage, some applications might required `dotnet45`
 
