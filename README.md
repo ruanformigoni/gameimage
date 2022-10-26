@@ -252,15 +252,11 @@ folder.
 <details>
 <summary>wine example with video</summary>
 
-Requires manjaro or archlinux to build, you may use a virtual machine. On a
-fresh install install the packages:
+Since version `0.1.9` wine is not required to build. No need to install it on
+your system.
 
-```sh
-sudo pacman -S cabextract wine
-```
-
-Wine is required to build the AppImages, but not to run them. You can remove it
-afterwards.
+Requires manjaro or archlinux to build, you may use a virtual machine. Required
+packages:
 
 In the `winetricks` stage, some applications might required `dotnet45`
 

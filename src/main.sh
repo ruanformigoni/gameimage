@@ -42,7 +42,12 @@ function die()
 
 function msg()
 {
-  echo "-- $*" >&2
+  # Test for color support
+  if [ "$(tput colors)" -ge 8 ]; then
+    echo -e "[\033[32m*\033[m] $*" >&2
+  else
+    echo "[*] $*" >&2
+  fi
 }
 
 function deps()
@@ -50,7 +55,7 @@ function deps()
 
   local has_deps="y"
   for i; do
-    command -v "$i" &>/dev/null || { has_deps="n"; echo "Missing executable $i, please install it before usage"; }
+    command -v "$i" &>/dev/null || { has_deps="n"; msg "Missing executable $i, please install it before usage"; }
   done
   [[ "${has_deps}" = "y" ]] || die
 }

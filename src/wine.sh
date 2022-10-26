@@ -34,24 +34,6 @@ function wine_download()
   WINE="$(pwd)/AppDir/usr/bin/wine"
 }
 
-# Get winetricks and define alias
-function winetricks_download()
-{
-  local url
-
-  url="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
-
-  msg "winetricks: $url"
-
-  [ ! -f "$(pwd)/winetricks" ] && \
-    wget -q --show-progress --progress=bar:noscroll -O winetricks "$url"
-
-  chmod +x winetricks
-
-  # shellcheck disable=2139
-  WINETRICKS="$(pwd)/winetricks"
-}
-
 function arch_select()
 {
   msg "Please select the architecture" >&2
@@ -59,32 +41,6 @@ function arch_select()
     [ "$i" ] || continue;
     echo "$i"; break
   done
-}
-
-function dxvk_install()
-{
-  local url
-
-  url=$(curl -H "Accept: application/vnd.github+json" \
-    https://api.github.com/repos/doitsujin/dxvk/releases/latest 2>&1 |
-    grep -Eo "https://.*\.tar\.gz")
-
-  msg "dxvk: $url"
-
-  local filename="dxvk.tar.gz"
-
-  [ ! -f "$(pwd)/$filename" ] && \
-    wget -q --show-progress --progress=bar:noscroll -O "$filename" "$url"
-
-  tar -xf "$filename"
-
-  cd dxvk-*
-
-  chmod +x ./setup_dxvk.sh
-
-  ./setup_dxvk.sh install
-
-  cd ..
 }
 
 function wine_configure()
@@ -95,8 +51,8 @@ function wine_configure()
 
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
-    "$WINETRICKS" fontsmooth=rgb
-    dxvk_install
+    "$WINE" winetricks fontsmooth=rgb
+    "$WINE" winetricks dxvk
   fi
 
   declare -A opts
@@ -117,7 +73,7 @@ function wine_configure()
       [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
     done
     # If not call winetricks
-    "$WINETRICKS" "$args" || continue
+    "$WINE" winetricks "$args" || continue
   done
 }
 
@@ -245,7 +201,6 @@ function main()
 
   # Install and configure application
   wine_download
-  winetricks_download
   wine_configure
   wine_install
   readarray -t ret <<< "$(wine_executable_select)"

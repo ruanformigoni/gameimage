@@ -215,7 +215,7 @@ function desktop_entry_create()
   for i in $name; do name_alt+=("${i^}"); done
   name="$1"
 
-  # Create runner script
+  # Create desktop entry
   { sed -E 's/^\s+://' | tee AppDir/"${name}.desktop"; } <<-END
     :[Desktop Entry]
     :Name=${name_alt[*]}
