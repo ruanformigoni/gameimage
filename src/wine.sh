@@ -21,7 +21,7 @@ function wine_download()
   local url
 
   url=$(curl -H "Accept: application/vnd.github+json" \
-    https://api.github.com/repos/mmtrt/WINE_AppImage/releases 2>&1 |
+    https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
     grep -Eo "https://.*continuous-staging/wine-staging_.*\.AppImage\"")
 
   msg "wine: ${url%\"}"
@@ -57,7 +57,7 @@ function wine_configure()
 
   declare -A opts
 
-  for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
+  for i in $("$WINE" winetricks list-all | awk '!/=+/ { print $1 }'); do
     opts["$i"]=1
   done
 

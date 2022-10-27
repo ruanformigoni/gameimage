@@ -252,12 +252,7 @@ folder.
 <details>
 <summary>wine example with video</summary>
 
-Since version `0.1.9` wine is not required to build. No need to install it on
-your system.
-
-Tested to work on `linux mint` and `arch linux`:
-- For `debian-based` distros you need to install `libc6-i386` and `libfreetype6:i386`
-- For `arch-based` distros, you need to install `lib32-freetype2` and `lib32-glibc`
+Since version `0.2.0` the wine module works across several linux distros.
 
 In the `winetricks` stage, some applications might required `dotnet45`
 
