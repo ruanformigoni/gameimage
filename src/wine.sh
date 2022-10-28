@@ -22,16 +22,19 @@ function wine_download()
 
   url=$(curl -H "Accept: application/vnd.github+json" \
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
-    grep -Eo "https://.*continuous-staging/wine-staging_.*\.AppImage\"")
+    grep -Eo "https://.*continuous-.*/wine-caffe.*\.AppImage\"")
 
   msg "wine: ${url%\"}"
 
-  [ ! -f "AppDir/usr/bin/wine" ] && \
+  if [ ! -f "AppDir/usr/bin/wine" ]; then
     wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
+    chmod +x AppDir/usr/bin/wine
+    ln -s wine AppDir/usr/bin/winetricks
+  fi
 
-  chmod +x AppDir/usr/bin/wine
   # shellcheck disable=2139
   WINE="$(pwd)/AppDir/usr/bin/wine"
+  WINETRICKS="$(pwd)/AppDir/usr/bin/winetricks"
 }
 
 function arch_select()
@@ -51,13 +54,13 @@ function wine_configure()
 
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
-    "$WINE" winetricks fontsmooth=rgb
-    "$WINE" winetricks dxvk
+    "$WINETRICKS" fontsmooth=rgb
+    "$WINETRICKS" dxvk
   fi
 
   declare -A opts
 
-  for i in $("$WINE" winetricks list-all | awk '!/=+/ { print $1 }'); do
+  for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
     opts["$i"]=1
   done
 
@@ -73,7 +76,7 @@ function wine_configure()
       [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
     done
     # If not call winetricks
-    "$WINE" winetricks "$args" || continue
+    "$WINETRICKS" "$args" || continue
   done
 }
 
