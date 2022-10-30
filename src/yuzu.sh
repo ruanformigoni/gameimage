@@ -92,7 +92,7 @@ function runner_create()
     :elif [[ "\$*" ]]; then
     :  "\$APPDIR/usr/bin/yuzu" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/yuzu" "\$APPDIR/app/rom/${rom}"
+    :  "\$APPDIR/usr/bin/yuzu" -f -g "\$APPDIR/app/rom/${rom}"
     :fi
 	END
 
