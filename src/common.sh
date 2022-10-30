@@ -105,6 +105,7 @@ function params_validate()
 
   # Get name and normalize to dash separated lowercase
   local name="${1// /-}"
+  local name="${1//,/;}"
   local name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
 
   # Return

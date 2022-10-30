@@ -72,9 +72,9 @@ function runner_create()
     :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/bios/${bios}"
     :fi
     :
-    :if [[ "\$@" = "--config" ]]; then
+    :if [[ "\$*" = "--config" ]]; then
     :  "\$APPDIR/usr/bin/rpcs3"
-    :elif [[ "\$@" ]]; then
+    :elif [[ "\$*" ]]; then
     :  "\$APPDIR/usr/bin/rpcs3" "\$@"
     :else
     :  "\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app/rom"

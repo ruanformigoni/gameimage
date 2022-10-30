@@ -88,9 +88,9 @@ function runner_create()
     :  cp "\$APPDIR/app/bios/$bios" "\$path_bios"
     :fi
     :
-    :if [[ "\$@" = "--config" ]]; then
+    :if [[ "\$*" = "--config" ]]; then
     :  "\$APPDIR/usr/bin/retroarch"
-    :elif [[ "\$@" ]]; then
+    :elif [[ "\$*" ]]; then
     :  "\$APPDIR/usr/bin/retroarch" "\$@"
     :else
     :  "\$APPDIR/usr/bin/retroarch" -L "\$APPDIR/app/core/${core}" "\$APPDIR/app/rom/${rom}"

@@ -68,7 +68,7 @@ function runner_create()
     :bios_path="\${XDG_CONFIG_HOME}/PCSX2/bios"
     :
     :# Create path if not exists
-    :mkdir -p \${bios_path}
+    :mkdir -p "\${bios_path}"
     :
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :echo "bios: ${bios}"
@@ -78,9 +78,9 @@ function runner_create()
     :  cp "\$APPDIR/app/bios/${bios}" "\${bios_path}/${bios}"
     :fi
     :
-    :if [[ "\$@" = "--config" ]]; then
+    :if [[ "\$*" = "--config" ]]; then
     :  "\$APPDIR/usr/bin/pcsx2"
-    :elif [[ "\$@" ]]; then
+    :elif [[ "\$*" ]]; then
     :  "\$APPDIR/usr/bin/pcsx2" "\$@"
     :else
     :  "\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/rom/$rom"
