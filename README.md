@@ -1,6 +1,18 @@
 # Agape - AppImage Game Packer
 
-[[_TOC_]]
+- [Agape - AppImage Game Packer](#agape---appimage-game-packer)
+  - [Supported applications for packaging](#supported-applications-for-packaging)
+  - [Todo](#todo)
+  - [Build Dependencies](#build-dependencies)
+  - [Install](#install)
+  - [Usage](#usage)
+  - [Configuration](#configuration)
+    - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
+    - [Make the AppImage use the global configuration directory `~/.config`](#make-the-appimage-use-the-global-configuration-directory-`~/.config`)
+    - [Test the emulator inside the appimage](#test-the-emulator-inside-the-appimage)
+  - [Examples](#examples)
+  - [Showcase](#showcase)
+  - [Tutorial on how to show icons for generated AppImages](#tutorial-on-how-to-show-icons-for-generated-appimages)
 
 Game emulation is on the rise, with years of contribution from the community and
 now with Valve's portable handheld, the `steam deck`. The fragmentation with
