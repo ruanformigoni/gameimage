@@ -15,9 +15,9 @@ function usage()
   { sed -E 's/^\s+://' | tee /dev/null; } <<-END
   :-- Usage:
   :  $(basename "$0") --platform="target-platform" --name="game name" --dir=src-directory
-  :  - "platform": [retroarch,pcsx2,rpcs3,wine]
-  :  - "game name": The name of the game.
-  :  - "src-directory": The directory with the bios, rom, etc. May be absolute or relative.
+  :  - "platform": [retroarch,pcsx2,rpcs3,yuzu,wine]
+  :  - "name": The name of the game.
+  :  - "dir": The directory with the bios, rom, etc. May be absolute or relative.
   :  The source directory must have this structure (files can have any name):
   :    src-directory
   :    ├─rom
@@ -31,6 +31,8 @@ function usage()
   :    │ └─bios.[bin,PUP]
   :    └─icon
   :      └─icon.[png,svg,jpg]
+  :-- Usage:
+  :  $(basename "$0") --version # Prints version and exits
 	END
 }
 

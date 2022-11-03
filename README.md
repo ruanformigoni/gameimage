@@ -91,7 +91,7 @@ platform, `./gameimage.AppImage` displays the following example:
 ```
 -- Usage:
   main.sh --platform="target-platform" --name="game name" --dir=src-directory
-  - "platform": [retroarch,pcsx2,rpcs3,wine]
+  - "platform": [retroarch,pcsx2,rpcs3,yuzu,wine]
   - "name": The name of the game.
   - "dir": The directory with the bios, rom, etc. May be absolute or relative.
   The source directory must have this structure (files can have any name):
@@ -107,6 +107,8 @@ platform, `./gameimage.AppImage` displays the following example:
     │ └─bios.[bin,PUP]
     └─icon
       └─icon.[png,svg,jpg]
+-- Usage:
+  main.sh --version # Prints version and exits
 ```
 ## Configuration
 
