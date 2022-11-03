@@ -7,10 +7,11 @@ create-appimage:
   before_script:
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
+    - sed -i "s/TRUNK/$CI_COMMIT_TAG/" src/main.sh
     - ./deploy/deploy.sh
   artifacts:
     paths:
-      - ./build/Agape-x86_64.AppImage
+      - ./build/GameImage-x86_64.AppImage
     reports:
       dotenv: generate_executables.env
 
@@ -28,8 +29,8 @@ deploy-appimage:
     description: '$CI_COMMIT_TAG'
     assets:
       links:
-        - name: 'agape.AppImage'
-          url: 'https://gitlab.com/formigoni/agape/-/jobs/${GE_JOB_ID}/artifacts/file/build/Agape-x86_64.AppImage'
+        - name: 'GameImage-x86_64.AppImage'
+          url: 'https://gitlab.com/formigoni/gameimage/-/jobs/${GE_JOB_ID}/artifacts/file/build/GameImage-x86_64.AppImage'
   needs:
     - job: create-appimage
       artifacts: true

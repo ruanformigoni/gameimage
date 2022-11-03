@@ -62,6 +62,8 @@ function deps()
 
 function main()
 {
+  [[ "$*" = "--version" ]] && { echo "TRUNK"; exit; }
+
   deps "7z" "unzip"
 
   declare -A args

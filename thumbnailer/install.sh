@@ -19,13 +19,13 @@ else
 fi
 
 # Copy thumbnail generator
-sudo curl --output /usr/bin/thumbnailer-appimage https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/thumbnailer-appimage
+sudo curl --output /usr/bin/thumbnailer-appimage https://gitlab.com/formigoni/gameimage/-/raw/master/thumbnailer/thumbnailer-appimage
 sudo chmod +x /usr/bin/thumbnailer-appimage
 
 # Copy tumbler entry
 mkdir -p ~/.local/share/thumbnailers
 curl --output ~/.local/share/thumbnailers/appimage.thumbnailer \
-  https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/appimage.thumbnailer
+  https://gitlab.com/formigoni/gameimage/-/raw/master/thumbnailer/appimage.thumbnailer
 
 # Remove 2GB limit on thumbnails
 mkdir -p ~/.config/tumbler

@@ -15,7 +15,7 @@ mkdir -p AppDir/usr/bin
 
 # Copy files
 cp -r ../src/* AppDir/usr/bin
-cp -r ../doc/agape.png AppDir/
+cp -r ../doc/gameimage.png AppDir/
 
 for i in AppDir/usr/bin/*; do
   echo "$i"
@@ -31,11 +31,11 @@ END
 chmod +x AppDir/AppRun
 
 # Create desktop entry
-{ sed -E 's/^\s+://' | tee AppDir/agape.desktop; } <<-END
+{ sed -E 's/^\s+://' | tee AppDir/gameimage.desktop; } <<-END
   :[Desktop Entry]
-  :Name=Agape
+  :Name=GameImage
   :Exec=/usr/bin/bash
-  :Icon=agape
+  :Icon=gameimage
   :Type=Application
   :Categories=Utility;
 END

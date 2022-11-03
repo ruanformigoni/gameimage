@@ -1,6 +1,10 @@
-# Agape - AppImage Game Packer
+<div align="center">
+  <img src="doc/gameimage.svg"  width="150">
+</div>
 
-- [Agape - AppImage Game Packer](#agape---appimage-game-packer)
+# GameImage - AppImage Game Packer
+
+- [GameImage - AppImage Game Packer](#gameimage---appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
   - [Todo](#todo)
   - [Build Dependencies](#build-dependencies)
@@ -17,8 +21,8 @@
 Game emulation is on the rise, with years of contribution from the community and
 now with Valve's portable handheld, the `steam deck`. The fragmentation with
 several platform emulators is daunting, especially since it requires repetitive
-configuration for the first time or if the config files go missing. Agape is a
-tool to pack a runner (such as an emulator), a game, and it's configs in a
+configuration for the first time or if the config files go missing. GameImage is
+a tool to pack a runner (such as an emulator), a game, and it's configs in a
 single `appimage` package.
 
 Advantages:
@@ -77,12 +81,12 @@ sudo apt install p7zip-full p7zip-rar
 
 ## Install
 
-Download the appimage in the [releases](https://gitlab.com/formigoni/agape/-/releases) page.
+Download the appimage in the [releases](https://gitlab.com/formigoni/gameimage/-/releases) page.
 
 ## Usage
 
-Agape requires a directory set-up with the required files for the target
-platform, `./agape.AppImage` displays the following example:
+Gameimage requires a directory set-up with the required files for the target
+platform, `./gameimage.AppImage` displays the following example:
 
 ```
 -- Usage:
@@ -157,7 +161,7 @@ my-game-dir
 
 and run:
 ```
-agape.AppImage --platform=rpcs3 --name="My cool game" --dir=./my-game-dir
+gameimage.AppImage --platform=rpcs3 --name="My cool game" --dir=./my-game-dir
 ```
 </details>
 
@@ -180,7 +184,7 @@ my-game-dir
 
 and run:
 ```
-./agape.AppImage --platform=pcsx2 --name="My cool game" --dir=./my-game-dir
+./gameimage.AppImage --platform=pcsx2 --name="My cool game" --dir=./my-game-dir
 ```
 </details>
 
@@ -213,7 +217,7 @@ my-game-dir
 and run:
 
 ```
-./agape.AppImage --platform=retroarch --name="My cool game" --dir=./my-game-dir
+./gameimage.AppImage --platform=retroarch --name="My cool game" --dir=./my-game-dir
 ```
 
 This defaults the disc 1 to start with the appimage, you can open retroarch
@@ -228,7 +232,7 @@ there. Remove the `bios` folder for platforms that do not require it.
 
 Video tutorial:
 
-![agape-yuzu-example](doc/yuzu.mp4)
+![gameimage-yuzu-example](doc/yuzu.mp4)
 
 For `yuzu`:
 
@@ -251,7 +255,7 @@ my-game-dir
 and run:
 
 ```
-./agape.AppImage --platform=yuzu --name="My cool game" --dir=./my-game-dir
+./gameimage.AppImage --platform=yuzu --name="My cool game" --dir=./my-game-dir
 ```
 
 During the install, yuzu will open to install the updates in the `update`
@@ -272,7 +276,7 @@ In the `winetricks` stage, some applications might required `dotnet45`
 
 Video tutorial
 
-![agape-wine-example](doc/agape-wine-example.mp4)
+![gameimage-wine-example](doc/wine.mp4)
 
 ---
 
@@ -292,7 +296,7 @@ my-game-dir
 and run:
 
 ```
-./agape.AppImage --platform=wine --name="My cool game" --dir=./my-game-dir
+./gameimage.AppImage --platform=wine --name="My cool game" --dir=./my-game-dir
 ```
 
 During the installation, you will select the architecture (32 or 64) bit, and
@@ -317,7 +321,7 @@ The following methods use thunar, other supported file managers are listed
 Execute the install script:
 
 ```sh
-curl https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/install.sh | bash
+curl https://gitlab.com/formigoni/gameimage/-/raw/master/thumbnailer/install.sh | bash
 ```
 </details>
 
@@ -329,10 +333,10 @@ curl https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/install.sh | ba
   - `sudo pacman -S tumbler squashfs-tools thunar`
 
 2. Copy the thumbnailer files
-  - `sudo curl --output /usr/bin/thumbnailer-appimage https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/thumbnailer-appimage`
+  - `sudo curl --output /usr/bin/thumbnailer-appimage https://gitlab.com/formigoni/gameimage/-/raw/master/thumbnailer/thumbnailer-appimage`
   - `sudo chmod +x /usr/bin/thumbnailer-appimage`
   - `mkdir -p ~/.local/share/thumbnailers`
-  - `curl --output ~/.local/share/thumbnailers/appimage.thumbnailer https://gitlab.com/formigoni/agape/-/raw/master/thumbnailer/appimage.thumbnailer`
+  - `curl --output ~/.local/share/thumbnailers/appimage.thumbnailer https://gitlab.com/formigoni/gameimage/-/raw/master/thumbnailer/appimage.thumbnailer`
 
 3. Allow icons on files over 2GB
   - `mkdir -p ~/.config/tumbler`
