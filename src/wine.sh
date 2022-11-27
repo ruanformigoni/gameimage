@@ -27,7 +27,11 @@ function wine_download()
   msg "wine: ${url%\"}"
 
   if [ ! -f "AppDir/usr/bin/wine" ]; then
-    wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
+    if [ "$YAML" ]; then
+      wget -q --show-progress --progress=dot:giga -O AppDir/usr/bin/wine "${url%\"}"
+    else
+      wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
+    fi
     chmod +x AppDir/usr/bin/wine
     ln -s wine AppDir/usr/bin/winetricks
   fi
@@ -39,11 +43,15 @@ function wine_download()
 
 function arch_select()
 {
-  msg "Please select the architecture" >&2
-  select i in "win32" "win64"; do
-    [ "$i" ] || continue;
-    echo "$i"; break
-  done
+  if [ "$YAML" ]; then
+    yq -e '.arch' "$YAML"
+  else
+    msg "Please select the architecture" >&2
+    select i in "win32" "win64"; do
+      [ "$i" ] || continue;
+      echo "$i"; break
+    done
+  fi
 }
 
 function wine_configure()
@@ -60,54 +68,71 @@ function wine_configure()
 
   declare -A opts
 
-  for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
-    opts["$i"]=1
-  done
-
-  pwd
-  msg "winetricks, use it to install dependencies, leave it blank to continue"
-  while :; do
-    echo -n "winetricks> "
-    read -r args
-    # Stop on empty input
-    [ "$args" ] || break
-    # Check if is bash cmd
-    for i in "${args[@]}"; do
-      [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
+  if ! [ "$YAML" ]; then
+    for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
+      opts["$i"]=1
     done
-    # If not call winetricks
-    "$WINETRICKS" "$args" || continue
-  done
+
+    pwd
+    msg "winetricks, use it to install dependencies, leave it blank to continue"
+    while :; do
+      echo -n "winetricks> "
+      read -r args
+      # Stop on empty input
+      [ "$args" ] || break
+      # Check if is bash cmd
+      for i in "${args[@]}"; do
+        [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
+      done
+      # If not call winetricks
+      "$WINETRICKS" "$args" || continue
+    done
+  fi
 }
 
 function wine_install()
 {
-  pwd
-  msg "wine, install desired applications, leave it blank to continue"
-  while :; do
-    echo -n "wine> "
-    read -r args
-    # Stop on empty input
-    [ "$args" ] || break
-    # Check if config
-    [ "${args[*]}" = "config" ] && { "$WINE"; continue; }
-    # Check if is bash cmd
-    [[ ! "${args[*]}" =~ .*\.exe ]] && { eval "${args[*]}" || true; continue; }
-    # Exec as wine arg
-    "$WINE" "$args"
-  done
+  if [ "$YAML" ]; then
+    local rom="$(yq -e '.rom' "$YAML")"
+    #shellcheck disable=2005
+    echo "$(cd "$(dirname "$rom")" && "$WINE" "$rom")"
+    while [ "$("$SCRIPT_DIR"/menu-button "Install another file?" "yes|no")" != "no" ]; do
+      readarray -t files <<< "$(find "$1/rom" -iname "*.exe" -exec echo -n "{}|" \;)"
+      files=("${files[*]%|}")
+      files=("${files[*]//\//\\/}")
+      executable="$("$SCRIPT_DIR"/menu-button "Select the file to install" "${files[*]}")"
+      "$WINE" "$executable"
+    done
+  else
+    msg "Showing executable files in $1/rom"
+    msg "Select the file to install"
+    while :; do
+      _eval_select 'find ' "$1/rom" ' -iname "*.exe"' || break
+      #shellcheck disable=2005
+      echo "$(cd "$(dirname "$_FN_OUT_0")" && "$WINE" "$_FN_OUT_0")"
+      msg -n "Install another file? [y/N]: "
+      read -r opt; [ "${opt,,}" = "y" ] || break
+    done
+  fi
 }
 
 function wine_executable_select()
 {
-  msg "Select the game's executable"
-  readarray -t files <<< "$(find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe")"
+  msg "Select the main executable"
 
   local executable
-  select i in "${files[@]}"; do
-    [ "$i" ] || continue;
-    executable="$i"; break
-  done
+  if [ "$YAML" ]; then
+    local files
+    readarray -t files <<< "$(find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe" -exec echo -n "{}|" \;)"
+    files=("${files[*]%|}")
+    files=("${files[*]//\//\\/}")
+    executable="$("$SCRIPT_DIR"/menu-button "Select the main executable" "${files[*]}")"
+  else
+    _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
+    executable="$_FN_OUT_0"
+  fi
+
+  msg "Selected: $executable"
 
   # Get directory to move out from drive c:
   local dir_installation
@@ -120,7 +145,7 @@ function wine_executable_select()
   mkdir -p "$dir_target"
 
   # Move to target directory
-  msg "Moving $dir_installation to $dir_target"
+  msg "Moving '$dir_installation' to '$dir_target'"
   mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
 
   echo -e "$dir_installation\n$executable"
@@ -182,8 +207,10 @@ function runner_create()
   # Allow execute
   chmod +x AppDir/AppRun
 
-  msg "AppRun written, make further changes to it if you desire, then press enter..."
-  read -r
+  if ! [ "$YAML" ]; then
+    msg -n "AppRun written, make further changes to it if you desire, then press enter..."
+    read -r
+  fi
 }
 
 function main()
@@ -192,10 +219,11 @@ function main()
   readarray -t ret <<< "$(params_validate "wine" "$@")"
 
   local name="${ret[0]}"
+  local dir="${ret[1]}"
   local cover="${ret[4]}"
 
   # Create dirs
-  build_dir="$(dir_build_create)"; cd "${build_dir}"
+  cd "$(dir_build_create "$dir")"
 
   dir_appdir_create
 
@@ -205,7 +233,7 @@ function main()
   # Install and configure application
   wine_download
   wine_configure
-  wine_install
+  wine_install "$dir"
   readarray -t ret <<< "$(wine_executable_select)"
 
   # Create runner script

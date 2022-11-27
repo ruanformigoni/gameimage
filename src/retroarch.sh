@@ -29,7 +29,11 @@ function retroarch_download()
       msg "retroarch: $url"
 
       # Get AppImage of retroarch
-      wget -q --show-progress --progress=bar:noscroll "$url"
+      if [ "$YAML" ]; then
+        wget -q --show-progress --progress=dot:giga "$url"
+      else
+        wget -q --show-progress --progress=bar:noscroll "$url"
+      fi
 
       # Extract and move
       7z x "RetroArch.7z"
@@ -114,7 +118,7 @@ function main()
   local rom="${ret[5]}"
 
   # Create dirs
-  cd "$(dir_build_create)"
+  cd "$(dir_build_create "$dir")"
 
   dir_appdir_create
 

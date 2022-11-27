@@ -20,12 +20,19 @@ function die()
 
 function msg()
 {
+  declare -a opts
+  while [ $# -gt 1 ]; do
+    opts+=("$1")
+    shift
+  done
+
   # Test for color support
   if [ "$(tput colors)" -ge 8 ]; then
-    echo -e "[\033[32m*\033[m] $*" >&2
+    eval "echo -e ${opts[*]} [\\\033[32m*\\\033[m] \"$*\"" >&2
   else
-    echo "[*] $*" >&2
+    eval "echo ${opts[*]} [*] \"$*\"" >&2
   fi
+
 }
 
 function extract()
@@ -40,6 +47,45 @@ function extract()
     msg "Invalid extract file format"
     die
   fi
+}
+
+# Selects an option from an enumerated list
+function _select()
+{
+  export _FN_OUT_0=""
+
+  declare -a opts; for i; do opts+=("$i"); done
+
+  if [ "$#" -gt 1 ]; then
+    msg "Select an option from 0 to $(($#-1)) or type continue"
+    while :; do
+      # Print list
+      for (( i=0; i < $#; i=i+1 )); do
+        echo "$i) ${opts[i]}" >&2
+      done
+      # Select
+      echo -n "option?> " >&2; read -r opt
+      # Evaluate
+      [[ "$opt" = "continue" ]] && return 1
+      if [[ "$opt" =~ ^[0-9]+$ ]] && [ "$opt" -lt "${#opts[@]}" ]; then
+        _FN_OUT_0="${opts[$opt]}"
+        break
+      fi
+    done
+  elif [ "$#" -gt 0 ]; then
+    _FN_OUT_0="$1"
+  else
+    return 1
+  fi
+
+  msg "Selected $_FN_OUT_0"
+}
+
+function _eval_select()
+{
+  local files
+  readarray -t files <<< "$(eval "$*")"
+  _select "${files[@]}"
 }
 
 function param_validate()
@@ -80,7 +126,7 @@ function params_validate()
 
     if [[ "${#files[@]}" -eq 1 ]]; then
       rom="${files[0]}"
-    else
+    elif [ -z "$YAML" ]; then
       msg "Select the rom file to boot when the appimage is clicked"
       msg "It must be a number between 1 and ${#files[@]}"
       msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
@@ -90,6 +136,9 @@ function params_validate()
         rom="$i"
         break
       done
+    else
+      rom="$(yq -e '.rom' "$YAML")"
+      [ -f "$rom" ] || { msg "Invalid rom path in $YAML"; die; }
     fi
 
     msg "Selected rom: $rom"
@@ -114,21 +163,23 @@ function params_validate()
 
 function dir_build_create()
 {
+  cd "$1"
+
   local build_dir="build"
 
   mkdir -p "$build_dir"
 
   msg "build dir: $(readlink -f ./"${build_dir}")"
 
-  echo "$build_dir"
+  echo "$1/$build_dir"
 }
 
 function dir_appdir_create()
 {
   local appdir="AppDir"
 
-  if [ -d "$appdir" ]; then
-    echo -n "AppDir from previous run found, remove it? [y/N]: "
+  if [ -d "$appdir" ] && [ -z "${YAML}" ]; then
+    msg -n "AppDir from previous run found, remove it? [y/N]: "
     read -r opt
     [ "$opt" = "y" ] && rm -rf "$appdir";
   fi
@@ -148,7 +199,13 @@ function appimagetool_download()
   msg "appimagetool: $url"
 
   # Get appimagetool
-  [ ! -f "./appimagetool" ] && wget -q --show-progress --progress=bar:noscroll -O appimagetool "$url"
+  if [ ! -f "./appimagetool" ]; then
+    if [ "$YAML" ]; then
+      wget -q --show-progress --progress=dot:mega -O appimagetool "$url"
+    else
+      wget -q --show-progress --progress=bar:noscroll -O appimagetool "$url"
+    fi
+  fi
 
   # Make executable
   chmod +x appimagetool
@@ -172,7 +229,11 @@ function files_copy()
   msg "imagemagick: ${url}"
   ## Get imagemagick
   if [ ! -f "imagemagick" ]; then
-    wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
+    if [ "$YAML" ]; then
+      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
+    else
+      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
+    fi
     chmod +x imagemagick
   fi
   ## Convert image to png

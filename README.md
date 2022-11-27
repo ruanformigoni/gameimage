@@ -37,6 +37,12 @@ Advantages:
     install, no dependencies required.
 - [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
 
+## Showcase
+
+Files displayed on the `thunar` file manager.
+
+<img src="doc/wall.png"  width="720">
+
 ## Supported applications for packaging
 
 <a href="https://www.retroarch.com/" target="_blank">
@@ -61,7 +67,8 @@ Advantages:
 
 ## Todo
 
-- [ ] Open yad GUI, when no arguments are passed
+- [ ] Launcher mode
+- [ ] Shared runners
 
 ## Build Dependencies
 
@@ -306,12 +313,6 @@ use wine to install the desired game from it's gog's `.exe`, in the rom folder.
 </details>
 
 ---
-
-## Showcase
-
-Files displayed on the `thunar` file manager.
-
-<img src="doc/wall.png"  width="720">
 
 ## Tutorial on how to show icons for generated AppImages
 

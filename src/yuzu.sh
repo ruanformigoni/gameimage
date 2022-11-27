@@ -31,7 +31,11 @@ function yuzu_download()
   if [ ! -f "AppDir/usr/bin/yuzu" ]; then
     if [ ! -f "yuzu.AppImage" ]; then
       # Get AppImage of yuzu
-      wget -q --show-progress --progress=bar:noscroll -O yuzu "$url"
+      if [ "$YAML" ]; then
+        wget -q --show-progress --progress=dot:mega -O yuzu "$url"
+      else
+        wget -q --show-progress --progress=bar:noscroll -O yuzu "$url"
+      fi
       # Make executable
       chmod +x ./yuzu
     fi
@@ -113,7 +117,7 @@ function main()
   local keys="${ret[6]}"
 
   # Create dirs
-  cd "$(dir_build_create)"
+  cd "$(dir_build_create "$dir")"
 
   dir_appdir_create
 

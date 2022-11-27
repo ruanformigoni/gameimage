@@ -7,6 +7,17 @@
 
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# Compile gui
+cd gui/wizard && cargo build --release
+
+cd "$(dirname "$SCRIPT_DIR")"
+
+cd gui/menu-button && cargo build --release
+
+cd "$(dirname "$SCRIPT_DIR")"
+
 # Create build dir
 mkdir -p build && cd build
 
@@ -16,6 +27,8 @@ mkdir -p AppDir/usr/bin
 # Copy files
 cp -r ../src/* AppDir/usr/bin
 cp -r ../doc/gameimage.png AppDir/
+cp -r ../gui/wizard/target/release/gameimage-install-gui AppDir/usr/bin/gui
+cp -r ../gui/menu-button/target/release/menu-button AppDir/usr/bin/menu-button
 
 for i in AppDir/usr/bin/*; do
   echo "$i"

@@ -32,7 +32,11 @@ function rpcs3_download()
   if [ ! -f "AppDir/usr/bin/rpcs3" ]; then
     if [ ! -f "rpcs3.AppImage" ]; then
       # Get AppImage of rpcs3
-      wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "$url"
+      if [ "$YAML" ]; then
+        wget -q --show-progress --progress=dot:mega -O rpcs3.AppImage "$url"
+      else
+        wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "$url"
+      fi
 
       # Make executable
       chmod +x ./rpcs3.AppImage
@@ -97,7 +101,7 @@ function main()
   local cover="${ret[4]}"
 
   # Create dirs
-  build_dir="$(dir_build_create)"; cd "${build_dir}"
+  cd "$(dir_build_create "$dir")"
 
   dir_appdir_create
 

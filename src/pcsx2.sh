@@ -30,7 +30,11 @@ function pcsx2_download()
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
     if [ ! -f "pcsx2.AppImage" ]; then
       # Get AppImage of pcsx2
-      wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "$url"
+      if [ "$YAML" ]; then
+        wget -q --show-progress --progress=dot:mega -O pcsx2.AppImage "$url"
+      else
+        wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "$url"
+      fi
 
       # Make executable
       chmod +x ./pcsx2.AppImage
@@ -104,7 +108,7 @@ function main()
   local rom="${ret[5]}"
 
   # Create dirs
-  build_dir="$(dir_build_create)"; cd "${build_dir}"
+  cd "$(dir_build_create "$dir")"
 
   dir_appdir_create
 
