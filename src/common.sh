@@ -27,7 +27,7 @@ function msg()
   done
 
   # Test for color support
-  if [ "$(tput colors)" -ge 8 ]; then
+  if [ "$(tput colors)" -ge 8 ] && [ ! "$YAML" ]; then
     eval "echo -e ${opts[*]} [\\\033[32m*\\\033[m] \"$*\"" >&2
   else
     eval "echo ${opts[*]} [*] \"$*\"" >&2
