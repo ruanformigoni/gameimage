@@ -1,10 +1,5 @@
 image: "rust:latest"
 
-default:
-  before_script:
-    - rustc --version 
-    - cargo --version
-
 stages:
   - build
   - release
@@ -12,6 +7,8 @@ stages:
 create-appimage:
   stage: build
   before_script:
+    - rustc --version 
+    - cargo --version
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
     - apt update
