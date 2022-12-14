@@ -6,16 +6,16 @@
 
 - [GameImage - AppImage Game Packer](#gameimage---appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
-  - [Todo](#todo)
+  - [Showcase](#showcase)
+  - [Graphical User Interface (GUI)](#graphical-user-interface-(gui))
   - [Build Dependencies](#build-dependencies)
   - [Install](#install)
-  - [Usage](#usage)
+  - [Usage (Command Line)](#usage-(command-line))
   - [Configuration](#configuration)
     - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
-    - [Make the AppImage use the global configuration directory `~/.config`](#make-the-appimage-use-the-global-configuration-directory-`~/.config`)
+    - [Make the AppImage use the global configuration directory](#make-the-appimage-use-the-global-configuration-directory)
     - [Test the emulator inside the appimage](#test-the-emulator-inside-the-appimage)
   - [Examples](#examples)
-  - [Showcase](#showcase)
   - [Tutorial on how to show icons for generated AppImages](#tutorial-on-how-to-show-icons-for-generated-appimages)
 
 Game emulation is on the rise, with years of contribution from the community and
@@ -36,12 +36,6 @@ Advantages:
 - [x] Usability: get your game running with a double click on a fresh linux
     install, no dependencies required.
 - [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
-
-## Showcase
-
-Files displayed on the `thunar` file manager.
-
-<img src="doc/wall.png"  width="720">
 
 ## Supported applications for packaging
 
@@ -65,10 +59,15 @@ Files displayed on the `thunar` file manager.
 <img src="doc/yuzu.jpg"  width="120" height="120">
 </a>
 
-## Todo
+## Showcase
 
-- [ ] Launcher mode
-- [ ] Shared runners
+Files displayed on the `thunar` file manager.
+
+<img src="doc/wall.png"  width="720">
+
+## Graphical User Interface (GUI)
+
+<img src="doc/example-gui.png"  width="1000">
 
 ## Build Dependencies
 
@@ -90,7 +89,7 @@ sudo apt install p7zip-full p7zip-rar
 
 Download the appimage in the [releases](https://gitlab.com/formigoni/gameimage/-/releases) page.
 
-## Usage
+## Usage (Command Line)
 
 Gameimage requires a directory set-up with the required files for the target
 platform, `./gameimage.AppImage` displays the following example:
@@ -133,10 +132,9 @@ Change the `global` settings, and it will only apply to the game in the
 In the case of wine if you pass any parameters, they'll be executed as
 `wine args...`
 
-### Make the AppImage use the global configuration directory `~/.config`
+### Make the AppImage use the global configuration directory
 
-
-Include an extra `.` in the extension:
+Include an extra `.` in the extension to use `~/.config`:
 
 From `my-cool-game.AppImage` to `my-cool-game..AppImage`
 
@@ -279,7 +277,7 @@ folder.
 
 Since version `0.2.0` the wine module works across several linux distros.
 
-In the `winetricks` stage, some applications might required `dotnet45`
+In the `winetricks` stage, some applications might require `dotnet45`
 
 ---
 
