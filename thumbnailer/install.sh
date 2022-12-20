@@ -10,9 +10,9 @@ set -e
 
 # Install required packages
 if command -v apt; then
-  sudo apt install -y tumbler squashfs-tools thunar
+  sudo apt install -y tumbler squashfs-tools thunar imagemagick
 elif command -v pacman; then
-  sudo pacman -S --noconfirm tumbler squashfs-tools thunar
+  sudo pacman -S --noconfirm tumbler squashfs-tools thunar imagemagick
 else
   echo "Unsupported package manager, please install the packages manually"
   exit 1
