@@ -85,6 +85,16 @@ sudo apt update
 sudo apt install p7zip-full p7zip-rar
 ```
 
+For Fedora:
+```
+sudo dnf install p7zip
+```
+
+For Vanilla OS:
+```
+sudo abroot exec apt install p7zip-full p7zip-rar
+```
+
 ## Install
 
 Download the appimage in the [releases](https://gitlab.com/formigoni/gameimage/-/releases) page.
