@@ -11,9 +11,9 @@
 
 set -e
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-source "$SCRIPT_DIR/common.sh"
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 # Get wine appimage and define wine alias
 function wine_download()
@@ -22,12 +22,12 @@ function wine_download()
 
   url=$(curl -H "Accept: application/vnd.github+json" \
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
-    grep -Eo "https://.*continuous-.*/wine-ge.*\.AppImage\"")
+    grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST.*\.AppImage\"")
 
   msg "wine: ${url%\"}"
 
   if [ ! -f "AppDir/usr/bin/wine" ]; then
-    if [ "$YAML" ]; then
+    if [ "$GIMG_YAML" ]; then
       wget -q --show-progress --progress=dot:giga -O AppDir/usr/bin/wine "${url%\"}"
     else
       wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
@@ -43,8 +43,8 @@ function wine_download()
 
 function arch_select()
 {
-  if [ "$YAML" ]; then
-    yq -e '.arch' "$YAML"
+  if [ "$GIMG_YAML" ]; then
+    yq -e '.arch' "$GIMG_YAML"
   else
     msg "Please select the architecture" >&2
     select i in "win32" "win64"; do
@@ -68,7 +68,7 @@ function wine_configure()
 
   declare -A opts
 
-  if ! [ "$YAML" ]; then
+  if ! [ "$GIMG_YAML" ]; then
     for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
       opts["$i"]=1
     done
@@ -92,15 +92,15 @@ function wine_configure()
 
 function wine_install()
 {
-  if [ "$YAML" ]; then
-    local rom="$(yq -e '.rom' "$YAML")"
+  if [ "$GIMG_YAML" ]; then
+    local rom="$(yq -e '.rom' "$GIMG_YAML")"
     #shellcheck disable=2005
     echo "$(cd "$(dirname "$rom")" && "$WINE" "$rom")"
-    while [ "$("$SCRIPT_DIR"/menu-button "Install another file?" "yes|no")" != "no" ]; do
+    while [ "$("$GIMG_SCRIPT_DIR"/menu-button "Install another file?" "yes|no")" != "no" ]; do
       readarray -t files <<< "$(find "$1/rom" -iname "*.exe" -exec echo -n "{}|" \;)"
       files=("${files[*]%|}")
       files=("${files[*]//\//\\/}")
-      executable="$("$SCRIPT_DIR"/menu-button "Select the file to install" "${files[*]}")"
+      executable="$("$GIMG_SCRIPT_DIR"/menu-button "Select the file to install" "${files[*]}")"
       "$WINE" "$executable"
     done
   else
@@ -121,12 +121,12 @@ function wine_executable_select()
   msg "Select the main executable"
 
   local executable
-  if [ "$YAML" ]; then
+  if [ "$GIMG_YAML" ]; then
     local files
     readarray -t files <<< "$(find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe" -exec echo -n "{}|" \;)"
     files=("${files[*]%|}")
     files=("${files[*]//\//\\/}")
-    executable="$("$SCRIPT_DIR"/menu-button "Select the main executable" "${files[*]}")"
+    executable="$("$GIMG_SCRIPT_DIR"/menu-button "Select the main executable" "${files[*]}")"
   else
     _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
     executable="$_FN_OUT_0"
@@ -207,7 +207,7 @@ function runner_create()
   # Allow execute
   chmod +x AppDir/AppRun
 
-  if ! [ "$YAML" ]; then
+  if ! [ "$GIMG_YAML" ]; then
     msg -n "AppRun written, make further changes to it if you desire, then press enter..."
     read -r
   fi

@@ -116,6 +116,21 @@ platform, `./gameimage.AppImage` displays the following example:
 -- Usage:
   main.sh --version # Prints version and exits
 ```
+### Select Wine Distribution
+
+Default distribution is [wine-ge](https://github.com/ruanformigoni/wine). Available are:
+* staging
+* caffe
+* vaniglia
+* soda
+
+To change it, export the variable before running the appimage, e.g:
+
+```bash
+export GIMG_WINE_DIST=soda
+```
+
+
 ## Configuration
 
 Consider an AppImage named `my-cool-game.AppImage`:

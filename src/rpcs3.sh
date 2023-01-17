@@ -13,9 +13,9 @@ set -e
 
 shopt -s globstar
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-source "$SCRIPT_DIR/common.sh"
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 
 function rpcs3_download()
@@ -32,7 +32,7 @@ function rpcs3_download()
   if [ ! -f "AppDir/usr/bin/rpcs3" ]; then
     if [ ! -f "rpcs3.AppImage" ]; then
       # Get AppImage of rpcs3
-      if [ "$YAML" ]; then
+      if [ "$GIMG_YAML" ]; then
         wget -q --show-progress --progress=dot:mega -O rpcs3.AppImage "$url"
       else
         wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "$url"

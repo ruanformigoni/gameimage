@@ -10,8 +10,15 @@
 
 set -e
 
-export CALL_DIR="$(pwd)"
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# Global variables
+# # YAML Location
+export GIMG_YAML=""
+# # Call directory
+export GIMG_CALL_DIR="$(pwd)"
+# # Script directory
+export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# # Wine distribution - ge,caffe,staging,vaniglia,soda
+[ ! -v GIMG_WINE_DIST ] && export GIMG_WINE_DIST="ge"
 
 function usage()
 {
@@ -48,7 +55,7 @@ function die()
 function msg()
 {
   # Test for color support
-  if [ "$(tput colors)" -ge 8 ] && [ -z "$YAML" ]; then
+  if [ "$(tput colors)" -ge 8 ] && [ -z "$GIMG_YAML" ]; then
     echo -e "[\033[32m*\033[m] $*" >&2
   else
     echo "[*] $*" >&2
@@ -69,22 +76,20 @@ function main()
 {
   deps "7z" "unzip"
 
-  export YAML=""
-
   declare -A args
 
   if [[ "$#" -eq 0 ]]; then
-    "$SCRIPT_DIR"/gui
+    "$GIMG_SCRIPT_DIR"/gui
     exit
   elif [[ "$*" = "--version" ]]; then
     echo "TRUNK"
     exit
   elif [ "$*" = "--yaml" ]; then
-    export YAML="${CALL_DIR}/gameimage.yml"
-    msg "Yaml: $YAML"
-    args[--name]="$(yq -e '.name' "$YAML")"
-    args[--platform]="$(yq -e '.platform' "$YAML")"
-    args[--dir]="$(yq -e '.dir' "$YAML")"
+    export GIMG_YAML="${GIMG_CALL_DIR}/gameimage.yml"
+    msg "Yaml: $GIMG_YAML"
+    args[--name]="$(yq -e '.name' "$GIMG_YAML")"
+    args[--platform]="$(yq -e '.platform' "$GIMG_YAML")"
+    args[--dir]="$(yq -e '.dir' "$GIMG_YAML")"
   else
     for i; do
       [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}" && continue
@@ -97,11 +102,11 @@ function main()
   [[ ${#args[@]} -eq 3 ]] || { msg "Invalid number of arguments"; die; }
 
   case "${args[--platform]}" in
-    "retroarch") "${SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}";;
-    "pcsx2") "${SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}";;
-    "rpcs3") "${SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}";;
-    "yuzu") "${SCRIPT_DIR}/yuzu.sh" "${args[--name]}" "${args[--dir]}";;
-    "wine") "${SCRIPT_DIR}/wine.sh" "${args[--name]}" "${args[--dir]}";;
+    "retroarch") "${GIMG_SCRIPT_DIR}/retroarch.sh" "${args[--name]}" "${args[--dir]}";;
+    "pcsx2") "${GIMG_SCRIPT_DIR}/pcsx2.sh" "${args[--name]}" "${args[--dir]}";;
+    "rpcs3") "${GIMG_SCRIPT_DIR}/rpcs3.sh" "${args[--name]}" "${args[--dir]}";;
+    "yuzu") "${GIMG_SCRIPT_DIR}/yuzu.sh" "${args[--name]}" "${args[--dir]}";;
+    "wine") "${GIMG_SCRIPT_DIR}/wine.sh" "${args[--name]}" "${args[--dir]}";;
     *) msg "Invalid platform '${args[--platform]}'"; die;;
   esac
 

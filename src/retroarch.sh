@@ -13,9 +13,9 @@ set -e
 
 shopt -s globstar
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-source "$SCRIPT_DIR/common.sh"
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 function retroarch_download()
 {
@@ -29,7 +29,7 @@ function retroarch_download()
       msg "retroarch: $url"
 
       # Get AppImage of retroarch
-      if [ "$YAML" ]; then
+      if [ "$GIMG_YAML" ]; then
         wget -q --show-progress --progress=dot:giga "$url"
       else
         wget -q --show-progress --progress=bar:noscroll "$url"

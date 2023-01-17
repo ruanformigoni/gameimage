@@ -13,9 +13,9 @@ set -e
 
 shopt -s globstar
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-source "$SCRIPT_DIR/common.sh"
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 function yuzu_download()
 {
@@ -31,7 +31,7 @@ function yuzu_download()
   if [ ! -f "AppDir/usr/bin/yuzu" ]; then
     if [ ! -f "yuzu.AppImage" ]; then
       # Get AppImage of yuzu
-      if [ "$YAML" ]; then
+      if [ "$GIMG_YAML" ]; then
         wget -q --show-progress --progress=dot:mega -O yuzu "$url"
       else
         wget -q --show-progress --progress=bar:noscroll -O yuzu "$url"
