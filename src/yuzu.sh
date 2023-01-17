@@ -123,8 +123,8 @@ function main()
 
   # Download tools
   appimagetool_download
-
   yuzu_download
+  imagemagick_download
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "null" "$cover" "$keys"

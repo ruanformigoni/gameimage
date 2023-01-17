@@ -124,8 +124,8 @@ function main()
 
   # Download tools
   appimagetool_download
-
   retroarch_download
+  imagemagick_download
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"

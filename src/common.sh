@@ -211,6 +211,21 @@ function appimagetool_download()
   chmod +x appimagetool
 }
 
+function imagemagick_download()
+{
+  local url="https://imagemagick.org/archive/binaries/magick"
+  msg "imagemagick: ${url}"
+  ## Get imagemagick
+  if [ ! -f "imagemagick" ]; then
+    if [ "$GIMG_YAML" ]; then
+      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
+    else
+      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
+    fi
+    chmod +x imagemagick
+  fi
+}
+
 function files_copy()
 {
   local name="$1"
@@ -225,17 +240,6 @@ function files_copy()
   cp -r "$dir"/rom/* AppDir/app/rom
 
   # Copy image to AppDir
-  local url="https://imagemagick.org/archive/binaries/magick"
-  msg "imagemagick: ${url}"
-  ## Get imagemagick
-  if [ ! -f "imagemagick" ]; then
-    if [ "$GIMG_YAML" ]; then
-      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
-    else
-      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
-    fi
-    chmod +x imagemagick
-  fi
   ## Convert image to png
   ./imagemagick "$cover" AppDir/"${name}".png
 

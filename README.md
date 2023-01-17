@@ -11,6 +11,7 @@
   - [Build Dependencies](#build-dependencies)
   - [Install](#install)
   - [Usage (Command Line)](#usage-(command-line))
+    - [Select Wine Distribution](#select-wine-distribution)
   - [Configuration](#configuration)
     - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
     - [Make the AppImage use the global configuration directory](#make-the-appimage-use-the-global-configuration-directory)

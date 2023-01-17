@@ -229,6 +229,7 @@ function main()
 
   # Download tools
   appimagetool_download
+  imagemagick_download
 
   # Install and configure application
   wine_download
@@ -240,7 +241,7 @@ function main()
   runner_create "${ret[0]}" "${ret[1]}"
 
   # Copy cover
-  convert "$cover" "AppDir/${name}.png"
+  ./imagemagick "$cover" "AppDir/${name}.png"
 
   # Create desktop entry
   desktop_entry_create "$name"
