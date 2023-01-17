@@ -22,7 +22,7 @@ function wine_download()
 
   url=$(curl -H "Accept: application/vnd.github+json" \
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
-    grep -Eo "https://.*continuous-.*/wine-caffe.*\.AppImage\"")
+    grep -Eo "https://.*continuous-.*/wine-ge.*\.AppImage\"")
 
   msg "wine: ${url%\"}"
 
