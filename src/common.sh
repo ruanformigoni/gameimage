@@ -27,7 +27,7 @@ function msg()
   done
 
   # Test for color support
-  if [ "$(tput colors)" -ge 8 ] && [ ! "$YAML" ]; then
+  if [ "$(tput colors)" -ge 8 ] && [ ! "$GIMG_YAML" ]; then
     eval "echo -e ${opts[*]} [\\\033[32m*\\\033[m] \"$*\"" >&2
   else
     eval "echo ${opts[*]} [*] \"$*\"" >&2
@@ -126,7 +126,7 @@ function params_validate()
 
     if [[ "${#files[@]}" -eq 1 ]]; then
       rom="${files[0]}"
-    elif [ -z "$YAML" ]; then
+    elif [ -z "$GIMG_YAML" ]; then
       msg "Select the rom file to boot when the appimage is clicked"
       msg "It must be a number between 1 and ${#files[@]}"
       msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
@@ -137,8 +137,8 @@ function params_validate()
         break
       done
     else
-      rom="$(yq -e '.rom' "$YAML")"
-      [ -f "$rom" ] || { msg "Invalid rom path in $YAML"; die; }
+      rom="$(yq -e '.rom' "$GIMG_YAML")"
+      [ -f "$rom" ] || { msg "Invalid rom path in $GIMG_YAML"; die; }
     fi
 
     msg "Selected rom: $rom"
@@ -178,7 +178,7 @@ function dir_appdir_create()
 {
   local appdir="AppDir"
 
-  if [ -d "$appdir" ] && [ -z "${YAML}" ]; then
+  if [ -d "$appdir" ] && [ -z "${GIMG_YAML}" ]; then
     msg -n "AppDir from previous run found, remove it? [y/N]: "
     read -r opt
     [ "$opt" = "y" ] && rm -rf "$appdir";
@@ -200,7 +200,7 @@ function appimagetool_download()
 
   # Get appimagetool
   if [ ! -f "./appimagetool" ]; then
-    if [ "$YAML" ]; then
+    if [ "$GIMG_YAML" ]; then
       wget -q --show-progress --progress=dot:mega -O appimagetool "$url"
     else
       wget -q --show-progress --progress=bar:noscroll -O appimagetool "$url"
@@ -209,6 +209,21 @@ function appimagetool_download()
 
   # Make executable
   chmod +x appimagetool
+}
+
+function imagemagick_download()
+{
+  local url="https://imagemagick.org/archive/binaries/magick"
+  msg "imagemagick: ${url}"
+  ## Get imagemagick
+  if [ ! -f "imagemagick" ]; then
+    if [ "$GIMG_YAML" ]; then
+      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
+    else
+      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
+    fi
+    chmod +x imagemagick
+  fi
 }
 
 function files_copy()
@@ -225,17 +240,6 @@ function files_copy()
   cp -r "$dir"/rom/* AppDir/app/rom
 
   # Copy image to AppDir
-  local url="https://imagemagick.org/archive/binaries/magick"
-  msg "imagemagick: ${url}"
-  ## Get imagemagick
-  if [ ! -f "imagemagick" ]; then
-    if [ "$YAML" ]; then
-      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
-    else
-      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
-    fi
-    chmod +x imagemagick
-  fi
   ## Convert image to png
   ./imagemagick "$cover" AppDir/"${name}".png
 

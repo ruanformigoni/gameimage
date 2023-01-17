@@ -13,9 +13,9 @@ set -e
 
 shopt -s globstar
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-source "$SCRIPT_DIR/common.sh"
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 function pcsx2_download()
 {
@@ -30,7 +30,7 @@ function pcsx2_download()
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
     if [ ! -f "pcsx2.AppImage" ]; then
       # Get AppImage of pcsx2
-      if [ "$YAML" ]; then
+      if [ "$GIMG_YAML" ]; then
         wget -q --show-progress --progress=dot:mega -O pcsx2.AppImage "$url"
       else
         wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "$url"
@@ -114,8 +114,8 @@ function main()
 
   # Download tools
   appimagetool_download
-
   pcsx2_download
+  imagemagick_download
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
