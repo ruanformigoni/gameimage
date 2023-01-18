@@ -89,11 +89,12 @@ sudo apt install p7zip-full p7zip-rar
 For Fedora:
 ```
 sudo dnf install p7zip
+sudo dnf install glibc.i686
 ```
 
 For Vanilla OS:
 ```
-sudo abroot exec apt install p7zip-full p7zip-rar
+sudo abroot exec apt install p7zip-full p7zip-rar glibc.i686
 ```
 
 ## Install
