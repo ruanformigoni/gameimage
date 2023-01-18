@@ -98,7 +98,7 @@ sudo dnf install glibc.i686
 
 For Vanilla OS:
 ```
-sudo abroot exec apt install p7zip-full p7zip-rar glibc.i686
+sudo abroot exec apt install p7zip-full p7zip-rar libc6-i386
 ```
 
 ## Install
