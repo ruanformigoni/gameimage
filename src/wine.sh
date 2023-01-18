@@ -116,6 +116,20 @@ function wine_install()
   fi
 }
 
+function wine_test()
+{
+  msg -n "Test the installed software? [y/N]: "
+  read -r opt; [ "${opt,,}" = "y" ] || return 0
+
+  while :; do
+    _eval_select "find " "\"$1\"" " -not -path *drive_c/windows/*.exe -iname *.exe" || break
+    #shellcheck disable=2005
+    echo "$(cd "$(dirname "$_FN_OUT_0")" && "$WINE" "$_FN_OUT_0")"
+    msg -n "Test another file? [y/N]: "
+    read -r opt; [ "${opt,,}" = "y" ] || break
+  done
+}
+
 function wine_executable_select()
 {
   msg "Select the main executable"
@@ -235,6 +249,7 @@ function main()
   wine_download
   wine_configure
   wine_install "$dir"
+  wine_test "$dir/build/AppDir/app/wine"
   readarray -t ret <<< "$(wine_executable_select)"
 
   # Create runner script
