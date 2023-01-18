@@ -38,6 +38,10 @@ Advantages:
     install, no dependencies required.
 - [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
 
+![](doc/not-aidan-tutorial.mp4)
+
+Also watch it on [youtube](https://www.youtube.com/watch?v=_15QkwCS7bg), thanks Not Aidan.
+
 ## Supported applications for packaging
 
 <a href="https://www.retroarch.com/" target="_blank">
