@@ -11,6 +11,8 @@
 set -e
 
 # Global variables
+# # Extra directories for executables to install
+[ ! -v GIMG_DIR_ROM_EXTRA ] && export GIMG_DIR_ROM_EXTRA=""
 # # YAML Location
 export GIMG_YAML=""
 # # Call directory

@@ -107,7 +107,11 @@ function wine_install()
     msg "Showing executable files in $1/rom"
     msg "Select the file to install"
     while :; do
-      _eval_select 'find -L ' "\"$1/rom\"" ' -iname "*.exe"' || break
+      if [ -n "$GIMG_DIR_ROM_EXTRA" ]; then
+        _eval_select 'find -L ' "\"$1/rom\" " "\"$GIMG_DIR_ROM_EXTRA\"" ' -iname "*.exe"' || break
+      else
+        _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
+      fi
       #shellcheck disable=2005
       echo "$(cd "$(dirname "$_FN_OUT_0")" && "$WINE" "$_FN_OUT_0")"
       msg -n "Install another file? [y/N]: "
