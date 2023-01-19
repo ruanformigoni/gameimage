@@ -56,15 +56,32 @@ function arch_select()
 
 function wine_configure()
 {
-  "$WINE" --version
-
   export WINEPREFIX="$(pwd)/AppDir/app/wine"
 
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
-    "$WINETRICKS" fontsmooth=rgb
-    "$WINETRICKS" dxvk
+
+    msg -n "Download pre-configured wineprefix? [Y/n]: "
+    read -r opt; if [ "${opt,,}" != "n" ]; then
+      if [ "$GIMG_YAML" ]; then
+        wget -q --show-progress --progress=dot:giga -O prefix.tar.xz \
+          https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-"${WINEARCH#win}".tar.xz
+      else
+        wget -q --show-progress --progress=bar:noscroll -O prefix.tar.xz \
+          https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-"${WINEARCH#win}".tar.xz
+      fi
+      tar -xf prefix.tar.xz
+      mv wine "$(pwd)/AppDir/app/"
+      rm prefix.tar.xz
+    else
+      if [ ! -d "$WINEPREFIX" ]; then
+        "$WINETRICKS" fontsmooth=rgb
+        "$WINETRICKS" dxvk
+      fi
+    fi
   fi
+
+  "$WINE" --version
 
   declare -A opts
 
