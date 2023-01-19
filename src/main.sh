@@ -11,6 +11,8 @@
 set -e
 
 # Global variables
+# # Function return type
+declare -a _FN_RET
 # # Extra directories for executables to install
 [ ! -v GIMG_DIR_ROM_EXTRA ] && export GIMG_DIR_ROM_EXTRA=""
 # # YAML Location

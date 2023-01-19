@@ -122,9 +122,9 @@ function main()
   dir_appdir_create
 
   # Download tools
-  appimagetool_download
+  _fetch_appimagetool
   yuzu_download
-  imagemagick_download
+  _fetch_imagemagick
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "null" "$cover" "$keys"

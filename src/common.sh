@@ -49,11 +49,40 @@ function extract()
   fi
 }
 
+# Select from a y/n prompt
+# $1 = prompt
+# $2 = default option [y/n]
+function _select_yn()
+{
+  { [ "${2,,}" = "y" ] || [ "${2,,}" = "n" ]; } || exit 1
+
+  local default="${2,,}"
+
+  [ "$default" = "y" ] && defaults="Y|n" || defaults="y|N"
+
+  local opt
+
+  if [ "$GIMG_YAML" ]; then
+    while ! [[ "${opt,,}" =~ y|n ]]; do
+      opt="$("$GIMG_SCRIPT_DIR"/menu-button "$1" "$defaults")"
+    done
+  else
+    msg -n "$1 [$defaults]: "
+    # Wait for y|n or empty string
+    read -r opt; 
+    while ! [[ "${opt,,}" =~ y|n ]] && [ -n "$opt" ]; do
+      read -r opt; 
+    done
+    [ -z "$opt" ] && opt="$default"
+  fi
+
+  echo "${opt,,}"
+}
+
 # Selects an option from an enumerated list
+# $@ = opts
 function _select()
 {
-  export _FN_OUT_0=""
-
   declare -a opts; for i; do opts+=("$i"); done
 
   if [ "$#" -gt 1 ]; then
@@ -68,24 +97,24 @@ function _select()
       # Evaluate
       [[ "$opt" = "continue" ]] && return 1
       if [[ "$opt" =~ ^[0-9]+$ ]] && [ "$opt" -lt "${#opts[@]}" ]; then
-        _FN_OUT_0="${opts[$opt]}"
+        _FN_RET[0]="${opts[$opt]}"
         break
       fi
     done
   elif [ "$#" -gt 0 ]; then
-    _FN_OUT_0="$1"
+    _FN_RET[0]="$1"
   else
     return 1
   fi
 
-  msg "Selected $_FN_OUT_0"
+  msg "Selected ${_FN_RET[*]}"
 }
 
 function _eval_select()
 {
   local files
   readarray -t files <<< "$(eval "$*")"
-  _select "${files[@]}"
+  _select "${files[@]}" || return 1
 }
 
 function param_validate()
@@ -190,40 +219,40 @@ function dir_appdir_create()
   mkdir -p AppDir/usr/share/icons
 }
 
-function appimagetool_download()
+# Fetches a file from url
+# $1 = output filename
+# $2 = url
+function _fetch()
 {
-  local url
+  name="$1"
+  url="$2"
 
-  url="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-
-  msg "appimagetool: $url"
+  msg "$name: $url"
 
   # Get appimagetool
-  if [ ! -f "./appimagetool" ]; then
+  if [ ! -f "./$name" ]; then
     if [ "$GIMG_YAML" ]; then
-      wget -q --show-progress --progress=dot:mega -O appimagetool "$url"
+      wget -q --show-progress --progress=dot:mega -O  "$name" "$url"
     else
-      wget -q --show-progress --progress=bar:noscroll -O appimagetool "$url"
+      wget -q --show-progress --progress=bar:noscroll -O  "$name" "$url"
     fi
   fi
 
   # Make executable
-  chmod +x appimagetool
+  chmod +x "$name"
 }
 
-function imagemagick_download()
+# Fetches appimagetool to current dir
+function _fetch_appimagetool()
 {
-  local url="https://imagemagick.org/archive/binaries/magick"
-  msg "imagemagick: ${url}"
-  ## Get imagemagick
-  if [ ! -f "imagemagick" ]; then
-    if [ "$GIMG_YAML" ]; then
-      wget -q --show-progress --progress=dot:mega -O imagemagick "$url"
-    else
-      wget -q --show-progress --progress=bar:noscroll -O imagemagick "$url"
-    fi
-    chmod +x imagemagick
-  fi
+  _fetch  "appimagetool" \
+    "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+}
+
+# Fetches imagemagick to current dir
+function _fetch_imagemagick()
+{
+  _fetch "imagemagick" "https://imagemagick.org/archive/binaries/magick"
 }
 
 function files_copy()

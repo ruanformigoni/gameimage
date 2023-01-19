@@ -24,15 +24,9 @@ function wine_download()
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
     grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST.*\.AppImage\"")
 
-  msg "wine: ${url%\"}"
-
   if [ ! -f "AppDir/usr/bin/wine" ]; then
-    if [ "$GIMG_YAML" ]; then
-      wget -q --show-progress --progress=dot:giga -O AppDir/usr/bin/wine "${url%\"}"
-    else
-      wget -q --show-progress --progress=bar:noscroll -O AppDir/usr/bin/wine "${url%\"}"
-    fi
-    chmod +x AppDir/usr/bin/wine
+    _fetch "wine" "${url%\"}"
+    mv wine AppDir/usr/bin/wine
     ln -s wine AppDir/usr/bin/winetricks
   fi
 
@@ -61,15 +55,9 @@ function wine_configure()
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
 
-    msg -n "Download pre-configured wineprefix? [Y/n]: "
-    read -r opt; if [ "${opt,,}" != "n" ]; then
-      if [ "$GIMG_YAML" ]; then
-        wget -q --show-progress --progress=dot:giga -O prefix.tar.xz \
-          https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-"${WINEARCH#win}".tar.xz
-      else
-        wget -q --show-progress --progress=bar:noscroll -O prefix.tar.xz \
-          https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-"${WINEARCH#win}".tar.xz
-      fi
+  if [ "$(_select_yn "Download wineprefix?" "y")" != "n" ]; then
+      _fetch "prefix.tar.xz" \
+        "https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-${WINEARCH#win}.tar.xz"
       tar -xf prefix.tar.xz
       mv wine "$(pwd)/AppDir/app/"
       rm prefix.tar.xz
@@ -113,7 +101,7 @@ function wine_install()
     local rom="$(yq -e '.rom' "$GIMG_YAML")"
     #shellcheck disable=2005
     echo "$(cd "$(dirname "$rom")" && "$WINE" "$rom")"
-    while [ "$("$GIMG_SCRIPT_DIR"/menu-button "Install another file?" "yes|no")" != "no" ]; do
+    while [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ]; do
       readarray -t files <<< "$(find "$1/rom" -iname "*.exe" -exec echo -n "{}|" \;)"
       files=("${files[*]%|}")
       files=("${files[*]//\//\\/}")
@@ -130,24 +118,21 @@ function wine_install()
         _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
       fi
       #shellcheck disable=2005
-      echo "$(cd "$(dirname "$_FN_OUT_0")" && "$WINE" "$_FN_OUT_0")"
-      msg -n "Install another file? [y/N]: "
-      read -r opt; [ "${opt,,}" = "y" ] || break
+      echo "$(cd "$(dirname "$_FN_RET")" && "$WINE" "$_FN_RET")"
+      [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ] || break
     done
   fi
 }
 
 function wine_test()
 {
-  msg -n "Test the installed software? [y/N]: "
-  read -r opt; [ "${opt,,}" = "y" ] || return 0
+  [ "$(_select_yn "Test the installed software?" "N")" = "y" ] || return 0
 
   while :; do
     _eval_select "find " "\"$1\"" " -not -path *drive_c/windows/*.exe -iname *.exe" || break
     #shellcheck disable=2005
-    echo "$(cd "$(dirname "$_FN_OUT_0")" && "$WINE" "$_FN_OUT_0")"
-    msg -n "Test another file? [y/N]: "
-    read -r opt; [ "${opt,,}" = "y" ] || break
+    echo "$(cd "$(dirname "$_FN_RET")" && "$WINE" "$_FN_RET")"
+    [ "$(_select_yn "Test the another file?" "N")" = "y" ] || break
   done
 }
 
@@ -164,10 +149,8 @@ function wine_executable_select()
     executable="$("$GIMG_SCRIPT_DIR"/menu-button "Select the main executable" "${files[*]}")"
   else
     _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
-    executable="$_FN_OUT_0"
+    executable="$_FN_RET"
   fi
-
-  msg "Selected: $executable"
 
   # Get directory to move out from drive c:
   local dir_installation
@@ -183,7 +166,8 @@ function wine_executable_select()
   msg "Moving '$dir_installation' to '$dir_target'"
   mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
 
-  echo -e "$dir_installation\n$executable"
+  _FN_RET[0]="$dir_installation"
+  _FN_RET[1]="$executable"
 }
 
 function runner_create()
@@ -263,18 +247,18 @@ function main()
   dir_appdir_create
 
   # Download tools
-  appimagetool_download
-  imagemagick_download
+  _fetch_appimagetool
+  _fetch_imagemagick
 
   # Install and configure application
   wine_download
   wine_configure
   wine_install "$dir"
   wine_test "$dir/build/AppDir/app/wine"
-  readarray -t ret <<< "$(wine_executable_select)"
+  wine_executable_select
 
   # Create runner script
-  runner_create "${ret[0]}" "${ret[1]}"
+  runner_create "${_FN_RET[0]}" "${_FN_RET[1]}"
 
   # Copy cover
   ./imagemagick "$cover" "AppDir/${name}.png"
