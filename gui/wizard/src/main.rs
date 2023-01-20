@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::BTreeMap;
-use std::io::{BufRead,BufReader};
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::process;
 
 use walkdir::WalkDir;
 use closure::closure;
@@ -262,27 +264,59 @@ impl Gui
     let group2 = Group::default().size_of(&self.wizard);
 
     // Frame top {{{
-    let frame_top = self.make_frame(self.width, self.height - 50);
+    let frame_top_height = self.height - 110;
+    let frame_top = self.make_frame(self.width, frame_top_height);
 
     // Terminal to output script execution
-    let mut term = SimpleTerminal::new(self.border, self.border, self.width, self.height - 50, "")
-      .above_of(&frame_top, - (self.height - 50));
+    let mut term = SimpleTerminal::new(self.border, self.border, self.width, frame_top_height, "")
+      .above_of(&frame_top, - frame_top_height);
     term.set_text_color(self.wind.label_color());
     term.set_text_size(10);
     // }}}
 
     // Frame bottom {{{
-    let frame_bottom = self.make_frame(self.width, 50).below_of(&frame_top, 0);
+
+    // Frame CMD input {{{
+
+    let frame_cmd = self.make_frame(self.width, 50).below_of(&frame_top, 10);
+
+    let input_cmd = Input::new(self.border
+      , self.border
+      , self.width-60-2*30-10
+      , 30
+      , "Input commands for the terminal")
+        .center_y(&frame_cmd)
+        .with_align(Align::TopLeft);
+
+    let mut btn_send = Button::default()
+      .with_size(60, 30)
+      .with_label("Send")
+      .center_y(&frame_cmd);
+    btn_send.set_color(Color::DarkGreen);
+    btn_send.set_pos(self.width-90, btn_send.y());
+    btn_send.set_callback(closure!(clone mut input_cmd, |_|{
+      let value = input_cmd.value();
+      input_cmd.set_value("");
+      cmd!("bash", "-c", format!("echo \"{}\" > /tmp/gimg-stdin", value))
+        .run()
+        .expect("Failed to write /tmp/gimg-stdin");
+    }));
+    
+    // }}}
+
+    // Frame Buttons {{{
+    let frame_buttons = self.make_frame(self.width, 50).below_of(&frame_cmd, 0);
 
     let mut btn_prev = Button::default()
       .with_size(60, 30)
       .with_label("Prev")
-      .center_y(&frame_bottom);
+      .center_y(&frame_buttons);
+    btn_prev.set_pos(30, btn_prev.y());
 
     let mut btn_exit = Button::default()
       .with_size(60, 30)
       .with_label("Exit")
-      .center_y(&frame_bottom);
+      .center_y(&frame_buttons);
     btn_exit.set_pos(self.width-90, btn_exit.y());
     btn_exit.set_color(Color::Red);
     btn_exit.set_callback(|_|
@@ -290,7 +324,6 @@ impl Gui
       app::quit();
     });
 
-    btn_prev.set_pos(30, btn_prev.y());
     btn_prev.set_callback({
       closure!(clone mut self.wizard, |_| wizard.prev())
     });
@@ -298,14 +331,25 @@ impl Gui
     let mut btn_build = Button::default()
       .with_size(60, 30)
       .with_label("Build")
-      .center_of(&frame_bottom);
+      .center_of(&frame_buttons);
 
+    // Create temp file
     btn_build.set_color(Color::DarkGreen);
-    btn_build.set_callback(closure!(clone mut btn_build, clone mut btn_prev, clone term, |_|
+    btn_build.set_callback(closure!(clone mut btn_prev, clone term, |e|
     {
+      let mut btn_build = e.clone();
       let env_appdir = env::var("APPDIR").unwrap_or(String::from("."));
       let cmd_str = format!("{}{}{}", env_appdir, "/usr/bin/", "main.sh");
-      let _cmd : Result<(),String> = cmd!(cmd_str, "--yaml")
+      // Command to pipe data from custom stdin to terminal
+      let _cmd_string = String::from(format!("while ps -p {} > /dev/null; do
+        [ -f /tmp/gimg-stdin ] && cat /tmp/gimg-stdin && rm /tmp/gimg-stdin;
+        sleep 0.5;
+        done", process::id())
+      );
+
+      let _cmd : Result<(),String> = 
+        cmd!("bash", "-c", _cmd_string)
+        .pipe(cmd!(cmd_str, "--yaml"))
         .stderr_to_stdout()
         .reader()
         .and_then(|e|
@@ -313,13 +357,13 @@ impl Gui
           btn_build.deactivate();
           btn_prev.deactivate();
 
-          let buf = BufReader::new(e);
+          let rbuf = BufReader::new(e);
 
           std::thread::spawn(closure!(clone mut btn_build, clone mut btn_prev, clone mut term, || {
-            buf.lines().filter_map(|line| line.ok()).try_for_each(|line|
+            rbuf.bytes().filter_map(|line| line.ok()).try_for_each(|line|
             {
-                term.insert(&line);
-                term.insert("\n");
+                term.insert(format!("{}",line as char).as_str());
+                // term.insert("\n");
                 term.show_insert_position();
                 app::awake();
                 Some(())
@@ -337,6 +381,8 @@ impl Gui
         });
 
     }));
+    
+    // }}}
 
     // }}}
 
@@ -359,6 +405,9 @@ impl Drop for Gui
 
 // fn: main {{{
 fn main() {
+  // Tell GameImage that GUI is used
+  env::set_var("GIMG_GUI", "Yes");
+  // Init GUI
   let gui = Gui::new();
   gui.frame_1();
   gui.frame_2();

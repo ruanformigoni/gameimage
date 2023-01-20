@@ -62,19 +62,13 @@ function _select_yn()
 
   local opt
 
-  if [ "$GIMG_YAML" ]; then
-    while ! [[ "${opt,,}" =~ y|n ]]; do
-      opt="$("$GIMG_SCRIPT_DIR"/menu-button "$1" "$defaults")"
-    done
-  else
-    msg -n "$1 [$defaults]: "
-    # Wait for y|n or empty string
+  { [ -n "$GIMG_GUI" ] && msg "$1 [$defaults]: "; } || msg -n "$1 [$defaults]: "
+
+  # Wait for y|n or empty string
+  while ! read -r opt && [[ "${opt,,}" =~ y|n ]] && [ -n "$opt" ]; do
     read -r opt; 
-    while ! [[ "${opt,,}" =~ y|n ]] && [ -n "$opt" ]; do
-      read -r opt; 
-    done
-    [ -z "$opt" ] && opt="$default"
-  fi
+  done
+  [ -z "$opt" ] && opt="$default"
 
   echo "${opt,,}"
 }
@@ -94,6 +88,8 @@ function _select()
       done
       # Select
       echo -n "option?> " >&2; read -r opt
+      # Newline for gui
+      [ -n "$GIMG_GUI" ] && echo "";
       # Evaluate
       [[ "$opt" = "continue" ]] && return 1
       if [[ "$opt" =~ ^[0-9]+$ ]] && [ "$opt" -lt "${#opts[@]}" ]; then
@@ -107,7 +103,7 @@ function _select()
     return 1
   fi
 
-  msg "Selected ${_FN_RET[*]}"
+  msg "Selected ${_FN_RET[0]}"
 }
 
 function _eval_select()
@@ -187,7 +183,13 @@ function params_validate()
   local name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
 
   # Return
-  echo -e "$name\n$src_dir\n$bios\n$core\n$cover\n$rom\n$keys"
+  _FN_RET[0]="$name"
+  _FN_RET[1]="$src_dir"
+  _FN_RET[2]="$bios"
+  _FN_RET[3]="$core"
+  _FN_RET[4]="$cover"
+  _FN_RET[5]="$rom"
+  _FN_RET[6]="$keys"
 }
 
 function dir_build_create()
@@ -224,8 +226,8 @@ function dir_appdir_create()
 # $2 = url
 function _fetch()
 {
-  name="$1"
-  url="$2"
+  local name="$1"
+  local url="$2"
 
   msg "$name: $url"
 

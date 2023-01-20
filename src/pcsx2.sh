@@ -98,14 +98,14 @@ function runner_create()
 function main()
 {
   # Validate params
-  readarray -t ret <<< "$(params_validate "pcsx2" "$@")"
+  params_validate "pcsx2" "$@"
 
-  local name="${ret[0]}"
-  local dir="${ret[1]}"
-  local bios="${ret[2]}"
-  local core="${ret[3]}"
-  local cover="${ret[4]}"
-  local rom="${ret[5]}"
+  local name="${_FN_RET[0]}"
+  local dir="${_FN_RET[1]}"
+  local bios="${_FN_RET[2]}"
+  local core="${_FN_RET[3]}"
+  local cover="${_FN_RET[4]}"
+  local rom="${_FN_RET[5]}"
 
   # Create dirs
   cd "$(dir_build_create "$dir")"

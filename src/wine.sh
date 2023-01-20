@@ -97,31 +97,18 @@ function wine_configure()
 
 function wine_install()
 {
-  if [ "$GIMG_YAML" ]; then
-    local rom="$(yq -e '.rom' "$GIMG_YAML")"
+  msg "Showing executable files in $1/rom"
+  msg "Select the file to install"
+  while :; do
+    if [ -n "$GIMG_DIR_ROM_EXTRA" ]; then
+      _eval_select 'find -L ' "\"$1/rom\" " "\"$GIMG_DIR_ROM_EXTRA\"" ' -iname "*.exe"' || break
+    else
+      _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
+    fi
     #shellcheck disable=2005
-    echo "$(cd "$(dirname "$rom")" && "$WINE" "$rom")"
-    while [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ]; do
-      readarray -t files <<< "$(find "$1/rom" -iname "*.exe" -exec echo -n "{}|" \;)"
-      files=("${files[*]%|}")
-      files=("${files[*]//\//\\/}")
-      executable="$("$GIMG_SCRIPT_DIR"/menu-button "Select the file to install" "${files[*]}")"
-      "$WINE" "$executable"
-    done
-  else
-    msg "Showing executable files in $1/rom"
-    msg "Select the file to install"
-    while :; do
-      if [ -n "$GIMG_DIR_ROM_EXTRA" ]; then
-        _eval_select 'find -L ' "\"$1/rom\" " "\"$GIMG_DIR_ROM_EXTRA\"" ' -iname "*.exe"' || break
-      else
-        _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
-      fi
-      #shellcheck disable=2005
-      echo "$(cd "$(dirname "$_FN_RET")" && "$WINE" "$_FN_RET")"
-      [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ] || break
-    done
-  fi
+    echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$WINE" "${_FN_RET[0]}")"
+    [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ] || break
+  done
 }
 
 function wine_test()
@@ -139,18 +126,8 @@ function wine_test()
 function wine_executable_select()
 {
   msg "Select the main executable"
-
-  local executable
-  if [ "$GIMG_YAML" ]; then
-    local files
-    readarray -t files <<< "$(find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe" -exec echo -n "{}|" \;)"
-    files=("${files[*]%|}")
-    files=("${files[*]//\//\\/}")
-    executable="$("$GIMG_SCRIPT_DIR"/menu-button "Select the main executable" "${files[*]}")"
-  else
-    _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
-    executable="$_FN_RET"
-  fi
+  _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
+  executable="$_FN_RET"
 
   # Get directory to move out from drive c:
   local dir_installation
@@ -226,20 +203,18 @@ function runner_create()
   # Allow execute
   chmod +x AppDir/AppRun
 
-  if ! [ "$GIMG_YAML" ]; then
-    msg -n "AppRun written, make further changes to it if you desire, then press enter..."
-    read -r
-  fi
+  msg -n "AppRun written, make further changes to it if you desire, then press enter..."
+  read -r
 }
 
 function main()
 {
   # Validate params
-  readarray -t ret <<< "$(params_validate "wine" "$@")"
+  params_validate "wine" "$@"
 
-  local name="${ret[0]}"
-  local dir="${ret[1]}"
-  local cover="${ret[4]}"
+  local name="${_FN_RET[0]}"
+  local dir="${_FN_RET[1]}"
+  local cover="${_FN_RET[4]}"
 
   # Create dirs
   cd "$(dir_build_create "$dir")"

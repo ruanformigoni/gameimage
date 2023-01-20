@@ -23,6 +23,9 @@ export GIMG_CALL_DIR="$(pwd)"
 export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # # Wine distribution - ge,caffe,staging,vaniglia,soda
 [ ! -v GIMG_WINE_DIST ] && export GIMG_WINE_DIST="ge"
+# # Check for GUI
+[ ! -v GIMG_GUI ] && export GIMG_GUI=""
+
 
 function usage()
 {
