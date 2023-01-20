@@ -132,6 +132,19 @@ platform, `./gameimage.AppImage` displays the following example:
 -- Usage:
   main.sh --version # Prints version and exits
 ```
+
+### Additional search paths (besides rom)
+
+```bash
+export GIMG_DIR_ROM_EXTRA="/path/to/dir1 /path/to/dir2"
+```
+
+If the path has spaces:
+
+```bash
+export GIMG_DIR_ROM_EXTRA="\"/path/to my/dir 1\" \"/path/to my/dir 2\""
+```
+
 ### Select Wine Distribution
 
 Default distribution is [wine-ge](https://github.com/ruanformigoni/wine). Available are:
