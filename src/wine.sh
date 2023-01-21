@@ -105,9 +105,12 @@ function wine_install()
     else
       _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
     fi
+
+    [ ! -f "${_FN_RET[0]}" ] && die "No valid file found in $1/rom"
+
     #shellcheck disable=2005
     echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$WINE" "${_FN_RET[0]}")"
-    [ "$(_select_yn "Install another file? [y/N]: " "N")" = "y" ] || break
+    [ "$(_select_yn "Install another file?" "N")" = "y" ] || break
   done
 }
 

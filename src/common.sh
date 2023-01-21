@@ -14,6 +14,7 @@ PID="$$"
 
 function die()
 {
+  [ "$*" ] && msg "$*"
   kill -s SIGTERM "$PID"
   exit 1
 }
@@ -44,8 +45,7 @@ function extract()
   elif [ "$1" = ".7z" ]; then
     7z -aoa x "$2" -o"$3"
   else
-    msg "Invalid extract file format"
-    die
+    die "Invalid extract file format"
   fi
 }
 
@@ -121,11 +121,11 @@ function param_validate()
 
   if [ -d "$src_dir/$directory" ]; then
     read -r query <<< "$(find "$src_dir/$directory" -regextype posix-extended -iregex "$pattern" -print -quit)"
-    [ -f "$query" ] || { msg "Invalid $directory file"; die; }
+    [ -f "$query" ] || { die "Pattern '$pattern' not found in directory $directory"; }
     msg "Selected $directory: $query"
     echo "$query"
   else
-    [ "$required" ] && die || echo "null"
+    [ "$required" ] && die "Directory '$directory' does not exist" || echo "null"
   fi
 }
 
@@ -136,18 +136,20 @@ function params_validate()
   # Convert path to absolute
   local src_dir="$(readlink -f "$2")"
 
-  [ -d "$src_dir" ] || { msg "Invalid src dir ${src_dir}"; die; }
+  [ -d "$src_dir" ] || { die "Invalid src dir ${src_dir}"; }
+  [ -d "$src_dir/rom" ] || { die "Invalid no rom folder in src dir ${src_dir}"; }
+  [ -d "$src_dir/icon" ] || { die "Invalid no icon folder in src dir ${src_dir}"; }
 
   local rom
   if [ "$platform" = "wine" ]; then
     rom="null"
   elif [ ! -d "$src_dir/rom" ]; then
-    msg "Directory \"$src_dir/rom\" not found"; die; 
+    die "Directory \"$src_dir/rom\" not found"
   else
     declare -a files
 
     readarray -t files < <(find "$src_dir/rom" -maxdepth 1 -type f)
-    [[ "${#files[@]}" -ne 0 ]] || { msg "No file found in rom directory $src_dir/rom"; die; }
+    [[ "${#files[@]}" -ne 0 ]] || { die "No file found in rom directory $src_dir/rom"; }
 
     if [[ "${#files[@]}" -eq 1 ]]; then
       rom="${files[0]}"
@@ -163,7 +165,7 @@ function params_validate()
       done
     else
       rom="$(yq -e '.rom' "$GIMG_YAML")"
-      [ -f "$rom" ] || { msg "Invalid rom path in $GIMG_YAML"; die; }
+      [ -f "$rom" ] || { die "Invalid rom path in $GIMG_YAML"; }
     fi
 
     msg "Selected rom: $rom"
