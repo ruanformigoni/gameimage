@@ -22,7 +22,8 @@ function wine_download()
 
   url=$(curl -H "Accept: application/vnd.github+json" \
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
-    grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST.*\.AppImage\"")
+    grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST-[0-9-]+-continuous-x86_64-portable-glibc-i386.AppImage\"" ||
+    die "Error fetching wine url")
 
   if [ ! -f "AppDir/usr/bin/wine" ]; then
     _fetch "wine" "${url%\"}"
