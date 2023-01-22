@@ -92,7 +92,7 @@ function main()
     echo "TRUNK"
     exit
   elif [ "$*" = "--yaml" ]; then
-    export GIMG_YAML="${GIMG_CALL_DIR}/gameimage.yml"
+    export GIMG_YAML="/tmp/gameimage.yml"
     msg "Yaml: $GIMG_YAML"
     args[--name]="$("$GIMG_SCRIPT_DIR/yq" -e '.name' "$GIMG_YAML")"
     args[--platform]="$("$GIMG_SCRIPT_DIR/yq" -e '.platform' "$GIMG_YAML")"

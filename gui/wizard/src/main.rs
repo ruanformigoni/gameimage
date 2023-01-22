@@ -251,7 +251,7 @@ impl Gui
       closure!(clone self.map_yaml, clone mut self.wizard, |_|
       {
         let yaml = serde_yaml::to_string(map_yaml.as_ref()).unwrap();
-        assert!(fs::write("gameimage.yml", yaml).is_ok());
+        assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
         wizard.next()
       })
     });
