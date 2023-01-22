@@ -27,7 +27,6 @@ use fltk::{
   image::SharedImage,
 };
 use fltk_theme::{ColorTheme, color_themes};
-use regex::Regex;
 
 type SharedPtr<T> = Rc<RefCell<T>>;
 
@@ -215,14 +214,14 @@ impl Gui
 
         btn_rom.clear();
 
-        let re = Regex::new(r".*\.exe|.*\.msi").unwrap();
         let _ = WalkDir::new(dir_root_path.value() + "/rom")
           .follow_links(true)
           .sort_by_file_name()
           .into_iter()
+          .filter_map(|e| e.ok() )
+          .filter(|e| { e.path().to_str().unwrap().ends_with(".exe") ||
+                        e.path().to_str().unwrap().ends_with(".msi")} )
           .take(20)
-          .filter_map(|e| e.ok().filter(|f| f.path().is_file() ) )
-          .filter(|e| { re.is_match(e.path().to_str().unwrap()) } )
           .for_each(|f| { btn_rom.add_choice(f.path().to_str().unwrap()); } );
 
         let _ = WalkDir::new(dir_root_path.value() + "/icon")
