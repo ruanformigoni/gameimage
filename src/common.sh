@@ -28,7 +28,7 @@ function msg()
   done
 
   # Test for color support
-  if [ "$(tput colors)" -ge 8 ] && [ -z "$GIMG_GUI" ]; then
+  if [ -z "$GIMG_GUI" ]; then
     echo -e "${opts[@]}" "[\033[32m*\033[m] $*" >&2
   else
     echo "${opts[@]}" "[*] $*" >&2
