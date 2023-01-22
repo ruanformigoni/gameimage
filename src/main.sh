@@ -62,7 +62,7 @@ function die()
 function msg()
 {
   # Test for color support
-  if [ "$(tput colors)" -ge 8 ] && [ -z "$GIMG_YAML" ]; then
+  if [ -z "$GIMG_YAML" ]; then
     echo -e "[\033[32m*\033[m] $*" >&2
   else
     echo "[*] $*" >&2
