@@ -217,6 +217,7 @@ impl Gui
 
         let re = Regex::new(r".*\.exe|.*\.msi").unwrap();
         let _ = WalkDir::new(dir_root_path.value() + "/rom")
+          .follow_links(true)
           .sort_by_file_name()
           .into_iter()
           .take(20)
@@ -225,6 +226,7 @@ impl Gui
           .for_each(|f| { btn_rom.add_choice(f.path().to_str().unwrap()); } );
 
         let _ = WalkDir::new(dir_root_path.value() + "/icon")
+          .follow_links(true)
           .into_iter()
           .filter_map(|e| e.ok().filter(|f| f.path().is_file() ) )
           .for_each(|e|
