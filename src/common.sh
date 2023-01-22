@@ -164,7 +164,7 @@ function params_validate()
         break
       done
     else
-      rom="$(yq -e '.rom' "$GIMG_YAML")"
+      rom="$("$GIMG_SCRIPT_DIR/yq" -e '.rom' "$GIMG_YAML")"
       [ -f "$rom" ] || { die "Invalid rom path in $GIMG_YAML"; }
     fi
 

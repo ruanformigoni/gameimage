@@ -39,7 +39,7 @@ function wine_download()
 function arch_select()
 {
   if [ "$GIMG_YAML" ]; then
-    yq -e '.arch' "$GIMG_YAML"
+    "$GIMG_SCRIPT_DIR/yq" -e '.arch' "$GIMG_YAML"
   else
     msg "Please select the architecture" >&2
     select i in "win32" "win64"; do

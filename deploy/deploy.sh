@@ -24,6 +24,12 @@ mkdir -p build && cd build
 # Create appdir
 mkdir -p AppDir/usr/bin
 
+# Fetch yq
+wget -q --show-progress --progress=dot:mega https://github.com/mikefarah/yq/releases/download/v4.30.7/yq_linux_amd64.tar.gz -O - | tar xz
+rm yq.1
+mv yq_linux_amd64 yq
+mv yq AppDir/usr/bin
+
 # Copy files
 cp -r ../src/* AppDir/usr/bin
 cp -r ../doc/gameimage.png AppDir/

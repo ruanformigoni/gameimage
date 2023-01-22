@@ -94,9 +94,9 @@ function main()
   elif [ "$*" = "--yaml" ]; then
     export GIMG_YAML="${GIMG_CALL_DIR}/gameimage.yml"
     msg "Yaml: $GIMG_YAML"
-    args[--name]="$(yq -e '.name' "$GIMG_YAML")"
-    args[--platform]="$(yq -e '.platform' "$GIMG_YAML")"
-    args[--dir]="$(yq -e '.dir' "$GIMG_YAML")"
+    args[--name]="$("$GIMG_SCRIPT_DIR/yq" -e '.name' "$GIMG_YAML")"
+    args[--platform]="$("$GIMG_SCRIPT_DIR/yq" -e '.platform' "$GIMG_YAML")"
+    args[--dir]="$("$GIMG_SCRIPT_DIR/yq" -e '.dir' "$GIMG_YAML")"
   else
     for i; do
       [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}" && continue
