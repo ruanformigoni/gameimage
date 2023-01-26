@@ -72,28 +72,25 @@ function wine_configure()
 
   "$WINE" --version
 
-  declare -A opts
-
-  if ! [ "$GIMG_YAML" ]; then
-    for i in $("$WINETRICKS" list-all | awk '!/=+/ { print $1 }'); do
-      opts["$i"]=1
-    done
-
-    pwd
-    msg "winetricks, use it to install dependencies, leave it blank to continue"
-    while :; do
-      echo -n "winetricks> "
-      read -r args
-      # Stop on empty input
-      [ "$args" ] || break
-      # Check if is bash cmd
-      for i in "${args[@]}"; do
-        [ "${opts[$i]}" ] || { eval "${args[*]}" || true; continue 2; }
-      done
-      # If not call winetricks
-      "$WINETRICKS" "$args" || continue
-    done
-  fi
+  local dir_current="$(pwd)"
+  msg "configuration phase, use it to install dependencies, type continue to skip"
+  msg "Commands are 'winetricks ...' and 'wine ...', example 'wine winecfg'"
+  msg "You can also type any bash cmd, e.g., 'ls -l'"
+  while :; do
+    # Read user input
+    echo -n "config> "
+    read -ra args
+    # Newline for gui
+    [ -n "$GIMG_GUI" ] && echo "";
+    # Stop on continue
+    [ "${args[0]}" = "continue" ] && break
+    # Check if is a local command
+    [ "${args[0]}" = "wine" ] && { "$WINE" "${args[*]:1}" || true; continue; }
+    [ "${args[0]}" = "winetricks" ] && { "$WINETRICKS" "${args[*]:1}" || true; continue; }
+    # Use it as a bash command
+    eval "${args[*]}" || continue
+  done
+  cd "$dir_current"
 }
 
 function wine_install()
