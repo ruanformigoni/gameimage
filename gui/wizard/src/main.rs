@@ -364,11 +364,10 @@ impl Gui
           let rbuf = BufReader::new(e);
 
           std::thread::spawn(closure!(clone mut btn_build, clone mut btn_prev, clone mut term, || {
-            rbuf.bytes().filter_map(|line| line.ok()).try_for_each(|line|
+            rbuf.bytes().filter_map(|byte| byte.ok()).try_for_each(|byte|
             {
-                term.insert(format!("{}",line as char).as_str());
-                // term.insert("\n");
-                term.show_insert_position();
+                term.insert(format!("{}", byte as char).as_str());
+                if byte as char == '\n' { term.show_insert_position(); }
                 app::awake();
                 Some(())
             });
