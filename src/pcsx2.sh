@@ -22,7 +22,7 @@ function pcsx2_download()
   local url
 
   url="$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
-    grep -o "https://.*AVX2-Qt\.AppImage" | sort | tail -n1)"
+    grep -o "https://.*\.AppImage" | sort -V | tail -n1)"
 
   msg "pcsx2: ${url}"
 
