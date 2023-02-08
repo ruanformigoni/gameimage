@@ -218,8 +218,14 @@ impl Gui
           .sort_by_file_name()
           .into_iter()
           .filter_map(|e| e.ok() )
-          .filter(|e| { e.path().to_str().unwrap().ends_with(".exe") ||
-                        e.path().to_str().unwrap().ends_with(".msi")} )
+          .filter(|e| { let str_file = e.path().to_str().unwrap().to_lowercase();
+                        str_file.ends_with(".exe") ||
+                        str_file.ends_with(".msi") ||
+                        str_file.ends_with(".iso") ||
+                        str_file.ends_with(".sfb") ||
+                        str_file.ends_with(".bin") ||
+                        str_file.ends_with(".nsp") ||
+                        str_file.ends_with(".cue")} )
           .take(20)
           .for_each(|f| { btn_rom.add_choice(f.path().to_str().unwrap()); } );
 
