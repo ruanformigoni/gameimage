@@ -4,13 +4,12 @@ use std::path::PathBuf;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::BTreeMap;
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::process;
+use std::sync::{Arc, Mutex};
+use std::io::{Read, Write};
+use std::process::{Command, Stdio};
 
 use walkdir::WalkDir;
 use closure::closure;
-use duct::cmd;
 use fltk::{
   app,
   app::App,
@@ -298,13 +297,6 @@ impl Gui
       .center_y(&frame_cmd);
     btn_send.set_color(Color::DarkGreen);
     btn_send.set_pos(self.width-90, btn_send.y());
-    btn_send.set_callback(closure!(clone mut input_cmd, |_|{
-      let value = input_cmd.value();
-      input_cmd.set_value("");
-      cmd!("bash", "-c", format!("echo \"{}\" > /tmp/gimg-stdin", value))
-        .run()
-        .expect("Failed to write /tmp/gimg-stdin");
-    }));
     
     // }}}
 
@@ -337,53 +329,79 @@ impl Gui
       .with_label("Build")
       .center_of(&frame_buttons);
 
-    // Create temp file
     btn_build.set_color(Color::DarkGreen);
-    btn_build.set_callback(closure!(clone mut btn_prev, clone term, |e|
+
+    btn_build.set_callback(closure!(clone mut btn_prev, clone term
+      , clone btn_send, clone input_cmd, |e|
     {
       let mut btn_build = e.clone();
       let env_appdir = env::var("APPDIR").unwrap_or(String::from("."));
-      let cmd_str = format!("{}{}{}", env_appdir, "/usr/bin/", "main.sh");
-      // Command to pipe data from custom stdin to terminal
-      let _cmd_string = String::from(format!("while ps -p {} > /dev/null; do
-        [ -f /tmp/gimg-stdin ] && cat /tmp/gimg-stdin && rm /tmp/gimg-stdin;
-        sleep 0.5;
-        done", process::id())
-      );
+      let cmd_main = format!("{}{}{}", env_appdir, "/usr/bin/", "main.sh");
 
-      let _cmd : Result<(),String> = 
-        cmd!("bash", "-c", _cmd_string)
-        .pipe(cmd!(cmd_str, "--yaml"))
-        .stderr_to_stdout()
-        .reader()
-        .and_then(|e|
+      btn_build.deactivate();
+      btn_prev.deactivate();
+
+      std::thread::spawn(closure!(clone mut btn_build, clone mut btn_prev
+        , clone mut btn_send, clone input_cmd, clone term, ||
+      {
+        // Spawn command
+        let reader_cmd = Command::new("bash")
+          .args(["-c", format!("{} --yaml 2>&1", cmd_main).as_str()])
+          .stdin(Stdio::piped())
+          .stderr(Stdio::inherit())
+          .stdout(Stdio::piped())
+          .spawn()
+          .expect("Could not start gameimage main script");
+
+        // Create arc reader for stdin and stdout
+        let arc_reader_stdin = Arc::new(Mutex::new(reader_cmd.stdin));
+        let arc_reader_stdout = Arc::new(Mutex::new(reader_cmd.stdout));
+
+        // Set callback to send commands to terminal stdin,
+        // when 'send' is pressed
+        btn_send.set_callback(closure!(clone mut input_cmd, clone arc_reader_stdin, |_|
         {
-          btn_build.deactivate();
-          btn_prev.deactivate();
+          let mut mutex = (&*arc_reader_stdin).lock().unwrap();
+          let stdin = mutex.as_mut().unwrap();
+          let value = input_cmd.value();
+          input_cmd.set_value("");
+          writeln!(stdin, "{}", value).expect("Failed to write to child stdin");
+        }));
 
-          let rbuf = BufReader::new(e);
+        // Write stdout to terminal
+        std::thread::spawn(closure!(clone mut term, clone arc_reader_stdout, ||
+        {
+          (&*arc_reader_stdout)
+          .lock().unwrap().as_mut().unwrap().bytes()
+          .filter_map(|b| b.ok()).try_for_each(|byte|
+          {
+            term.insert(std::str::from_utf8(&[byte]).unwrap());
+            if byte as char == '\n' { term.show_insert_position(); }
+            app::awake();
+            Some(())
+          });
+        }));
 
-          std::thread::spawn(closure!(clone mut btn_build, clone mut btn_prev, clone mut term, || {
-            rbuf.bytes().filter_map(|byte| byte.ok()).try_for_each(|byte|
-            {
-                term.insert(format!("{}", byte as char).as_str());
-                if byte as char == '\n' { term.show_insert_position(); }
-                app::awake();
-                Some(())
-            });
+        // Unlock GUI buttons after script finishes
+        // When this happens, stdout and stderr will be released
+        std::thread::spawn(closure!(clone arc_reader_stdout, ||
+        {
+          // Wait for stdout lock in previously launched thread
+          std::thread::sleep(std::time::Duration::from_millis(500));
+          // Try to re-enable buttons after release
+          (&*arc_reader_stdout).lock().and_then(|_|
+          {
             btn_build.activate();
             btn_prev.activate();
-          }));
+            app::awake();
+            Ok(())
+          }).expect("Failure to restore button state");
+        }));
 
-          Ok(())
-        })
-        .or_else(|_|
-        {
-          term.insert("Invalid gameimage directory\n");
-          Ok(())
-        });
 
-    }));
+      })); // std::thread::spawn...
+
+    })); // btn_build.set_callback...
     
     // }}}
 
