@@ -26,6 +26,10 @@ export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/nu
 # # Check for GUI
 [ ! -v GIMG_GUI ] && export GIMG_GUI=""
 
+GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# shellcheck disable=1091
+source "$GIMG_SCRIPT_DIR/common.sh"
 
 function usage()
 {
@@ -53,25 +57,8 @@ function usage()
 	END
 }
 
-function die()
-{
-  usage
-  exit 1
-}
-
-function msg()
-{
-  # Test for color support
-  if [ -z "$GIMG_YAML" ]; then
-    echo -e "[\033[32m*\033[m] $*" >&2
-  else
-    echo "[*] $*" >&2
-  fi
-}
-
 function deps()
 {
-
   local has_deps="y"
   for i; do
     command -v "$i" &>/dev/null || { has_deps="n"; msg "Missing executable $i, please install it before usage"; }
