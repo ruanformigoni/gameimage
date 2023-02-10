@@ -37,7 +37,9 @@ function retroarch_download()
 
       # Extract and move
       7z x "RetroArch.7z"
-      mv RetroArch*/RetroArch*.AppImage retroarch.AppImage
+      mv RetroArch-Linux-x86_64/RetroArch*.AppImage retroarch.AppImage
+      mv RetroArch-Linux-x86_64/RetroArch*.AppImage.home/.config config
+      rm -rf RetroArch-Linux-x86_64
 
       # Make executable
       chmod +x ./retroarch.AppImage
@@ -53,8 +55,15 @@ function retroarch_download()
 
       # Create new fixed appimage
       ARCH=x86_64 ./appimagetool squashfs-root
+
+      # Remove extract dir
+      rm -rf squashfs-root
     fi
 
+    # Copy assets into the AppImage
+    cp -r config AppDir/app/config 
+
+    # Copy retroarch into the appimage
     cp RetroArch*.AppImage AppDir/usr/bin/retroarch
   fi
 }
@@ -83,6 +92,13 @@ function runner_create()
     :fi
     :
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :
+    :# Check if retroarch assets are missing
+    :dir_retroarch_assets="\$XDG_CONFIG_HOME/retroarch"
+    :if [ ! -d "\$dir_retroarch_assets" ]; then
+    :  mkdir -p "\$dir_retroarch_assets"
+    :  cp -r "\$APPDIR"/app/config/retroarch/* "\$dir_retroarch_assets"
+    :fi
     :
     :path_bios=\$XDG_CONFIG_HOME/retroarch/system/
     :
