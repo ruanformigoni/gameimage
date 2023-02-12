@@ -14,10 +14,6 @@ cd gui/wizard && cargo build --release
 
 cd "$(dirname "$SCRIPT_DIR")"
 
-cd gui/menu-button && cargo build --release
-
-cd "$(dirname "$SCRIPT_DIR")"
-
 # Create build dir
 mkdir -p build && cd build
 
@@ -31,6 +27,7 @@ cmake -H. -Bbuild
 cmake --build build
 cd ..
 cp unionfs-fuse/build/src/unionfs AppDir/usr/bin
+rm -rf unionfs-fuse
 
 # Fetch yq
 wget -q --show-progress --progress=dot:mega https://github.com/mikefarah/yq/releases/download/v4.30.7/yq_linux_amd64.tar.gz -O - | tar xz
@@ -42,7 +39,6 @@ mv yq AppDir/usr/bin
 cp -r ../src/* AppDir/usr/bin
 cp -r ../doc/gameimage.png AppDir/
 cp -r ../gui/wizard/target/release/gameimage-install-gui AppDir/usr/bin/gui
-cp -r ../gui/menu-button/target/release/menu-button AppDir/usr/bin/menu-button
 
 for i in AppDir/usr/bin/*; do
   echo "$i"
