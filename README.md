@@ -11,11 +11,16 @@
   - [Build Dependencies](#build-dependencies)
   - [Install](#install)
   - [Usage (Command Line)](#usage-(command-line))
-    - [Select Wine Distribution](#select-wine-distribution)
   - [Configuration](#configuration)
-    - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
-    - [Make the AppImage use the global configuration directory](#make-the-appimage-use-the-global-configuration-directory)
-    - [Test the emulator inside the appimage](#test-the-emulator-inside-the-appimage)
+    - [Global](#global)
+      - [Additional search paths (besides rom)](#additional-search-paths-(besides-rom))
+    - [Wine Specific](#wine-specific)
+      - [How to package the software](#how-to-package-the-software)
+      - [Select Wine Distribution](#select-wine-distribution)
+    - [Emulator Specific](#emulator-specific)
+      - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
+      - [Make the AppImage use the global configuration directory](#make-the-appimage-use-the-global-configuration-directory)
+      - [Test the emulator inside the appimage](#test-the-emulator-inside-the-appimage)
   - [Examples](#examples)
   - [Tutorial on how to show icons for generated AppImages](#tutorial-on-how-to-show-icons-for-generated-appimages)
 
@@ -153,26 +158,27 @@ export GIMG_DIR_ROM_EXTRA="\"/path/to my/dir 1\" \"/path/to my/dir 2\""
 
 ### Wine Specific
 
-#### Where to install the game
+#### How to package the software
 
-The `GIMG_INSTALL_LOC` option defines where to install the game, valid values
-are `appimage` and `prefix`, the former is the default.
+The `GIMG_PKG_TYPE` option defines the packaging method, options are:
 
-1. Inside the appimage (compressed and read-only)
-2. Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
+1. `unionfs`: Inside the appimage, writeable with unionfs. `[default, recommended]`
+1. `readonly`: Inside the appimage, read-only.
+1. `prefix`: Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
 
-`[1]` Packs everything inside the appimage, so only the file `my-game.AppImage`
-is required for it to work, saves are written in `.my-game.AppImage.config`.
+`[1]` Packs everything inside the appimage, the game can write to its own
+directory with unionfs.
 
-`[2]` The software is installed in `.my-game.AppImage.config`, this is required
-for games that write into their install directory, which would otherwise fail if
-is read-only. In this option, both the file `my-game.AppImage` and the directory
-`.my-game.AppImage.config` are required for software to work.
+`[2]` Packs everything inside the appimage, read-only (might not work for some
+games).
+
+`[3]` The software is moved to `.my-game.AppImage.config`, the appimage acts
+as a launcher.
 
 Example:
 
 ```bash
-export GIMG_INSTALL_LOC=prefix
+export GIMG_PKG_TYPE=prefix
 ```
 
 #### Select Wine Distribution

@@ -25,8 +25,8 @@ export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/nu
 export GIMG_WINE_DIST="${GIMG_WINE_DIST:-ge}"
 # # Check for GUI
 export GIMG_GUI="${GIMG_GUI:-}"
-# # Install location for wine applications (appimage/prefix)
-export GIMG_INSTALL_LOC="${GIMG_INSTALL_LOC:-appimage}"
+# # Install location for wine applications (unionfs/readonly/prefix)
+export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-unionfs}"
 
 GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 

@@ -126,6 +126,7 @@ function wine_test()
 
 function wine_executable_select()
 {
+  msg "Install method: $GIMG_PKG_TYPE"
   msg "Select the main executable"
   _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
   local executable="$_FN_RET"
@@ -140,13 +141,15 @@ function wine_executable_select()
 
   # Create directory to store installed files
   # Move to external prefix or keep it inside appimage
-  if [ "${GIMG_INSTALL_LOC}" = "appimage" ]; then
+  if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
+    cp "${GIMG_SCRIPT_DIR}/unionfs" "AppDir/usr/bin"
+  elif [ "${GIMG_PKG_TYPE}" = "readonly" ]; then
     dir_target="AppDir/app/rom"
     mkdir -p "$dir_target"
     # Move installed software to target directory
     msg "Moving '$dir_installation' to '$dir_target'"
     mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
-  else
+  else # prefix
     dir_target="$dir_build/.${name}.AppImage.config"
     mkdir -p "$dir_target"
     # Move prefix to outside of AppImage
@@ -186,23 +189,50 @@ function runner_create()
     :  CFGDIR="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
     :fi
     :
+    :# Remove invalid characters
+    :CFGDIR="\${CFGDIR//:/}"
+    :
     :# Path to appimage mountpoint
     :MNTDIR="\$APPDIR"
     :
-    :# Create wine prefix if not exists
+    :# Export prefix
     :export WINEPREFIX="\$CFGDIR/wine"
+    :
+	END
+
+  if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+    :# Unmount after appimage unmounts squashfs
+    :function _exit() { nohup sh -c "sleep 1 && fusermount -u \$WINEPREFIX" &>/dev/null & disown; }
+    :trap _exit SIGINT EXIT
+    :
+    :# Configure dirs for unionfs
+    :export WINEPREFIX_RO="\$MNTDIR/app/wine"
+    :export WINEPREFIX_RW="\$CFGDIR/union"
+    :mkdir -p "\$WINEPREFIX"
+    :mkdir -p "\$WINEPREFIX_RW"
+    :
+    :# Mount prefix with unionfs
+    :"\$APPDIR/usr/bin/unionfs" -o uid="\$(id -u)",gid="\$(id -g)" -ocow "\$WINEPREFIX_RW"=RW:"\$WINEPREFIX_RO"=RO "\$WINEPREFIX"
+    :
+		END
+  elif [ "${GIMG_PKG_TYPE}" = "readonly" ]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+    :# Copy prefix to outside of appimage
     :if [ ! -d "\$WINEPREFIX" ]; then
     :  mkdir -p "\$CFGDIR"
     :  cp -r "\$MNTDIR/app/wine" "\$CFGDIR"
     :fi
     :
-	END
-
-  if [ "${GIMG_INSTALL_LOC}" = "appimage" ]; then
+    :# Create/Update symlink to the application directory
+    :ln -sf "\$MNTDIR/app/rom/$path_install" "\$CFGDIR/wine/drive_c/$path_install"
+    :
+		END
+  else # prefix
     { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
-      :# Create/Update symlink to the application directory
-      :ln -sf "\$MNTDIR/app/rom/$path_install" "\$CFGDIR/wine/drive_c/$path_install"
-      :
+    :# Requires pre-existing prefix to start
+    :[ ! -d "\$WINEPREFIX" ] && { echo "Requires pre-existing prefix to start"; exit 1; }
+    :
 		END
   fi
 
