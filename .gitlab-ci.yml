@@ -12,7 +12,7 @@ create-appimage:
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
     - apt update
-    - apt install -y git build-essential cmake libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev libpango-1.0-0 libpango1.0-dev libpangoxft-1.0-0 libpangocairo-1.0-0
+    - apt install -y git build-essential cmake libfuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev libpango-1.0-0 libpango1.0-dev libpangoxft-1.0-0 libpangocairo-1.0-0
     - sed -i "s/TRUNK/$CI_COMMIT_TAG/" src/main.sh
     - ./deploy/deploy.sh
   artifacts:
