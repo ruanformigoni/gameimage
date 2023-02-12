@@ -128,7 +128,9 @@ function wine_executable_select()
 {
   msg "Select the main executable"
   _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
-  executable="$_FN_RET"
+  local executable="$_FN_RET"
+  local dir_build="$1"
+  local name="$2"
 
   # Get directory to move out from drive c:
   local dir_installation
@@ -137,12 +139,20 @@ function wine_executable_select()
   dir_installation="${dir_installation//\/*}"
 
   # Create directory to store installed files
-  dir_target="AppDir/app/rom"
-  mkdir -p "$dir_target"
-
-  # Move to target directory
-  msg "Moving '$dir_installation' to '$dir_target'"
-  mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
+  # Move to external prefix or keep it inside appimage
+  if [ "${GIMG_INSTALL_LOC}" = "appimage" ]; then
+    dir_target="AppDir/app/rom"
+    mkdir -p "$dir_target"
+    # Move installed software to target directory
+    msg "Moving '$dir_installation' to '$dir_target'"
+    mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
+  else
+    dir_target="$dir_build/.${name}.AppImage.config"
+    mkdir -p "$dir_target"
+    # Move prefix to outside of AppImage
+    msg "Moving '$dir_build/AppDir/app/wine' to '$dir_target'"
+    mv "$dir_build/AppDir/app/wine" "$dir_target"
+  fi
 
   _FN_RET[0]="$dir_installation"
   _FN_RET[1]="$executable"
@@ -186,10 +196,17 @@ function runner_create()
     :  cp -r "\$MNTDIR/app/wine" "\$CFGDIR"
     :fi
     :
-    :# Create/Update symlink to the application directory
-    :rm -f "\$CFGDIR/wine/drive_c/$path_install"
-    :ln -s "\$MNTDIR/app/rom/$path_install" "\$CFGDIR/wine/drive_c/$path_install"
-    :
+	END
+
+  if [ "${GIMG_INSTALL_LOC}" = "appimage" ]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+      :# Create/Update symlink to the application directory
+      :ln -sf "\$MNTDIR/app/rom/$path_install" "\$CFGDIR/wine/drive_c/$path_install"
+      :
+		END
+  fi
+
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
     :cd "\$(dirname "\$CFGDIR/$path_exec")"
     :
     :exec="$(basename "$path_exec")"
@@ -214,11 +231,12 @@ function main()
   params_validate "wine" "$@"
 
   local name="${_FN_RET[0]}"
-  local dir="${_FN_RET[1]}"
+  local dir_src="${_FN_RET[1]}"
   local cover="${_FN_RET[4]}"
 
-  # Create dirs
-  cd "$(dir_build_create "$dir")"
+  # Create & cd in build dir
+  local dir_build="$(dir_build_create "$dir_src")"
+  cd "$dir_build"
 
   dir_appdir_create
 
@@ -229,9 +247,9 @@ function main()
   # Install and configure application
   wine_download
   wine_configure
-  wine_install "$dir"
-  wine_test "$dir/build/AppDir/app/wine"
-  wine_executable_select
+  wine_install "$dir_src"
+  wine_test "$dir_build/AppDir/app/wine"
+  wine_executable_select "$dir_build" "$name"
 
   # Create runner script
   runner_create "${_FN_RET[0]}" "${_FN_RET[1]}"
@@ -244,6 +262,10 @@ function main()
 
   # Build appimage
   appdir_build
+
+  # Rename AppImage file
+  [ -f "${name}.AppImage" ] && rm "${name}.AppImage"
+  mv ./*.AppImage "${name}.AppImage"
 }
 
 main "$@"

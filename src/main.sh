@@ -14,17 +14,19 @@ set -e
 # # Function return type
 declare -a _FN_RET
 # # Extra directories for executables to install
-[ ! -v GIMG_DIR_ROM_EXTRA ] && export GIMG_DIR_ROM_EXTRA=""
+export GIMG_DIR_ROM_EXTRA="${GIMG_DIR_ROM_EXTRA:-}"
 # # YAML Location
-export GIMG_YAML=""
+export GIMG_YAML="${GIMG_YAML:-}"
 # # Call directory
 export GIMG_CALL_DIR="$(pwd)"
 # # Script directory
 export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # # Wine distribution - ge,caffe,staging,vaniglia,soda
-[ ! -v GIMG_WINE_DIST ] && export GIMG_WINE_DIST="ge"
+export GIMG_WINE_DIST="${GIMG_WINE_DIST:-ge}"
 # # Check for GUI
-[ ! -v GIMG_GUI ] && export GIMG_GUI=""
+export GIMG_GUI="${GIMG_GUI:-}"
+# # Install location for wine applications (appimage/prefix)
+export GIMG_INSTALL_LOC="${GIMG_INSTALL_LOC:-appimage}"
 
 GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 

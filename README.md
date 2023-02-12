@@ -133,7 +133,13 @@ platform, `./gameimage.AppImage` displays the following example:
   main.sh --version # Prints version and exits
 ```
 
-### Additional search paths (besides rom)
+## Configuration
+
+Consider an AppImage named `my-cool-game.AppImage` for the examples below.
+
+### Global
+
+#### Additional search paths (besides rom)
 
 ```bash
 export GIMG_DIR_ROM_EXTRA="/path/to/dir1 /path/to/dir2"
@@ -145,7 +151,31 @@ If the path has spaces:
 export GIMG_DIR_ROM_EXTRA="\"/path/to my/dir 1\" \"/path/to my/dir 2\""
 ```
 
-### Select Wine Distribution
+### Wine Specific
+
+#### Where to install the game
+
+The `GIMG_INSTALL_LOC` option defines where to install the game, valid values
+are `appimage` and `prefix`, the former is the default.
+
+1. Inside the appimage (compressed and read-only)
+2. Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
+
+`[1]` Packs everything inside the appimage, so only the file `my-game.AppImage`
+is required for it to work, saves are written in `.my-game.AppImage.config`.
+
+`[2]` The software is installed in `.my-game.AppImage.config`, this is required
+for games that write into their install directory, which would otherwise fail if
+is read-only. In this option, both the file `my-game.AppImage` and the directory
+`.my-game.AppImage.config` are required for software to work.
+
+Example:
+
+```bash
+export GIMG_INSTALL_LOC=prefix
+```
+
+#### Select Wine Distribution
 
 Default distribution is [wine-ge](https://github.com/ruanformigoni/wine). Available are:
 * staging
@@ -159,12 +189,9 @@ To change it, export the variable before running the appimage, e.g:
 export GIMG_WINE_DIST=soda
 ```
 
+### Emulator Specific
 
-## Configuration
-
-Consider an AppImage named `my-cool-game.AppImage`:
-
-### Configure the emulator bundled inside the appimage
+#### Configure the emulator bundled inside the appimage
 
 ```
 my-cool-game.AppImage --config
@@ -176,13 +203,13 @@ Change the `global` settings, and it will only apply to the game in the
 In the case of wine if you pass any parameters, they'll be executed as
 `wine args...`
 
-### Make the AppImage use the global configuration directory
+#### Make the AppImage use the global configuration directory
 
 Include an extra `.` in the extension to use `~/.config`:
 
 From `my-cool-game.AppImage` to `my-cool-game..AppImage`
 
-### Test the emulator inside the appimage
+#### Test the emulator inside the appimage
 
 You can also pass any arguments to the emulator directly:
 
