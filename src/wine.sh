@@ -203,7 +203,7 @@ function runner_create()
   if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
     { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
     :# Unmount after appimage unmounts squashfs
-    :function _exit() { nohup sh -c "sleep 1 && fusermount -u \$WINEPREFIX" &>/dev/null & disown; }
+    :function _exit() { pkill -f "unionfs.*\$WINEPREFIX"; }
     :trap _exit SIGINT EXIT
     :
     :# Configure dirs for unionfs
