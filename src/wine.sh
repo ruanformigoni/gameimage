@@ -245,6 +245,9 @@ function runner_create()
     :
     :exec="$(basename "$path_exec")"
     :
+    :# Avoid symlink creation
+    :mkdir -p "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}
+    :
     :if [ "\$@" ]; then
     :  "\$WINE" "\$@"
     :else
