@@ -176,6 +176,9 @@ function runner_create()
   path_exec="$2"
   path_exec="${path_exec##*AppDir/app/}"
 
+  # Parse yaml
+  cp "${GIMG_SCRIPT_DIR}/yq" "AppDir/usr/bin"
+
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
     :#!/usr/bin/env bash
@@ -248,10 +251,23 @@ function runner_create()
     :# Avoid symlink creation
     :mkdir -p "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}
     :
-    :if [ "\$@" ]; then
-    :  "\$WINE" "\$@"
+    :YQ="\$APPDIR/usr/bin/yq"
+    :
+    :# Check YAML integrity
+    :YAML="\$CFGDIR/config.yml"
+    :"\$YQ" --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null || echo "cmd: \"{wine} {exec}\"" > "\$YAML"
+    :
+    :if [[ "\$1" =~ --gameimage-cmd=(.*) ]]; then
+    :  # Define custom Command
+    :  "\$YQ" -i ".cmd = \"\${BASH_REMATCH[1]}\"" "\$YAML"
+    :elif { YAML_CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$YAML_CMD" ]; }; then
+    :  # Run custom command, replaces {wine} and {exec} strings
+    :  YAML_CMD="\${YAML_CMD//\{wine\}/\$WINE}"
+    :  YAML_CMD="\${YAML_CMD//\{exec\}/\$exec}"
+    :  eval "\$YAML_CMD"
     :else
-    :  "\$WINE" "\$exec"
+    :  # Error
+    :  echo "Could not start gameimage, remove \$YAML and try again"
     :fi
 	END
 
