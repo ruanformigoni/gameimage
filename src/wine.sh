@@ -186,6 +186,8 @@ function runner_create()
     :set -e
     :
     :# Wine executable
+    :DIR_CALL="\$(dirname "\$APPIMAGE")"
+    :DIR_APP="\$APPDIR"
     :WINE="\$APPDIR/usr/bin/wine"
     :
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
@@ -246,7 +248,7 @@ function runner_create()
   { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
     :cd "\$(dirname "\$CFGDIR/$path_exec")"
     :
-    :exec="$(basename "$path_exec")"
+    :EXEC="$(basename "$path_exec")"
     :
     :# Avoid symlink creation
     :mkdir -p "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}
@@ -259,11 +261,15 @@ function runner_create()
     :
     :if [[ "\$1" =~ --gameimage-cmd=(.*) ]]; then
     :  # Define custom Command
-    :  "\$YQ" -i ".cmd = \"\${BASH_REMATCH[1]}\"" "\$YAML"
+    :  YAML_CMD="\${BASH_REMATCH[1]}"
+    :  YAML_CMD="\${YAML_CMD//\"/\\\\\"}" # Escape quotes
+    :  "\$YQ" -i ".cmd = \"\$YAML_CMD\"" "\$YAML"
     :elif { YAML_CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$YAML_CMD" ]; }; then
     :  # Run custom command, replaces {wine} and {exec} strings
-    :  YAML_CMD="\${YAML_CMD//\{wine\}/\$WINE}"
-    :  YAML_CMD="\${YAML_CMD//\{exec\}/\$exec}"
+    :  YAML_CMD="\${YAML_CMD//\{wine\}/\"\$WINE\"}"
+    :  YAML_CMD="\${YAML_CMD//\{exec\}/\"\$EXEC\"}"
+    :  YAML_CMD="\${YAML_CMD//\{here\}/\"\$DIR_CALL\"}"
+    :  YAML_CMD="\${YAML_CMD//\{appd\}/\"\$DIR_APP\"}"
     :  eval "\$YAML_CMD"
     :else
     :  # Error
