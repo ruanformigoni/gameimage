@@ -7,15 +7,16 @@
 - [GameImage - AppImage Game Packer](#gameimage---appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
   - [Showcase](#showcase)
-  - [Graphical User Interface (GUI)](#graphical-user-interface-(gui))
+  - [Graphical User Interface (GUI)](#graphical-user-interface-gui)
   - [Build Dependencies](#build-dependencies)
   - [Install](#install)
-  - [Usage (Command Line)](#usage-(command-line))
+  - [Usage (Command Line)](#usage-command-line)
   - [Configuration](#configuration)
     - [Global](#global)
-      - [Additional search paths (besides rom)](#additional-search-paths-(besides-rom))
+      - [Additional search paths (besides rom)](#additional-search-paths-besides-rom)
     - [Wine Specific](#wine-specific)
-      - [How to package the software](#how-to-package-the-software)
+      - [Launch Command](#launch-command)
+      - [Select type of packaging](#select-type-of-packaging)
       - [Select Wine Distribution](#select-wine-distribution)
     - [Emulator Specific](#emulator-specific)
       - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
@@ -158,7 +159,30 @@ export GIMG_DIR_ROM_EXTRA="\"/path/to my/dir 1\" \"/path/to my/dir 2\""
 
 ### Wine Specific
 
-#### How to package the software
+#### Launch Command
+
+It is possible to set the default launch command with `--gameimage-cmd`, this is
+saved in `.my-cool-game.AppImage/config.yml`. Avaliable aliases are:
+
+* `{wine}`: Path to wine binary included inside the appimage
+* `{exec}`: Basename of the default executable
+* `{here}`: Directory from which the appimage is launched.
+* `{appd}`: AppImage AppDir.
+
+Examples:
+
+```sh
+ # Default command, sets wine to launch main application executable
+./my-cool-game.AppImage --gameimage-cmd='{wine} {exec}'
+ # Use wine to run other executable in the current working directory
+./my-cool-game.AppImage --gameimage-cmd='{wine} {here}/other-exec.exe'
+ # Run winetricks, included in the wine appimage
+./my-cool-game.AppImage --gameimage-cmd='{appd}/usr/bin/winetricks'
+ # Use FSR (gamescope must be installed separately)
+./my-cool-game.AppImage --gameimage-cmd='gamescope -U {wine} {exec}'
+```
+
+#### Select type of packaging
 
 The `GIMG_PKG_TYPE` option defines the packaging method, options are:
 
