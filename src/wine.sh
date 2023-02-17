@@ -251,7 +251,11 @@ function runner_create()
     :EXEC="$(basename "$path_exec")"
     :
     :# Avoid symlink creation
-    :mkdir -p "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}
+    :for i in "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}; do
+    :  # Erase symbolic link and replace with regular folder
+    :  [ ! -L "\$i" ] || rm "\$i"
+    :  [ -d "\$i" ] || mkdir -p "\$i"
+    :done
     :
     :YQ="\$APPDIR/usr/bin/yq"
     :
@@ -279,6 +283,12 @@ function runner_create()
 
   # Allow execute
   chmod +x AppDir/AppRun
+
+  # Erase symlinks from wine user home
+  for i in "$WINEPREFIX/drive_c/users/$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}; do
+    # Erase symbolic links
+    [ ! -L "$i" ] || rm "$i";
+  done
 
   msg -n "AppRun written, make further changes to it if you desire, then press enter..."
   read -r
