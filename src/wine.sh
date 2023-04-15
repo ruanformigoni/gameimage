@@ -245,7 +245,7 @@ function runner_create()
 		END
   fi
 
-  { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :cd "\$(dirname "\$CFGDIR/$path_exec")"
     :
     :EXEC="$(basename "$path_exec")"
