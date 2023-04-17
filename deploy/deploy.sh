@@ -25,13 +25,9 @@ mkdir -p build && cd build
 # Create appdir
 mkdir -p AppDir/usr/bin
 
-# Fetch & Compile uniofs-fuse
-[ -d "unionfs-fuse" ] || git clone https://github.com/rpodgorny/unionfs-fuse.git
-cd unionfs-fuse
-# Workaround for #133 in https://github.com/rpodgorny/unionfs-fuse
-git reset --hard 453f588a0d227e31730244f45fce3adb0ecbe95d
-cmake -H. -Bbuild && cmake --build build && cd ..
-cp unionfs-fuse/build/src/unionfs AppDir/usr/bin
+# Fetch unionfs
+wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
+mv -f unionfs AppDir/usr/bin
 
 # Fetch yq
 wget -q --show-progress --progress=dot:mega https://github.com/mikefarah/yq/releases/download/v4.30.7/yq_linux_amd64.tar.gz -O - | tar xz
