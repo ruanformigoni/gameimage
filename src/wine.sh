@@ -167,8 +167,11 @@ function wine_executable_select()
 
 function runner_create()
 {
-  # Application name
+  # Application name, space separated, uppercase
   local name="$1"; shift
+  declare -a name_upper
+  for i in $name; do name_upper+=("${i^}"); done
+  name="${name_upper[*]}"
 
   # Binary directory path under c: drive
   path_install="$1"
