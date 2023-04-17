@@ -20,7 +20,7 @@ staticx ./gui/wizard/target/release/gameimage-install-gui build/AppDir/usr/bin/g
 # Compile launcher
 cd gui/launcher && cargo build --release
 cd "$(dirname "$SCRIPT_DIR")"
-staticx -l"/usr/lib/libappindicator3.so.1" ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
+staticx -l"/usr/lib/x86_64-linux-gnu/libappindicator3.so.1" ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
 
 # Fetch unionfs
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
