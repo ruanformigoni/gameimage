@@ -1,21 +1,21 @@
-image: "rust:latest"
-
 stages:
   - build
   - release
 
 create-appimage:
   stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    IMAGE_NAME: gameimage:latest
   before_script:
-    - rustc --version 
-    - cargo --version
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
-    - apt update
-    - apt install -y git patchelf python3-pip build-essential cmake libfuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev libpango-1.0-0 libpango1.0-dev libpangoxft-1.0-0 libpangocairo-1.0-0 libgtk-3-dev libappindicator3-1
-    - pip3 install staticx
-    - sed -i "s/TRUNK/$CI_COMMIT_TAG/" src/main.sh
-    - ./deploy/deploy.sh
+    - mkdir build
+    - docker build -t $CI_REGISTRY/$IMAGE_NAME .
+    - docker run --rm -v $(pwd):/workdir $CI_REGISTRY/$IMAGE_NAME cp /gameimage/build/GameImage-x86_64.AppImage /workdir/build
   artifacts:
     paths:
       - ./build/GameImage-x86_64.AppImage
