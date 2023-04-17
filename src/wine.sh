@@ -167,17 +167,22 @@ function wine_executable_select()
 
 function runner_create()
 {
-  local path_exec
+  # Application name
+  local name="$1"; shift
 
   # Binary directory path under c: drive
   path_install="$1"
 
   # Binary path under AppDir
+  local path_exec
   path_exec="$2"
   path_exec="${path_exec##*AppDir/app/}"
 
   # Parse yaml
   cp "${GIMG_SCRIPT_DIR}/yq" "AppDir/usr/bin"
+
+  # Launcher
+  cp "${GIMG_SCRIPT_DIR}/launcher" "AppDir/usr/bin"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
@@ -246,9 +251,11 @@ function runner_create()
   fi
 
   { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+    :# Enter the main executable's directory
     :cd "\$(dirname "\$CFGDIR/$path_exec")"
     :
-    :EXEC="$(basename "$path_exec")"
+    :# Name of the main executable (without path)
+    :export GIMG_DEFAULT_EXEC="\${GIMG_DEFAULT_EXEC:-$(basename "$path_exec")}"
     :
     :# Avoid symlink creation
     :for i in "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}; do
@@ -261,23 +268,41 @@ function runner_create()
     :
     :# Check YAML integrity
     :YAML="\$CFGDIR/config.yml"
-    :"\$YQ" --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null || echo "cmd: \"{wine} {exec}\"" > "\$YAML"
+    :if ! "\$YQ" --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null; then
+    :  echo "cmd: \"{wine} {exec}\"" > "\$YAML"
+    :fi
     :
+    :# Change startup command
     :if [[ "\$1" =~ --gameimage-cmd=(.*) ]]; then
     :  # Define custom Command
-    :  YAML_CMD="\${BASH_REMATCH[1]}"
-    :  YAML_CMD="\${YAML_CMD//\"/\\\\\"}" # Escape quotes
-    :  "\$YQ" -i ".cmd = \"\$YAML_CMD\"" "\$YAML"
-    :elif { YAML_CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$YAML_CMD" ]; }; then
+    :  CMD="\${BASH_REMATCH[1]}"
+    :  CMD="\${CMD//\"/\\\\\"}" # Escape quotes
+    :  "\$YQ" -i ".cmd = \"\$CMD\"" "\$YAML"
+    :  exit 0
+    :fi
+    :
+    :# Parse startup command
+    :if { CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$CMD" ]; }; then
     :  # Run custom command, replaces {wine} and {exec} strings
-    :  YAML_CMD="\${YAML_CMD//\{wine\}/\"\$WINE\"}"
-    :  YAML_CMD="\${YAML_CMD//\{exec\}/\"\$EXEC\"}"
-    :  YAML_CMD="\${YAML_CMD//\{here\}/\"\$DIR_CALL\"}"
-    :  YAML_CMD="\${YAML_CMD//\{appd\}/\"\$DIR_APP\"}"
-    :  eval "\$YAML_CMD"
+    :  CMD="\${CMD//\{wine\}/\"\$WINE\"}"
+    :  CMD="\${CMD//\{exec\}/\"\\\$GIMG_DEFAULT_EXEC\"}"
+    :  CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
+    :  CMD="\${CMD//\{appd\}/\"\$DIR_APP\"}"
     :else
-    :  # Error
-    :  echo "Could not start gameimage, remove \$YAML and try again"
+    :  echo "Startup command is empty, try to erase YAML"
+    :  exit 1
+    :fi
+    :
+    :# Start application
+    :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
+    :  LAUNCHER="\$APPDIR/usr/bin/launcher"
+    :  export GIMG_LAUNCHER_NAME="$name"
+    :  export GIMG_LAUNCHER_IMG="\$APPDIR/.DirIcon"
+    :  export GIMG_LAUNCHER_CMD="\$CMD"
+    :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \\;)"
+    :  "\$LAUNCHER"
+    :else
+    :  eval "\$CMD"
     :fi
 	END
 
@@ -321,7 +346,7 @@ function main()
   wine_executable_select "$dir_build" "$name"
 
   # Create runner script
-  runner_create "${_FN_RET[0]}" "${_FN_RET[1]}"
+  runner_create "$name" "${_FN_RET[0]}" "${_FN_RET[1]}"
 
   # Copy cover
   ./imagemagick "$cover" "AppDir/${name}.png"
@@ -334,7 +359,7 @@ function main()
 
   # Rename AppImage file
   [ -f "${name}.AppImage" ] && rm "${name}.AppImage"
-  mv ./*.AppImage "${name}.AppImage"
+  mv ./*.AppImage "${name// /-}.AppImage"
 }
 
 main "$@"

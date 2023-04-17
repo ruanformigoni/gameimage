@@ -1,0 +1,15 @@
+[package]
+name = "gameimage-launcher"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tray-item = "0.7.1"
+gtk = "0.15"
+gdk = "0.15"
+glib = "0.15"
+gtk-sys = "0.15"
+fltk = "1.4"
+fltk-theme = "0.6.0"

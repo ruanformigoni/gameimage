@@ -14,6 +14,11 @@ cd gui/wizard && cargo build --release
 
 cd "$(dirname "$SCRIPT_DIR")"
 
+# Compile launcher
+cd gui/launcher && cargo build --release
+
+cd "$(dirname "$SCRIPT_DIR")"
+
 # Create build dir
 mkdir -p build && cd build
 
@@ -38,6 +43,7 @@ mv yq AppDir/usr/bin
 cp -r ../src/* AppDir/usr/bin
 cp -r ../doc/gameimage.png AppDir/
 cp -r ../gui/wizard/target/release/gameimage-install-gui AppDir/usr/bin/gui
+cp -r ../gui/launcher/target/release/gameimage-launcher AppDir/usr/bin/launcher
 
 for i in AppDir/usr/bin/*; do
   echo "$i"
