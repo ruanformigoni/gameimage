@@ -5,6 +5,7 @@ stages:
 create-appimage:
   stage: build
   image: docker:latest
+  when: manual
   services:
     - docker:dind
   variables:
