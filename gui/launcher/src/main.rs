@@ -293,6 +293,7 @@ impl Drop for Gui
     self.wind.end();
     self.wind.show();
     app::run().unwrap_or_else(|_|{ println!("Failed to run GUI"); });
+    self.sender.send(0).ok();
   }
 } // }}}
 
