@@ -12,23 +12,18 @@ use glib;
 // Gtk Colors
 use gtk::prelude::*;
 
-// Parse yaml
-use serde;
-
 // Gui
 use fltk::{
   app,
   app::App,
   button::Button,
-  dialog::dir_chooser,
   group::{Group, PackType, Wizard},
-  input::{Input,FileInput},
+  input::Input,
   menu::MenuButton,
-  prelude::{ImageExt, DisplayExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
+  prelude::{ImageExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
   window::Window,
   enums::{Align,FrameType,Color},
   frame::Frame,
-  text::SimpleTerminal,
   image::SharedImage,
 };
 
@@ -292,7 +287,7 @@ impl Drop for Gui
     self.wind.make_resizable(false);
     self.wind.end();
     self.wind.show();
-    app::run().unwrap_or_else(|_|{ println!("Failed to run GUI"); });
+    self.app.run().unwrap_or_else(|_|{ println!("Failed to run GUI"); });
     self.sender.send(0).ok();
   }
 } // }}}
