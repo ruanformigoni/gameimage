@@ -161,6 +161,7 @@ impl Gui
       .below_of(&menu_binaries, 40);
     input.set_label("Default command");
     input.set_align(Align::TopLeft);
+    input.set_color(Color::BackGround);
     env::var("GIMG_CONFIG_FILE").ok()
       .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); }, |var|
       {
