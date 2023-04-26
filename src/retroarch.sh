@@ -77,7 +77,7 @@ function runner_create()
   [ "$bios" == "null" ] && local bios=""
 
   # Create runner script
-  { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
+  { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :#!/usr/bin/env bash
     :
     :set -e

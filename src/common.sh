@@ -315,7 +315,7 @@ function desktop_entry_create()
   name="$1"
 
   # Create desktop entry
-  { sed -E 's/^\s+://' | tee AppDir/"${name}.desktop"; } <<-END
+  { sed -E 's/^\s+://' | tee AppDir/"${name}.desktop" | sed -e 's/^/-- /'; } <<-END
     :[Desktop Entry]
     :Name=${name_alt[*]}
     :Exec=/usr/bin/bash

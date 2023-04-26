@@ -54,7 +54,7 @@ function runner_create()
   [ "$rom" == "null" ] && { msg "Invalid rom file"; die; }
 
   # Create runner script
-  { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
+  { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :#!/usr/bin/env bash
     :
     :set -e

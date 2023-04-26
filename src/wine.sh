@@ -188,7 +188,7 @@ function runner_create()
   cp "${GIMG_SCRIPT_DIR}/launcher" "AppDir/usr/bin"
 
   # Create runner script
-  { sed -E 's/^\s+://' | tee AppDir/AppRun; } <<-END
+  { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :#!/usr/bin/env bash
     :
     :set -e
@@ -218,7 +218,7 @@ function runner_create()
 	END
 
   if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
-    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :# Unmount after appimage unmounts squashfs
     :function _exit() { pkill -f "unionfs.*\$WINEPREFIX"; }
     :trap _exit SIGINT EXIT
@@ -234,7 +234,7 @@ function runner_create()
     :
 		END
   elif [ "${GIMG_PKG_TYPE}" = "readonly" ]; then
-    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :# Copy prefix to outside of appimage
     :if [ ! -d "\$WINEPREFIX" ]; then
     :  mkdir -p "\$CFGDIR"
@@ -246,7 +246,7 @@ function runner_create()
     :
 		END
   else # prefix
-    { sed -E 's/^\s+://' | tee -a AppDir/AppRun; } <<-END
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :# Requires pre-existing prefix to start
     :[ ! -d "\$WINEPREFIX" ] && { echo "Requires pre-existing prefix to start"; exit 1; }
     :
