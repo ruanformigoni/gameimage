@@ -44,7 +44,7 @@ Advantages:
     install, no dependencies required.
 - [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
 
-![](doc/not-aidan-tutorial.mp4)
+![](doc/not-aidan-tutorial.mp4){width=1000px}
 
 Also watch it on [youtube](https://www.youtube.com/watch?v=_15QkwCS7bg), thanks Not Aidan.
 
