@@ -194,9 +194,9 @@ function runner_create()
     :set -e
     :
     :# Wine executable
-    :DIR_CALL="\$(dirname "\$APPIMAGE")"
-    :DIR_APP="\$APPDIR"
-    :WINE="\$APPDIR/usr/bin/wine"
+    :export DIR_CALL="\$(dirname "\$APPIMAGE")"
+    :export DIR_APP="\$APPDIR"
+    :export WINE="\$APPDIR/usr/bin/wine"
     :
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set hidden config dir
@@ -299,6 +299,7 @@ function runner_create()
     :# Start application
     :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
     :  LAUNCHER="\$APPDIR/usr/bin/launcher"
+    :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
     :  export GIMG_LAUNCHER_NAME="$name"
     :  export GIMG_LAUNCHER_IMG="\$APPDIR/.DirIcon"
     :  export GIMG_LAUNCHER_CMD="\$CMD"

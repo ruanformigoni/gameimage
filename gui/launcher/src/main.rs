@@ -4,7 +4,6 @@ use std::env;
 use std::sync::mpsc;
 use std::sync::{Arc,Mutex};
 
-
 // Tray
 use tray_item::TrayItem;
 use gtk;
@@ -12,6 +11,9 @@ use glib;
 
 // Gtk Colors
 use gtk::prelude::*;
+
+// Parse yaml
+use serde;
 
 // Gui
 use fltk::{
@@ -164,8 +166,15 @@ impl Gui
       .below_of(&menu_binaries, 40);
     input.set_label("Default command");
     input.set_align(Align::TopLeft);
-    input.set_value("{wine} {exec}");
-    input.deactivate();
+    env::var("GIMG_CONFIG_FILE").ok()
+      .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); }, |var|
+      {
+        std::fs::File::open(var).ok().and_then(|f|{ serde_yaml::from_reader(f).ok() })
+          .map(|y: serde_yaml::Value|
+          {
+            y.get("cmd").map(|cmd| { cmd.as_str().map(|s| { input.set_value(s); }); })
+          });
+      });
 
     // Lauch application
     let mut btn_launch = Button::default()
@@ -194,6 +203,47 @@ impl Gui
       let choice = e.choice().unwrap();
       e.set_label(choice.as_str());
       env::set_var("GIMG_DEFAULT_EXEC", choice.as_str());
+    });
+
+    input.set_callback(move |e|
+    {
+      // Perform strings replacements
+      let mut str_cmd = e.value();
+      str_cmd = str_cmd.replace("{wine}", env::var("WINE").unwrap().as_str());
+      str_cmd = str_cmd.replace("{exec}", env::var("GIMG_DEFAULT_EXEC").unwrap().as_str());
+      str_cmd = str_cmd.replace("{here}", env::var("DIR_CALL").unwrap().as_str());
+      str_cmd = str_cmd.replace("{appd}", env::var("DIR_APP").unwrap().as_str());
+
+      // Read file from global variable
+      let (file, var) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
+          || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
+          |var| { (std::fs::File::open(var.clone()).ok(), var) }
+        );
+
+      // Parse file into yaml with serde_yaml
+      let yaml: Option<serde_yaml::Value> = file.map_or_else(
+          || { println!("Could not open file {} for read", var);  None },
+          |file| { serde_yaml::from_reader(file).ok() }
+        );
+
+      // Update cmd in the yaml file and the GIMG_LAUNCHER_CMD variable
+      yaml.map_or_else(|| { println!("Could parse yaml file");  }, |mut yaml: serde_yaml::Value|
+      {
+        // Update cmd value with the 'aliased' command
+        yaml.get_mut("cmd").map_or_else(
+            || { println!("Failed to update variable");  },
+            |key| { *key = e.value().as_str().into(); }
+          );
+        // Write new cmd value to file and update GIMG_LAUNCHER_CMD with resolved aliases
+        serde_yaml::to_string(&yaml).map_or_else(|_| { println!("Could not generate yaml string") }, |str_yaml|
+        {
+          std::fs::write(var.clone(), str_yaml)
+            .map_or_else(
+              |_| { println!("Could not write to file {}", var); },
+              |_| { env::set_var("GIMG_LAUNCHER_CMD", str_cmd); }
+            );
+        });
+      });
     });
 
     let sender = self.sender.clone();
