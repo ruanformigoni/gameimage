@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::process::{Command, Stdio};
 
 use walkdir::WalkDir;
@@ -338,7 +338,7 @@ impl Gui
     btn_build.set_color(Color::DarkGreen);
 
     btn_build.set_callback(closure!(clone mut btn_prev, clone term
-      , clone btn_send, clone input_cmd, |e|
+      , clone mut btn_send, clone input_cmd, |e|
     {
       let mut btn_build = e.clone();
       let env_appdir = env::var("APPDIR").unwrap_or(String::from("."));
@@ -347,65 +347,93 @@ impl Gui
       btn_build.deactivate();
       btn_prev.deactivate();
 
-      std::thread::spawn(closure!(clone mut btn_build, clone mut btn_prev
-        , clone mut btn_send, clone input_cmd, clone term, ||
+      // Spawn command
+      let reader_cmd = Command::new("bash")
+        .args(["-c", format!("{} --yaml 2>&1", cmd_main).as_str()])
+        .stdin(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Could not start gameimage main script");
+
+      // Create arc reader for stdin and stdout
+      let arc_reader_stdin = Arc::new(Mutex::new(reader_cmd.stdin));
+      let arc_reader_stdout = Arc::new(Mutex::new(reader_cmd.stdout));
+
+      // Set callback to send commands to terminal stdin,
+      // when 'send' is pressed
+      btn_send.set_callback(closure!(clone mut input_cmd, clone arc_reader_stdin, |_|
       {
-        // Spawn command
-        let reader_cmd = Command::new("bash")
-          .args(["-c", format!("{} --yaml 2>&1", cmd_main).as_str()])
-          .stdin(Stdio::piped())
-          .stderr(Stdio::inherit())
-          .stdout(Stdio::piped())
-          .spawn()
-          .expect("Could not start gameimage main script");
+        let guard_result = arc_reader_stdin.lock();
 
-        // Create arc reader for stdin and stdout
-        let arc_reader_stdin = Arc::new(Mutex::new(reader_cmd.stdin));
-        let arc_reader_stdout = Arc::new(Mutex::new(reader_cmd.stdout));
-
-        // Set callback to send commands to terminal stdin,
-        // when 'send' is pressed
-        btn_send.set_callback(closure!(clone mut input_cmd, clone arc_reader_stdin, |_|
+        if let Err(_) = guard_result
         {
-          let mut mutex = (&*arc_reader_stdin).lock().unwrap();
-          let stdin = mutex.as_mut().unwrap();
-          let value = input_cmd.value();
-          input_cmd.set_value("");
-          writeln!(stdin, "{}", value).expect("Failed to write to child stdin");
-        }));
+          println!("Failed to acquire stdin lock");
+          return;
+        }
 
-        // Write stdout to terminal
-        std::thread::spawn(closure!(clone mut term, clone arc_reader_stdout, ||
+        let mut guard = guard_result.unwrap();
+        let stdin_opt = guard.as_mut();
+
+        if let None = stdin_opt
         {
-          (&*arc_reader_stdout)
-          .lock().unwrap().as_mut().unwrap().bytes()
-          .filter_map(|b| b.ok()).try_for_each(|byte|
-          {
-            term.insert(std::str::from_utf8(&[byte]).unwrap());
-            if byte as char == '\n' { term.show_insert_position(); }
-            app::awake();
-            Some(())
-          });
-        }));
+          println!("Failed to acquire mut stdin");
+          return;
+        }
 
-        // Unlock GUI buttons after script finishes
-        // When this happens, stdout and stderr will be released
-        std::thread::spawn(closure!(clone arc_reader_stdout, ||
+        let stdin = stdin_opt.unwrap();
+        let value = input_cmd.value();
+        input_cmd.set_value("");
+        writeln!(stdin, "{}", value).expect("Failed to write to child stdin");
+      }));
+
+      // Write stdout to terminal
+      std::thread::spawn(closure!(clone mut term, clone arc_reader_stdout, ||
+      {
+        // Acquire lock
+        let lock = (&*arc_reader_stdout).lock();
+        if let Err(_) = lock { println!("Failed to acquire stdout lock"); return; }
+
+        // Acquire stdout
+        let mut guard = lock.unwrap();
+        let stdout = guard.as_mut();
+        if stdout.is_none() { println!("Failed to acquire mut stdout"); return; }
+
+        // Create buf
+        let mut buf_reader = BufReader::new(stdout.unwrap());
+        let mut buf = vec![0; 4096];
+
+        // Write buf to stdout
+        loop
         {
-          // Wait for stdout lock in previously launched thread
-          std::thread::sleep(std::time::Duration::from_millis(500));
-          // Try to re-enable buttons after release
-          (&*arc_reader_stdout).lock().and_then(|_|
-          {
-            btn_build.activate();
-            btn_prev.activate();
-            app::awake();
-            Ok(())
-          }).expect("Failure to restore button state");
-        }));
+          std::thread::sleep(std::time::Duration::from_millis(50));
 
+          let bytes_read = match buf_reader.read(&mut buf) {
+            Ok(bytes_read) => bytes_read,
+            Err(_) => break,
+          };
 
-      })); // std::thread::spawn...
+          if bytes_read == 0 { break; }
+          let output = String::from_utf8_lossy(&buf[..bytes_read]);
+          term.insert(&output);
+          term.show_insert_position();
+          app::awake();
+        }
+      }));
+
+      // Unlock GUI buttons after script finishes
+      // When this happens, stdout and stderr will be released
+      std::thread::spawn(closure!(clone mut btn_prev, clone arc_reader_stdout, ||
+      {
+        // Wait for stdout lock in previously launched thread
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        // Try to re-enable buttons after release
+        match (&*arc_reader_stdout).lock()
+        {
+          Ok(_) => { btn_build.activate(); btn_prev.activate(); app::awake(); }
+          Err(_) => { println!("Failure to restore button state"); }
+        }
+      }));
 
     })); // btn_build.set_callback...
     
@@ -440,6 +468,6 @@ fn main() {
   gui.frame_2();
 } // fn: main }}}
 
-// cmd: !cargo run
+// cmd: !cargo build --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
