@@ -78,7 +78,13 @@ Files displayed on the `thunar` file manager.
 
 ## Graphical User Interface (GUI)
 
+### GUI Installer
+
 <img src="doc/example-gui.png"  width="1000">
+
+### GUI Launcher
+
+<img src="doc/example-gui-launcher.png"  width="1000">
 
 ## Build Dependencies
 
@@ -158,6 +164,15 @@ export GIMG_DIR_ROM_EXTRA="\"/path/to my/dir 1\" \"/path/to my/dir 2\""
 ```
 
 ### Wine Specific
+
+#### Disable Launcher
+
+It is possible to disable the launcher with the `GIMG_LAUNCHER_DISABLE`
+variable, e.g.:
+
+```sh
+GIMG_LAUNCHER_DISABLE=1 my-cool-game.AppImage
+```
 
 #### Launch Command
 
