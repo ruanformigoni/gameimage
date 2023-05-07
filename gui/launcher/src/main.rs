@@ -205,10 +205,18 @@ impl Gui
     {
       // Perform strings replacements
       let mut str_cmd = e.value();
-      str_cmd = str_cmd.replace("{wine}", env::var("WINE").unwrap().as_str());
-      str_cmd = str_cmd.replace("{exec}", env::var("GIMG_DEFAULT_EXEC").unwrap().as_str());
-      str_cmd = str_cmd.replace("{here}", env::var("DIR_CALL").unwrap().as_str());
-      str_cmd = str_cmd.replace("{appd}", env::var("DIR_APP").unwrap().as_str());
+
+      // Replace placeholder with value in environment variable 'var'
+      let mut f_expand = |placeholder, var|
+      {
+        env::var(var).map_or_else(|_| { println!("Could not expand var {}", var); },
+          |value| { str_cmd = str_cmd.replace(placeholder, format!("\"{}\"", value).as_str()); });
+      };
+
+      f_expand("{wine}", "WINE");
+      f_expand("{exec}", "GIMG_DEFAULT_EXEC");
+      f_expand("{here}", "DIR_CALL");
+      f_expand("{appd}", "DIR_APP");
 
       // Read file from global variable
       let (file, var) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
