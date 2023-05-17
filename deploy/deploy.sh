@@ -15,12 +15,46 @@ mkdir -p build/AppDir/usr/bin
 # Compile gui
 cd gui/wizard && cargo build --release
 cd "$(dirname "$SCRIPT_DIR")"
-staticx ./gui/wizard/target/release/gameimage-install-gui build/AppDir/usr/bin/gui
+staticx \
+  -l "/usr/lib/x86_64-linux-gnu/libpthread.so.0" \
+  -l "/usr/lib/x86_64-linux-gnu/libappindicator3.so.1" \
+  -l "/lib/x86_64-linux-gnu/libdbusmenu-glib.so.4" \
+  -l "/lib/x86_64-linux-gnu/libdbusmenu-gtk3.so.4" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libdconfsettings.so" \
+  -l "/lib/x86_64-linux-gnu/libdl.so.2" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libgioremote-volume-monitor.so" \
+  -l "/lib/x86_64-linux-gnu/libgnomekbd.so.8" \
+  -l "/lib/x86_64-linux-gnu/libgnomekbdui.so.8" \
+  -l "/usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libgvfsdbus.so" \
+  -l "/lib/x86_64-linux-gnu/libstdc++.so.6" \
+  -l "/lib/x86_64-linux-gnu/libxapp.so.1" \
+  -l "/lib/x86_64-linux-gnu/libxkbfile.so.1" \
+  -l "/lib/x86_64-linux-gnu/libxklavier.so.16" \
+  -l "/lib/x86_64-linux-gnu/libxml2.so.2" \
+  ./gui/wizard/target/release/gameimage-install-gui build/AppDir/usr/bin/gui
 
 # Compile launcher
 cd gui/launcher && cargo build --release
 cd "$(dirname "$SCRIPT_DIR")"
-staticx -l"/usr/lib/x86_64-linux-gnu/libappindicator3.so.1" ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
+staticx \
+  -l "/usr/lib/x86_64-linux-gnu/libpthread.so.0" \
+  -l "/usr/lib/x86_64-linux-gnu/libappindicator3.so.1" \
+  -l "/lib/x86_64-linux-gnu/libdbusmenu-glib.so.4" \
+  -l "/lib/x86_64-linux-gnu/libdbusmenu-gtk3.so.4" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libdconfsettings.so" \
+  -l "/lib/x86_64-linux-gnu/libdl.so.2" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libgioremote-volume-monitor.so" \
+  -l "/lib/x86_64-linux-gnu/libgnomekbd.so.8" \
+  -l "/lib/x86_64-linux-gnu/libgnomekbdui.so.8" \
+  -l "/usr/lib/x86_64-linux-gnu/gvfs/libgvfscommon.so" \
+  -l "/usr/lib/x86_64-linux-gnu/gio/modules/libgvfsdbus.so" \
+  -l "/lib/x86_64-linux-gnu/libstdc++.so.6" \
+  -l "/lib/x86_64-linux-gnu/libxapp.so.1" \
+  -l "/lib/x86_64-linux-gnu/libxkbfile.so.1" \
+  -l "/lib/x86_64-linux-gnu/libxklavier.so.16" \
+  -l "/lib/x86_64-linux-gnu/libxml2.so.2" \
+  ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
 
 # Fetch unionfs
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
