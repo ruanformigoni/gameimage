@@ -118,7 +118,10 @@ function wine_install()
     [ ! -f "${_FN_RET[0]}" ] && die "No valid file found in $1/rom"
 
     #shellcheck disable=2005
-    echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$WINE" "${_FN_RET[0]}")"
+    if [ "$(_select_yn "Install $(basename "${_FN_RET[0]}")?" "Y")" = "y" ]; then
+      echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$WINE" "${_FN_RET[0]}")"
+    fi
+
     [ "$(_select_yn "Install another file?" "N")" = "y" ] || break
   done
 }
