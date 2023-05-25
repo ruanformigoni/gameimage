@@ -315,10 +315,10 @@ impl Gui
       env::set_var("GIMG_DEFAULT_EXEC", choice.as_str());
     });
 
-    input_default_cmd.set_callback(move |e|
+    let f_input_default_cmd_update = move |e: &str|
     {
       // Perform strings replacements
-      let mut str_cmd = e.value();
+      let mut str_cmd = e.to_string();
 
       // Replace placeholder with value in environment variable 'var'
       let mut f_expand = |placeholder, var|
@@ -332,7 +332,7 @@ impl Gui
       f_expand("{here}", "DIR_CALL");
       f_expand("{appd}", "DIR_APP");
 
-      if f_yaml_write("cmd".to_string(), e.value().as_str().into()).is_some()
+      if f_yaml_write("cmd".to_string(), e.into()).is_some()
       {
         env::set_var("GIMG_LAUNCHER_CMD", str_cmd);
       }
@@ -340,6 +340,11 @@ impl Gui
       {
         println!("Could not update YAML config file");
       } // else
+    };
+
+    input_default_cmd.set_callback(move |e|
+    {
+      f_input_default_cmd_update(e.value().as_str());
     });
 
     let mut _input_default_runner = input_default_runner.clone();
@@ -367,9 +372,11 @@ impl Gui
         .map_or_else(|| { println!("Could not pick new path"); None },
           |e| { _input_default_runner.set_value(e.as_str()); Some(e) })
         .map_or_else(|| { println!("Could not set value for input widget"); None },
-          |e| { env::set_var("WINE", e.clone()); Some (e) })
-        .map_or_else(|| { println!("Could not set env variable value") },
-          |e| { f_yaml_write("runner".to_string(), e.to_string()); });
+          |e| { env::set_var("WINE", e.clone()); Some(e) })
+        .map_or_else(|| { println!("Could not set env variable value"); None },
+          |e| { f_yaml_write("runner".to_string(), e.to_string()); Some(e) })
+        .map_or_else(|| { println!("Could not update default command") },
+          |_| { f_input_default_cmd_update(input_default_cmd.value().as_str()); });
     });
 
     let sender = self.sender.clone();
