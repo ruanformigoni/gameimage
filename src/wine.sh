@@ -80,9 +80,6 @@ function wine_configure()
   # Output current wine version
   "$WINE" --version
 
-  # Disable wine config update
-  echo "disable" > "$WINEPREFIX/.update-timestamp" 
-
   local dir_current="$(pwd)"
   msg "configuration phase, use it to install dependencies, type continue to skip"
   msg "Commands are 'winetricks ...' and 'wine ...', example 'wine winecfg'"
