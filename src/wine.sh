@@ -268,13 +268,6 @@ function runner_create()
     :# Name of the main executable (without path)
     :export GIMG_DEFAULT_EXEC="\${GIMG_DEFAULT_EXEC:-$(basename "$path_exec")}"
     :
-    :# Avoid symlink creation
-    :for i in "\$WINEPREFIX/drive_c/users/\$(whoami)/"{AppData,Application\ Data,Contacts,Desktop,Documents,Downloads,Favorites,Links,Music,My\ Documents,Pictures,Saved\ Games,Searches,Videos}; do
-    :  # Erase symbolic link and replace with regular folder
-    :  [ ! -L "\$i" ] || rm "\$i"
-    :  [ -d "\$i" ] || mkdir -p "\$i"
-    :done
-    :
     :YQ="\$APPDIR/usr/bin/yq"
     :
     :# Check YAML integrity
