@@ -62,19 +62,8 @@ function wine_configure()
 
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
-
-  if [ "$(_select_yn "Download wineprefix?" "y")" != "n" ]; then
-      _fetch "prefix.tar.xz" \
-        "https://github.com/ruanformigoni/wine/releases/download/continuous-ge/wineprefix-${WINEARCH#win}.tar.xz"
-      tar -xf prefix.tar.xz
-      mv wine "$(pwd)/AppDir/app/"
-      rm prefix.tar.xz
-    else
-      if [ ! -d "$WINEPREFIX" ]; then
-        "$WINETRICKS" fontsmooth=rgb
-        "$WINETRICKS" dxvk
-      fi
-    fi
+    "$WINETRICKS" fontsmooth=rgb
+    "$WINETRICKS" dxvk
   fi
 
   # Output current wine version
