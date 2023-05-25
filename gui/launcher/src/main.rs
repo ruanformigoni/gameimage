@@ -3,6 +3,7 @@ use std::env;
 // Multithreading
 use std::sync::mpsc;
 use std::sync::{Arc,Mutex};
+use std::path::Path;
 
 // Tray
 use tray_item::TrayItem;
@@ -18,6 +19,7 @@ use fltk::{
   app::App,
   button::Button,
   group::{Group, PackType, Wizard},
+  dialog::file_chooser,
   input::Input,
   menu::MenuButton,
   prelude::{ImageExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
@@ -89,6 +91,58 @@ impl Gui
   // fn: frame_1 {{{
   fn frame_1(&self)
   {
+    // Functor to update yaml
+    let f_yaml_write = |key: String, value: String|
+    {
+      // Read file from global variable
+      let (file, str_file) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
+          || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
+          |str_file| { (std::fs::File::open(str_file.clone()).ok(), str_file) });
+
+      // Deserialize the YAML into a serde_yaml::Value
+      let yaml_value: Option<serde_yaml::Value> = file.map_or_else(
+          || { println!("Could not open file {} for read", str_file);  None },
+          |file| { serde_yaml::from_reader(file).ok() });
+
+      // Update value in the yaml file
+      yaml_value.map_or_else(
+        || { println!("Could parse yaml file"); None },
+        |mut yaml_value: serde_yaml::Value|
+        {
+          // Update yaml variable
+          yaml_value[key] = serde_yaml::Value::String(value.as_str().into());
+
+          // Write yaml
+          serde_yaml::to_string(&yaml_value).map_or_else(
+            |_| { println!("Could not generate yaml string"); None },
+            |str_yaml| { std::fs::write(str_file.clone(), str_yaml.clone()).ok() })
+        })
+    };
+
+    let f_yaml_read = |key: &str|
+    {
+      env::var("GIMG_CONFIG_FILE")
+        .ok()
+        .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); None },
+        |var|
+        {
+          std::fs::File::open(var)
+            .ok()
+            .map_or_else(
+              || { println!("Could not open config file for read"); None },
+              |f|{ serde_yaml::from_reader(f).ok() })
+            .map_or_else(
+              || { println!("Could not parse config file"); None },
+              |y: serde_yaml::Value|
+              {
+                y.get(key)
+                  .map_or_else(
+                    || { println!("Could not extract key from YAML file"); None },
+                    |cmd| { Some(String::from(cmd.as_str().unwrap())) })
+              })
+        })
+    };
+
     let mut group1 = Group::default().size_of(&self.wizard);
     group1.set_frame(FrameType::FlatBox);
 
@@ -134,6 +188,10 @@ impl Gui
     // frame_right.set_color(Color::Red);
     frame_right.redraw();
 
+    //
+    // Layout
+    //
+
     // Application name
     let name = env::var("GIMG_LAUNCHER_NAME").unwrap_or(String::from("GameImage"));
     let mut output = self.make_frame(100, 50)
@@ -144,33 +202,41 @@ impl Gui
     output.set_align(Align::Left | Align::Inside);
     output.set_label(name.as_str());
 
-    // Application binaries
+    // Default application rom to execute
     let mut menu_binaries = MenuButton::default()
       .with_size(frame_right.width() - self.border, 40)
       .with_align(Align::Inside)
       .below_of(&output, 20);
     menu_binaries.set_frame(FrameType::BorderBox);
-    menu_binaries.add_choice(env::var("GIMG_LAUNCHER_EXECUTABLES")
-      .unwrap_or(String::new()).as_str());
-    menu_binaries.set_label(env::var("GIMG_DEFAULT_EXEC")
-      .unwrap_or(String::new()).as_str());
 
     // Default launch command
-    let mut input = Input::default()
+    let mut input_default_cmd = Input::default()
       .with_size(frame_right.width() - self.border, 40)
       .below_of(&menu_binaries, 40);
-    input.set_label("Default command");
-    input.set_align(Align::TopLeft);
-    input.set_color(Color::BackGround);
-    env::var("GIMG_CONFIG_FILE").ok()
-      .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); }, |var|
-      {
-        std::fs::File::open(var).ok().and_then(|f|{ serde_yaml::from_reader(f).ok() })
-          .map(|y: serde_yaml::Value|
-          {
-            y.get("cmd").map(|cmd| { cmd.as_str().map(|s| { input.set_value(s); }); })
-          });
-      });
+    input_default_cmd.set_label("Default command");
+    input_default_cmd.set_align(Align::TopLeft);
+    input_default_cmd.set_color(Color::BackGround);
+
+    // Use default wine path?
+    let mut btn_use_builtin = fltk::button::CheckButton::default()
+      .with_label("Use builtin wine?")
+      .with_size(15,15)
+      .below_of(&input_default_cmd, 15);
+    btn_use_builtin.deactivate();
+
+    // Input to select default runner
+    let mut input_default_runner = Input::default()
+      .with_size(frame_right.width() - self.border - 40, 40)
+      .below_of(&input_default_cmd, 60);
+    input_default_runner.set_label("Default runner path");
+    input_default_runner.set_align(Align::TopLeft);
+    input_default_runner.set_color(Color::BackGround);
+    input_default_runner.deactivate();
+
+    let mut btn_default_runner_picker = Button::default()
+      .with_size(40, 40)
+      .with_label("...")
+      .right_of(&input_default_runner, 0);
 
     // Lauch application
     let mut btn_launch = Button::default()
@@ -191,6 +257,54 @@ impl Gui
     btn_quit.set_frame(FrameType::BorderBox);
 
     //
+    // Initial Values
+    //
+
+    // Default rom to execute
+    menu_binaries.add_choice(env::var("GIMG_LAUNCHER_EXECUTABLES")
+      .unwrap_or(String::new()).as_str());
+    menu_binaries.set_label(env::var("GIMG_DEFAULT_EXEC")
+      .unwrap_or(String::new()).as_str());
+
+    // Default Launch command
+    f_yaml_read("cmd")
+      .map_or_else(|| { println!("Could not read cmd"); },
+        |s| { input_default_cmd.set_value(s.as_str()); });
+
+    // Default runner exists?
+    let use_runner_default = env::var("WINE").ok()
+      .map_or_else(|| { println!("Could fetch RUNNER variable"); false },
+      |str_path|
+      {
+        // Activate if default runner exists
+        Path::new(&str_path)
+        .exists()
+        .then(||
+        {
+          btn_use_builtin.activate();
+        })
+        .map_or_else(|| { false },
+        |_|
+        {
+          // Fetch previous state
+          f_yaml_read("runner_default")
+            .map_or_else(||{ println!("Could not read runner_default in YAML"); false }
+              , |e| { btn_use_builtin.set_checked(e == "true"); e == "true" })
+        })
+      });
+
+    // Display default runner
+    f_yaml_read("runner")
+      .map_or_else(|| { println!("Could not read runner"); },
+        |s|
+        {
+          // Set field text
+          input_default_runner.set_value(s.as_str());
+          // Check if can activate
+          if ! use_runner_default { input_default_runner.activate(); }
+        });
+
+    //
     // Callbacks
     //
 
@@ -201,7 +315,7 @@ impl Gui
       env::set_var("GIMG_DEFAULT_EXEC", choice.as_str());
     });
 
-    input.set_callback(move |e|
+    input_default_cmd.set_callback(move |e|
     {
       // Perform strings replacements
       let mut str_cmd = e.value();
@@ -218,36 +332,44 @@ impl Gui
       f_expand("{here}", "DIR_CALL");
       f_expand("{appd}", "DIR_APP");
 
-      // Read file from global variable
-      let (file, var) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
-          || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
-          |var| { (std::fs::File::open(var.clone()).ok(), var) }
-        );
-
-      // Parse file into yaml with serde_yaml
-      let yaml: Option<serde_yaml::Value> = file.map_or_else(
-          || { println!("Could not open file {} for read", var);  None },
-          |file| { serde_yaml::from_reader(file).ok() }
-        );
-
-      // Update cmd in the yaml file and the GIMG_LAUNCHER_CMD variable
-      yaml.map_or_else(|| { println!("Could parse yaml file");  }, |mut yaml: serde_yaml::Value|
+      if f_yaml_write("cmd".to_string(), e.value().as_str().into()).is_some()
       {
-        // Update cmd value with the 'aliased' command
-        yaml.get_mut("cmd").map_or_else(
-            || { println!("Failed to update variable");  },
-            |key| { *key = e.value().as_str().into(); }
-          );
-        // Write new cmd value to file and update GIMG_LAUNCHER_CMD with resolved aliases
-        serde_yaml::to_string(&yaml).map_or_else(|_| { println!("Could not generate yaml string") }, |str_yaml|
-        {
-          std::fs::write(var.clone(), str_yaml)
-            .map_or_else(
-              |_| { println!("Could not write to file {}", var); },
-              |_| { env::set_var("GIMG_LAUNCHER_CMD", str_cmd); }
-            );
-        });
-      });
+        env::set_var("GIMG_LAUNCHER_CMD", str_cmd);
+      }
+      else
+      {
+        println!("Could not update YAML config file");
+      } // else
+    });
+
+    let mut _input_default_runner = input_default_runner.clone();
+    btn_use_builtin.set_callback(move |e|
+    {
+      if e.is_checked()
+      {
+        _input_default_runner.deactivate();
+        env::set_var("WINE", "$APPDIR/usr/bin/wine");
+        f_yaml_write("runner_default".to_string(), "true".to_string());
+      }
+      else
+      {
+        _input_default_runner.activate();
+        env::set_var("WINE", _input_default_runner.value());
+        f_yaml_write("runner".to_string(), _input_default_runner.value());
+        f_yaml_write("runner_default".to_string(), "false".to_string());
+      }
+    });
+
+    let mut _input_default_runner = input_default_runner.clone();
+    btn_default_runner_picker.set_callback(move |_|
+    {
+      file_chooser("", "", "", false)
+        .map_or_else(|| { println!("Could not pick new path"); None },
+          |e| { _input_default_runner.set_value(e.as_str()); Some(e) })
+        .map_or_else(|| { println!("Could not set value for input widget"); None },
+          |e| { env::set_var("WINE", e.clone()); Some (e) })
+        .map_or_else(|| { println!("Could not set env variable value") },
+          |e| { f_yaml_write("runner".to_string(), e.to_string()); });
     });
 
     let sender = self.sender.clone();

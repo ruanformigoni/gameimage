@@ -26,9 +26,16 @@ function wine_download()
     die "Error fetching wine url")
 
   if [ ! -f "AppDir/usr/bin/wine" ]; then
-    _fetch "wine" "${url%\"}"
-    mv wine AppDir/usr/bin/wine
-    ln -s wine AppDir/usr/bin/winetricks
+    if [ -f "./wine" ]; then
+      mv wine AppDir/usr/bin/wine
+    else
+      _fetch "wine" "${url%\"}"
+      mv wine AppDir/usr/bin/wine
+    fi
+  fi
+
+  if [ ! -f "AppDir/usr/bin/winetricks" ]; then
+    ln -sf wine AppDir/usr/bin/winetricks
   fi
 
   # shellcheck disable=2139
@@ -167,6 +174,9 @@ function wine_executable_select()
 
 function runner_create()
 {
+  # Build Dir
+  local dir_build="$1"; shift
+
   # Application name, space separated, uppercase
   local name="$1"; shift
   declare -a name_upper
@@ -187,16 +197,25 @@ function runner_create()
   # Launcher
   cp "${GIMG_SCRIPT_DIR}/launcher" "AppDir/usr/bin"
 
+  include_wine="$(_select_yn "Include wine inside the appimage?" "N")"
+
+  if [ "$include_wine" != "y" ]; then
+    # Move back to build dir
+    mv "$WINE" "$dir_build"
+  fi
+
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :#!/usr/bin/env bash
     :
     :set -e
     :
-    :# Wine executable
+    :# Exports
     :export DIR_CALL="\$(dirname "\$APPIMAGE")"
     :export DIR_APP="\$APPDIR"
-    :export WINE="\$APPDIR/usr/bin/wine"
+    :if [ -f "\$APPDIR/usr/bin/wine" ]; then
+    :  export WINE="\$APPDIR/usr/bin/wine"
+    :fi
     :
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set hidden config dir
@@ -273,15 +292,31 @@ function runner_create()
     :YAML="\$CFGDIR/config.yml"
     :if ! "\$YQ" --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null; then
     :  echo "cmd: \"{wine} {exec}\"" > "\$YAML"
+    :  echo "runner: ''" >> "\$YAML"
+    :  echo "runner_default: \"true\"" >> "\$YAML"
     :fi
     :
     :# Change startup command
     :if [[ "\$1" =~ --gameimage-cmd=(.*) ]]; then
-    :  # Define custom Command
+    :  # Define custom command
     :  CMD="\${BASH_REMATCH[1]}"
     :  CMD="\${CMD//\"/\\\\\"}" # Escape quotes
     :  "\$YQ" -i ".cmd = \"\$CMD\"" "\$YAML"
     :  exit 0
+    :fi
+    :
+    :# Change runner
+    :if [[ "\$1" =~ --gameimage-runner=(.*) ]]; then
+    :  # Define custom runner
+    :  RUNNER="\${BASH_REMATCH[1]}"
+    :  RUNNER="\${RUNNER//\"/\\\\\"}" # Escape quotes
+    :  "\$YQ" -i ".runner = \"\$RUNNER\"" "\$YAML"
+    :  exit 0
+    :fi
+    :
+    :# Parse runner location
+    :if { RUNNER="\$("\$YQ" '.runner | select(.!=null)' "\$YAML")"; [ -n "\$RUNNER" ]; }; then
+    :  WINE="\$RUNNER"
     :fi
     :
     :# Parse startup command
@@ -306,6 +341,12 @@ function runner_create()
     :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \\;)"
     :  "\$LAUNCHER"
     :else
+    :  if [ -z "\$WINE" ]; then
+    :   echo "-- Wine runner is missing"
+    :   echo "-- You can set it with './\$(basename "\$APPIMAGE") --gameimage-runner=/path/to/wine'"
+    :   echo "-- The path must be absolute"
+    :   exit 1
+    :  fi
     :  eval "\$CMD"
     :fi
 	END
@@ -350,7 +391,7 @@ function main()
   wine_executable_select "$dir_build" "$name"
 
   # Create runner script
-  runner_create "$name" "${_FN_RET[0]}" "${_FN_RET[1]}"
+  runner_create "$dir_build" "$name" "${_FN_RET[0]}" "${_FN_RET[1]}"
 
   # Copy cover
   ./imagemagick "$cover" "AppDir/${name}.png"
