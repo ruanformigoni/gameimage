@@ -84,7 +84,12 @@ function _select()
     while :; do
       # Print list
       for (( i=0; i < $#; i=i+1 )); do
-        echo "$i) ${opts[i]}" >&2
+        local current="${opts[i]}"
+        if [ ${#current} -gt 50 ]; then
+          current="${current: -50}"
+          current="../${current#*/}"
+        fi
+        echo "$i) ${current}" >&2
       done
       # Select
       echo -n "option?> " >&2; read -r opt
