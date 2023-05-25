@@ -237,6 +237,7 @@ impl Gui
       .with_size(40, 40)
       .with_label("...")
       .right_of(&input_default_runner, 0);
+    btn_default_runner_picker.set_frame(FrameType::BorderBox);
 
     // Lauch application
     let mut btn_launch = Button::default()
