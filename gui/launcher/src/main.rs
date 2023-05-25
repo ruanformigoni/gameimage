@@ -150,14 +150,14 @@ impl Gui
     let mut frame_top = self.make_frame(self.width - self.border, self.height - self.border)
       .with_pos(self.border/2, self.border/2);
     frame_top.set_frame(FrameType::FlatBox);
-    frame_top.set_color(Color::DarkBlue);
+    // frame_top.set_color(Color::DarkBlue);
     // }}}
 
     // Frame left {{{
     let mut frame_left = self.make_frame(frame_top.width()/3, frame_top.height())
       .with_pos(frame_top.x(),frame_top.y());
     frame_left.set_frame(FrameType::FlatBox);
-    frame_left.set_color(Color::Green);
+    // frame_left.set_color(Color::Green);
 
     // Cover image
     env::var("GIMG_LAUNCHER_IMG")
