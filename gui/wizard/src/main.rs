@@ -65,6 +65,7 @@ impl Gui
     app::foreground(230,230,230);
     let color = Color::from_hex_str("#5294e2").unwrap().to_rgb();
     app::set_selection_color(color.0, color.1, color.2);
+    app::set_frame_type(FrameType::BorderBox);
 
     Gui
     {
@@ -94,7 +95,8 @@ impl Gui
   // fn: frame_1 {{{
   fn frame_1(&self)
   {
-    let group1 = Group::default().size_of(&self.wizard);
+    let mut group1 = Group::default().size_of(&self.wizard);
+    group1.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
     let frame_top = self.make_frame(self.width, self.height - 50);
@@ -270,7 +272,8 @@ impl Gui
   // fn: frame_2 {{{
   fn frame_2(&self)
   {
-    let group2 = Group::default().size_of(&self.wizard);
+    let mut group2 = Group::default().size_of(&self.wizard);
+    group2.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
     let frame_top_height = self.height - 110;
