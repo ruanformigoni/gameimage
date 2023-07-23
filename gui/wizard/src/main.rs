@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::io::{BufReader, Read, Write};
 use std::process::{Command, Stdio};
+use std::collections::HashSet;
 
 use walkdir::WalkDir;
 use closure::closure;
@@ -17,6 +18,7 @@ use fltk::{
   dialog::dir_chooser,
   group::{Group, PackType, Wizard},
   input::{Input,FileInput},
+  output::Output,
   menu::MenuButton,
   prelude::{ImageExt, DisplayExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
   window::Window,
@@ -95,19 +97,19 @@ impl Gui
   // fn: frame_1 {{{
   fn frame_1(&self)
   {
-    let mut group1 = Group::default().size_of(&self.wizard);
-    group1.set_frame(FrameType::FlatBox);
+    let mut group = Group::default().size_of(&self.wizard);
+    group.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
-    let frame_top = self.make_frame(self.width, self.height - 50);
+    let frame_top = self.make_frame(self.width, self.height);
 
     // Header
-    let mut output = Frame::new(self.border, 0, self.width - self.border*2, 100, "");
-    output.set_label_size(20);
+    let mut output = Output::default()
+      .with_pos(self.border, self.border)
+      .with_align(Align::Right)
+      .with_label("GameImage");
     output.set_frame(FrameType::NoBox);
-    // output.set_label_color(Color::White);
-    output.set_align(Align::Left | Align::Inside);
-    output.set_label("GameImage");
+    output.set_label_size(20);
 
     //
     // Widgets
@@ -115,7 +117,7 @@ impl Gui
 
     // Game name
     let mut input = Input::new(self.border, self.border, self.width - self.border*2, 30, "")
-      .below_of(&output, 0);
+      .below_of(&output, 50);
     input.set_label("Enter the game name");
     input.set_align(Align::TopLeft);
 
@@ -247,7 +249,7 @@ impl Gui
     // }}}
 
     // frame_bottom {{{
-    let frame_bottom = self.make_frame(self.width, 50) .below_of(&frame_top, 0);
+    let frame_bottom = self.make_frame(self.width, 50) .below_of(&frame_top, -50);
 
     // Write yaml on click in 'next'
     let mut btn_next = Button::default()
@@ -266,14 +268,123 @@ impl Gui
 
     // }}}
 
-    group1.end();
+    group.end();
   } // fn: frame_1 }}}
 
   // fn: frame_2 {{{
   fn frame_2(&self)
   {
-    let mut group2 = Group::default().size_of(&self.wizard);
-    group2.set_frame(FrameType::FlatBox);
+    let mut group = Group::default().size_of(&self.wizard);
+    group.set_frame(FrameType::FlatBox);
+
+    // frame_top {{{
+    let frame_top = self.make_frame(self.width, self.height);
+    let mut header = Output::default()
+      .with_pos(self.border, self.border)
+      .with_align(Align::Right)
+      .with_label("Environment Variable Configuration");
+    header.set_frame(FrameType::NoBox);
+    header.set_label_size(20);
+    // }}}
+
+    // frame_content {{{
+    let width_btn = 120;
+    let height_btn = 30;
+
+    // Create label to the far left and menubutton to the far right
+    let f_make_entry = |txt: &str, row: i32|
+    {
+      let btn = MenuButton::default()
+        .with_size(width_btn, height_btn)
+        .with_pos(frame_top.width() - width_btn - self.border, (frame_top.y() + self.border*2)*row);
+      let mut lbl = Output::default()
+        .with_pos(self.border, btn.y() + self.border / 2)
+        .with_align(Align::Right)
+        .with_label(txt);
+      lbl.set_frame(FrameType::NoBox);
+      btn
+    };
+
+    // Create labels / menubuttons
+    let mut btn_package_type = f_make_entry("Package Type", 1);
+    btn_package_type.add_choice("unionfs|readonly|prefix");
+    let hash_package_type : HashSet<&str> = vec!["unionfs", "readonly", "prefix"].into_iter().collect();
+    let mut btn_wine_dist = f_make_entry("Wine Distribution", 2);
+    btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda");
+    let hash_wine_dist : HashSet<&str> = vec!["ge","staging","caffe","vaniglia","soda"].into_iter().collect();
+
+    // Initialize defaults
+    let f_initialize_entry = |var: &str, default: &str, hash: HashSet<&str>, btn: &mut MenuButton|
+    {
+      match env::var(var)
+      {
+        Ok(e) =>
+        {
+          if hash.contains(e.as_str())
+          {
+            btn.set_label(e.as_str());
+          }
+          else
+          {
+            btn.set_label(default);
+          }
+        },
+        Err(_) => btn.set_label(default),
+      }
+    };
+    f_initialize_entry("GIMG_PKG_TYPE", "unionfs", hash_package_type, &mut btn_package_type);
+    f_initialize_entry("GIMG_WINE_DIST", "ge", hash_wine_dist, &mut btn_wine_dist);
+
+    // Set callbacks
+    btn_package_type.set_callback(|e|
+    {
+      e.choice().as_ref().map(|f| { e.set_label(f); env::set_var("GIMG_PKG_TYPE", f); });
+    });
+
+    btn_wine_dist.set_callback(|e|
+    {
+      e.choice().as_ref().map(|f| { e.set_label(f); env::set_var("GIMG_WINE_DIST", f); });
+    });
+    // }}}
+
+    // frame_bottom {{{
+    
+    let frame_bottom = self.make_frame(self.width, 50).below_of(&frame_top, -50);
+
+    // Write yaml on click in 'next'
+    let mut btn_prev = Button::default()
+      .with_size(60, 30)
+      .with_label("Prev")
+      .center_y(&frame_bottom);
+    btn_prev.set_pos(30, btn_prev.y());
+
+    btn_prev.set_callback({
+      closure!(clone mut self.wizard, |_| wizard.prev())
+    });
+
+    let mut btn_next = Button::default()
+      .with_size(60, self.border)
+      .with_label("Next")
+      .center_of(&frame_bottom);
+    btn_next.set_color(Color::DarkGreen);
+    btn_next.set_callback({
+      closure!(clone self.map_yaml, clone mut self.wizard, |_|
+      {
+        let yaml = serde_yaml::to_string(map_yaml.as_ref()).unwrap();
+        assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
+        wizard.next()
+      })
+    });
+    // }}}
+
+    group.end();
+  } // fn: frame_2 }}}
+
+  // fn: frame_3 {{{
+  fn frame_3(&self)
+  {
+    let mut group = Group::default().size_of(&self.wizard);
+    group.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
     let frame_top_height = self.height - 110;
@@ -444,8 +555,8 @@ impl Gui
 
     // }}}
 
-    group2.end();
-  } // fn: frame_2 }}}
+    group.end();
+  } // fn: frame_3 }}}
 
 } // }}}
 
@@ -469,6 +580,7 @@ fn main() {
   let gui = Gui::new();
   gui.frame_1();
   gui.frame_2();
+  gui.frame_3();
 } // fn: main }}}
 
 // cmd: !cargo build --release
