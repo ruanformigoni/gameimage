@@ -60,6 +60,7 @@ impl Gui
       .with_label("GameImage")
       .with_size(width, height)
       .center_screen();
+    app::set_frame_type(FrameType::BorderBox);
     let wizard = Wizard::default().with_size(width, height);
 
     Gui
