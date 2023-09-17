@@ -64,6 +64,7 @@ function wine_configure()
     export WINEARCH="$(arch_select)"
     "$WINETRICKS" fontsmooth=rgb
     "$WINETRICKS" dxvk
+    "$WINETRICKS" vkd3d
   fi
 
   # Output current wine version
