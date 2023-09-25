@@ -250,7 +250,7 @@ function runner_create()
     :  -o gidmapping="\$(id -g):\$(id -g):\$(id -g)" \\
     :  -o squash_to_uid="\$(id -u)" \\
     :  -o squash_to_gid="\$(id -g)" \\
-    :  -o lowerdir="\$WINEPREFIX_RO",upperdir="\$WINEPREFIX_RW",workdir="\$DIR_CALL" "\$WINEPREFIX"
+    :  -o lowerdir="\$WINEPREFIX_RO",upperdir="\$WINEPREFIX_RW",workdir="\$CFGDIR" "\$WINEPREFIX"
     :
 		END
   elif [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
