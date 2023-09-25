@@ -220,9 +220,9 @@ impl Gui
 
     // Use default wine path?
     let mut btn_use_builtin = fltk::button::CheckButton::default()
-      .with_label("Use builtin wine?")
-      .with_size(15,15)
+      .with_size(frame_right.width() - self.border,15)
       .below_of(&input_default_cmd, 15);
+    btn_use_builtin.hide();
     btn_use_builtin.deactivate();
 
     // Input to select default runner
@@ -283,7 +283,9 @@ impl Gui
         .exists()
         .then(||
         {
+          btn_use_builtin.show();
           btn_use_builtin.activate();
+          btn_use_builtin.set_label("Use builtin wine?")
         })
         .map_or_else(|| { false },
         |_|
