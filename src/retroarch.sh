@@ -36,7 +36,7 @@ function retroarch_download()
       fi
 
       # Extract and move
-      7z x "RetroArch.7z"
+      "$GIMG_SCRIPT_DIR"/7zz x "RetroArch.7z"
       mv RetroArch-Linux-x86_64/RetroArch*.AppImage retroarch.AppImage
       mv RetroArch-Linux-x86_64/RetroArch*.AppImage.home/.config config
       rm -rf RetroArch-Linux-x86_64

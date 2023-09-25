@@ -70,8 +70,6 @@ function deps()
 
 function main()
 {
-  deps "7z" "unzip"
-
   declare -A args
 
   if [[ "$#" -eq 0 ]]; then

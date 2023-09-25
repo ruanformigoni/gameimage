@@ -70,6 +70,12 @@ rm yq.1
 mv yq_linux_amd64 yq
 mv yq build/AppDir/usr/bin
 
+# Fetch 7zz
+wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7zz
+mv -f 7zz build/AppDir/usr/bin/7zz
+
+# Fetch yq
+
 # Copy files
 cp -r ./src/* build/AppDir/usr/bin
 cp    ./doc/gameimage.png build/AppDir/

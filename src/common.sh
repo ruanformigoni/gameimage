@@ -40,10 +40,8 @@ function extract()
 {
   msg "Extracting $1 file '$2' to $3"
 
-  if [ "$1" = ".zip" ]; then
-    unzip -q -o "$2" -d "$3"
-  elif [ "$1" = ".7z" ]; then
-    7z -aoa x "$2" -o"$3"
+  if [ "$1" = ".7z" ] || [ "$1" = ".zip" ]; then
+    "$GIMG_SCRIPT_DIR"/7zz -aoa x "$2" -o"$3"
   else
     die "Invalid extract file format"
   fi

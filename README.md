@@ -89,31 +89,31 @@ Files displayed on the `thunar` file manager.
 
 <img src="doc/example-gui-launcher.png"  width="1000">
 
-## Build Dependencies
+## Dependencies
 
-Required packages to build:
+Wine requires 32-bit glibc installed on the host to avoid the `no such file or
+directory` error.
 
 For arch-based systems:
 ```
-sudo pacman -S p7zip
+sudo pacman -S lib32-freetype2 lib32-glibc
 ```
 
 For debian-based systems:
 ```
-sudo add-apt-repository universe
+dpkg --add-architecture i386
 sudo apt update
-sudo apt install p7zip-full p7zip-rar
+sudo apt install libc6:i386 libfreetype6-dev:i386
 ```
 
 For Fedora:
 ```
-sudo dnf install p7zip
 sudo dnf install glibc.i686
 ```
 
 For Vanilla OS:
 ```
-sudo abroot exec apt install p7zip-full p7zip-rar libc6-i386
+sudo abroot exec apt install libc6-i386
 ```
 
 ## Install
