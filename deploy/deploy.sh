@@ -74,7 +74,9 @@ mv yq build/AppDir/usr/bin
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7zz
 mv -f 7zz build/AppDir/usr/bin/7zz
 
-# Fetch yq
+# Fetch busybox
+wget -q --show-progress --progress=dot:mega "https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox"
+mv -f busybox build/AppDir/usr/bin/busybox
 
 # Copy files
 cp -r ./src/* build/AppDir/usr/bin

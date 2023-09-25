@@ -29,11 +29,7 @@ function retroarch_download()
       msg "retroarch: $url"
 
       # Get AppImage of retroarch
-      if [ "$GIMG_YAML" ]; then
-        wget -q --show-progress --progress=dot:giga "$url"
-      else
-        wget -q --show-progress --progress=bar:noscroll "$url"
-      fi
+      "$GIMG_SCRIPT_DIR"/busybox wget "$url"
 
       # Extract and move
       "$GIMG_SCRIPT_DIR"/7zz x "RetroArch.7z"

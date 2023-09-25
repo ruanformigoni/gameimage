@@ -21,7 +21,7 @@ function yuzu_download()
 {
   local url
 
-  url="$(curl -H "Accept: application/vnd.github+json" \
+  url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
     https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases 2>&1 |
     grep -o "https://.*\.AppImage" | sort | tail -n1)"
 
@@ -31,11 +31,7 @@ function yuzu_download()
   if [ ! -f "AppDir/usr/bin/yuzu" ]; then
     if [ ! -f "yuzu.AppImage" ]; then
       # Get AppImage of yuzu
-      if [ "$GIMG_YAML" ]; then
-        wget -q --show-progress --progress=dot:mega -O yuzu "$url"
-      else
-        wget -q --show-progress --progress=bar:noscroll -O yuzu "$url"
-      fi
+      "$GIMG_SCRIPT_DIR"/busybox wget -O yuzu "$url"
       # Make executable
       chmod +x ./yuzu
     fi

@@ -22,7 +22,7 @@ function rpcs3_download()
 {
   local url
 
-  url="$(curl -H "Accept: application/vnd.github+json" \
+  url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
     https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest 2>&1 |
     grep -o "https://.*\.AppImage")"
 
@@ -32,11 +32,7 @@ function rpcs3_download()
   if [ ! -f "AppDir/usr/bin/rpcs3" ]; then
     if [ ! -f "rpcs3.AppImage" ]; then
       # Get AppImage of rpcs3
-      if [ "$GIMG_YAML" ]; then
-        wget -q --show-progress --progress=dot:mega -O rpcs3.AppImage "$url"
-      else
-        wget -q --show-progress --progress=bar:noscroll -O rpcs3.AppImage "$url"
-      fi
+      "$GIMG_SCRIPT_DIR"/busybox wget -O rpcs3.AppImage "$url"
 
       # Make executable
       chmod +x ./rpcs3.AppImage

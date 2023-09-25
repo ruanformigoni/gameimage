@@ -20,7 +20,7 @@ function wine_download()
 {
   local url
 
-  url=$(curl -H "Accept: application/vnd.github+json" \
+  url=$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
     https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
     grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST-[0-9.-]+-continuous-x86_64.AppImage\"" ||
     die "Error fetching wine url")

@@ -21,7 +21,8 @@ function pcsx2_download()
 {
   local url
 
-  url="$(curl -H "Accept: application/vnd.github+json" https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
+  url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
+    https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
     grep -o "https://.*\.AppImage" | sort -V | tail -n1)"
 
   msg "pcsx2: ${url}"
@@ -30,11 +31,7 @@ function pcsx2_download()
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
     if [ ! -f "pcsx2.AppImage" ]; then
       # Get AppImage of pcsx2
-      if [ "$GIMG_YAML" ]; then
-        wget -q --show-progress --progress=dot:mega -O pcsx2.AppImage "$url"
-      else
-        wget -q --show-progress --progress=bar:noscroll -O pcsx2.AppImage "$url"
-      fi
+      "$GIMG_SCRIPT_DIR"/busybox wget -O pcsx2.AppImage "$url"
 
       # Make executable
       chmod +x ./pcsx2.AppImage

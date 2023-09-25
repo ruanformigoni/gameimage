@@ -238,11 +238,7 @@ function _fetch()
 
   # Get appimagetool
   if [ ! -f "./$name" ]; then
-    if [ "$GIMG_YAML" ]; then
-      wget -q --show-progress --progress=dot:mega -O  "$name" "$url"
-    else
-      wget -q --show-progress --progress=bar:noscroll -O  "$name" "$url"
-    fi
+    "$GIMG_SCRIPT_DIR"/busybox wget -O  "$name" "$url"
   fi
 
   # Make executable
