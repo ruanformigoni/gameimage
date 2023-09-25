@@ -142,7 +142,9 @@ function wine_executable_select()
 
   # Create directory to store installed files
   # Move to external prefix or keep it inside appimage
-  if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
+  if [ "${GIMG_PKG_TYPE}" = "overlayfs" ]; then
+    cp "${GIMG_SCRIPT_DIR}/overlayfs" "AppDir/usr/bin"
+  elif [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
     cp "${GIMG_SCRIPT_DIR}/unionfs" "AppDir/usr/bin"
   elif [ "${GIMG_PKG_TYPE}" = "readonly" ]; then
     dir_target="AppDir/app/rom"
@@ -226,7 +228,32 @@ function runner_create()
     :
 	END
 
-  if [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
+  if [ "${GIMG_PKG_TYPE}" = "overlayfs" ]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+    :# Unmount after appimage unmounts squashfs
+    :function _exit() { pkill -f "overlayfs.*\$WINEPREFIX"; }
+    :trap _exit SIGINT EXIT
+    :
+    :# Configure dirs for overlayfs
+    :export WINEPREFIX_RO="\$MNTDIR/app/wine"
+    :export WINEPREFIX_RW="\$CFGDIR/union"
+    :mkdir -p "\$WINEPREFIX"
+    :mkdir -p "\$WINEPREFIX_RW"
+    :
+    :# Mount prefix with overlayfs
+    :# uidmapping and gidmapping: These options specify user and group ID mappings, respectively.
+    :# They are used to map UIDs and GIDs from the host to the overlay filesystem. The format is
+    :# containerID:hostID:size.
+    :# 0:10:100: This maps the first 100 UIDs in the container (0-99) to UIDs 10-109 on the host.
+    :# 100:10000:2000: This maps UIDs 100-2099 in the container to UIDs 10000-11999 on the host.
+    :"\$APPDIR/usr/bin/overlayfs" -o uidmapping="\$(id -u):\$(id -u):\$(id -u)" \\
+    :  -o gidmapping="\$(id -g):\$(id -g):\$(id -g)" \\
+    :  -o squash_to_uid="\$(id -u)" \\
+    :  -o squash_to_gid="\$(id -g)" \\
+    :  -o lowerdir="\$WINEPREFIX_RO",upperdir="\$WINEPREFIX_RW",workdir="\$DIR_CALL" "\$WINEPREFIX"
+    :
+		END
+  elif [ "${GIMG_PKG_TYPE}" = "unionfs" ]; then
     { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :# Unmount after appimage unmounts squashfs
     :function _exit() { pkill -f "unionfs.*\$WINEPREFIX"; }

@@ -60,6 +60,10 @@ staticx \
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
 mv -f unionfs build/AppDir/usr/bin
 
+# Fetch overlayfs
+wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/fuse-overlayfs/releases/download/af507a2/fuse-overlayfs-x86_64
+mv -f fuse-overlayfs-x86_64 build/AppDir/usr/bin/overlayfs
+
 # Fetch yq
 wget -q --show-progress --progress=dot:mega https://github.com/mikefarah/yq/releases/download/v4.30.7/yq_linux_amd64.tar.gz -O - | tar xz
 rm yq.1

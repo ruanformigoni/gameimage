@@ -204,17 +204,18 @@ Examples:
 
 The `GIMG_PKG_TYPE` option defines the packaging method, options are:
 
-1. `unionfs`: Inside the appimage, writeable with unionfs. `[default, recommended]`
-1. `readonly`: Inside the appimage, read-only.
-1. `prefix`: Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
+1. `overlayfs` : Inside the appimage, writeable with overlayfs. `[default, recommended]`
+1. `unionfs`   : Inside the appimage, writeable with unionfs.
+1. `readonly`  : Inside the appimage, read-only.
+1. `prefix`    : Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
 
-`[1]` Packs everything inside the appimage, the game can write to its own
+`[1,2]` Packs everything inside the appimage, the game can write to its own
 directory with unionfs.
 
-`[2]` Packs everything inside the appimage, read-only (might not work for some
+`[3]` Packs everything inside the appimage, read-only (might not work for some
 games).
 
-`[3]` The software is moved to `.my-game.AppImage.config`, the appimage acts
+`[4]` The software is moved to `.my-game.AppImage.config`, the appimage acts
 as a launcher.
 
 Example:

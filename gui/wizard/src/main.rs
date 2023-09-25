@@ -307,8 +307,8 @@ impl Gui
 
     // Create labels / menubuttons
     let mut btn_package_type = f_make_entry("Package Type", 1);
-    btn_package_type.add_choice("unionfs|readonly|prefix");
-    let hash_package_type : HashSet<&str> = vec!["unionfs", "readonly", "prefix"].into_iter().collect();
+    btn_package_type.add_choice("overlayfs|unionfs|readonly|prefix");
+    let hash_package_type : HashSet<&str> = vec!["overlayfs", "unionfs", "readonly", "prefix"].into_iter().collect();
     let mut btn_wine_dist = f_make_entry("Wine Distribution", 2);
     btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda");
     let hash_wine_dist : HashSet<&str> = vec!["ge","staging","caffe","vaniglia","soda"].into_iter().collect();
@@ -332,7 +332,7 @@ impl Gui
         Err(_) => btn.set_label(default),
       }
     };
-    f_initialize_entry("GIMG_PKG_TYPE", "unionfs", hash_package_type, &mut btn_package_type);
+    f_initialize_entry("GIMG_PKG_TYPE", "overlayfs", hash_package_type, &mut btn_package_type);
     f_initialize_entry("GIMG_WINE_DIST", "ge", hash_wine_dist, &mut btn_wine_dist);
 
     // Set callbacks
