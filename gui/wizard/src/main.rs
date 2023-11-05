@@ -171,10 +171,14 @@ impl Gui
     }));
 
     // button platform
-    btn_platform.set_callback(closure!(clone self.map_yaml, clone btn_arch, clone btn_rom, |e| {
+    btn_platform.set_callback(closure!(clone self.map_yaml, clone btn_arch, clone btn_rom, |e|
+    {
       e.choice().and_then(closure!(clone map_yaml, clone mut btn_arch, clone mut btn_rom, |f|
       {
         e.set_label(&f);
+
+        env::set_var("GIMG_PLATFORM", &f);
+
         map_yaml.borrow_mut().insert("platform".to_string(), f.clone());
         match f.as_str()
         {
@@ -592,12 +596,22 @@ fn frame_switcher(&self)
 
   let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
   let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
+  let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
   frame_1_btn_next.set_callback(move |_|
   {
     let mut frame_1_group = arc_frame_1_group_clone.lock().unwrap();
     let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
-    frame_1_group.hide();
-    frame_2_group.show();
+    let mut frame_3_group = arc_frame_3_group_clone.lock().unwrap();
+    if env::var("GIMG_PLATFORM").is_ok_and(|x| x == "wine")
+    {
+      frame_1_group.hide();
+      frame_2_group.show();
+    } // if
+    else
+    {
+      frame_1_group.hide();
+      frame_3_group.show();
+    } // else
   });
 
   let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
@@ -620,14 +634,24 @@ fn frame_switcher(&self)
     frame_3_group.show();
   });
 
+  let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
   let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
   let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
   frame_3_btn_prev.set_callback(move |_|
   {
+    let mut frame_1_group = arc_frame_1_group_clone.lock().unwrap();
     let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
     let mut frame_3_group = arc_frame_3_group_clone.lock().unwrap();
-    frame_3_group.hide();
-    frame_2_group.show();
+    if env::var("GIMG_PLATFORM").is_ok_and(|x| x == "wine")
+    {
+      frame_3_group.hide();
+      frame_2_group.show();
+    } // if
+    else
+    {
+      frame_3_group.hide();
+      frame_1_group.show();
+    } // else
   });
 } // fn: frame_switcher }}}
 
