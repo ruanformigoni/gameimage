@@ -1,5 +1,4 @@
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -171,9 +170,9 @@ impl Gui
     }));
 
     // button platform
-    btn_platform.set_callback(closure!(clone self.map_yaml, clone btn_arch, clone btn_rom, |e|
+    btn_platform.set_callback(closure!(clone self.map_yaml, clone mut btn_arch, clone mut btn_rom, |e|
     {
-      e.choice().and_then(closure!(clone map_yaml, clone mut btn_arch, clone mut btn_rom, |f|
+      if let Some(f) = e.choice()
       {
         e.set_label(&f);
 
@@ -193,8 +192,7 @@ impl Gui
             btn_arch.show();
           }
         }
-        Some(f)
-      }));
+      }
     }));
 
     // button rom
@@ -220,7 +218,8 @@ impl Gui
     {
       let diag_dir_chooser = dir_chooser("", "", false);
 
-      if diag_dir_chooser.is_some() {
+      if diag_dir_chooser.is_some()
+      {
         dir_root_path.set_value(&diag_dir_chooser.unwrap());
         map_yaml.borrow_mut().insert("dir".to_string(), dir_root_path.value());
 
@@ -676,7 +675,7 @@ fn main() {
   env::set_var("GIMG_GUI", "Yes");
 
   // Init GUI
-  let gui = Gui::new().frame_switcher();
+  let _gui = Gui::new().frame_switcher();
 } // fn: main }}}
 
 // cmd: !cargo build --release
