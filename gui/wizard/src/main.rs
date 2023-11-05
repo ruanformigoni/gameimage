@@ -16,7 +16,7 @@ use fltk::{
   app::App,
   button::Button,
   dialog::dir_chooser,
-  group::{Group, PackType, Wizard},
+  group::{Group, PackType},
   input::{Input,FileInput},
   output::Output,
   menu::MenuButton,
@@ -36,13 +36,20 @@ type SharedPtr<T> = Rc<RefCell<T>>;
 struct Gui
 {
   app: App,
-  wind: Window,
-  wizard: Wizard,
+  wind: Arc<Mutex<Window>>,
   map_yaml: SharedPtr<BTreeMap::<String,String>>,
   width: i32,
   height: i32,
   border: i32,
 } // struct: Gui }}}
+
+// struct: FrameInstance {{{
+#[derive(Debug)]
+struct FrameInstance
+{
+  group: Group,
+  buttons: Vec<Button>,
+} // struct FrameInstance }}}
 
 // impl: Gui {{{
 impl Gui
@@ -55,11 +62,10 @@ impl Gui
     let height = width;
     let border = 30;
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
-    let wind = Window::default()
+    let wind = Arc::new(Mutex::new(Window::default()
       .with_label("GameImage")
       .with_size(width, height)
-      .center_screen();
-    let wizard = Wizard::default().with_size(width, height);
+      .center_screen()));
     let map_yaml = Rc::new(RefCell::new(BTreeMap::<String,String>::new()));
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
@@ -73,7 +79,6 @@ impl Gui
     {
       app,
       wind,
-      wizard,
       map_yaml,
       width,
       height,
@@ -95,9 +100,9 @@ impl Gui
   } // fn: make_frame }}}
 
   // fn: frame_1 {{{
-  fn frame_1(&self)
+  fn frame_1(&self) -> FrameInstance
   {
-    let mut group = Group::default().size_of(&self.wizard);
+    let mut group = Group::default().with_size(self.width, self.height);
     group.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
@@ -257,24 +262,24 @@ impl Gui
       .with_label("Next")
       .center_of(&frame_bottom);
     btn_next.set_color(Color::DarkGreen);
-    btn_next.set_callback({
-      closure!(clone self.map_yaml, clone mut self.wizard, |_|
-      {
-        let yaml = serde_yaml::to_string(map_yaml.as_ref()).unwrap();
-        assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
-        wizard.next()
-      })
-    });
 
     // }}}
 
     group.end();
+
+    let frame_instance = FrameInstance {
+      group,
+      buttons: vec![btn_next],
+    };
+
+    frame_instance
+
   } // fn: frame_1 }}}
 
   // fn: frame_2 {{{
-  fn frame_2(&self)
+  fn frame_2(&self) -> FrameInstance
   {
-    let mut group = Group::default().size_of(&self.wizard);
+    let mut group = Group::default().with_size(self.width, self.height);
     group.set_frame(FrameType::FlatBox);
 
     // frame_top {{{
@@ -348,7 +353,7 @@ impl Gui
     // }}}
 
     // frame_bottom {{{
-    
+
     let frame_bottom = self.make_frame(self.width, 50).below_of(&frame_top, -50);
 
     // Write yaml on click in 'next'
@@ -358,32 +363,28 @@ impl Gui
       .center_y(&frame_bottom);
     btn_prev.set_pos(30, btn_prev.y());
 
-    btn_prev.set_callback({
-      closure!(clone mut self.wizard, |_| wizard.prev())
-    });
-
     let mut btn_next = Button::default()
       .with_size(60, self.border)
       .with_label("Next")
       .center_of(&frame_bottom);
     btn_next.set_color(Color::DarkGreen);
-    btn_next.set_callback({
-      closure!(clone self.map_yaml, clone mut self.wizard, |_|
-      {
-        let yaml = serde_yaml::to_string(map_yaml.as_ref()).unwrap();
-        assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
-        wizard.next()
-      })
-    });
+
     // }}}
 
     group.end();
+
+    let frame_instance = FrameInstance {
+      group,
+      buttons: vec![btn_prev,btn_next],
+    };
+
+    frame_instance
   } // fn: frame_2 }}}
 
   // fn: frame_3 {{{
-  fn frame_3(&self)
+  fn frame_3(&self) -> FrameInstance
   {
-    let mut group = Group::default().size_of(&self.wizard);
+    let mut group = Group::default().with_size(self.width, self.height);
     group.set_frame(FrameType::FlatBox);
 
     // Frame top {{{
@@ -393,7 +394,7 @@ impl Gui
     // Terminal to output script execution
     let mut term = SimpleTerminal::new(self.border, self.border, self.width, frame_top_height, "")
       .above_of(&frame_top, - frame_top_height);
-    term.set_text_color(self.wind.label_color());
+    term.set_text_color(self.wind.lock().unwrap().label_color());
     term.set_text_size(10);
     // }}}
 
@@ -417,7 +418,7 @@ impl Gui
       .center_y(&frame_cmd);
     btn_send.set_color(Color::DarkGreen);
     btn_send.set_pos(self.width-90, btn_send.y());
-    
+
     // }}}
 
     // Frame Buttons {{{
@@ -438,10 +439,6 @@ impl Gui
     btn_exit.set_callback(|_|
     {
       app::quit();
-    });
-
-    btn_prev.set_callback({
-      closure!(clone mut self.wizard, |_| wizard.prev())
     });
 
     let mut btn_build = Button::default()
@@ -550,13 +547,89 @@ impl Gui
       }));
 
     })); // btn_build.set_callback...
-    
+
     // }}}
 
     // }}}
 
     group.end();
+
+    let frame_instance = FrameInstance {
+      group,
+      buttons: vec![btn_prev],
+    };
+
+    frame_instance
+
   } // fn: frame_3 }}}
+
+// fn: frame_switcher {{{
+fn frame_switcher(&self)
+{
+  // Create frames
+  let mut frame_1 = self.frame_1();
+  let mut frame_2 = self.frame_2();
+  let mut frame_3 = self.frame_3();
+
+  // Show first frame by default
+  frame_1.group.show();
+  frame_2.group.hide();
+  frame_3.group.hide();
+
+  // Fetch frame groups & buttons
+  let frame_1_group = frame_1.group.clone();
+  let mut frame_1_btn_next = frame_1.buttons[0].clone();
+  let frame_2_group = frame_2.group.clone();
+  let mut frame_2_btn_prev = frame_2.buttons[0].clone();
+  let mut frame_2_btn_next = frame_2.buttons[1].clone();
+  let frame_3_group = frame_3.group.clone();
+  let mut frame_3_btn_prev = frame_3.buttons[0].clone();
+
+  // Setup access to groups from different callbacks
+  let arc_frame_1_group = Arc::new(Mutex::new(frame_1_group));
+  let arc_frame_2_group = Arc::new(Mutex::new(frame_2_group));
+  let arc_frame_3_group = Arc::new(Mutex::new(frame_3_group));
+
+  let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
+  let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
+  frame_1_btn_next.set_callback(move |_|
+  {
+    let mut frame_1_group = arc_frame_1_group_clone.lock().unwrap();
+    let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
+    frame_1_group.hide();
+    frame_2_group.show();
+  });
+
+  let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
+  let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
+  frame_2_btn_prev.set_callback(move |_|
+  {
+    let mut frame_1_group = arc_frame_1_group_clone.lock().unwrap();
+    let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
+    frame_2_group.hide();
+    frame_1_group.show();
+  });
+
+  let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
+  let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
+  frame_2_btn_next.set_callback(move |_|
+  {
+    let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
+    let mut frame_3_group = arc_frame_3_group_clone.lock().unwrap();
+    frame_2_group.hide();
+    frame_3_group.show();
+  });
+
+  let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
+  let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
+  frame_3_btn_prev.set_callback(move |_|
+  {
+    let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
+    let mut frame_3_group = arc_frame_3_group_clone.lock().unwrap();
+    frame_3_group.hide();
+    frame_2_group.show();
+  });
+} // fn: frame_switcher }}}
 
 } // }}}
 
@@ -565,9 +638,10 @@ impl Drop for Gui
 {
   fn drop(&mut self)
   {
-    self.wind.make_resizable(false);
-    self.wind.end();
-    self.wind.show();
+    let mut wind = self.wind.lock().unwrap();
+    wind.make_resizable(false);
+    wind.end();
+    wind.show();
     self.app.run().unwrap();
   }
 } // }}}
@@ -576,11 +650,9 @@ impl Drop for Gui
 fn main() {
   // Tell GameImage that GUI is used
   env::set_var("GIMG_GUI", "Yes");
+
   // Init GUI
-  let gui = Gui::new();
-  gui.frame_1();
-  gui.frame_2();
-  gui.frame_3();
+  let gui = Gui::new().frame_switcher();
 } // fn: main }}}
 
 // cmd: !cargo build --release
