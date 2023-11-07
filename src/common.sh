@@ -160,12 +160,8 @@ function params_validate()
       msg "Select the rom file to boot when the appimage is clicked"
       msg "It must be a number between 1 and ${#files[@]}"
       msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
-
-      select i in "${files[@]}"; do
-        [ -f "$i" ] || { msg "Invalid selection"; continue; }
-        rom="$i"
-        break
-      done
+      _select "${files[@]}"
+      rom="${_FN_RET[0]}"
     else
       rom="$("$GIMG_SCRIPT_DIR/yq" -e '.rom' "$GIMG_YAML")"
       [ -f "$rom" ] || { die "Invalid rom path in $GIMG_YAML"; }

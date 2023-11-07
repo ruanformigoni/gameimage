@@ -16,7 +16,7 @@ GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && p
 source "$GIMG_SCRIPT_DIR/common.sh"
 
 # Get wine appimage and define wine alias
-function wine_download()
+function _fetch_wine()
 {
   local url
 
@@ -37,10 +37,6 @@ function wine_download()
   if [ ! -f "AppDir/usr/bin/winetricks" ]; then
     ln -sf wine AppDir/usr/bin/winetricks
   fi
-
-  # shellcheck disable=2139
-  WINE="$(pwd)/AppDir/usr/bin/wine"
-  WINETRICKS="$(pwd)/AppDir/usr/bin/winetricks"
 }
 
 function arch_select()
@@ -49,10 +45,8 @@ function arch_select()
     "$GIMG_SCRIPT_DIR/yq" -e '.arch' "$GIMG_YAML"
   else
     msg "Please select the architecture" >&2
-    select i in "win32" "win64"; do
-      [ "$i" ] || continue;
-      echo "$i"; break
-    done
+    _select "win32" "win64"
+    echo "${_FN_RET[0]}"
   fi
 }
 
@@ -62,13 +56,13 @@ function wine_configure()
 
   if [ ! -d "$WINEPREFIX" ]; then
     export WINEARCH="$(arch_select)"
-    "$WINETRICKS" fontsmooth=rgb
-    "$WINETRICKS" dxvk
-    "$WINETRICKS" vkd3d
+    "$BIN_WINETRICKS" fontsmooth=rgb
+    "$BIN_WINETRICKS" dxvk
+    "$BIN_WINETRICKS" vkd3d
   fi
 
   # Output current wine version
-  "$WINE" --version
+  "$BIN_WINE" --version
 
   local dir_current="$(pwd)"
   msg "configuration phase, use it to install dependencies, type continue to skip"
@@ -81,10 +75,10 @@ function wine_configure()
     # Newline for gui
     [ -n "$GIMG_GUI" ] && echo "";
     # Stop on continue
-    [ "${args[0]}" = "continue" ] && break
+    [ "${args[0]}" = "continue"   ] && break
     # Check if is a local command
-    [ "${args[0]}" = "wine" ] && { "$WINE" "${args[*]:1}" || true; continue; }
-    [ "${args[0]}" = "winetricks" ] && { "$WINETRICKS" "${args[*]:1}" || true; continue; }
+    [ "${args[0]}" = "wine"       ] && { "$BIN_WINE" "${args[*]:1}" || true; continue; }
+    [ "${args[0]}" = "winetricks" ] && { "$BIN_WINETRICKS" "${args[*]:1}" || true; continue; }
     # Use it as a bash command
     eval "${args[*]}" || continue
   done
@@ -106,7 +100,7 @@ function wine_install()
 
     #shellcheck disable=2005
     if [ "$(_select_yn "Install $(basename "${_FN_RET[0]}")?" "Y")" = "y" ]; then
-      echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$WINE" "${_FN_RET[0]}")"
+      echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$BIN_WINE" "${_FN_RET[0]}")"
     fi
 
     [ "$(_select_yn "Install another file?" "N")" = "y" ] || break
@@ -120,7 +114,7 @@ function wine_test()
   while :; do
     _eval_select "find " "\"$1\"" " -not -path *drive_c/windows/*.exe -iname *.exe" || break
     #shellcheck disable=2005
-    echo "$(cd "$(dirname "$_FN_RET")" && "$WINE" "$_FN_RET")"
+    echo "$(cd "$(dirname "$_FN_RET")" && "$BIN_WINE" "$_FN_RET")"
     [ "$(_select_yn "Test the another file?" "N")" = "y" ] || break
   done
 }
@@ -192,8 +186,8 @@ function runner_create()
   include_wine="$(_select_yn "Include wine inside the appimage?" "N")"
 
   if [ "$include_wine" != "y" ]; then
-    # Move back to build dir
-    mv "$WINE" "$dir_build"
+    # Move from default location to build dir
+    if [ -f "$BIN_WINE" ]; then mv "$BIN_WINE" "$dir_build"; fi
   fi
 
   # Create runner script
@@ -206,7 +200,7 @@ function runner_create()
     :export DIR_CALL="\$(dirname "\$APPIMAGE")"
     :export DIR_APP="\$APPDIR"
     :if [ -f "\$APPDIR/usr/bin/wine" ]; then
-    :  export WINE="\$APPDIR/usr/bin/wine"
+    :  export BIN_WINE="\$APPDIR/usr/bin/wine"
     :fi
     :
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
@@ -326,13 +320,13 @@ function runner_create()
     :
     :# Parse runner location
     :if { RUNNER="\$("\$YQ" '.runner | select(.!=null)' "\$YAML")"; [ -n "\$RUNNER" ]; }; then
-    :  WINE="\$RUNNER"
+    :  BIN_WINE="\$RUNNER"
     :fi
     :
     :# Parse startup command
     :if { CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$CMD" ]; }; then
     :  # Run custom command, replaces {wine} and {exec} strings
-    :  CMD="\${CMD//\{wine\}/\"\$WINE\"}"
+    :  CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
     :  CMD="\${CMD//\{exec\}/\"\\\$GIMG_DEFAULT_EXEC\"}"
     :  CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
     :  CMD="\${CMD//\{appd\}/\"\$DIR_APP\"}"
@@ -351,7 +345,7 @@ function runner_create()
     :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \\;)"
     :  "\$LAUNCHER"
     :else
-    :  if [ -z "\$WINE" ]; then
+    :  if [ -z "\$BIN_WINE" ]; then
     :   echo "-- Wine runner is missing"
     :   echo "-- You can set it with './\$(basename "\$APPIMAGE") --gameimage-runner=/path/to/wine'"
     :   echo "-- The path must be absolute"
@@ -387,34 +381,71 @@ function main()
   local dir_build="$(dir_build_create "$dir_src")"
   cd "$dir_build"
 
+  export WINEPREFIX="$(pwd)/AppDir/app/wine"
+  export BIN_WINE="$(pwd)/AppDir/usr/bin/wine"
+  export BIN_WINETRICKS="$(pwd)/AppDir/usr/bin/winetricks"
+
+  # Check if wine was moved by the build stage
+  if [ -f "$dir_build"/wine ]; then
+    mv "$dir_build"/wine "$BIN_WINE" 
+  fi
+
   dir_appdir_create
 
-  # Download tools
-  _fetch_appimagetool
-  _fetch_imagemagick
+  while :; do
 
-  # Install and configure application
-  wine_download
-  wine_configure
-  wine_install "$dir_src"
-  wine_test "$dir_build/AppDir/app/wine"
-  wine_executable_select "$dir_build" "$name"
+    case "$GIMG_STAGE" in
+      fetch) 
+        # Download tools
+        _fetch_appimagetool
+        _fetch_imagemagick
+        _fetch_wine
+      ;;
 
-  # Create runner script
-  runner_create "$dir_build" "$name" "${_FN_RET[0]}" "${_FN_RET[1]}"
+      configure)
+        # Install and configure application
+        wine_configure
+      ;;
 
-  # Copy cover
-  ./imagemagick "$cover" "AppDir/${name}.png"
+      install)
+        wine_install "$dir_src"
+      ;;
 
-  # Create desktop entry
-  desktop_entry_create "$name"
+      test)
+        wine_test "$dir_build/AppDir/app/wine"
+      ;;
 
-  # Build appimage
-  appdir_build
+      build)
+        # Select main executable
+        wine_executable_select "$dir_build" "$name"
 
-  # Rename AppImage file
-  [ -f "${name}.AppImage" ] && rm "${name}.AppImage"
-  mv ./*.AppImage "${name// /-}.AppImage"
+        # Create runner script
+        runner_create "$dir_build" "$name" "${_FN_RET[0]}" "${_FN_RET[1]}"
+
+        # Copy cover
+        ./imagemagick "$cover" "AppDir/${name}.png"
+
+        # Create desktop entry
+        desktop_entry_create "$name"
+
+        # Build appimage
+        appdir_build
+
+        # Rename AppImage file
+        [ -f "${name}.AppImage" ] && rm "${name}.AppImage"
+        mv ./*.AppImage "${name// /-}.AppImage"
+      ;;
+    esac
+
+    # Allow for single-stage execution without user input (for the GUI)
+    if [ -n "$GIMG_STAGE_SINGLE" ]; then
+      break
+    else
+      msg "Select one of the stages listed below"
+      _select "fetch" "configure" "install" "test" "build"
+      GIMG_STAGE="${_FN_RET[0]}"
+    fi
+  done
 }
 
 main "$@"

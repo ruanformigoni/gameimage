@@ -274,7 +274,7 @@ impl Gui
         |s| { input_default_cmd.set_value(s.as_str()); });
 
     // Default runner exists?
-    let use_runner_default = env::var("WINE").ok()
+    let use_runner_default = env::var("BIN_WINE").ok()
       .map_or_else(|| { println!("Could fetch RUNNER variable"); false },
       |str_path|
       {
@@ -331,7 +331,7 @@ impl Gui
           |value| { str_cmd = str_cmd.replace(placeholder, format!("\"{}\"", value).as_str()); });
       };
 
-      f_expand("{wine}", "WINE");
+      f_expand("{wine}", "BIN_WINE");
       f_expand("{exec}", "GIMG_DEFAULT_EXEC");
       f_expand("{here}", "DIR_CALL");
       f_expand("{appd}", "DIR_APP");
@@ -357,13 +357,13 @@ impl Gui
       if e.is_checked()
       {
         _input_default_runner.deactivate();
-        env::set_var("WINE", "$APPDIR/usr/bin/wine");
+        env::set_var("BIN_WINE", "$APPDIR/usr/bin/wine");
         f_yaml_write("runner_default".to_string(), "true".to_string());
       }
       else
       {
         _input_default_runner.activate();
-        env::set_var("WINE", _input_default_runner.value());
+        env::set_var("BIN_WINE", _input_default_runner.value());
         f_yaml_write("runner".to_string(), _input_default_runner.value());
         f_yaml_write("runner_default".to_string(), "false".to_string());
       }
@@ -376,7 +376,7 @@ impl Gui
         .map_or_else(|| { println!("Could not pick new path"); None },
           |e| { _input_default_runner.set_value(e.as_str()); Some(e) })
         .map_or_else(|| { println!("Could not set value for input widget"); None },
-          |e| { env::set_var("WINE", e.clone()); Some(e) })
+          |e| { env::set_var("BIN_WINE", e.clone()); Some(e) })
         .map_or_else(|| { println!("Could not set env variable value"); None },
           |e| { f_yaml_write("runner".to_string(), e.to_string()); Some(e) })
         .map_or_else(|| { println!("Could not update default command") },
