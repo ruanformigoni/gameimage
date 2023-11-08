@@ -1,3 +1,4 @@
+use std::fs;
 use std::env;
 use std::path::PathBuf;
 use std::cell::RefCell;
@@ -596,6 +597,7 @@ fn frame_switcher(&self)
   let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
   let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
   let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
+  let map_yaml_clone = self.map_yaml.clone();
   frame_1_btn_next.set_callback(move |_|
   {
     let mut frame_1_group = arc_frame_1_group_clone.lock().unwrap();
@@ -611,6 +613,8 @@ fn frame_switcher(&self)
       frame_1_group.hide();
       frame_3_group.show();
     } // else
+    let yaml = serde_yaml::to_string(map_yaml_clone.as_ref()).unwrap();
+    assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
   });
 
   let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
@@ -625,12 +629,15 @@ fn frame_switcher(&self)
 
   let arc_frame_2_group_clone = Arc::clone(&arc_frame_2_group);
   let arc_frame_3_group_clone = Arc::clone(&arc_frame_3_group);
+  let map_yaml_clone = self.map_yaml.clone();
   frame_2_btn_next.set_callback(move |_|
   {
     let mut frame_2_group = arc_frame_2_group_clone.lock().unwrap();
     let mut frame_3_group = arc_frame_3_group_clone.lock().unwrap();
     frame_2_group.hide();
     frame_3_group.show();
+    let yaml = serde_yaml::to_string(map_yaml_clone.as_ref()).unwrap();
+    assert!(fs::write("/tmp/gameimage.yml", yaml).is_ok());
   });
 
   let arc_frame_1_group_clone = Arc::clone(&arc_frame_1_group);
