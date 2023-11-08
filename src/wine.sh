@@ -55,10 +55,28 @@ function wine_configure()
   export WINEPREFIX="$(pwd)/AppDir/app/wine"
 
   if [ ! -d "$WINEPREFIX" ]; then
+    # Update prefix
     export WINEARCH="$(arch_select)"
     "$BIN_WINETRICKS" fontsmooth=rgb
-    "$BIN_WINETRICKS" dxvk
-    "$BIN_WINETRICKS" vkd3d
+  fi
+
+  # If the variable is unset, ask
+  # If the variable is set, use value to determine if should install or not
+  ## DXVK
+  if [ -v GIMG_INSTALL_DXVK ]; then
+    if [ "$GIMG_INSTALL_DXVK" -eq 1 ]; then
+      "$BIN_WINETRICKS" -f dxvk
+    fi
+  elif [ "$(_select_yn "Install dxvk for directx 9/10/11?" "Y")" = "y" ]; then
+    "$BIN_WINETRICKS" -f dxvk
+  fi
+  ## VKD3D
+  if [ -v GIMG_INSTALL_VKD3D ]; then
+    if [ "$GIMG_INSTALL_VKD3D" -eq 1 ]; then
+      "$BIN_WINETRICKS" -f vkd3d
+    fi
+  elif [ "$(_select_yn "Install vkd3d for directx 12?" "Y")" = "y" ]; then
+    "$BIN_WINETRICKS" -f vkd3d
   fi
 
   # Output current wine version
