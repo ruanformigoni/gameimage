@@ -238,6 +238,7 @@ impl Gui
                         str_file.ends_with(".sfb") ||
                         str_file.ends_with(".bin") ||
                         str_file.ends_with(".nsp") ||
+                        str_file.ends_with(".zip") ||
                         str_file.ends_with(".cue")} )
           .take(20)
           .for_each(|f| { btn_rom.add_choice(f.path().to_str().unwrap()); } );
