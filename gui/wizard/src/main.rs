@@ -14,7 +14,7 @@ use closure::closure;
 use fltk::{
   app,
   app::App,
-  button::Button,
+  button::{Button,CheckButton},
   dialog::dir_chooser,
   group::{Group, PackType},
   input::{Input,FileInput},
@@ -301,7 +301,7 @@ impl Gui
     let height_btn = 30;
 
     // Create label to the far left and menubutton to the far right
-    let f_make_entry = |txt: &str, row: i32|
+    let f_make_entry_menubutton = |txt: &str, row: i32|
     {
       let btn = MenuButton::default()
         .with_size(width_btn, height_btn)
@@ -314,13 +314,32 @@ impl Gui
       btn
     };
 
+    // Create checkbutton
+    let f_make_entry_checkbutton = |txt: &str, row: i32|
+    {
+      let btn = CheckButton::default()
+        .with_size(width_btn, height_btn)
+        .with_pos(frame_top.width() - width_btn - self.border, (frame_top.y() + self.border*2)*row);
+      let mut lbl = Output::default()
+        .with_pos(self.border, btn.y() + self.border / 2)
+        .with_align(Align::Right)
+        .with_label(txt);
+      lbl.set_frame(FrameType::NoBox);
+      btn
+    };
+
     // Create labels / menubuttons
-    let mut btn_package_type = f_make_entry("Package Type", 1);
+    let mut btn_package_type = f_make_entry_menubutton("Package Type", 1);
     btn_package_type.add_choice("overlayfs|unionfs|readonly|prefix");
     let hash_package_type : HashSet<&str> = vec!["overlayfs", "unionfs", "readonly", "prefix"].into_iter().collect();
-    let mut btn_wine_dist = f_make_entry("Wine Distribution", 2);
+
+    let mut btn_wine_dist = f_make_entry_menubutton("Wine Distribution", 2);
     btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda");
     let hash_wine_dist : HashSet<&str> = vec!["ge","staging","caffe","vaniglia","soda"].into_iter().collect();
+
+    let mut btn_check_dxvk = f_make_entry_checkbutton("Install dxvk for directx 9/10/11?", 3);
+
+    let mut btn_check_vkd3d = f_make_entry_checkbutton("Install vkd3d for directx 12?", 4);
 
     // Initialize defaults
     let f_initialize_entry = |var: &str, default: &str, hash: HashSet<&str>, btn: &mut MenuButton|
@@ -341,8 +360,14 @@ impl Gui
         Err(_) => btn.set_label(default),
       }
     };
+
     f_initialize_entry("GIMG_PKG_TYPE", "overlayfs", hash_package_type, &mut btn_package_type);
+
     f_initialize_entry("GIMG_WINE_DIST", "ge", hash_wine_dist, &mut btn_wine_dist);
+
+    env::set_var("GIMG_INSTALL_DXVK", "0");
+
+    env::set_var("GIMG_INSTALL_VKD3D", "0");
 
     // Set callbacks
     btn_package_type.set_callback(|e|
@@ -353,6 +378,16 @@ impl Gui
     btn_wine_dist.set_callback(|e|
     {
       e.choice().as_ref().map(|f| { e.set_label(f); env::set_var("GIMG_WINE_DIST", f); });
+    });
+
+    btn_check_dxvk.set_callback(|e|
+    {
+      env::set_var("GIMG_INSTALL_DXVK", if e.is_checked() { "1" } else { "0" });
+    });
+
+    btn_check_vkd3d.set_callback(|e|
+    {
+      env::set_var("GIMG_INSTALL_VKD3D", if e.is_checked() { "1" } else { "0" });
     });
     // }}}
 
