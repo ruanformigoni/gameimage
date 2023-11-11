@@ -67,7 +67,7 @@ function wine_configure()
     if [ "$GIMG_INSTALL_DXVK" -eq 1 ]; then
       "$BIN_WINETRICKS" -f dxvk
     fi
-  elif [ "$(_select_yn "Install dxvk for directx 9/10/11?" "Y")" = "y" ]; then
+  elif _select_bool "Install dxvk for directx 9/10/11?" "Y"; then
     "$BIN_WINETRICKS" -f dxvk
   fi
   ## VKD3D
@@ -75,7 +75,7 @@ function wine_configure()
     if [ "$GIMG_INSTALL_VKD3D" -eq 1 ]; then
       "$BIN_WINETRICKS" -f vkd3d
     fi
-  elif [ "$(_select_yn "Install vkd3d for directx 12?" "Y")" = "y" ]; then
+  elif _select_bool "Install vkd3d for directx 12?" "Y"; then
     "$BIN_WINETRICKS" -f vkd3d
   fi
 
@@ -117,23 +117,23 @@ function wine_install()
     [ ! -f "${_FN_RET[0]}" ] && die "No valid file found in $1/rom"
 
     #shellcheck disable=2005
-    if [ "$(_select_yn "Install $(basename "${_FN_RET[0]}")?" "Y")" = "y" ]; then
+    if _select_bool "Install $(basename "${_FN_RET[0]}")?" "Y"; then
       echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$BIN_WINE" "${_FN_RET[0]}")"
     fi
 
-    [ "$(_select_yn "Install another file?" "N")" = "y" ] || break
+    _select_bool "Install another file?" "N" || break
   done
 }
 
 function wine_test()
 {
-  [ "$(_select_yn "Test the installed software?" "N")" = "y" ] || return 0
+  _select_bool "Test the installed software?" "N" || return 0
 
   while :; do
     _eval_select "find " "\"$1\"" " -not -path *drive_c/windows/*.exe -iname *.exe" || break
     #shellcheck disable=2005
     echo "$(cd "$(dirname "$_FN_RET")" && "$BIN_WINE" "$_FN_RET")"
-    [ "$(_select_yn "Test the another file?" "N")" = "y" ] || break
+    _select_bool "Test the another file?" "N" || break
   done
 }
 
@@ -201,9 +201,7 @@ function runner_create()
   # Launcher
   cp "${GIMG_SCRIPT_DIR}/launcher" "AppDir/usr/bin"
 
-  include_wine="$(_select_yn "Include wine inside the appimage?" "N")"
-
-  if [ "$include_wine" != "y" ]; then
+  if ! _select_bool "Include wine inside the appimage?" "N"; then
     # Move from default location to build dir
     if [ -f "$BIN_WINE" ]; then mv "$BIN_WINE" "$dir_build"; fi
   fi
@@ -382,7 +380,7 @@ function runner_create()
     [ ! -L "$i" ] || rm "$i";
   done
 
-  msg -n "AppRun written, make further changes to it if you desire, then press enter..."
+  msg "%b" "AppRun written, make further changes to it if you desire, then press enter..."
   read -r
 }
 

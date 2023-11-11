@@ -21,19 +21,17 @@ function die()
 
 function msg()
 {
-  declare -a opts
-  while [ $# -gt 1 ]; do
-    opts+=("$1")
-    shift
-  done
+  local format
 
-  # Test for color support
-  if [ -z "$GIMG_GUI" ]; then
-    echo -e "${opts[@]}" "[\033[32m*\033[m] $*" >&2
-  else
-    echo "${opts[@]}" "[*] $*" >&2
+  if [ $# -eq 2 ]; then
+    format="$1"; shift
+  elif [ $# -gt 2 ]; then
+    die "Too many args for msg"
   fi
 
+  # Test for color support
+  # shellcheck disable=2059
+  printf "${format:-%s\n}" "[*] $*" >&2
 }
 
 function extract()
@@ -50,9 +48,11 @@ function extract()
 # Select from a y/n prompt
 # $1 = prompt
 # $2 = default option [y/n]
-function _select_yn()
+function _select_bool()
 {
-  { [ "${2,,}" = "y" ] || [ "${2,,}" = "n" ]; } || exit 1
+  if [ "${2,,}" != "y" ] && [ "${2,,}" != "n" ]; then
+    msg "Invalid default option for _select_bool"
+  fi
 
   local default="${2,,}"
 
@@ -60,15 +60,16 @@ function _select_yn()
 
   local opt
 
-  { [ -n "$GIMG_GUI" ] && msg "$1 [$defaults]: "; } || msg -n "$1 [$defaults]: "
-
   # Wait for y|n or empty string
-  while ! read -r opt && [[ "${opt,,}" =~ y|n ]] && [ -n "$opt" ]; do
+  while :; do
+    # No newline on CLI
+    msg "${GIMG_CLI:+%s}" "$1 [$defaults]: "
     read -r opt; 
+    if [[ -z "$opt" ]]; then opt="$default"; break; fi
+    if [[ "${opt,,}" =~ y|n ]]; then break; fi
   done
-  [ -z "$opt" ] && opt="$default"
 
-  echo "${opt,,}"
+  test "$opt" = "y"
 }
 
 # Selects an option from an enumerated list
@@ -211,7 +212,7 @@ function dir_appdir_create()
   local appdir="AppDir"
 
   if [ -d "$appdir" ] && [ -z "${GIMG_YAML}" ]; then
-    msg -n "AppDir from previous run found, remove it? [y/N]: "
+    msg "%b" "AppDir from previous run found, remove it? [y/N]: "
     read -r opt
     [ "$opt" = "y" ] && rm -rf "$appdir";
   fi

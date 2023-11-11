@@ -24,7 +24,10 @@ export GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/nu
 # # Wine distribution - ge,caffe,staging,vaniglia,soda
 export GIMG_WINE_DIST="${GIMG_WINE_DIST:-ge}"
 # # Check for GUI
-export GIMG_GUI="${GIMG_GUI:-}"
+export GIMG_GUI="${GIMG_GUI:+1}"
+# # Check for CLI
+export GIMG_CLI="1"
+export GIMG_CLI="${GIMG_CLI#"${GIMG_GUI}"}"
 # # Install location for wine applications (overlayfs/unionfs/readonly/prefix)
 export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-overlayfs}"
 
