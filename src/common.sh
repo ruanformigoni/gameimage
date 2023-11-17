@@ -321,7 +321,39 @@ function desktop_entry_create()
 	END
 }
 
-function appdir_build()
+function build_appimage()
 {
   ARCH=x86_64 ./appimagetool AppDir
+}
+
+function build_flatimage()
+{
+  [[ -d "$DIR_BUILD" ]] || die "Build dir no specified"
+  [[ -f "$BIN_PKG" ]] || die "BIN_PKG is not a file"
+
+  if [[ "$GIMG_PKG_METHOD" = "overlayfs" ]]; then
+    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" /
+    rm "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-config-set overlay.prefix "Wine prefix overlay"
+    #shellcheck disable=2016
+    "$BIN_PKG" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config"'
+    "$BIN_PKG" fim-config-set overlay.prefix.cont '/prefix'
+  elif [[ "$GIMG_PKG_METHOD" = "dynamic" ]]; then
+    "$BIN_PKG" fim-include-path "$DIR_BUILD/AppDir/app/wine/." /prefix
+  elif [[ "$GIMG_PKG_METHOD" = "unionfs" ]]; then
+    die "unionfs is currently not implemented for flatimage (use overlayfs instead)"
+  elif [[ "$GIMG_PKG_METHOD" = "copy" ]]; then
+    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" /
+    rm "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/rom" -o "$DIR_BUILD/rom.dwarfs"
+    "$BIN_PKG" fim-include-path "$DIR_BUILD/rom.dwarfs" /
+    rm "$DIR_BUILD/rom.dwarfs"
+  elif [[ "$GIMG_PKG_METHOD" = "prefix" ]]; then
+    # Requires no configuration
+    :
+  else
+    die "Unsupported package install method '$GIMG_PKG_METHOD'"
+  fi
 }

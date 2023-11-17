@@ -147,7 +147,7 @@ function main()
   desktop_entry_create "$name"
 
   # Build appimage
-  appdir_build
+  build_appimage
 }
 
 main "$@"

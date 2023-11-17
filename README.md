@@ -10,7 +10,9 @@
   - [Graphical User Interface (GUI)](#graphical-user-interface-gui)
     - [GUI Installer](#gui-installer)
     - [GUI Launcher](#gui-launcher)
-  - [Build Dependencies](#build-dependencies)
+  - [Dependencies](#dependencies)
+    - [FlatImage](#flatimage)
+    - [AppImage](#appimage)
   - [Install](#install)
   - [Usage (Command Line)](#usage-command-line)
   - [Configuration](#configuration)
@@ -20,6 +22,7 @@
       - [Disable Launcher](#disable-launcher)
       - [Launch Command](#launch-command)
       - [Select type of packaging](#select-type-of-packaging)
+      - [Select method of packaging](#select-method-of-packaging)
       - [Select Wine Distribution](#select-wine-distribution)
     - [Emulator Specific](#emulator-specific)
       - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
@@ -90,6 +93,14 @@ Files displayed on the `thunar` file manager.
 <img src="doc/example-gui-launcher.png"  width="1000">
 
 ## Dependencies
+
+### FlatImage
+
+A working fuse setup
+
+### AppImage
+
+A working fuse setup
 
 Wine requires 32-bit glibc installed on the host to avoid the `no such file or
 directory` error.
@@ -202,18 +213,44 @@ Examples:
 
 #### Select type of packaging
 
-The `GIMG_PKG_TYPE` option defines the packaging method, options are:
+The `GIMG_PKG_TYPE` option defines the packaging type, options are:
+
+1. FlatImage : Portable container.
+2. AppImage  : Portable read-only image.
+
+The key differences are:
+
+1. Flatimage is more portable, the generated file works on more linux
+   distributions than AppImage, AppImages built on archlinux have glibc errors
+   when attempted to run on older systems.
+1. Flatimage runs the application on a container, it only allows the application
+   to access what is necessary for it to work.
+1. Flatimage has a larger file size than AppImage, since it packs everything the
+   application requires to run in a single file.
+1. Flatimage is read-write, you can create a flatimage that stores your saves in
+   the image itself, that way, instead of having back-up one file
+   (wine+prefix+game data) and one directory (saves), you just have to backup
+   one file. Flatimage grows automatically to accomodate your save data, you can
+   still use the previous method with flatimage, as well as others listed in 
+
+
+#### Select method of packaging
+
+The `GIMG_PKG_METHOD` option defines the packaging method, options are:
 
 1. `overlayfs` : Inside the appimage, writeable with overlayfs. `[default, recommended]`
+1. `dynamic`   : Inside the appimage, writeable.
 1. `unionfs`   : Inside the appimage, writeable with unionfs.
-1. `readonly`  : Inside the appimage, read-only.
+1. `copy`      : Inside the appimage, read-only. 
 1. `prefix`    : Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
 
 `[1,2]` Packs everything inside the appimage, the game can write to its own
-directory with unionfs.
+directory.
 
 `[3]` Packs everything inside the appimage, read-only (might not work for some
-games).
+games). Copies the prefix to `.my-game.AppImage.config` on first execution, only
+the prefix, not the game files (which are still compressed and read-only inside
+the package).
 
 `[4]` The software is moved to `.my-game.AppImage.config`, the appimage acts
 as a launcher.
@@ -221,7 +258,7 @@ as a launcher.
 Example:
 
 ```bash
-export GIMG_PKG_TYPE=prefix
+export GIMG_PKG_METHOD=prefix
 ```
 
 #### Select Wine Distribution

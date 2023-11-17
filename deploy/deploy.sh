@@ -56,6 +56,9 @@ staticx \
   -l "/lib/x86_64-linux-gnu/libxml2.so.2" \
   ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
 
+# Include shared version
+cp ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher-shared
+
 # Fetch unionfs
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
 mv -f unionfs build/AppDir/usr/bin

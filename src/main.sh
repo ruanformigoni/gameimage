@@ -28,8 +28,10 @@ export GIMG_GUI="${GIMG_GUI:+1}"
 # # Check for CLI
 export GIMG_CLI="1"
 export GIMG_CLI="${GIMG_CLI#"${GIMG_GUI}"}"
+# # Default package type for gameimage
+export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-flatimage}"
 # # Install location for wine applications (overlayfs/unionfs/readonly/prefix)
-export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-overlayfs}"
+export GIMG_PKG_METHOD="${GIMG_PKG_METHOD:-overlayfs}"
 
 GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
