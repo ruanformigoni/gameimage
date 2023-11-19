@@ -40,7 +40,20 @@ function _fetch_wine()
     if [ -f "./wine" ]; then
       mv wine AppDir/usr/bin/wine
     else
-      _fetch "wine" "$url"
+      if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+        # Fetch packages
+        _fetch "wine" "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
+        _fetch "opt.dwarfs" "$url"
+        chmod +x ./wine
+        # Remove if previous attempt failed
+        rm -f opt.dwarfs
+        # Merge flatimage with wine binaries
+        ./wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
+        # Remove downloaded wine binaries
+        rm opt.dwarfs
+      else
+        _fetch "wine" "$url"
+      fi
       mv wine AppDir/usr/bin/wine
     fi
   fi
