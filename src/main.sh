@@ -77,6 +77,16 @@ function main()
 {
   declare -A args
 
+  # Validate GIMG_PKG_TYPE
+  ## Default it to lowercase
+  GIMG_PKG_TYPE="${GIMG_PKG_TYPE,,}"
+  ## Check for valid input
+  if ! [[ "$GIMG_PKG_TYPE" =~ ^flatimage$|^appimage$ ]]; then
+    die "Invalid package type '$GIMG_PKG_TYPE', valid values are 'flatimage,appimage'"
+  else
+    msg "Package type: $GIMG_PKG_TYPE"
+  fi
+  
   if [[ "$#" -eq 0 ]]; then
     "$GIMG_SCRIPT_DIR"/gui
     exit
