@@ -17,18 +17,23 @@ GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && p
 
 source "$GIMG_SCRIPT_DIR/common.sh"
 
+# Default options for GIMG_WINE_DIST
+GIMG_WINE_DIST_VALUES="ge,caffe,vaniglia,soda"
+
 # Get wine appimage and define wine alias
 function _fetch_wine()
 {
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    local url="https://gitlab.com/api/v4/projects/45732205/packages"
-    url+="/generic/wine-amd-intel/continuous/wine-amd_intel-$GIMG_WINE_DIST.fim"
+    if ! read -r url; then
+      die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
+    fi < <("$GIMG_SCRIPT_DIR"/busybox wget -q -O - "https://gitlab.com/api/v4/projects/45732205/releases/Continuous" |
+        "$GIMG_SCRIPT_DIR"/jq -e -r '.assets.links.[].direct_asset_url | match("'".*$GIMG_WINE_DIST.*"'").string')
   else
-    url=$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/ruanformigoni/wine/releases 2>&1 |
-      grep -Eo "https://.*continuous-.*/wine-$GIMG_WINE_DIST-[0-9.-]+-continuous-x86_64.AppImage\"" ||
-      die "Error fetching wine url")
-    url="${url%\"}"
+    if ! read -r url; then
+      die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
+    fi < <("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/ruanformigoni/wine/releases | 
+      "$GIMG_SCRIPT_DIR"/jq -e -r '.[].assets.[].browser_download_url | match(".*wine-'"$GIMG_WINE_DIST"'.*x86_64.AppImage").string | select (.!=null)')
   fi
 
   if [ ! -f "AppDir/usr/bin/wine" ]; then

@@ -73,6 +73,9 @@ rm yq.1
 mv yq_linux_amd64 yq
 mv yq build/AppDir/usr/bin
 
+# Fetch jq
+wget -q --show-progress --progress=dot:binary https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux-amd64 -O build/AppDir/usr/bin/jq
+
 # Fetch 7zz
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7zz
 mv -f 7zz build/AppDir/usr/bin/7zz
