@@ -21,28 +21,25 @@ function pcsx2_download()
 {
   local url
 
-  url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
-    https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
-    grep -o "https://.*\.AppImage" | sort -V | tail -n1)"
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/flatimage/flatimage-pcsx2/releases/latest 2>&1 |
+      jq -r ".assets.[0].browser_download_url")"
+  else
+    url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
+      grep -o "https://.*\.AppImage" | sort -V | tail -n1)"
+  fi
 
   msg "pcsx2: ${url}"
 
   # Get pcsx2
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
-    if [ ! -f "pcsx2.AppImage" ]; then
-      # Get AppImage of pcsx2
-      "$GIMG_SCRIPT_DIR"/busybox wget -O pcsx2.AppImage "$url"
-
-      # Make executable
-      chmod +x ./pcsx2.AppImage
-    fi
-
-    # Move to AppDir
-    cp pcsx2.AppImage AppDir/usr/bin/pcsx2
+    _fetch "AppDir/usr/bin/pcsx2" "$url"
   fi
 }
 
-function runner_create()
+function runner_create_appimage()
 {
   local bios="$(basename "$1")"
   local rom="$(basename "$3")"
@@ -92,6 +89,78 @@ function runner_create()
   chmod +x AppDir/AppRun
 }
 
+function runner_create_flatimage()
+{
+  local bios="$(basename "$1")"
+  local rom="$(basename "$3")"
+
+  [ "$bios" == "null" ] && local bios=""
+  [ "$rom" == "null" ] && { msg "Invalid rom file"; die; }
+
+  # Create runner script
+  { sed -E 's/^\s+://' | tee AppDir/app/gameimage.sh | sed -e 's/^/-- /'; } <<-END
+    :#!/usr/bin/env bash
+    :
+    :set -e
+    :
+    :# Path to pcsx2
+    :export PATH="/pcsx2/bin:\$PATH"
+    :
+    :# Set cfg dir
+    :export XDG_CONFIG_HOME="\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config"
+    :
+    :# Bios path
+    :bios_path="\${XDG_CONFIG_HOME}/PCSX2/bios"
+    :
+    :# Create path if not exists
+    :mkdir -p "\${bios_path}"
+    :
+    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :echo "bios: ${bios}"
+    :echo "bios_path: \${bios_path}"
+    :
+    :if [ ! -f "\${bios_path}/${bios}" ]; then
+    :  cp "/app/bios/${bios}" "\${bios_path}/${bios}"
+    :fi
+    :
+    :if [[ "\$*" = "--config" ]]; then
+    :  pcsx2-qt
+    :elif [[ "\$*" ]]; then
+    :  pcsx2-qt "\$@"
+    :else
+    :  pcsx2-qt -- "\$APPDIR/app/rom/$rom"
+    :fi
+	END
+
+  # Allow execute
+  chmod +x AppDir/app/gameimage.sh
+}
+
+function build_flatimage()
+{
+  local name="$1"
+  local bin_pkg="$BUILD_DIR"/pcsx2
+
+  # Copy vanilla pcsx2 package
+  cp "$BUILD_DIR/AppDir/usr/bin/pcsx2" "$bin_pkg"
+
+  # Compress game dir
+  "$bin_pkg" fim-exec mkdwarfs -f -i "$BUILD_DIR"/AppDir/app -o "$BUILD_DIR"/app.dwarfs
+
+  # Include inside image
+  "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
+
+  # Default command -> runner script
+  "$bin_pkg" fim-cmd /app/gameimage.sh
+
+  # Copy cover
+  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
+  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
+
+  # Rename binary
+  mv "$bin_pkg" "$BUILD_DIR/${name}.fim"
+}
+
 function main()
 {
   # Validate params
@@ -107,22 +176,28 @@ function main()
   # Create dirs
   cd "$(dir_build_create "$dir")"
 
+  BUILD_DIR="$(pwd)"
+
   dir_appdir_create
 
   # Download tools
-  _fetch_appimagetool
+  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
+    _fetch_appimagetool
+  fi
   pcsx2_download
   _fetch_imagemagick
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
-  runner_create "$bios" "$core" "$rom"
-
-  desktop_entry_create "$name"
-
-  # Build appimage
-  build_appimage
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    runner_create_flatimage "$bios" "$core" "$rom"
+    build_flatimage "$name"
+  else
+    runner_create_appimage "$bios" "$core" "$rom"
+    desktop_entry_create "$name"
+    build_appimage
+  fi
 }
 
 main "$@"
