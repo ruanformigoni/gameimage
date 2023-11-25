@@ -118,9 +118,6 @@ function runner_create_flatimage()
 
   # Allow executable
   chmod +x AppDir/app/gameimage.sh
-
-  # Copy icon
-  ./imagemagick "$cover" "AppDir/${name}.png"
 }
 
 function build_flatimage()
