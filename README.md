@@ -2,7 +2,7 @@
   <img src="doc/gameimage.svg"  width="150">
 </div>
 
-# GameImage - AppImage Game Packer
+# GameImage - FlatImage / AppImage Game Packer
 
 - [GameImage - AppImage Game Packer](#gameimage---appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
@@ -36,14 +36,14 @@ now with Valve's portable handheld, the `steam deck`. The fragmentation with
 several platform emulators is daunting, especially since it requires repetitive
 configuration for the first time or if the config files go missing. GameImage is
 a tool to pack a runner (such as an emulator), a game, and it's configs in a
-single `appimage` package.
+single `flatimage` or `appimage` package.
 
 Advantages:
 
 - [x] Simplicity:
   - [x] No need to install an emulator or wine to run your games,
       they are downloaded as appimages and packaged with the game.
-  - [x] Each game config/saves are in the same folder as the appimage by
+  - [x] Each game config/saves are in the same folder as the `flatimage`/`appimage` by
       default (it can be changed to use global ~/.config). Which simplifies
       backups.
 - [x] Usability: get your game running with a double click on a fresh linux
@@ -161,7 +161,7 @@ platform, `./gameimage.AppImage` displays the following example:
 
 ## Configuration
 
-Consider an AppImage named `my-cool-game.AppImage` for the examples below.
+Consider a AppImage named `my-cool-game.AppImage` for the examples below.
 
 ### Global
 
@@ -242,17 +242,17 @@ The `GIMG_PKG_METHOD` option defines the packaging method, options are:
 1. `dynamic`   : Inside the appimage, writeable.
 1. `unionfs`   : Inside the appimage, writeable with unionfs.
 1. `copy`      : Inside the appimage, read-only. 
-1. `prefix`    : Outside the AppImage (in a hidden folder called `.my-game.AppImage.config`).
+1. `prefix`    : Outside the AppImage (in a hidden folder called `.my-game.[flatimage,AppImage].config`).
 
 `[1,2]` Packs everything inside the appimage, the game can write to its own
 directory.
 
 `[3]` Packs everything inside the appimage, read-only (might not work for some
-games). Copies the prefix to `.my-game.AppImage.config` on first execution, only
+games). Copies the prefix to `.my-game.[flatimage,AppImage].config` on first execution, only
 the prefix, not the game files (which are still compressed and read-only inside
 the package).
 
-`[4]` The software is moved to `.my-game.AppImage.config`, the appimage acts
+`[4]` The software is moved to `.my-game.[flatimage,AppImage].config`, the appimage acts
 as a launcher.
 
 Example:
@@ -263,7 +263,8 @@ export GIMG_PKG_METHOD=prefix
 
 #### Select Wine Distribution
 
-Default distribution is [wine-ge](https://github.com/ruanformigoni/wine). Available are:
+Default distribution is [ge](https://github.com/ruanformigoni/wine). Available are:
+* ge
 * staging
 * caffe
 * vaniglia
