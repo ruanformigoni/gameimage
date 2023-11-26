@@ -21,27 +21,25 @@ function yuzu_download()
 {
   local url
 
-  url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
-    https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases 2>&1 |
-    grep -o "https://.*\.AppImage" | sort | tail -n1)"
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/flatimage/flatimage-yuzu/releases/latest 2>&1 |
+      jq -r ".assets.[0].browser_download_url")"
+  else
+    url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases 2>&1 |
+      grep -o "https://.*\.AppImage" | sort | tail -n1)"
+  fi
 
   msg "yuzu: ${url}"
 
   # Get yuzu
   if [ ! -f "AppDir/usr/bin/yuzu" ]; then
-    if [ ! -f "yuzu.AppImage" ]; then
-      # Get AppImage of yuzu
-      "$GIMG_SCRIPT_DIR"/busybox wget -O yuzu "$url"
-      # Make executable
-      chmod +x ./yuzu
-    fi
-
-    # Move to AppDir
-    cp yuzu AppDir/usr/bin/yuzu
+    _fetch "./AppDir/usr/bin/yuzu" "$url"
   fi
 }
 
-function runner_create()
+function runner_create_appimage()
 {
   local bios="$(basename "$1")"
   local keys="$(basename "$2")"
@@ -57,11 +55,15 @@ function runner_create()
   cp AppDir/app/bios/* AppDir/app/config/home/.local/share/yuzu/nand/system/Contents/registered
   cp AppDir/app/keys/* AppDir/app/config/home/.local/share/yuzu/keys
 
-  echo "$(export XDG_CONFIG_HOME="$(pwd)"/AppDir/app/config; \
-    export HOME="$(pwd)"/AppDir/app/config/home; \
-    AppDir/usr/bin/yuzu)"
+  (
+    #shellcheck disable=2030
+    export XDG_CONFIG_HOME="$(pwd)"/AppDir/app/config
+    #shellcheck disable=2030
+    export HOME="$(pwd)"/AppDir/app/config/home
+    AppDir/usr/bin/yuzu
+  )
 
-  [ "$bios" == "null" ] && local bios=""
+  local bios="${bios#null}"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
@@ -100,6 +102,103 @@ function runner_create()
   chmod +x AppDir/AppRun
 }
 
+function runner_create_flatimage()
+{
+  local bios="$(basename "$1")"
+  local keys="$(basename "$2")"
+  local rom="$(basename "$3")"
+
+  msg "Install the updates and DLC to pack into the AppImage (not the game itself)"
+
+  mkdir -p AppDir/app/config
+  mkdir -p AppDir/app/data/yuzu/nand/system/Contents/registered
+  mkdir -p AppDir/app/data/yuzu/keys
+
+  cp AppDir/app/bios/* AppDir/app/data/yuzu/nand/system/Contents/registered
+  cp AppDir/app/keys/* AppDir/app/data/yuzu/keys
+
+  (
+    #shellcheck disable=2031
+    export XDG_CONFIG_HOME="$(pwd)"/AppDir/app/config
+    #shellcheck disable=2031
+    export XDG_DATA_HOME="$(pwd)"/AppDir/app/data
+    AppDir/usr/bin/yuzu
+  )
+
+  local bios="${bios#null}"
+
+  # Create runner script
+  { sed -E 's/^\s+://' | tee "$BUILD_DIR"/gameimage.sh | sed -e 's/^/-- /'; } <<-END
+    :#!/usr/bin/env bash
+    :
+    :set -e
+    :
+    :# Path to yuzu
+    :export PATH="/yuzu/bin:\$PATH"
+    :
+    :# Make sure HOME exists
+    :mkdir -p "\$HOME"
+    :
+    :# Set gameimage config dir
+    :GIMG_CONFIG_DIR="\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config"
+    :
+    :# Set .config
+    :export XDG_CONFIG_HOME="\$GIMG_CONFIG_DIR/overlay.app/mount/config"
+    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :
+    :# Set .local/share
+    :export XDG_DATA_HOME="\$GIMG_CONFIG_DIR/overlay.app/mount/data"
+    :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
+    :
+    :if [[ "\$*" = "--config" ]]; then
+    :  yuzu
+    :elif [[ "\$*" ]]; then
+    :  yuzu "\$@"
+    :else
+    :  yuzu -f -g "\$FIM_DIR_MOUNT/app/rom/${rom}"
+    :fi
+	END
+
+  # Allow execute
+  chmod +x "$BUILD_DIR"/gameimage.sh
+}
+
+function build_flatimage()
+{
+  local name="$1"
+  local bin_pkg="$BUILD_DIR"/yuzu
+
+  # Copy vanilla yuzu package
+  cp "$BUILD_DIR/AppDir/usr/bin/yuzu" "$bin_pkg"
+
+  # Compress game dir
+  "$bin_pkg" fim-exec mkdwarfs -f -i "$BUILD_DIR"/AppDir/app -o "$BUILD_DIR"/app.dwarfs
+
+  # Include inside image
+  "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
+
+  # Include launche script
+  "$bin_pkg" fim-root mkdir -p /fim/scripts
+  "$bin_pkg" fim-root cp "$BUILD_DIR/gameimage.sh" /fim/scripts
+
+  # Default command -> runner script
+  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
+
+  # Configure overlay
+  "$bin_pkg" fim-config-set overlay.app 'App Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlay.app'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Copy cover
+  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
+  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
+
+  # Rename binary
+  mv "$bin_pkg" "$BUILD_DIR/${name}.fim"
+}
+
 function main()
 {
   # Validate params
@@ -115,22 +214,29 @@ function main()
   # Create dirs
   cd "$(dir_build_create "$dir")"
 
+  BUILD_DIR="$(pwd)"
+
   dir_appdir_create
 
   # Download tools
-  _fetch_appimagetool
+  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
+    _fetch_appimagetool
+  fi
   yuzu_download
   _fetch_imagemagick
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "null" "$cover" "$keys"
 
-  runner_create "$bios" "$keys" "$rom"
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    runner_create_flatimage "$bios" "$keys" "$rom"
+    build_flatimage "$name"
+  else
+    runner_create_appimage "$bios" "$keys" "$rom"
+    desktop_entry_create "$name"
+    build_appimage
+  fi
 
-  desktop_entry_create "$name"
-
-  # Build appimage
-  build_appimage
 }
 
 main "$@"
