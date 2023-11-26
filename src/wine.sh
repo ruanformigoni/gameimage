@@ -593,6 +593,10 @@ function runner_create_flatimage()
   # Set default command
   "$BIN_PKG" fim-cmd "/fim/gameimage.sh"
 
+  # Set HOME directory
+  #shellcheck disable=2016
+  "$BIN_PKG" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
+
   msg "%b" "Runner script written, make further changes to it if you desire, then press enter..."
   read -r
 }
