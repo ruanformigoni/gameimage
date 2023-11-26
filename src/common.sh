@@ -333,7 +333,7 @@ function build_flatimage()
 
   if [[ "$GIMG_PKG_METHOD" = "overlayfs" ]]; then
     "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
-    "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" /
+    "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" "/prefix.dwarfs"
     rm "$DIR_BUILD/prefix.dwarfs"
     "$BIN_PKG" fim-config-set overlay.prefix "Wine prefix overlay"
     #shellcheck disable=2016
