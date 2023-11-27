@@ -18,7 +18,7 @@ use fltk::{
   app,
   app::App,
   button::Button,
-  group::{Group, PackType, Wizard},
+  group::{Group, PackType},
   dialog::file_chooser,
   input::Input,
   menu::MenuButton,
@@ -30,6 +30,39 @@ use fltk::{
 };
 
 use fltk_theme::{ColorTheme, color_themes};
+const ICON_BACKGROUND: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="317" height="50" class="bi bi-play-fill" viewBox="0 0 30 20">
+  <rect width="100%" height="100%" fill="#2A2E32" opacity="0.65"></rect>
+</svg>
+"##;
+
+const ICON_PLAY: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" class="bi bi-play-fill" viewBox="0 0 16 16">
+  <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+</svg>
+"#;
+
+const ICON_CONFIGURE: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" class="bi bi-tools" viewBox="0 0 16 16">
+  <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3c0-.269-.035-.53-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814zm9.646 10.646a.5.5 0 0 1 .708 0l2.914 2.915a.5.5 0 0 1-.707.707l-2.915-2.914a.5.5 0 0 1 0-.708M3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026z"/>
+</svg>
+"#;
+
+const ICON_BACK: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" class="bi bi-arrow-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/>
+</svg>
+"#;
+
+
+const HEIGHT_BUTTON_WIDE : i32 = 40;
+const WIDTH_BUTTON_WIDE  : i32 = 60;
+
+const HEIGHT_BUTTON_REC : i32 = 40;
+const WIDTH_BUTTON_REC  : i32 = 40;
+
+const HEIGHT_BUTTON_CHECK : i32 = 20;
+const WIDTH_BUTTON_CHECK  : i32 = 20;
 
 // struct: Gui {{{
 #[derive(Debug)]
@@ -37,13 +70,72 @@ struct Gui
 {
   app: App,
   wind: Window,
-  wizard: Wizard,
   width: i32,
   height: i32,
   border: i32,
   sender: mpsc::Sender<i32>,
   receiver: mpsc::Receiver<()>,
 } // struct: Gui }}}
+
+// struct: FrameInstance {{{
+#[derive(Debug)]
+struct FrameInstance
+{
+  group: Group,
+  buttons: Vec<Button>,
+} // struct FrameInstance }}}
+
+fn f_yaml_write(key: String, value: String) -> Option<()>
+{
+  // Read file from global variable
+  let (file, str_file) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
+      || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
+      |str_file| { (std::fs::File::open(str_file.clone()).ok(), str_file) });
+
+  // Deserialize the YAML into a serde_yaml::Value
+  let yaml_value: Option<serde_yaml::Value> = file.map_or_else(
+      || { println!("Could not open file {} for read", str_file);  None },
+      |file| { serde_yaml::from_reader(file).ok() });
+
+  // Update value in the yaml file
+  yaml_value.map_or_else(
+    || { println!("Could parse yaml file"); None },
+    |mut yaml_value: serde_yaml::Value|
+    {
+      // Update yaml variable
+      yaml_value[key] = serde_yaml::Value::String(value.as_str().into());
+
+      // Write yaml
+      serde_yaml::to_string(&yaml_value).map_or_else(
+        |_| { println!("Could not generate yaml string"); None },
+        |str_yaml| { std::fs::write(str_file.clone(), str_yaml.clone()).ok() })
+    })
+}
+
+fn f_yaml_read(key: &str) -> Option<String>
+{
+  env::var("GIMG_CONFIG_FILE")
+    .ok()
+    .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); None },
+    |var|
+    {
+      std::fs::File::open(var)
+        .ok()
+        .map_or_else(
+          || { println!("Could not open config file for read"); None },
+          |f|{ serde_yaml::from_reader(f).ok() })
+        .map_or_else(
+          || { println!("Could not parse config file"); None },
+          |y: serde_yaml::Value|
+          {
+            y.get(key)
+              .map_or_else(
+                || { println!("Could not extract key from YAML file"); None },
+                |cmd| { Some(String::from(cmd.as_str().unwrap())) })
+          })
+    })
+}
+
 
 // impl: Gui {{{
 impl Gui
@@ -52,22 +144,37 @@ impl Gui
   // fn: new {{{
   pub fn new(sender: mpsc::Sender<i32>, receiver: mpsc::Receiver<()>) -> Self
   {
-    let width = 792;
+    let width = 264;
     let height = 352;
-    let border = 30;
+    let border = 2;
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
-    let wind = Window::default()
+    let mut wind = Window::default()
       .with_label("GameImage")
       .with_size(width, height)
       .center_screen();
     app::set_frame_type(FrameType::BorderBox);
-    let wizard = Wizard::default().with_size(width, height);
+
+    // Window icon
+    if let Some(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG").ok()
+    {
+      if let Some(mut shared_image) = fltk::image::PngImage::load(env_image_launcher).ok()
+      {
+        wind.set_icon(Some(shared_image));
+      } // if
+      else
+      {
+        println!("Failed to load icon image");
+      } // else
+    } // if
+    else
+    {
+      println!("Failed to fetch environment variable GIMG_LAUNCHER_IMG")
+    } // else
 
     Gui
     {
       app,
       wind,
-      wizard,
       width,
       height,
       border,
@@ -89,174 +196,173 @@ impl Gui
     frame
   } // fn: make_frame }}}
 
-  // fn: frame_1 {{{
-  fn frame_1(&self)
+  // fn: frame_cover {{{
+  fn frame_cover(&self) -> FrameInstance
   {
-    // Functor to update yaml
-    let f_yaml_write = |key: String, value: String|
-    {
-      // Read file from global variable
-      let (file, str_file) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
-          || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
-          |str_file| { (std::fs::File::open(str_file.clone()).ok(), str_file) });
-
-      // Deserialize the YAML into a serde_yaml::Value
-      let yaml_value: Option<serde_yaml::Value> = file.map_or_else(
-          || { println!("Could not open file {} for read", str_file);  None },
-          |file| { serde_yaml::from_reader(file).ok() });
-
-      // Update value in the yaml file
-      yaml_value.map_or_else(
-        || { println!("Could parse yaml file"); None },
-        |mut yaml_value: serde_yaml::Value|
-        {
-          // Update yaml variable
-          yaml_value[key] = serde_yaml::Value::String(value.as_str().into());
-
-          // Write yaml
-          serde_yaml::to_string(&yaml_value).map_or_else(
-            |_| { println!("Could not generate yaml string"); None },
-            |str_yaml| { std::fs::write(str_file.clone(), str_yaml.clone()).ok() })
-        })
-    };
-
-    let f_yaml_read = |key: &str|
-    {
-      env::var("GIMG_CONFIG_FILE")
-        .ok()
-        .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); None },
-        |var|
-        {
-          std::fs::File::open(var)
-            .ok()
-            .map_or_else(
-              || { println!("Could not open config file for read"); None },
-              |f|{ serde_yaml::from_reader(f).ok() })
-            .map_or_else(
-              || { println!("Could not parse config file"); None },
-              |y: serde_yaml::Value|
-              {
-                y.get(key)
-                  .map_or_else(
-                    || { println!("Could not extract key from YAML file"); None },
-                    |cmd| { Some(String::from(cmd.as_str().unwrap())) })
-              })
-        })
-    };
-
-    let mut group1 = Group::default().size_of(&self.wizard);
-    group1.set_frame(FrameType::FlatBox);
+    let mut group = Group::default().size_of(&self.wind);
+    group.set_frame(FrameType::FlatBox);
+    // group.set_color(Color::Red);
 
     // Frame top {{{
-    let mut frame_top = self.make_frame(self.width - self.border, self.height - self.border)
-      .with_pos(self.border/2, self.border/2);
+    let mut frame_top = self.make_frame(self.width, self.height);
     frame_top.set_frame(FrameType::FlatBox);
-    // frame_top.set_color(Color::DarkBlue);
+    // frame_top.set_color(Color::Blue);
     // }}}
 
-    // Frame left {{{
-    let mut frame_left = self.make_frame(frame_top.width()/3, frame_top.height())
+    // Frame cover {{{
+    let mut frame_cover = self.make_frame(frame_top.width(), frame_top.height())
       .with_pos(frame_top.x(),frame_top.y());
-    frame_left.set_frame(FrameType::FlatBox);
-    // frame_left.set_color(Color::Green);
+    frame_cover.set_frame(FrameType::FlatBox);
+    // frame_cover.set_color(Color::Green);
 
     // Cover image
-    env::var("GIMG_LAUNCHER_IMG")
-    .map_err(|_| "Failed to fetch environment variable GIMG_LAUNCHER_IMG")
-    .and_then(|cover|
+    if let Some(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG").ok()
     {
-      SharedImage::load(cover)
-        .map_err(|_| "Failed to load cover image")
-        .and_then(|mut img|
-        {
-          let img_height = frame_left.h();
-          let img_width  = frame_left.w();
-          let mut frame_image = self.make_frame(img_width, img_height).with_pos(frame_left.x(), frame_left.y());
-          frame_image.draw(move |f| {
-            img.scale(f.w(), f.h(), true, true);
-            // img.draw(f.x(), f.y(), f.w(), f.h());
-            img.draw(f.x() + (frame_left.w() - img.width())/2, f.y(), f.w(), f.h());
-          });
-          Ok(())
-        })
-    }).unwrap_or_else(|_|{ println!("Failed to fetch environment variable GIMG_LAUNCHER_IMG"); });
-    // }}}
+      if let Some(mut shared_image) = SharedImage::load(env_image_launcher).ok()
+      {
+        let img_height = frame_cover.h();
+        let img_width  = frame_cover.w();
+        let mut frame_image = self.make_frame(img_width, img_height).with_pos(frame_cover.x(), frame_cover.y());
+        frame_image.draw(move |f| {
+          shared_image.scale(f.w(), f.h(), true, true);
+          shared_image.draw(f.x() + (frame_cover.w() - shared_image.width())/2, f.y(), f.w(), f.h());
+        });
+      } // if
+      else
+      {
+        println!("Failed to fetch load provided image");
+      } // else
+    } // if
+    else
+    {
+      println!("Failed to fetch environment variable GIMG_LAUNCHER_IMG")
+    } // else
+    // frame_cover }}}
 
-    // Frame right {{{
-    let mut frame_right = self.make_frame(frame_top.width()-frame_top.width()/3, frame_top.height())
-      .with_pos(frame_top.width()/3 + self.border/2, frame_top.y());
-    frame_right.set_frame(FrameType::FlatBox);
-    // frame_right.set_color(Color::Red);
-    frame_right.redraw();
+    let mut btn_background = Button::default()
+      .with_size(frame_top.width(), HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+    btn_background.set_frame(FrameType::NoBox);
+    btn_background.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACKGROUND).unwrap()));
+    btn_background.deactivate();
+
+
+    // Configure application
+    let mut btn_configure = Button::default()
+      .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+    btn_configure.set_color(Color::BackGround);
+    btn_configure.set_pos(btn_configure.x() + self.border, btn_configure.y() - self.border);
+    btn_configure.set_frame(FrameType::NoBox);
+    btn_configure.set_image(Some(fltk::image::SvgImage::from_data(ICON_CONFIGURE).unwrap()));
+
+    // Lauch application
+    let mut btn_launch = Button::default()
+      .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+    btn_launch.set_color(Color::DarkGreen);
+    btn_launch.set_pos(btn_launch.x() + frame_top.width() - btn_launch.width() - self.border, btn_launch.y() - self.border);
+    btn_launch.set_frame(FrameType::NoBox);
+    btn_launch.set_image(Some(fltk::image::SvgImage::from_data(ICON_PLAY).unwrap()));
+
+    group.end();
+
+    let frame_instance = FrameInstance
+    {
+      group,
+      buttons: vec![btn_configure,btn_launch],
+    };
+
+    frame_instance
+  } // fn: frame_cover }}}
+
+  // fn: frame_config_wine {{{
+  fn frame_config_wine(&self) -> FrameInstance
+  {
+    let mut group = Group::default().size_of(&self.wind);
+    group.set_frame(FrameType::FlatBox);
+    // group.set_color(Color::Green);
+
+    // Frame config {{{
+    let mut frame_config = self.make_frame(self.width, self.height);
+    frame_config.set_frame(FrameType::FlatBox);
+    // frame_config.set_color(Color::Blue);
+    // }}}
 
     //
     // Layout
     //
 
-    // Application name
-    let name = env::var("GIMG_LAUNCHER_NAME").unwrap_or(String::from("GameImage"));
-    let mut output = self.make_frame(100, 50)
-      .above_of(&frame_right, -35);
-    output.set_pos(self.border/2 + output.x(), output.y());
-    output.set_label_size(20);
-    output.set_frame(FrameType::NoBox);
-    output.set_align(Align::Left | Align::Inside);
-    output.set_label(name.as_str());
+    let size_font : i32 = 14;
+    let size_spacing : i32 = 5;
+
+    let f_make_output = |label : &str|
+    {
+      let mut output = self.make_frame(100, 20);
+      output.set_label_size(size_font);
+      output.set_frame(FrameType::NoBox);
+      output.set_align(Align::Left | Align::Inside);
+      output.set_label(label);
+      output
+    };
 
     // Default application rom to execute
+    let output = f_make_output("Binary to execute");
+    output.clone().set_pos(self.border, self.border);
     let mut menu_binaries = MenuButton::default()
-      .with_size(frame_right.width() - self.border, 40)
+      .with_size(frame_config.width() - self.border*2, 40)
       .with_align(Align::Inside)
-      .below_of(&output, 20);
+      .below_of(&output, 5);
     menu_binaries.set_frame(FrameType::BorderBox);
 
     // Default launch command
+    let mut output = f_make_output("Default command");
+    output.clone().below_of(&menu_binaries, self.border + size_spacing);
     let mut input_default_cmd = Input::default()
-      .with_size(frame_right.width() - self.border, 40)
-      .below_of(&menu_binaries, 40);
-    input_default_cmd.set_label("Default command");
-    input_default_cmd.set_align(Align::TopLeft);
+      .with_size(frame_config.width() - self.border*2, HEIGHT_BUTTON_WIDE)
+      .with_align(Align::TopLeft)
+      .below_of(&output, self.border);
     input_default_cmd.set_color(Color::BackGround);
 
-    // Use default wine path?
-    let mut btn_use_builtin = fltk::button::CheckButton::default()
-      .with_size(frame_right.width() - self.border,15)
-      .below_of(&input_default_cmd, 15);
-    btn_use_builtin.hide();
-    btn_use_builtin.deactivate();
-
     // Input to select default runner
+    let mut output = f_make_output("Alternative wine runner");
+    output.clone().below_of(&input_default_cmd, self.border + size_spacing);
+    output.clone().set_pos(output.x() + WIDTH_BUTTON_CHECK, output.y());
     let mut input_default_runner = Input::default()
-      .with_size(frame_right.width() - self.border - 40, 40)
-      .below_of(&input_default_cmd, 60);
-    input_default_runner.set_label("Default runner path");
+      .with_size(frame_config.width() - self.border*2 - WIDTH_BUTTON_REC, HEIGHT_BUTTON_WIDE)
+      .below_of(&output, self.border);
+    input_default_runner.set_pos(input_default_runner.x() - WIDTH_BUTTON_CHECK, input_default_runner.y());
     input_default_runner.set_align(Align::TopLeft);
     input_default_runner.set_color(Color::BackGround);
     input_default_runner.deactivate();
 
+    // // Use default wine path?
+    let mut btn_use_builtin = fltk::button::CheckButton::default()
+      .with_size(WIDTH_BUTTON_CHECK, HEIGHT_BUTTON_CHECK)
+      .left_of(&output, 0);
+    // btn_use_builtin.hide();
+    // btn_use_builtin.deactivate();
+
     let mut btn_default_runner_picker = Button::default()
-      .with_size(40, 40)
+      .with_size(WIDTH_BUTTON_REC, HEIGHT_BUTTON_REC)
       .with_label("...")
       .right_of(&input_default_runner, 0);
     btn_default_runner_picker.set_frame(FrameType::BorderBox);
 
-    // Lauch application
-    let mut btn_launch = Button::default()
-      .with_size(60, 40)
-      .with_label("Launch")
-      .below_of(&frame_right, -40);
-    btn_launch.set_color(Color::DarkGreen);
-    btn_launch.set_pos(btn_launch.x() + self.border/2, btn_launch.y());
-    btn_launch.set_frame(FrameType::BorderBox);
+    let mut btn_background = Button::default()
+      .with_size(frame_config.width(), HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_config, -HEIGHT_BUTTON_WIDE);
+    btn_background.set_frame(FrameType::NoBox);
+    btn_background.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACKGROUND).unwrap()));
+    btn_background.deactivate();
 
-    // Quit application
-    let mut btn_quit = Button::default()
-      .with_size(60, 40)
-      .with_label("Quit")
-      .below_of(&frame_right, -40);
-    btn_quit.set_color(Color::Red);
-    btn_quit.set_pos(btn_quit.x() + frame_right.width() - 60 - self.border/2, btn_quit.y());
-    btn_quit.set_frame(FrameType::BorderBox);
+    // Lauch application
+    let mut btn_back = Button::default()
+      .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_config, -HEIGHT_BUTTON_WIDE);
+    btn_back.set_pos(btn_back.x() + self.border, btn_back.y() - self.border);
+    btn_back.set_frame(FrameType::NoBox);
+    btn_back.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACK).unwrap()));
 
     //
     // Initial Values
@@ -383,16 +489,67 @@ impl Gui
           |_| { f_input_default_cmd_update(input_default_cmd.value().as_str()); });
     });
 
-    let sender = self.sender.clone();
-    btn_quit.set_callback(move |_|
+    // }}}
+
+    group.end();
+
+    let frame_instance = FrameInstance
     {
-      app::quit();
-      app::flush();
-      sender.send(0).ok();
+      group,
+      buttons: vec![btn_back],
+    };
+
+    frame_instance
+  } // fn: frame_config_wine }}}
+
+  // fn: frame_switcher {{{
+  fn frame_switcher(&self)
+  {
+    // Create frames
+    let frame_cover = self.frame_cover();
+    let frame_config = self.frame_config_wine();
+
+    // Fetch groups/buttons
+    let mut frame_cover_group         = frame_cover.group.clone();
+    let mut frame_cover_btn_configure = frame_cover.buttons[0].clone();
+    let mut frame_cover_btn_launch    = frame_cover.buttons[1].clone();
+    let mut frame_config_group        = frame_config.group.clone();
+    let mut frame_config_btn_back     = frame_config.buttons[0].clone();
+
+    // Startup group
+    // frame_cover_group.hide();
+    // frame_config_group.show();
+    frame_cover_group.show();
+    frame_config_group.hide();
+
+    // Mutual exclusive access to groups
+    let arc_frame_cover_group = Arc::new(Mutex::new(frame_cover_group));
+    let arc_frame_config_group = Arc::new(Mutex::new(frame_config_group));
+
+
+    // fn: Callbacks {{{
+    let arc_frame_config_group_clone = Arc::clone(&arc_frame_config_group);
+    let arc_frame_cover_group_clone = Arc::clone(&arc_frame_cover_group);
+    frame_config_btn_back.set_callback(move |_|
+    {
+      let mut arc_frame_config_group = arc_frame_config_group_clone.lock().unwrap();
+      let mut arc_frame_cover_group = arc_frame_cover_group_clone.lock().unwrap();
+      arc_frame_cover_group.show();
+      arc_frame_config_group.hide();
+    });
+
+    let arc_frame_config_group_clone = Arc::clone(&arc_frame_config_group);
+    let arc_frame_cover_group_clone = Arc::clone(&arc_frame_cover_group);
+    frame_cover_btn_configure.set_callback(move |_|
+    {
+      let mut arc_frame_config_group = arc_frame_config_group_clone.lock().unwrap();
+      let mut arc_frame_cover_group = arc_frame_cover_group_clone.lock().unwrap();
+      arc_frame_cover_group.hide();
+      arc_frame_config_group.show();
     });
 
     let sender = self.sender.clone();
-    btn_launch.set_callback(move |_|
+    frame_cover_btn_launch.set_callback(move |_|
     {
       app::quit();
       app::flush();
@@ -410,15 +567,14 @@ impl Gui
           .ok()
           .and_then(|e| { sender.send(e.code().unwrap_or(1)).ok() })
           .or_else( || { sender.send(1).ok() })
-        }).or_else(|| { sender.send(1).ok() })
-      }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD is not defined"); sender.send(1).ok(); None });
-    });
+      }).or_else(|| { sender.send(1).ok() })
+    }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD is not defined"); sender.send(1).ok(); None });
+  });
+  // }}}
 
-    // }}}
+  } // fn: frame_switcher }}}
 
-    group1.end();
-  } // fn: frame_1 }}}
-} // impl: Gui
+} // impl: Gui }}}
 
 // impl: Drop for Gui {{{
 impl Drop for Gui
@@ -434,32 +590,14 @@ impl Drop for Gui
   }
 } // }}}
 
+// fn: theme {{{
 fn theme()
 {
-  let label = gtk::Label::new(Some(""));
-  let style_context = gtk::prelude::WidgetExt::style_context(&label);
-  let color_bg = style_context.lookup_color("theme_bg_color");
-  let color_fg = style_context.lookup_color("theme_fg_color");
-  let color_sc = style_context.lookup_color("success_color");
-  let color_er = style_context.lookup_color("error_color");
+  app::background(42, 46, 50); 
+  app::foreground(255, 255, 255); 
+} // }}}
 
-  // Set the theme to correspond to the current gtk context
-  let ci = |c: f64| { (c*255.0) as u8 }; // normalized color f64 to un-normalized u8
-
-  if let Some(c) = color_bg { app::background(ci(c.red()), ci(c.green()), ci(c.blue())); }
-  else { println!("Failed to set background color"); }
-
-  if let Some(c) = color_fg { app::foreground(ci(c.red()), ci(c.green()), ci(c.blue())); }
-  else { println!("Failed to set foreground color"); }
-
-  if let Some(c) = color_sc { app::set_color(Color::DarkGreen, ci(c.red()), ci(c.green()), ci(c.blue())); }
-  else { println!("Failed to set success color"); }
-
-  if let Some(c) = color_er { app::set_color(Color::Red, ci(c.red()), ci(c.green()), ci(c.blue())); }
-  else { println!("Failed to set error color"); }
-
-}
-
+// fn: main {{{
 fn main()
 {
   // Exit status
@@ -523,15 +661,15 @@ fn main()
   // Run main fltk window in new thread
   let u = std::thread::spawn(||
   {
-    Gui::new(s1, r0).frame_1();
+    Gui::new(s1, r0).frame_switcher();
   });
 
   t.join().unwrap();
   u.join().unwrap();
 
   std::process::exit(*status_exit.lock().unwrap());
-}
+} // }}}
 
-// cmd: !cargo run
+// cmd: !GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
