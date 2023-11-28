@@ -71,6 +71,9 @@ function runner_create_appimage()
     :
     :set -e
     :
+    :# Platform
+    :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :
     :# Set cfg dir
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set global
@@ -132,6 +135,9 @@ function runner_create_flatimage()
     :#!/usr/bin/env bash
     :
     :set -e
+    :
+    :# Platform
+    :export GIMG_PLATFORM=$GIMG_PLATFORM
     :
     :# Path to yuzu
     :export PATH="/yuzu/bin:\$PATH"

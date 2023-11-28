@@ -262,6 +262,9 @@ function runner_create()
     :
     :set -e
     :
+    :# Platform
+    :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :
     :# Exports
     :export DIR_CALL="\$(dirname "\$APPIMAGE")"
     :export DIR_APP="\$APPDIR"
@@ -462,6 +465,9 @@ function runner_create_flatimage()
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/gameimage.sh | sed -e 's/^/-- /'; } <<-END
    :set -e
+   :
+   :# Platform
+   :export GIMG_PLATFORM=$GIMG_PLATFORM
    :
    :# Include wine in PATH
    :PATH="/opt/wine/bin:\$PATH"

@@ -78,6 +78,9 @@ function runner_create()
     :
     :set -e
     :
+    :# Platform
+    :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :
     :# Set cfg dir
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set global

@@ -108,6 +108,8 @@ function main()
     done
   fi
 
+  export GIMG_PLATFORM="${args[--platform]}"
+
   [[ ${#args[@]} -eq 3 ]] || { msg "Invalid number of arguments"; die; }
 
   case "${args[--platform]}" in
