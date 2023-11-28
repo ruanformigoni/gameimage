@@ -81,6 +81,9 @@ function runner_create()
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
     :
+    :# Package Type
+    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :
     :# Set cfg dir
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set global

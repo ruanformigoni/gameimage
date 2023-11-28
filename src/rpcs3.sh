@@ -53,6 +53,9 @@ function runner_create_appimage()
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
     :
+    :# Package Type
+    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :
     :# Set cfg dir
     :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
     :  # Set global
@@ -97,6 +100,9 @@ function runner_create_flatimage()
     :
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :
+    :# Package Type
+    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
     :
     :# Path to rpcs3
     :export PATH="/rpcs3/bin:\$PATH"

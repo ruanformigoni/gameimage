@@ -265,6 +265,9 @@ function runner_create()
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
     :
+    :# Package Type
+    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :
     :# Exports
     :export DIR_CALL="\$(dirname "\$APPIMAGE")"
     :export DIR_APP="\$APPDIR"
@@ -468,6 +471,9 @@ function runner_create_flatimage()
    :
    :# Platform
    :export GIMG_PLATFORM=$GIMG_PLATFORM
+   :
+   :# Package Type
+   :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
    :
    :# Include wine in PATH
    :PATH="/opt/wine/bin:\$PATH"
