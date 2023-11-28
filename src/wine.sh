@@ -363,7 +363,7 @@ function runner_create()
     :if ! "\$YQ" --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null; then
     :  echo "cmd: \"{wine} {exec}\"" > "\$YAML"
     :  echo "runner: ''" >> "\$YAML"
-    :  echo "runner_default: \"true\"" >> "\$YAML"
+    :  echo "runner_custom: false" >> "\$YAML"
     :fi
     :
     :# Change startup command
@@ -384,30 +384,12 @@ function runner_create()
     :  exit 0
     :fi
     :
-    :# Parse runner location
-    :if { RUNNER="\$("\$YQ" '.runner | select(.!=null)' "\$YAML")"; [ -n "\$RUNNER" ]; }; then
-    :  BIN_WINE="\$RUNNER"
-    :fi
-    :
-    :# Parse startup command
-    :if { CMD="\$("\$YQ" '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$CMD" ]; }; then
-    :  # Run custom command, replaces {wine} and {exec} strings
-    :  CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
-    :  CMD="\${CMD//\{exec\}/\"\\\$GIMG_DEFAULT_EXEC\"}"
-    :  CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
-    :  CMD="\${CMD//\{appd\}/\"\$DIR_APP\"}"
-    :else
-    :  echo "Startup command is empty, try to erase YAML"
-    :  exit 1
-    :fi
-    :
     :# Start application
     :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
     :  LAUNCHER="\$APPDIR/usr/bin/launcher"
     :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
     :  export GIMG_LAUNCHER_NAME="$name"
     :  export GIMG_LAUNCHER_IMG="\$APPDIR/.DirIcon"
-    :  export GIMG_LAUNCHER_CMD="\$CMD"
     :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \\;)"
     :  "\$LAUNCHER"
     :else
@@ -417,6 +399,24 @@ function runner_create()
     :   echo "-- The path must be absolute"
     :   exit 1
     :  fi
+    :
+    :  # Parse runner location
+    :  if read -r RUNNER < <("\$YQ" -re '.runner | select(.!=null)' "\$YAML" | xargs); then
+    :    BIN_WINE="\${RUNNER:-"\$BIN_WINE"}"
+    :  fi
+    :
+    :  # Parse startup command
+    :  if read -r CMD < <("\$YQ" -re '.cmd | select(.!=null)' "\$YAML" | xargs); then
+    :    # Run custom command, replaces {wine} and {exec} strings
+    :    CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
+    :    CMD="\${CMD//\{exec\}/\"\\\$GIMG_DEFAULT_EXEC\"}"
+    :    CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
+    :    CMD="\${CMD//\{appd\}/\"\$DIR_APP\"}"
+    :  else
+    :    echo "Startup command is empty, try to erase YAML"
+    :    exit 1
+    :  fi
+    :
     :  eval "\$CMD"
     :fi
 	END
@@ -523,7 +523,7 @@ function runner_create_flatimage()
    :if ! yq --exit-status 'tag == "!!map" or tag == "!!seq"' "\$YAML" &>/dev/null; then
    :  echo "cmd: \"{wine} {exec}\"" > "\$YAML"
    :  echo "runner: ''" >> "\$YAML"
-   :  echo "runner_default: \"true\"" >> "\$YAML"
+   :  echo "runner_custom: \"false\"" >> "\$YAML"
    :fi
    :
    :# Change startup command
@@ -544,28 +544,11 @@ function runner_create_flatimage()
    :  exit 0
    :fi
    :
-   :# Parse runner location
-   :if { RUNNER="\$(yq '.runner | select(.!=null)' "\$YAML")"; [ -n "\$RUNNER" ]; }; then
-   :  BIN_WINE="\$RUNNER"
-   :fi
-   :
-   :# Parse startup command
-   :if { CMD="\$(yq '.cmd | select(.!=null)' "\$YAML")"; [ -n "\$CMD" ]; }; then
-   :  # Run custom command, replaces {wine} and {exec} strings
-   :  CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
-   :  CMD="\${CMD//\{exec\}/\"\$GIMG_DEFAULT_EXEC\"}"
-   :  CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
-   :else
-   :  echo "Startup command is empty, try to erase YAML"
-   :  exit 1
-   :fi
-   :
    :# Start application
    :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
    :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
    :  export GIMG_LAUNCHER_NAME="$name"
    :  export GIMG_LAUNCHER_IMG="/fim/desktop-integration/icon.png"
-   :  export GIMG_LAUNCHER_CMD="\$CMD"
    :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \;)"
    :  gameimage-launcher
    :else
@@ -575,6 +558,23 @@ function runner_create_flatimage()
    :   echo "-- The path must be absolute"
    :   exit 1
    :  fi
+   :
+   :  # Parse runner location
+   :  if read -r RUNNER < <("\$YQ" -re '.runner | select(.!=null)' "\$YAML" | xargs); then
+   :    BIN_WINE="\${RUNNER:-"\$BIN_WINE"}"
+   :  fi
+   :  
+   :  # Parse startup command
+   :  if read -r CMD < <("\$YQ" -re '.cmd | select(.!=null)' "\$YAML" | xargs); then
+   :    # Run custom command, replaces {wine} and {exec} strings
+   :    CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
+   :    CMD="\${CMD//\{exec\}/\"\$GIMG_DEFAULT_EXEC\"}"
+   :    CMD="\${CMD//\{here\}/\"\$DIR_CALL\"}"
+   :  else
+   :    echo "Startup command is empty, try to erase YAML"
+   :    exit 1
+   :  fi
+   :
    :  eval "\$CMD"
    :fi
 	END

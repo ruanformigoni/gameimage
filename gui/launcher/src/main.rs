@@ -10,9 +10,6 @@ use tray_item::TrayItem;
 use gtk;
 use glib;
 
-// Gtk Colors
-use gtk::prelude::*;
-
 // Gui
 use fltk::{
   app,
@@ -30,6 +27,8 @@ use fltk::{
 };
 
 use fltk_theme::{ColorTheme, color_themes};
+
+// Icons {{{
 const ICON_BACKGROUND: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="317" height="50" class="bi bi-play-fill" viewBox="0 0 30 20">
   <rect width="100%" height="100%" fill="#2A2E32" opacity="0.65"></rect>
@@ -54,6 +53,7 @@ const ICON_BACK: &str = r#"
 </svg>
 "#;
 
+// }}}
 
 const HEIGHT_BUTTON_WIDE : i32 = 40;
 const WIDTH_BUTTON_WIDE  : i32 = 60;
@@ -85,57 +85,89 @@ struct FrameInstance
   buttons: Vec<Button>,
 } // struct FrameInstance }}}
 
-fn f_yaml_write(key: String, value: String) -> Option<()>
+// fn: yaml_write {{{
+fn yaml_write(key: String, some_value: Option<serde_yaml::Value>) -> Option<()>
 {
-  // Read file from global variable
-  let (file, str_file) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
-      || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
-      |str_file| { (std::fs::File::open(str_file.clone()).ok(), str_file) });
+  if let Some(value) = some_value
+  {
+    // Read file from global variable
+    let (file, str_file) = env::var("GIMG_CONFIG_FILE").ok().map_or_else(
+        || { println!("Could not read GIMG_CONFIG_FILE variable"); (None, String::new()) },
+        |str_file| { (std::fs::File::open(str_file.clone()).ok(), str_file) });
 
-  // Deserialize the YAML into a serde_yaml::Value
-  let yaml_value: Option<serde_yaml::Value> = file.map_or_else(
-      || { println!("Could not open file {} for read", str_file);  None },
-      |file| { serde_yaml::from_reader(file).ok() });
+    // Deserialize the YAML into a serde_yaml::Value
+    let yaml_value: Option<serde_yaml::Value> = file.map_or_else(
+        || { println!("Could not open file {} for read", str_file);  None },
+        |file| { serde_yaml::from_reader(file).ok() });
 
-  // Update value in the yaml file
-  yaml_value.map_or_else(
-    || { println!("Could parse yaml file"); None },
-    |mut yaml_value: serde_yaml::Value|
-    {
-      // Update yaml variable
-      yaml_value[key] = serde_yaml::Value::String(value.as_str().into());
+    // Update value in the yaml file
+    yaml_value.map_or_else(
+      || { println!("Could parse yaml file"); None },
+      |mut yaml_value: serde_yaml::Value|
+      {
+        // Update yaml variable
+        yaml_value[key] = value;
 
-      // Write yaml
-      serde_yaml::to_string(&yaml_value).map_or_else(
-        |_| { println!("Could not generate yaml string"); None },
-        |str_yaml| { std::fs::write(str_file.clone(), str_yaml.clone()).ok() })
-    })
-}
+        // Write yaml
+        serde_yaml::to_string(&yaml_value).map_or_else(
+          |_| { println!("Could not generate yaml string"); None },
+          |str_yaml| { std::fs::write(str_file.clone(), str_yaml.clone()).ok() })
+      });
 
-fn f_yaml_read(key: &str) -> Option<String>
+    return Some(());
+  }
+
+  None
+} // }}}
+
+// fn: yaml_read {{{
+fn yaml_read(query: &str) -> Option<serde_yaml::Value>
 {
-  env::var("GIMG_CONFIG_FILE")
-    .ok()
-    .map_or_else(|| { println!("Could not read GIMG_CONFIG_FILE variable"); None },
-    |var|
+  if let Some(var) = env::var("GIMG_CONFIG_FILE").ok()
+  {
+    if let Some(file) = std::fs::File::open(var).ok()
     {
-      std::fs::File::open(var)
-        .ok()
-        .map_or_else(
-          || { println!("Could not open config file for read"); None },
-          |f|{ serde_yaml::from_reader(f).ok() })
-        .map_or_else(
-          || { println!("Could not parse config file"); None },
-          |y: serde_yaml::Value|
-          {
-            y.get(key)
-              .map_or_else(
-                || { println!("Could not extract key from YAML file"); None },
-                |cmd| { Some(String::from(cmd.as_str().unwrap())) })
-          })
-    })
-}
+      if let Some(yaml) = serde_yaml::from_reader::<std::fs::File, serde_yaml::Value>(file).ok()
+      {
+        if let Some(key) = yaml.get(query)
+        {
+          return Some(key.clone());
+        } // if
+        else
+        {
+          println!("Could not extract key from YAML file");
+        } // else
+      } // if
+      else
+      {
+        println!("Could not parse config file");
+      } // else
+    } // if
+    else
+    {
+      println!("Could not open config file for read");
+    } // else
+  } // if
+  else
+  {
+    println!("Could not read GIMG_CONFIG_FILE variable");
+  } // else
+  None
+} // }}}
 
+// fn: tag_expand {{{
+// Replace placeholder with value in environment variable 'var'
+fn tag_expand(mut src: String) -> String
+{
+  for (tag, env) in vec![ ("{wine}", "BIN_WINE"), ("{exec}", "GIMG_DEFAULT_EXEC"), ("{here}", "DIR_CALL"), ("{appd}", "DIR_APP") ]
+  {
+    if let Some(value) = env::var(env).ok()
+    {
+      src = src.replace(tag, format!("\"{}\"", value).as_str()); 
+    } // if
+  }
+  return src;
+} // }}}
 
 // impl: Gui {{{
 impl Gui
@@ -157,7 +189,7 @@ impl Gui
     // Window icon
     if let Some(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG").ok()
     {
-      if let Some(mut shared_image) = fltk::image::PngImage::load(env_image_launcher).ok()
+      if let Some(shared_image) = fltk::image::PngImage::load(env_image_launcher).ok()
       {
         wind.set_icon(Some(shared_image));
       } // if
@@ -201,17 +233,9 @@ impl Gui
   {
     let mut group = Group::default().size_of(&self.wind);
     group.set_frame(FrameType::FlatBox);
-    // group.set_color(Color::Red);
-
-    // Frame top {{{
-    let mut frame_top = self.make_frame(self.width, self.height);
-    frame_top.set_frame(FrameType::FlatBox);
-    // frame_top.set_color(Color::Blue);
-    // }}}
 
     // Frame cover {{{
-    let mut frame_cover = self.make_frame(frame_top.width(), frame_top.height())
-      .with_pos(frame_top.x(),frame_top.y());
+    let mut frame_cover = self.make_frame(group.width(), group.height());
     frame_cover.set_frame(FrameType::FlatBox);
     // frame_cover.set_color(Color::Green);
 
@@ -225,7 +249,7 @@ impl Gui
         let mut frame_image = self.make_frame(img_width, img_height).with_pos(frame_cover.x(), frame_cover.y());
         frame_image.draw(move |f| {
           shared_image.scale(f.w(), f.h(), true, true);
-          shared_image.draw(f.x() + (frame_cover.w() - shared_image.width())/2, f.y(), f.w(), f.h());
+          shared_image.draw(f.x() + (img_width - shared_image.width())/2, f.y(), f.w(), f.h());
         });
       } // if
       else
@@ -240,8 +264,8 @@ impl Gui
     // frame_cover }}}
 
     let mut btn_background = Button::default()
-      .with_size(frame_top.width(), HEIGHT_BUTTON_WIDE)
-      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+      .with_size(frame_cover.width(), HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_cover, -HEIGHT_BUTTON_WIDE);
     btn_background.set_frame(FrameType::NoBox);
     btn_background.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACKGROUND).unwrap()));
     btn_background.deactivate();
@@ -250,7 +274,7 @@ impl Gui
     // Configure application
     let mut btn_configure = Button::default()
       .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
-      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+      .below_of(&frame_cover, -HEIGHT_BUTTON_WIDE);
     btn_configure.set_color(Color::BackGround);
     btn_configure.set_pos(btn_configure.x() + self.border, btn_configure.y() - self.border);
     btn_configure.set_frame(FrameType::NoBox);
@@ -259,9 +283,9 @@ impl Gui
     // Lauch application
     let mut btn_launch = Button::default()
       .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
-      .below_of(&frame_top, -HEIGHT_BUTTON_WIDE);
+      .below_of(&frame_cover, -HEIGHT_BUTTON_WIDE);
     btn_launch.set_color(Color::DarkGreen);
-    btn_launch.set_pos(btn_launch.x() + frame_top.width() - btn_launch.width() - self.border, btn_launch.y() - self.border);
+    btn_launch.set_pos(btn_launch.x() + frame_cover.width() - btn_launch.width() - self.border, btn_launch.y() - self.border);
     btn_launch.set_frame(FrameType::NoBox);
     btn_launch.set_image(Some(fltk::image::SvgImage::from_data(ICON_PLAY).unwrap()));
 
@@ -281,13 +305,12 @@ impl Gui
   {
     let mut group = Group::default().size_of(&self.wind);
     group.set_frame(FrameType::FlatBox);
-    // group.set_color(Color::Green);
 
-    // Frame config {{{
+    //
+    // Frame config
+    //
     let mut frame_config = self.make_frame(self.width, self.height);
     frame_config.set_frame(FrameType::FlatBox);
-    // frame_config.set_color(Color::Blue);
-    // }}}
 
     //
     // Layout
@@ -316,7 +339,7 @@ impl Gui
     menu_binaries.set_frame(FrameType::BorderBox);
 
     // Default launch command
-    let mut output = f_make_output("Default command");
+    let output = f_make_output("Default command");
     output.clone().below_of(&menu_binaries, self.border + size_spacing);
     let mut input_default_cmd = Input::default()
       .with_size(frame_config.width() - self.border*2, HEIGHT_BUTTON_WIDE)
@@ -325,9 +348,19 @@ impl Gui
     input_default_cmd.set_color(Color::BackGround);
 
     // Input to select default runner
-    let mut output = f_make_output("Alternative wine runner");
+    let mut group_runner_default = Group::default().size_of(&self.wind)
+      .below_of(&input_default_cmd, self.border);
+    group_runner_default.set_frame(FrameType::FlatBox);
+    group_runner_default.set_size(group_runner_default.width(),
+      self.border + size_spacing + HEIGHT_BUTTON_WIDE + HEIGHT_BUTTON_CHECK
+    );
+
+    // // Title
+    let output = f_make_output("Alternative wine runner");
     output.clone().below_of(&input_default_cmd, self.border + size_spacing);
     output.clone().set_pos(output.x() + WIDTH_BUTTON_CHECK, output.y());
+
+    // // Input
     let mut input_default_runner = Input::default()
       .with_size(frame_config.width() - self.border*2 - WIDTH_BUTTON_REC, HEIGHT_BUTTON_WIDE)
       .below_of(&output, self.border);
@@ -335,20 +368,43 @@ impl Gui
     input_default_runner.set_align(Align::TopLeft);
     input_default_runner.set_color(Color::BackGround);
     input_default_runner.deactivate();
-
+    
     // // Use default wine path?
-    let mut btn_use_builtin = fltk::button::CheckButton::default()
+    let mut btn_use_wine_custom = fltk::button::CheckButton::default()
       .with_size(WIDTH_BUTTON_CHECK, HEIGHT_BUTTON_CHECK)
       .left_of(&output, 0);
-    // btn_use_builtin.hide();
-    // btn_use_builtin.deactivate();
+    btn_use_wine_custom.set_checked(false);
 
+    // // Click three dots to open file picker
     let mut btn_default_runner_picker = Button::default()
       .with_size(WIDTH_BUTTON_REC, HEIGHT_BUTTON_REC)
       .with_label("...")
       .right_of(&input_default_runner, 0);
     btn_default_runner_picker.set_frame(FrameType::BorderBox);
+    btn_default_runner_picker.deactivate();
+    group_runner_default.end();
+    group_runner_default.hide();
 
+    // Conditionally enable group
+    if let Some(path_binary_wine) = env::var("BIN_WINE").ok()
+    {
+      // Activate if default runner exists
+      let path = Path::new(&path_binary_wine);
+      if path.exists()
+      {
+        group_runner_default.show();
+      }
+      else
+      {
+        println!("Path set in 'BIN_WINE' does not exist");
+      }
+    }
+    else
+    {
+      println!("Could fetch RUNNER variable");
+    }
+
+    // Set bottom backgroud
     let mut btn_background = Button::default()
       .with_size(frame_config.width(), HEIGHT_BUTTON_WIDE)
       .below_of(&frame_config, -HEIGHT_BUTTON_WIDE);
@@ -369,82 +425,104 @@ impl Gui
     //
 
     // Default rom to execute
-    menu_binaries.add_choice(env::var("GIMG_LAUNCHER_EXECUTABLES")
-      .unwrap_or(String::new()).as_str());
-    menu_binaries.set_label(env::var("GIMG_DEFAULT_EXEC")
-      .unwrap_or(String::new()).as_str());
+    menu_binaries.add_choice(env::var("GIMG_LAUNCHER_EXECUTABLES").unwrap_or(String::new()).as_str());
+    menu_binaries.set_label(env::var("GIMG_DEFAULT_EXEC").unwrap_or(String::new()).as_str());
 
-    // Default Launch command
-    f_yaml_read("cmd")
-      .map_or_else(|| { println!("Could not read cmd"); },
-        |s| { input_default_cmd.set_value(s.as_str()); });
-
-    // Default runner exists?
-    let use_runner_default = env::var("BIN_WINE").ok()
-      .map_or_else(|| { println!("Could fetch RUNNER variable"); false },
-      |str_path|
+    // Default launch command
+    if let Some(value) = yaml_read("cmd")
+    {
+      if let Some(string) = value.as_str()
       {
-        // Activate if default runner exists
-        Path::new(&str_path)
-        .exists()
-        .then(||
-        {
-          btn_use_builtin.show();
-          btn_use_builtin.activate();
-          btn_use_builtin.set_label("Use builtin wine?")
-        })
-        .map_or_else(|| { false },
-        |_|
-        {
-          // Fetch previous state
-          f_yaml_read("runner_default")
-            .map_or_else(||{ println!("Could not read runner_default in YAML"); false }
-              , |e| { btn_use_builtin.set_checked(e == "true"); e == "true" })
-        })
-      });
+        input_default_cmd.set_value(string);
+        env::set_var("GIMG_LAUNCHER_CMD", string);
+      } // if
+      else
+      {
+        println!("Could convert 'cmd' to string");
+      } // else
+    } // if
+    else
+    {
+      println!("Could not read launcher cmd");
+    } // else
+
+    // Fetch previous state for runner_custom
+    if let Some(value) = yaml_read("runner_custom")
+    {
+      if let Some(boolean) = value.as_bool()
+      {
+        btn_use_wine_custom.set_checked(boolean);
+      }
+      else
+      {
+        println!("Could convert 'runner_custom' to bool");
+      } // else
+    }
+    else
+    {
+      println!("Could not read runner_custom in YAML");
+    } // else
 
     // Display default runner
-    f_yaml_read("runner")
-      .map_or_else(|| { println!("Could not read runner"); },
-        |s|
+    if let Some(value) = yaml_read("runner")
+    {
+      if let Some(string) = value.as_str()
+      {
+        // Set field text
+        input_default_runner.set_value(string);
+
+        // Check if can activate
+        if btn_use_wine_custom.is_checked()
         {
-          // Set field text
-          input_default_runner.set_value(s.as_str());
-          // Check if can activate
-          if ! use_runner_default { input_default_runner.activate(); }
-        });
+          btn_default_runner_picker.activate();
+          input_default_runner.activate();
+          env::set_var("BIN_WINE", string);
+        }
+      }
+      else
+      {
+        println!("Could convert 'runner_custom' to string");
+      } // else
+    } // if
+    else
+    {
+      println!("Could not read runner");
+    } // else
+
+    // Expand GIMG_LAUNCHER_CMD
+    let f_launcher_cmd_update = ||
+    {
+      if let Some(var) = env::var("GIMG_LAUNCHER_CMD").ok()
+      {
+        env::set_var("GIMG_LAUNCHER_CMD_EXP", tag_expand(var));
+      }
+      else
+      {
+        println!("Could not fetch env var GIMG_LAUNCHER_CMD");
+      }
+    };
+    f_launcher_cmd_update();
 
     //
     // Callbacks
     //
 
+    // Update executable to execute
     menu_binaries.set_callback(move |e|
     {
       let choice = e.choice().unwrap();
       e.set_label(choice.as_str());
       env::set_var("GIMG_DEFAULT_EXEC", choice.as_str());
+      f_launcher_cmd_update();
     });
 
+    // Update default command to execute
     let f_input_default_cmd_update = move |e: &str|
     {
       // Perform strings replacements
-      let mut str_cmd = e.to_string();
-
-      // Replace placeholder with value in environment variable 'var'
-      let mut f_expand = |placeholder, var|
+      if yaml_write("cmd".to_string(), serde_yaml::to_value::<String>(e.into()).ok()).is_some()
       {
-        env::var(var).map_or_else(|_| { println!("Could not expand var {}", var); },
-          |value| { str_cmd = str_cmd.replace(placeholder, format!("\"{}\"", value).as_str()); });
-      };
-
-      f_expand("{wine}", "BIN_WINE");
-      f_expand("{exec}", "GIMG_DEFAULT_EXEC");
-      f_expand("{here}", "DIR_CALL");
-      f_expand("{appd}", "DIR_APP");
-
-      if f_yaml_write("cmd".to_string(), e.into()).is_some()
-      {
-        env::set_var("GIMG_LAUNCHER_CMD", str_cmd);
+        env::set_var("GIMG_LAUNCHER_CMD_EXP", tag_expand(e.to_string()));
       }
       else
       {
@@ -457,24 +535,35 @@ impl Gui
       f_input_default_cmd_update(e.value().as_str());
     });
 
+    // Checkbox to use custom wine path
     let mut _input_default_runner = input_default_runner.clone();
-    btn_use_builtin.set_callback(move |e|
+    let mut _btn_default_runner_picker = btn_default_runner_picker.clone();
+    btn_use_wine_custom.set_callback(move |e|
     {
       if e.is_checked()
       {
-        _input_default_runner.deactivate();
-        env::set_var("BIN_WINE", "$APPDIR/usr/bin/wine");
-        f_yaml_write("runner_default".to_string(), "true".to_string());
+        // Activate buttons
+        _input_default_runner.activate();
+        _btn_default_runner_picker.activate();
+        // Update wine path
+        env::set_var("BIN_WINE", _input_default_runner.value());
+        // Update wine path & checkbutton state
+        yaml_write("runner".to_string(), serde_yaml::to_value(_input_default_runner.value()).ok());
+        yaml_write("runner_custom".to_string(), serde_yaml::to_value(true).ok());
+        // Re-Expand GIMG_LAUNCHER_CMD_EXP
+        f_launcher_cmd_update();
       }
       else
       {
-        _input_default_runner.activate();
-        env::set_var("BIN_WINE", _input_default_runner.value());
-        f_yaml_write("runner".to_string(), _input_default_runner.value());
-        f_yaml_write("runner_default".to_string(), "false".to_string());
+        _input_default_runner.deactivate();
+        _btn_default_runner_picker.deactivate();
+        env::set_var("BIN_WINE", "$APPDIR/usr/bin/wine");
+        yaml_write("runner_custom".to_string(), serde_yaml::to_value(false).ok());
+        f_launcher_cmd_update();
       }
     });
 
+    // Select path to custom wine runner
     let mut _input_default_runner = input_default_runner.clone();
     btn_default_runner_picker.set_callback(move |_|
     {
@@ -484,12 +573,10 @@ impl Gui
         .map_or_else(|| { println!("Could not set value for input widget"); None },
           |e| { env::set_var("BIN_WINE", e.clone()); Some(e) })
         .map_or_else(|| { println!("Could not set env variable value"); None },
-          |e| { f_yaml_write("runner".to_string(), e.to_string()); Some(e) })
+          |e| { yaml_write("runner".to_string(), serde_yaml::to_value(e.to_string()).ok()); Some(e) })
         .map_or_else(|| { println!("Could not update default command") },
           |_| { f_input_default_cmd_update(input_default_cmd.value().as_str()); });
     });
-
-    // }}}
 
     group.end();
 
@@ -554,7 +641,7 @@ impl Gui
       app::quit();
       app::flush();
 
-      env::var("GIMG_LAUNCHER_CMD").ok().and_then(|e|
+      env::var("GIMG_LAUNCHER_CMD_EXP").ok().and_then(|e|
       {
         env::set_var("GIMG_LAUNCHER_DISABLE", "1");
         let handle = std::process::Command::new("sh")
@@ -568,7 +655,7 @@ impl Gui
           .and_then(|e| { sender.send(e.code().unwrap_or(1)).ok() })
           .or_else( || { sender.send(1).ok() })
       }).or_else(|| { sender.send(1).ok() })
-    }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD is not defined"); sender.send(1).ok(); None });
+    }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD_EXP is not defined"); sender.send(1).ok(); None });
   });
   // }}}
 
@@ -670,6 +757,6 @@ fn main()
   std::process::exit(*status_exit.lock().unwrap());
 } // }}}
 
-// cmd: !GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
+// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
