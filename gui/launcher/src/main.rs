@@ -388,16 +388,23 @@ impl Gui
     // Conditionally enable group
     if let Some(path_binary_wine) = env::var("BIN_WINE").ok()
     {
-      // Activate if default runner exists
-      let path = Path::new(&path_binary_wine);
-      if path.exists()
+      // Activate if default runner exists and is not flatimage
+      if let Some(var) = env::var("GIMG_PKG_TYPE").ok()
       {
-        group_runner_default.show();
-      }
+        let path = Path::new(&path_binary_wine);
+        if path.exists() && var != "flatimage"
+        {
+          group_runner_default.show();
+        }
+        else
+        {
+          println!("Path set in 'BIN_WINE' does not exist");
+        }
+      } // if
       else
       {
-        println!("Path set in 'BIN_WINE' does not exist");
-      }
+        println!("Could not fetch 'GIMG_PKG_TYPE' variable");
+      } // else
     }
     else
     {
@@ -757,6 +764,6 @@ fn main()
   std::process::exit(*status_exit.lock().unwrap());
 } // }}}
 
-// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
+// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_PKG_TYPE=appimage GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
