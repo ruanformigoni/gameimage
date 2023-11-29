@@ -19,14 +19,24 @@ source "$GIMG_SCRIPT_DIR/common.sh"
 
 function retroarch_download()
 {
-  # Get retroarch
+  local url
+
+  # Get retroarch url
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
+      https://api.github.com/repos/flatimage/flatimage-retroarch/releases/latest 2>&1 |
+      jq -r ".assets.[0].browser_download_url")"
+  else
+    url="https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
+  fi
+
   if [ ! -f "AppDir/usr/bin/retroarch" ]; then
-    if [ ! -f "RetroArch-x86_64.AppImage" ]; then
-      local url
+    msg "retroarch: $url"
 
-      url="https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
-
-      msg "retroarch: $url"
+    if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+      _fetch "AppDir/usr/bin/retroarch" "$url"
+    else
+      # AppImage requires additional patching to avoid crashes
 
       # Get AppImage of retroarch
       "$GIMG_SCRIPT_DIR"/busybox wget "$url"
@@ -54,13 +64,13 @@ function retroarch_download()
 
       # Remove extract dir
       rm -rf squashfs-root
+
+      # Copy assets into the AppImage
+      cp -r config AppDir/app/config 
+
+      # Copy retroarch into the appimage
+      cp RetroArch*.AppImage AppDir/usr/bin/retroarch
     fi
-
-    # Copy assets into the AppImage
-    cp -r config AppDir/app/config 
-
-    # Copy retroarch into the appimage
-    cp RetroArch*.AppImage AppDir/usr/bin/retroarch
   fi
 }
 
@@ -72,34 +82,51 @@ function runner_create()
 
   [ "$bios" == "null" ] && local bios=""
 
+  # Define common variables for each package type
+  # shellcheck disable=2016
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    export RUNNER_PATH='/retroarch/bin:$PATH'
+    export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config'
+    export RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
+    export RUNNER_ASSETS=/assets/.config/retroarch
+  else
+    export RUNNER_PATH='$APPDIR/usr/bin:$PATH'
+    export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config'
+    export RUNNER_MOUNTPOINT='$APPDIR'
+    export RUNNER_ASSETS='$APPDIR/app/config/retroarch'
+  fi
+  
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :#!/usr/bin/env bash
     :
     :set -e
     :
+    :SCRIPT_NAME="\$(basename "\$0")"
+    :
+    :exec 1> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line"; done)
+    :exec 2> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line" >&2; done)
+    :
+    :# PATH
+    :export PATH="$RUNNER_PATH"
+    :
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :echo "GIMG_PLATFORM: \${GIMG_PLATFORM}"
     :
     :# Package Type
     :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :echo "GIMG_PKG_TYPE: \${GIMG_PKG_TYPE}"
     :
     :# Set cfg dir
-    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
-    :  # Set global
-    :  export XDG_CONFIG_HOME="\$HOME/.config"
-    :else
-    :  # Set local
-    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
-    :fi
-    :
+    :export XDG_CONFIG_HOME="$RUNNER_XDG_CONFIG_HOME"
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :
     :# Check if retroarch assets are missing
     :dir_retroarch_assets="\$XDG_CONFIG_HOME/retroarch"
     :if [ ! -d "\$dir_retroarch_assets" ]; then
     :  mkdir -p "\$dir_retroarch_assets"
-    :  cp -r "\$APPDIR"/app/config/retroarch/* "\$dir_retroarch_assets"
+    :  cp -r "$RUNNER_ASSETS"/. "\$dir_retroarch_assets"
     :fi
     :
     :path_bios=\$XDG_CONFIG_HOME/retroarch/system/
@@ -107,20 +134,59 @@ function runner_create()
     :if [ "$bios" ] && [ ! -f "\${path_bios}/$bios" ]; then
     :  echo "bios: ${bios}"
     :  mkdir -p "\$path_bios"
-    :  cp "\$APPDIR/app/bios/$bios" "\$path_bios"
+    :  cp "$RUNNER_MOUNTPOINT/app/bios/$bios" "\$path_bios"
     :fi
     :
     :if [[ "\$*" = "--config" ]]; then
-    :  "\$APPDIR/usr/bin/retroarch"
+    :  retroarch
     :elif [[ "\$*" ]]; then
-    :  "\$APPDIR/usr/bin/retroarch" "\$@"
+    :  retroarch "\$@"
     :else
-    :  "\$APPDIR/usr/bin/retroarch" -L "\$APPDIR/app/core/${core}" "\$APPDIR/app/rom/${rom}"
+    :  retroarch -L "$RUNNER_MOUNTPOINT/app/core/${core}" "$RUNNER_MOUNTPOINT/app/rom/${rom}"
     :fi
 	END
 
   # Allow execute
   chmod +x AppDir/AppRun
+}
+
+function build_flatimage()
+{
+  local name="$1"
+  local bin_pkg="$BUILD_DIR"/retroarch
+
+  # Copy vanilla retroarch package
+  cp "$BUILD_DIR/AppDir/usr/bin/retroarch" "$bin_pkg"
+
+  # Set up /usr overlay
+  "$bin_pkg" fim-config-set overlay.prefix "/usr overlay"
+  #shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config/usr"'
+  "$bin_pkg" fim-config-set overlay.prefix.cont '/usr'
+
+  # Copy runner to flatimage
+  "$bin_pkg" fim-exec mkdir -p /fim/scripts
+  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
+
+  # Compress game dir
+  "$bin_pkg" fim-exec mkdwarfs -f -i "$BUILD_DIR"/AppDir/app -o "$BUILD_DIR"/app.dwarfs
+
+  # Include inside image
+  "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
+
+  # Default command -> runner script
+  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
+
+  # Copy cover
+  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
+  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
+
+  # Set HOME dir
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
+
+  # Rename binary
+  mv "$bin_pkg" "$BUILD_DIR/${name}.fim"
 }
 
 function main()
@@ -138,22 +204,29 @@ function main()
   # Create dirs
   cd "$(dir_build_create "$dir")"
 
+  BUILD_DIR="$(pwd)"
+
   dir_appdir_create
 
   # Download tools
-  _fetch_appimagetool
+  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
+    _fetch_appimagetool
+  fi
   retroarch_download
   _fetch_imagemagick
 
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
-  runner_create "$bios" "$core" "$rom"
-
-  desktop_entry_create "$name"
-
-  # Build appimage
-  build_appimage
+  # Create runner script and build image
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    runner_create "$bios" "$core" "$rom"
+    build_flatimage "$name"
+  else
+    runner_create "$bios" "$core" "$rom"
+    desktop_entry_create "$name"
+    build_appimage
+  fi
 }
 
 main "$@"
