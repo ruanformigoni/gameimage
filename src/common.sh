@@ -335,9 +335,10 @@ function build_flatimage()
     "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" "/prefix.dwarfs"
     rm "$DIR_BUILD/prefix.dwarfs"
-    "$BIN_PKG" fim-config-set overlay.prefix "Wine prefix overlay"
+    # Set up /prefix overlay
+    "$BIN_PKG" fim-config-set overlay.prefix "/prefix overlay"
     #shellcheck disable=2016
-    "$BIN_PKG" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config"'
+    "$BIN_PKG" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config/overlays/prefix"'
     "$BIN_PKG" fim-config-set overlay.prefix.cont '/prefix'
   elif [[ "$GIMG_PKG_METHOD" = "dynamic" ]]; then
     "$BIN_PKG" fim-include-path "$DIR_BUILD/AppDir/app/wine/." /prefix

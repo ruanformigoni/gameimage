@@ -86,12 +86,12 @@ function runner_create()
   # shellcheck disable=2016
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     export RUNNER_PATH='/retroarch/bin:$PATH'
-    export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config'
+    export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/xdg/config'
     export RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     export RUNNER_ASSETS=/assets/.config/retroarch
   else
     export RUNNER_PATH='$APPDIR/usr/bin:$PATH'
-    export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config'
+    export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
     export RUNNER_MOUNTPOINT='$APPDIR'
     export RUNNER_ASSETS='$APPDIR/app/config/retroarch'
   fi
@@ -161,7 +161,7 @@ function build_flatimage()
   # Set up /usr overlay
   "$bin_pkg" fim-config-set overlay.prefix "/usr overlay"
   #shellcheck disable=2016
-  "$bin_pkg" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config/usr"'
+  "$bin_pkg" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config/overlays/usr"'
   "$bin_pkg" fim-config-set overlay.prefix.cont '/usr'
 
   # Copy runner to flatimage
