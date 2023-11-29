@@ -169,6 +169,10 @@ function build_flatimage()
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
   "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
 
+  # Set HOME dir
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
+
   # Rename binary
   mv "$bin_pkg" "$BUILD_DIR/${name}.fim"
 }
