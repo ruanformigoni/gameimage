@@ -169,21 +169,21 @@ function build_flatimage()
   # Copy vanilla retroarch package
   cp "$BUILD_DIR/AppDir/usr/bin/retroarch" "$bin_pkg"
 
-  # Set up /usr overlay
-  "$bin_pkg" fim-config-set overlay.prefix "/usr overlay"
-  #shellcheck disable=2016
-  "$bin_pkg" fim-config-set overlay.prefix.host '"$FIM_DIR_BINARY"/."$FIM_FILE_BINARY.config/overlays/usr"'
-  "$bin_pkg" fim-config-set overlay.prefix.cont '/usr'
-
-  # Copy runner to flatimage
-  "$bin_pkg" fim-exec mkdir -p /fim/scripts
-  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
-
   # Compress game dir
   "$bin_pkg" fim-exec mkdwarfs -f -i "$BUILD_DIR"/AppDir/app -o "$BUILD_DIR"/app.dwarfs
 
   # Include inside image
   "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
+
+  # Configure /app overlay
+  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Include launcher script
+  "$bin_pkg" fim-root mkdir -p /fim/scripts
+  "$bin_pkg" fim-root cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
 
   # Default command -> runner script
   "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
@@ -229,12 +229,12 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
+  runner_create "$bios" "$core" "$rom"
+
   # Create runner script and build image
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    runner_create "$bios" "$core" "$rom"
     build_flatimage "$name"
   else
-    runner_create "$bios" "$core" "$rom"
     desktop_entry_create "$name"
     build_appimage
   fi
