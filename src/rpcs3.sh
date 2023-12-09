@@ -40,9 +40,25 @@ function rpcs3_download()
   fi
 }
 
-function runner_create_appimage()
+function runner_create()
 {
   local bios="$(basename "$1")"
+
+  # Define common variables for each package type
+  # shellcheck disable=2016
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    RUNNER_PATH='/rpcs3/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
+    RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
+    RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
+    RUNNER_BIN='/fim/scripts/rpcs3.sh'
+  else
+    RUNNER_PATH='$APPDIR/usr/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
+    RUNNER_XDG_DATA_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/data'
+    RUNNER_MOUNTPOINT='$APPDIR'
+    RUNNER_BIN='$APPDIR/usr/bin/rpcs3'
+  fi
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
@@ -50,86 +66,51 @@ function runner_create_appimage()
     :
     :set -e
     :
+    :SCRIPT_NAME="\$(basename "\$0")"
+    :
+    :exec 1> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line"; done)
+    :exec 2> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line" >&2; done)
+    :
+    :# PATH
+    :export PATH="$RUNNER_PATH"
+    :
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :echo "GIMG_PLATFORM: \${GIMG_PLATFORM}"
     :
     :# Package Type
     :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :echo "GIMG_PKG_TYPE: \${GIMG_PKG_TYPE}"
     :
     :# Set cfg dir
-    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
-    :  # Set global
-    :  export XDG_CONFIG_HOME="\$HOME/.config"
-    :else
-    :  # Set local
-    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
-    :fi
-    :
-    :mkdir -p "\$XDG_CONFIG_HOME"
-    :
+    :export XDG_CONFIG_HOME="$RUNNER_XDG_CONFIG_HOME"
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :
+    :# Set data dir
+    :export XDG_DATA_HOME="$RUNNER_XDG_DATA_HOME"
+    :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
+    :
+    :# Runner binary path
+    :echo "RUNNER_BIN: $RUNNER_BIN"
+    :
     :echo "bios: ${bios}"
     :
     :# Check if bios is installed
     :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
-    :  "\$APPDIR/usr/bin/rpcs3" --installfw "\$APPDIR/app/bios/${bios}"
+    :  "$RUNNER_BIN" --installfw "$RUNNER_MOUNTPOINT/app/bios/${bios}"
     :fi
     :
     :if [[ "\$*" = "--config" ]]; then
-    :  "\$APPDIR/usr/bin/rpcs3"
+    :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
-    :  "\$APPDIR/usr/bin/rpcs3" "\$@"
+    :  "$RUNNER_BIN" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/rpcs3" --no-gui "\$APPDIR/app/rom"
+    :  "$RUNNER_BIN" --no-gui "$RUNNER_MOUNTPOINT/app/rom"
     :fi
 	END
 
   # Allow executable
   chmod +x AppDir/AppRun
-}
-
-function runner_create_flatimage()
-{
-  local bios="$(basename "$1")"
-
-  # Create runner script
-  { sed -E 's/^\s+://' | tee AppDir/app/gameimage.sh | sed -e 's/^/-- /'; } <<-END
-    :#!/usr/bin/env bash
-    :
-    :set -e
-    :
-    :# Platform
-    :export GIMG_PLATFORM=$GIMG_PLATFORM
-    :
-    :# Package Type
-    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
-    :
-    :# Path to rpcs3
-    :export PATH="/rpcs3/bin:\$PATH"
-    :
-    :# Set cfg dir
-    :export XDG_CONFIG_HOME="\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config"
-    :mkdir -p "\$XDG_CONFIG_HOME"
-    :
-    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
-    :echo "bios: ${bios}"
-    :
-    :# Check if bios is installed
-    :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
-    :  rpcs3 --installfw "/app/bios/${bios}"
-    :fi
-    :
-    :if [[ "\$*" = "--config" ]]; then
-    :  rpcs3
-    :elif [[ "\$*" ]]; then
-    :  rpcs3 "\$@"
-    :else
-    :  rpcs3 --no-gui "/app/rom"
-    :fi
-	END
-
-  # Allow executable
-  chmod +x AppDir/app/gameimage.sh
 }
 
 function build_flatimage()
@@ -146,8 +127,18 @@ function build_flatimage()
   # Include inside image
   "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
 
+  # Configure /app overlay
+  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Include launcher script
+  "$bin_pkg" fim-root mkdir -p /fim/scripts
+  "$bin_pkg" fim-root cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
+
   # Default command -> runner script
-  "$bin_pkg" fim-cmd /app/gameimage.sh
+  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
 
   # Copy cover
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
@@ -189,11 +180,11 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
+  runner_create "$bios"
+
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    runner_create_flatimage "$bios"
     build_flatimage "$name"
   else
-    runner_create_appimage "$bios"
     desktop_entry_create "$name"
     build_appimage
   fi
