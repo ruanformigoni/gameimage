@@ -54,11 +54,13 @@ function runner_create()
     RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
     RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
     RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
+    RUNNER_BIN='/fim/scripts/yuzu.sh'
   else
     RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
     RUNNER_XDG_DATA_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/data'
     RUNNER_MOUNTPOINT='$APPDIR'
+    RUNNER_BIN='$APPDIR/usr/bin/yuzu'
   fi
 
   # Define & create temporary directories for builder
@@ -111,6 +113,9 @@ function runner_create()
     :export XDG_DATA_HOME="$RUNNER_XDG_DATA_HOME"
     :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
     :
+    :# Runner binary path
+    :echo "RUNNER_BIN: $RUNNER_BIN"
+    :
     :# Force re-generate paths, they are incorrect
     :# after the image is created
     :rm -f "$RUNNER_XDG_CONFIG_HOME/yuzu/qt-config.ini"
@@ -134,11 +139,11 @@ function runner_create()
   { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :
     :if [[ "\$*" = "--config" ]]; then
-    :  yuzu
+    :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
-    :  yuzu "\$@"
+    :  "$RUNNER_BIN" "\$@"
     :else
-    :  yuzu -f -g "$RUNNER_MOUNTPOINT/app/rom/${rom}"
+    :  "$RUNNER_BIN" -f -g "$RUNNER_MOUNTPOINT/app/rom/${rom}"
     :fi
 	END
 

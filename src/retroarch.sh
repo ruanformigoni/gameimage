@@ -86,14 +86,18 @@ function runner_create()
   # shellcheck disable=2016
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     export RUNNER_PATH='/retroarch/bin:$PATH'
-    export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/xdg/config'
+    export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
+    export RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
     export RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     export RUNNER_ASSETS=/assets/.config/retroarch
+    export RUNNER_BIN='/fim/scripts/retroarch.sh'
   else
     export RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
+    export RUNNER_XDG_DATA_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/data'
     export RUNNER_MOUNTPOINT='$APPDIR'
     export RUNNER_ASSETS='$APPDIR/app/config/retroarch'
+    export RUNNER_BIN='$APPDIR/usr/bin/retroarch'
   fi
   
   # Create runner script
@@ -122,6 +126,13 @@ function runner_create()
     :export XDG_CONFIG_HOME="$RUNNER_XDG_CONFIG_HOME"
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :
+    :# Set data dir
+    :export XDG_DATA_HOME="$RUNNER_XDG_DATA_HOME"
+    :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
+    :
+    :# Runner binary path
+    :echo "RUNNER_BIN: $RUNNER_BIN"
+    :
     :# Check if retroarch assets are missing
     :dir_retroarch_assets="\$XDG_CONFIG_HOME/retroarch"
     :if [ ! -d "\$dir_retroarch_assets" ]; then
@@ -138,11 +149,11 @@ function runner_create()
     :fi
     :
     :if [[ "\$*" = "--config" ]]; then
-    :  retroarch
+    :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
-    :  retroarch "\$@"
+    :  "$RUNNER_BIN" "\$@"
     :else
-    :  retroarch -L "$RUNNER_MOUNTPOINT/app/core/${core}" "$RUNNER_MOUNTPOINT/app/rom/${rom}"
+    :  "$RUNNER_BIN" -L "$RUNNER_MOUNTPOINT/app/core/${core}" "$RUNNER_MOUNTPOINT/app/rom/${rom}"
     :fi
 	END
 
