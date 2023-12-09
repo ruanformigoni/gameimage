@@ -39,13 +39,29 @@ function pcsx2_download()
   fi
 }
 
-function runner_create_appimage()
+function runner_create()
 {
   local bios="$(basename "$1")"
   local rom="$(basename "$3")"
 
   [ "$bios" == "null" ] && local bios=""
   [ "$rom" == "null" ] && { msg "Invalid rom file"; die; }
+
+  # Define common variables for each package type
+  # shellcheck disable=2016
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    RUNNER_PATH='/pcsx2/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
+    RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
+    RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
+    RUNNER_BIN='/fim/scripts/pcsx2.sh'
+  else
+    RUNNER_PATH='$APPDIR/usr/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
+    RUNNER_XDG_DATA_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/data'
+    RUNNER_MOUNTPOINT='$APPDIR'
+    RUNNER_BIN='$APPDIR/usr/bin/pcsx2'
+  fi
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
@@ -53,20 +69,32 @@ function runner_create_appimage()
     :
     :set -e
     :
+    :SCRIPT_NAME="\$(basename "\$0")"
+    :
+    :exec 1> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line"; done)
+    :exec 2> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line" >&2; done)
+    :
+    :# PATH
+    :export PATH="$RUNNER_PATH"
+    :
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :echo "GIMG_PLATFORM: \${GIMG_PLATFORM}"
     :
     :# Package Type
     :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :echo "GIMG_PKG_TYPE: \${GIMG_PKG_TYPE}"
     :
     :# Set cfg dir
-    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
-    :  # Set global
-    : export XDG_CONFIG_HOME="\$HOME/.config"
-    :else
-    :  # Set local
-    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
-    :fi
+    :export XDG_CONFIG_HOME="$RUNNER_XDG_CONFIG_HOME"
+    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
+    :
+    :# Set data dir
+    :export XDG_DATA_HOME="$RUNNER_XDG_DATA_HOME"
+    :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
+    :
+    :# Runner binary path
+    :echo "RUNNER_BIN: $RUNNER_BIN"
     :
     :# Bios path
     :bios_path="\${XDG_CONFIG_HOME}/PCSX2/bios"
@@ -74,78 +102,24 @@ function runner_create_appimage()
     :# Create path if not exists
     :mkdir -p "\${bios_path}"
     :
-    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :echo "bios: ${bios}"
     :echo "bios_path: \${bios_path}"
     :
     :if [ ! -f "\${bios_path}/${bios}" ]; then
-    :  cp "\$APPDIR/app/bios/${bios}" "\${bios_path}/${bios}"
+    :  cp "$RUNNER_MOUNTPOINT/app/bios/${bios}" "\${bios_path}/${bios}"
     :fi
     :
     :if [[ "\$*" = "--config" ]]; then
-    :  "\$APPDIR/usr/bin/pcsx2"
+    :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
-    :  "\$APPDIR/usr/bin/pcsx2" "\$@"
+    :  "$RUNNER_BIN" "\$@"
     :else
-    :  "\$APPDIR/usr/bin/pcsx2" -- "\$APPDIR/app/rom/$rom"
+    :  "$RUNNER_BIN" -- "$RUNNER_MOUNTPOINT/app/rom/$rom"
     :fi
 	END
 
   # Allow execute
   chmod +x AppDir/AppRun
-}
-
-function runner_create_flatimage()
-{
-  local bios="$(basename "$1")"
-  local rom="$(basename "$3")"
-
-  [ "$bios" == "null" ] && local bios=""
-  [ "$rom" == "null" ] && { msg "Invalid rom file"; die; }
-
-  # Create runner script
-  { sed -E 's/^\s+://' | tee AppDir/app/gameimage.sh | sed -e 's/^/-- /'; } <<-END
-    :#!/usr/bin/env bash
-    :
-    :set -e
-    :
-    :# Platform
-    :export GIMG_PLATFORM=$GIMG_PLATFORM
-    :
-    :# Package Type
-    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
-    :
-    :# Path to pcsx2
-    :export PATH="/pcsx2/bin:\$PATH"
-    :
-    :# Set cfg dir
-    :export XDG_CONFIG_HOME="\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config"
-    :
-    :# Bios path
-    :bios_path="\${XDG_CONFIG_HOME}/PCSX2/bios"
-    :
-    :# Create path if not exists
-    :mkdir -p "\${bios_path}"
-    :
-    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
-    :echo "bios: ${bios}"
-    :echo "bios_path: \${bios_path}"
-    :
-    :if [ ! -f "\${bios_path}/${bios}" ]; then
-    :  cp "/app/bios/${bios}" "\${bios_path}/${bios}"
-    :fi
-    :
-    :if [[ "\$*" = "--config" ]]; then
-    :  pcsx2-qt
-    :elif [[ "\$*" ]]; then
-    :  pcsx2-qt "\$@"
-    :else
-    :  pcsx2-qt -- "\$APPDIR/app/rom/$rom"
-    :fi
-	END
-
-  # Allow execute
-  chmod +x AppDir/app/gameimage.sh
 }
 
 function build_flatimage()
@@ -162,8 +136,18 @@ function build_flatimage()
   # Include inside image
   "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
 
+  # Configure /app overlay
+  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Include launcher script
+  "$bin_pkg" fim-root mkdir -p /fim/scripts
+  "$bin_pkg" fim-root cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
+
   # Default command -> runner script
-  "$bin_pkg" fim-cmd /app/gameimage.sh
+  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
 
   # Copy cover
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
@@ -206,11 +190,11 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
+  runner_create "$bios" "$core" "$rom"
+
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    runner_create_flatimage "$bios" "$core" "$rom"
     build_flatimage "$name"
   else
-    runner_create_appimage "$bios" "$core" "$rom"
     desktop_entry_create "$name"
     build_appimage
   fi
