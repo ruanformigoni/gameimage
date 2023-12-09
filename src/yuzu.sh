@@ -39,7 +39,7 @@ function yuzu_download()
   fi
 }
 
-function runner_create_appimage()
+function runner_create()
 {
   local bios="$(basename "$1")"
   local keys="$(basename "$2")"
@@ -47,19 +47,35 @@ function runner_create_appimage()
 
   msg "Install the updates and DLC to pack into the AppImage (not the game itself)"
 
-  mkdir -p AppDir/app/config/home
+  # Define common variables for each package type
+  # shellcheck disable=2016
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    RUNNER_PATH='/yuzu/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
+    RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
+    RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
+  else
+    RUNNER_PATH='$APPDIR/usr/bin:$PATH'
+    RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
+    RUNNER_XDG_DATA_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/data'
+    RUNNER_MOUNTPOINT='$APPDIR'
+  fi
 
-  mkdir -p AppDir/app/config/home/.local/share/yuzu/nand/system/Contents/registered
-  mkdir -p AppDir/app/config/home/.local/share/yuzu/keys
+  # Define & create temporary directories for builder
+  BUILDER_XDG_CONFIG_HOME="$(pwd)"/AppDir/app/xdg/config
+  BUILDER_XDG_DATA_HOME="$(pwd)"/AppDir/app/xdg/data
+  mkdir -p "$BUILDER_XDG_DATA_HOME"/yuzu/nand/system/Contents/registered
+  mkdir -p "$BUILDER_XDG_DATA_HOME"/yuzu/keys
 
-  cp AppDir/app/bios/* AppDir/app/config/home/.local/share/yuzu/nand/system/Contents/registered
-  cp AppDir/app/keys/* AppDir/app/config/home/.local/share/yuzu/keys
+  # Copy data such as bios and keys
+  cp AppDir/app/bios/* "$BUILDER_XDG_DATA_HOME"/yuzu/nand/system/Contents/registered
+  cp AppDir/app/keys/* "$BUILDER_XDG_DATA_HOME"/yuzu/keys
 
   (
     #shellcheck disable=2030
-    export XDG_CONFIG_HOME="$(pwd)"/AppDir/app/config
+    export XDG_CONFIG_HOME="$BUILDER_XDG_CONFIG_HOME"
     #shellcheck disable=2030
-    export HOME="$(pwd)"/AppDir/app/config/home
+    export XDG_DATA_HOME="$BUILDER_XDG_DATA_HOME"
     AppDir/usr/bin/yuzu
   )
 
@@ -71,108 +87,63 @@ function runner_create_appimage()
     :
     :set -e
     :
-    :# Platform
-    :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :SCRIPT_NAME="\$(basename "\$0")"
     :
-    :# Package Type
-    :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
-    :
-    :# Set cfg dir
-    :if [[ "\$(basename "\${APPIMAGE}")" =~ \.\.AppImage ]]; then
-    :  # Set global
-    :  export XDG_CONFIG_HOME="\$HOME/.config"
-    :else
-    :  # Set local
-    :  export XDG_CONFIG_HOME="\$(dirname "\$APPIMAGE")/.\$(basename "\$APPIMAGE").config"
-    :  export HOME="\$XDG_CONFIG_HOME/home"
-    :fi
-    :
-    :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
-    :
-    :if ! find "\$HOME/.local/share/yuzu/nand/system/Contents/registered" -iname "*.nca" -print -quit &>/dev/null || \\
-    :   ! find "\$HOME/.local/share/yuzu/keys" -iname "*.keys" -print -quit &>/dev/null; then
-    :  mkdir -p "\$HOME"
-    :  cp -r "\$APPDIR"/app/config/* "\${XDG_CONFIG_HOME}"
-    :fi
-    :
-    :if [[ "\$*" = "--config" ]]; then
-    :  "\$APPDIR/usr/bin/yuzu"
-    :elif [[ "\$*" ]]; then
-    :  "\$APPDIR/usr/bin/yuzu" "\$@"
-    :else
-    :  "\$APPDIR/usr/bin/yuzu" -f -g "\$APPDIR/app/rom/${rom}"
-    :fi
-	END
-
-  # Allow execute
-  chmod +x AppDir/AppRun
-}
-
-function runner_create_flatimage()
-{
-  local bios="$(basename "$1")"
-  local keys="$(basename "$2")"
-  local rom="$(basename "$3")"
-
-  msg "Install the updates and DLC to pack into the AppImage (not the game itself)"
-
-  mkdir -p AppDir/app/config
-  mkdir -p AppDir/app/data/yuzu/nand/system/Contents/registered
-  mkdir -p AppDir/app/data/yuzu/keys
-
-  cp AppDir/app/bios/* AppDir/app/data/yuzu/nand/system/Contents/registered
-  cp AppDir/app/keys/* AppDir/app/data/yuzu/keys
-
-  (
-    #shellcheck disable=2031
-    export XDG_CONFIG_HOME="$(pwd)"/AppDir/app/config
-    #shellcheck disable=2031
-    export XDG_DATA_HOME="$(pwd)"/AppDir/app/data
-    AppDir/usr/bin/yuzu
-  )
-
-  local bios="${bios#null}"
-
-  # Create runner script
-  { sed -E 's/^\s+://' | tee "$BUILD_DIR"/gameimage.sh | sed -e 's/^/-- /'; } <<-END
-    :#!/usr/bin/env bash
-    :
-    :set -e
+    :exec 1> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line"; done)
+    :exec 2> >(while IFS= read -r line; do echo "[\$SCRIPT_NAME] \$line" >&2; done)
     :
     :# Platform
     :export GIMG_PLATFORM=$GIMG_PLATFORM
+    :echo "GIMG_PLATFORM: \${GIMG_PLATFORM}"
     :
     :# Package Type
     :export GIMG_PKG_TYPE=$GIMG_PKG_TYPE
+    :echo "GIMG_PKG_TYPE: \${GIMG_PKG_TYPE}"
     :
     :# Path to yuzu
-    :export PATH="/yuzu/bin:\$PATH"
+    :export PATH="$RUNNER_PATH"
     :
-    :# Make sure HOME exists
-    :mkdir -p "\$HOME"
-    :
-    :# Set gameimage config dir
-    :GIMG_CONFIG_DIR="\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config"
-    :
-    :# Set .config
-    :export XDG_CONFIG_HOME="\$GIMG_CONFIG_DIR/overlay.app/mount/config"
+    :# Set cfg dir
+    :export XDG_CONFIG_HOME="$RUNNER_XDG_CONFIG_HOME"
     :echo "XDG_CONFIG_HOME: \${XDG_CONFIG_HOME}"
     :
-    :# Set .local/share
-    :export XDG_DATA_HOME="\$GIMG_CONFIG_DIR/overlay.app/mount/data"
+    :# Set data dir
+    :export XDG_DATA_HOME="$RUNNER_XDG_DATA_HOME"
     :echo "XDG_DATA_HOME: \${XDG_DATA_HOME}"
+    :
+    :# Force re-generate paths, they are incorrect
+    :# after the image is created
+    :rm -f "$RUNNER_XDG_CONFIG_HOME/yuzu/qt-config.ini"
+    :rm -f "$RUNNER_XDG_CONFIG_HOME/QtProject.conf"
+	END
+
+  # For AppImage, copy files, no overlayfs yet
+  if [[ "$GIMG_PKG_TYPE" = appimage ]]; then
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+    :if ! find "$RUNNER_XDG_DATA_HOME/yuzu/nand/system/Contents/registered" -iname "*.nca" -print -quit &>/dev/null || \\
+    :   ! find "$RUNNER_XDG_DATA_HOME/yuzu/keys" -iname "*.keys" -print -quit &>/dev/null; then
+    :  mkdir -p "$RUNNER_XDG_CONFIG_HOME"
+    :  mkdir -p "$RUNNER_XDG_DATA_HOME"
+    :  cp -r "$RUNNER_MOUNTPOINT"/app/xdg/config/* "$RUNNER_XDG_CONFIG_HOME"
+    :  cp -r "$RUNNER_MOUNTPOINT"/app/xdg/data/* "$RUNNER_XDG_DATA_HOME"
+    :fi
+		END
+  fi
+
+  # Set launcher options
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :
     :if [[ "\$*" = "--config" ]]; then
     :  yuzu
     :elif [[ "\$*" ]]; then
     :  yuzu "\$@"
     :else
-    :  yuzu -f -g "\$FIM_DIR_MOUNT/app/rom/${rom}"
+    :  yuzu -f -g "$RUNNER_MOUNTPOINT/app/rom/${rom}"
     :fi
 	END
 
   # Allow execute
-  chmod +x "$BUILD_DIR"/gameimage.sh
+  chmod +x AppDir/AppRun
 }
 
 function build_flatimage()
@@ -189,19 +160,18 @@ function build_flatimage()
   # Include inside image
   "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
 
-  # Include launche script
+  # Configure /app overlay
+  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Include launcher script
   "$bin_pkg" fim-root mkdir -p /fim/scripts
-  "$bin_pkg" fim-root cp "$BUILD_DIR/gameimage.sh" /fim/scripts
+  "$bin_pkg" fim-root cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
 
   # Default command -> runner script
   "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
-
-  # Configure overlay
-  "$bin_pkg" fim-config-set overlay.app 'App Overlay'
-  # shellcheck disable=2016
-  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlay.app'
-  # shellcheck disable=2016
-  "$bin_pkg" fim-config-set overlay.app.cont '/app'
 
   # Copy cover
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
@@ -244,11 +214,11 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "null" "$cover" "$keys"
 
+  runner_create "$bios" "$keys" "$rom"
+
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    runner_create_flatimage "$bios" "$keys" "$rom"
     build_flatimage "$name"
   else
-    runner_create_appimage "$bios" "$keys" "$rom"
     desktop_entry_create "$name"
     build_appimage
   fi
