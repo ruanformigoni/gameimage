@@ -76,21 +76,23 @@ function retroarch_download()
 
 function runner_create()
 {
-  local bios="$(basename "$1")"
-  local core="$(basename "$2")"
-  local rom="$(basename "$3")"
+  local name="$1"
+  local bios="$(basename "$2")"
+  local core="$(basename "$3")"
+  local rom="$(basename "$4")"
 
   [ "$bios" == "null" ] && local bios=""
 
   # Define common variables for each package type
   # shellcheck disable=2016
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    export RUNNER_PATH='/retroarch/bin:$PATH'
+    export RUNNER_PATH='/fim/shared:/retroarch/bin:$PATH'
     export RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
     export RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
     export RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     export RUNNER_ASSETS=/assets/.config/retroarch
     export RUNNER_BIN='/fim/scripts/retroarch.sh'
+    export RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop-integration/icon.png'
   else
     export RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
@@ -148,6 +150,18 @@ function runner_create()
     :  cp "$RUNNER_MOUNTPOINT/app/bios/$bios" "\$path_bios"
     :fi
     :
+	END
+
+  if [[ "$GIMG_PKG_TYPE" = flatimage ]]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+      :export GIMG_LAUNCHER_NAME="$name"
+      :export GIMG_LAUNCHER_IMG="$RUNNER_LAUNCHER_IMG"
+      :gameimage-launcher
+      :
+		END
+  fi
+
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :if [[ "\$*" = "--config" ]]; then
     :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
@@ -192,6 +206,11 @@ function build_flatimage()
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
   "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
 
+  # Copy launcher
+  # shellcheck disable=2016
+  "$bin_pkg" fim-root mkdir -p /fim/shared
+  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher-shared" '/fim/shared/gameimage-launcher'
+
   # Set HOME dir
   # shellcheck disable=2016
   "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
@@ -229,7 +248,7 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
-  runner_create "$bios" "$core" "$rom"
+  runner_create "$name" "$bios" "$core" "$rom"
 
   # Create runner script and build image
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then

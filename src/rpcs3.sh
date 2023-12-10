@@ -42,16 +42,18 @@ function rpcs3_download()
 
 function runner_create()
 {
-  local bios="$(basename "$1")"
+  local name="$1"
+  local bios="$(basename "$2")"
 
   # Define common variables for each package type
   # shellcheck disable=2016
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    RUNNER_PATH='/rpcs3/bin:$PATH'
+    RUNNER_PATH='/fim/shared:/rpcs3/bin:$PATH'
     RUNNER_XDG_CONFIG_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/config'
     RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
     RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     RUNNER_BIN='/fim/scripts/rpcs3.sh'
+    RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop-integration/icon.png'
   else
     RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
@@ -100,6 +102,18 @@ function runner_create()
     :  "$RUNNER_BIN" --installfw "$RUNNER_MOUNTPOINT/app/bios/${bios}"
     :fi
     :
+	END
+
+  if [[ "$GIMG_PKG_TYPE" = flatimage ]]; then
+    { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+      :export GIMG_LAUNCHER_NAME="$name"
+      :export GIMG_LAUNCHER_IMG="$RUNNER_LAUNCHER_IMG"
+      :gameimage-launcher
+      :
+		END
+  fi
+
+  { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
     :if [[ "\$*" = "--config" ]]; then
     :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
@@ -144,6 +158,11 @@ function build_flatimage()
   "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
   "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
 
+  # Copy launcher
+  # shellcheck disable=2016
+  "$bin_pkg" fim-root mkdir -p /fim/shared
+  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher-shared" '/fim/shared/gameimage-launcher'
+
   # Set HOME dir
   # shellcheck disable=2016
   "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
@@ -180,7 +199,7 @@ function main()
   # Populate appdir
   files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
 
-  runner_create "$bios"
+  runner_create "$name" "$bios"
 
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     build_flatimage "$name"
