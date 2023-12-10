@@ -469,6 +469,8 @@ function runner_create_flatimage()
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/gameimage.sh | sed -e 's/^/-- /'; } <<-END
+   :#!/usr/bin/env bash
+   :
    :set -e
    :
    :# Platform
