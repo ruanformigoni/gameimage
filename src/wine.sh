@@ -564,7 +564,7 @@ function runner_create_flatimage()
    :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
    :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
    :  export GIMG_LAUNCHER_NAME="$name"
-   :  export GIMG_LAUNCHER_IMG="/fim/desktop-integration/icon.png"
+   :  export GIMG_LAUNCHER_IMG="\$FIM_DIR_MOUNT/fim/desktop-integration/icon.png"
    :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \;)"
    :  gameimage-launcher
    :else
