@@ -44,7 +44,6 @@ function _fetch_wine()
         # Fetch packages
         _fetch "wine" "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
         _fetch "opt.dwarfs" "$url"
-        chmod +x ./wine
         # Merge flatimage with wine binaries
         ./wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
         # Remove downloaded wine binaries
