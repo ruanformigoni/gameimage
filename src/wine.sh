@@ -662,7 +662,9 @@ function main()
     case "$GIMG_STAGE" in
       fetch) 
         # Download tools
-        _fetch_appimagetool
+        if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
+          _fetch_appimagetool
+        fi
         _fetch_imagemagick
         _fetch_wine
       ;;
