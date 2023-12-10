@@ -254,7 +254,7 @@ impl Gui
       } // if
       else
       {
-        println!("Failed to fetch load provided image");
+        println!("Failed to load launcher image");
       } // else
     } // if
     else
@@ -596,12 +596,88 @@ impl Gui
     frame_instance
   } // fn: frame_config_wine }}}
 
+  // fn: frame_config_emu {{{
+  fn frame_config_emu(&self) -> FrameInstance
+  {
+    let mut group = Group::default().size_of(&self.wind);
+    group.set_frame(FrameType::FlatBox);
+
+    //
+    // Frame config
+    //
+    let mut frame_config = self.make_frame(self.width, self.height);
+    frame_config.set_frame(FrameType::FlatBox);
+
+    //
+    // Layout
+    //
+
+    let size_font : i32 = 14;
+    let _size_spacing : i32 = 5;
+
+    let _f_make_output = |label : &str|
+    {
+      let mut output = self.make_frame(100, 20);
+      output.set_label_size(size_font);
+      output.set_frame(FrameType::NoBox);
+      output.set_align(Align::Left | Align::Inside);
+      output.set_label(label);
+      output
+    };
+
+    // Set bottom backgroud
+    let mut btn_background = Button::default()
+      .with_size(frame_config.width(), HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_config, -HEIGHT_BUTTON_WIDE);
+    btn_background.set_frame(FrameType::NoBox);
+    btn_background.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACKGROUND).unwrap()));
+    btn_background.deactivate();
+
+    // Back to screen defined by callback
+    let mut btn_back = Button::default()
+      .with_size(WIDTH_BUTTON_WIDE, HEIGHT_BUTTON_WIDE)
+      .below_of(&frame_config, -HEIGHT_BUTTON_WIDE);
+    btn_back.set_pos(btn_back.x() + self.border, btn_back.y() - self.border);
+    btn_back.set_frame(FrameType::NoBox);
+    btn_back.set_image(Some(fltk::image::SvgImage::from_data(ICON_BACK).unwrap()));
+
+    group.end();
+
+    let frame_instance = FrameInstance
+    {
+      group,
+      buttons: vec![btn_back],
+    };
+
+    frame_instance
+  } // fn: frame_config_emu }}}
+
   // fn: frame_switcher {{{
   fn frame_switcher(&self)
   {
     // Create frames
     let frame_cover = self.frame_cover();
-    let frame_config = self.frame_config_wine();
+    let frame_config : FrameInstance;
+    let str_platform : String;
+
+    // Check for platform, wine or emulator
+    if let Some(env_platform) = env::var("GIMG_PLATFORM").ok()
+    {
+      str_platform = env_platform.clone();
+      if env_platform == "wine"
+      {
+        frame_config = self.frame_config_wine();
+      } // if
+      else
+      {
+        frame_config = self.frame_config_emu();
+      } // else
+    } // if
+    else
+    {
+      println!("Could not fetch GIMG_PLATFORM variable");
+      std::process::exit(1);
+    } // else
 
     // Fetch groups/buttons
     let mut frame_cover_group         = frame_cover.group.clone();
@@ -620,6 +696,12 @@ impl Gui
     let arc_frame_cover_group = Arc::new(Mutex::new(frame_cover_group));
     let arc_frame_config_group = Arc::new(Mutex::new(frame_config_group));
 
+    // Disable configure button for anything other than wine,
+    // while options are not implemented
+    if str_platform != "wine"
+    {
+      frame_cover_btn_configure.hide();
+    }
 
     // fn: Callbacks {{{
     let arc_frame_config_group_clone = Arc::clone(&arc_frame_config_group);
@@ -648,23 +730,30 @@ impl Gui
       app::quit();
       app::flush();
 
-      env::var("GIMG_LAUNCHER_CMD_EXP").ok().and_then(|e|
+      if str_platform == "wine"
       {
-        env::set_var("GIMG_LAUNCHER_DISABLE", "1");
-        let handle = std::process::Command::new("sh")
-          .args(["-c", format!("''{} 2>&1''", e.as_str()).as_str()])
-          .spawn();
-        handle.ok().and_then(|mut h|
+        env::var("GIMG_LAUNCHER_CMD_EXP").ok().and_then(|e|
         {
-          h
-          .wait()
-          .ok()
-          .and_then(|e| { sender.send(e.code().unwrap_or(1)).ok() })
-          .or_else( || { sender.send(1).ok() })
-      }).or_else(|| { sender.send(1).ok() })
-    }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD_EXP is not defined"); sender.send(1).ok(); None });
-  });
-  // }}}
+          env::set_var("GIMG_LAUNCHER_DISABLE", "1");
+          let handle = std::process::Command::new("sh")
+            .args(["-c", format!("''{} 2>&1''", e.as_str()).as_str()])
+            .spawn();
+          handle.ok().and_then(|mut h|
+          {
+            h
+            .wait()
+            .ok()
+            .and_then(|e| { sender.send(e.code().unwrap_or(1)).ok() })
+            .or_else( || { sender.send(1).ok() })
+          }).or_else(|| { sender.send(1).ok() })
+        }).or_else(|| { println!("Variable GIMG_LAUNCHER_CMD_EXP is not defined"); sender.send(1).ok(); None });
+      } // if
+      else
+      {
+        // Start emulator
+        sender.send(0).ok();
+      } // else
+    }); // }}}
 
   } // fn: frame_switcher }}}
 
@@ -680,7 +769,7 @@ impl Drop for Gui
     self.wind.end();
     self.wind.show();
     self.app.run().unwrap_or_else(|_|{ println!("Failed to run GUI"); });
-    self.sender.send(0).ok();
+    self.sender.send(1).ok();
   }
 } // }}}
 
@@ -764,6 +853,6 @@ fn main()
   std::process::exit(*status_exit.lock().unwrap());
 } // }}}
 
-// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_PKG_TYPE=appimage GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
+// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_PLATFORM=retroarch GIMG_PKG_TYPE=flatimage GIMG_LAUNCHER_NAME=prostreet GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
