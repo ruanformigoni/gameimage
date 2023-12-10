@@ -89,6 +89,11 @@ function wine_configure()
   if [ ! -d "$WINEPREFIX" ]; then
     # Update prefix
     export WINEARCH="$(arch_select)"
+    # Avoid symlinks
+    "$BIN_WINETRICKS" sandbox
+    # Leave the root drive binding
+    ln -sfT / "$WINEPREFIX/dosdevices/z:"
+    # Smooth fonts
     "$BIN_WINETRICKS" fontsmooth=rgb
   fi
 
