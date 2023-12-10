@@ -59,11 +59,11 @@ function _fetch_wine()
   local path_winetricks="AppDir/usr/bin/winetricks"
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     { sed -E 's/^\s+://' | tee "$path_winetricks" &>/dev/null; } <<-"END"
-    :  #!/usr/bin/env bash
+    :#!/usr/bin/env bash
     :
-    :  SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+    :SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
     :
-    :  PATH="$PATH:/opt/wine/bin" "$SCRIPT_DIR"/wine fim-exec winetricks "$@"
+    :PATH="$PATH:/opt/wine/bin" "$SCRIPT_DIR"/wine fim-exec winetricks "$@"
 		END
   else
     ln -sf wine AppDir/usr/bin/winetricks
@@ -479,7 +479,7 @@ function runner_create_flatimage()
    :
    :# Exports
    :export DIR_CALL="\$FIM_DIR_BINARY"
-   :export BIN_WINE="/fim/wine.sh"
+   :export BIN_WINE="/fim/scripts/wine.sh"
    :
    :# Define configuration directory path
    :export CFGDIR="\$FIM_DIR_BINARY/.\$FIM_FILE_BINARY.config"
