@@ -4,7 +4,7 @@
 
 # GameImage - FlatImage / AppImage Game Packer
 
-- [GameImage - AppImage Game Packer](#gameimage---appimage-game-packer)
+- [GameImage - FlatImage / AppImage Game Packer](#gameimage---flatimage-/-appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
   - [Showcase](#showcase)
   - [Graphical User Interface (GUI)](#graphical-user-interface-gui)
@@ -25,9 +25,8 @@
       - [Select method of packaging](#select-method-of-packaging)
       - [Select Wine Distribution](#select-wine-distribution)
     - [Emulator Specific](#emulator-specific)
-      - [Configure the emulator bundled inside the appimage](#configure-the-emulator-bundled-inside-the-appimage)
-      - [Make the AppImage use the global configuration directory](#make-the-appimage-use-the-global-configuration-directory)
-      - [Test the emulator inside the appimage](#test-the-emulator-inside-the-appimage)
+      - [Configure the emulator bundled inside the image](#configure-the-emulator-bundled-inside-the-image)
+      - [Test the emulator inside the image](#test-the-emulator-inside-the-image)
   - [Examples](#examples)
   - [Tutorial on how to show icons for generated AppImages](#tutorial-on-how-to-show-icons-for-generated-appimages)
 
@@ -42,13 +41,14 @@ Advantages:
 
 - [x] Simplicity:
   - [x] No need to install an emulator or wine to run your games,
-      they are downloaded as appimages and packaged with the game.
+      they are downloaded as images and packaged with the game.
   - [x] Each game config/saves are in the same folder as the `flatimage`/`appimage` by
       default (it can be changed to use global ~/.config). Which simplifies
       backups.
 - [x] Usability: get your game running with a double click on a fresh linux
     install, no dependencies required.
-- [x] Storage: Smaller file sizes than loose files, since appimage uses squashfs.
+- [x] Storage: Smaller file sizes than loose files, since the images uses
+    squashfs/dwarfs.
 
 ![](doc/not-aidan-tutorial.mp4){width=1000px}
 
@@ -86,11 +86,19 @@ Files displayed on the `thunar` file manager.
 
 ### GUI Installer
 
-<img src="doc/example-gui.png"  width="1000">
+GameImage comes with a GUI installer
+
+<img src="doc/gui-installer-1.png"  width="400">
+<img src="doc/gui-installer-2.png"  width="400">
+<img src="doc/gui-installer-3.png"  width="400">
 
 ### GUI Launcher
 
-<img src="doc/example-gui-launcher.png"  width="1000">
+After a GameImage is created, it has a built-in launcher to configure your games
+before launching. In the latest version it also supports emulators.
+
+<img src="doc/gui-launcher-1.png"  width="250">
+<img src="doc/gui-launcher-2.png"  width="250">
 
 ## Dependencies
 
@@ -196,7 +204,7 @@ saved in `.my-cool-game.AppImage/config.yml`. Avaliable aliases are:
 * `{wine}`: Path to wine binary included inside the appimage
 * `{exec}`: Basename of the default executable
 * `{here}`: Directory from which the appimage is launched.
-* `{appd}`: AppImage AppDir.
+* `{appd}`: AppImage mount directory.
 
 Examples:
 
@@ -238,21 +246,21 @@ The key differences are:
 
 The `GIMG_PKG_METHOD` option defines the packaging method, options are:
 
-1. `overlayfs` : Inside the appimage, writeable with overlayfs. `[default, recommended]`
-1. `dynamic`   : Inside the appimage, writeable.
-1. `unionfs`   : Inside the appimage, writeable with unionfs.
-1. `copy`      : Inside the appimage, read-only. 
-1. `prefix`    : Outside the AppImage (in a hidden folder called `.my-game.[flatimage,AppImage].config`).
+1. `overlayfs` : Inside the image, writeable with overlayfs. `[default, recommended]`
+1. `dynamic`   : Inside the image, writeable.
+1. `unionfs`   : Inside the image, writeable with unionfs.
+1. `copy`      : Inside the image, read-only. 
+1. `prefix`    : Outside the image (in a hidden folder called `.my-game.[flatimage,AppImage].config`).
 
-`[1,2]` Packs everything inside the appimage, the game can write to its own
+`[1,2]` Packs everything inside the image, the game can write to its own
 directory.
 
-`[3]` Packs everything inside the appimage, read-only (might not work for some
-games). Copies the prefix to `.my-game.[flatimage,AppImage].config` on first execution, only
+`[3]` Packs everything inside the image, read-only (might not work for some
+games). Copies the prefix to `.my-game.[fim,AppImage].config` on first execution, only
 the prefix, not the game files (which are still compressed and read-only inside
 the package).
 
-`[4]` The software is moved to `.my-game.[flatimage,AppImage].config`, the appimage acts
+`[4]` The software is moved to `.my-game.[fim,AppImage].config`, the image acts
 as a launcher.
 
 Example:
@@ -270,7 +278,7 @@ Default distribution is [ge](https://github.com/ruanformigoni/wine). Available a
 * vaniglia
 * soda
 
-To change it, export the variable before running the appimage, e.g:
+To change it, export the variable before running the image, e.g:
 
 ```bash
 export GIMG_WINE_DIST=soda
@@ -278,7 +286,7 @@ export GIMG_WINE_DIST=soda
 
 ### Emulator Specific
 
-#### Configure the emulator bundled inside the appimage
+#### Configure the emulator bundled inside the image
 
 ```
 my-cool-game.AppImage --config
@@ -290,13 +298,7 @@ Change the `global` settings, and it will only apply to the game in the
 In the case of wine if you pass any parameters, they'll be executed as
 `wine args...`
 
-#### Make the AppImage use the global configuration directory
-
-Include an extra `.` in the extension to use `~/.config`:
-
-From `my-cool-game.AppImage` to `my-cool-game..AppImage`
-
-#### Test the emulator inside the appimage
+#### Test the emulator inside the image
 
 You can also pass any arguments to the emulator directly:
 
