@@ -26,13 +26,12 @@ function _fetch_wine()
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
-    fi < <("$GIMG_SCRIPT_DIR"/busybox wget -q -O - "https://gitlab.com/api/v4/projects/45732205/releases/Continuous" |
+    fi < <(_fetch_stdout "https://gitlab.com/api/v4/projects/45732205/releases/Continuous" |
         "$GIMG_SCRIPT_DIR"/jq -e -r '.assets.links.[].direct_asset_url | match("'".*$GIMG_WINE_DIST.*"'").string')
   else
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
-    fi < <("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/ruanformigoni/wine/releases | 
+    fi < <(_fetch_stdout "https://api.github.com/repos/ruanformigoni/wine/releases" | 
       "$GIMG_SCRIPT_DIR"/jq -e -r '.[].assets.[].browser_download_url | match(".*wine-'"$GIMG_WINE_DIST"'.*x86_64.AppImage").string | select (.!=null)')
   fi
 

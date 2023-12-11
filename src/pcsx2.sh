@@ -22,13 +22,11 @@ function pcsx2_download()
   local url
 
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/flatimage/flatimage-pcsx2/releases/latest 2>&1 |
+    url="$(_fetch_stdout "https://api.github.com/repos/flatimage/flatimage-pcsx2/releases/latest" |
       jq -r ".assets.[0].browser_download_url")"
   else
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/PCSX2/pcsx2/releases 2>&1 |
-      grep -o "https://.*\.AppImage" | sort -V | tail -n1)"
+    url="$(_fetch_stdout "https://api.github.com/repos/PCSX2/pcsx2/releases" \
+      | jq -r ".[0].assets.[0].browser_download_url")"
   fi
 
   msg "pcsx2: ${url}"

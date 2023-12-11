@@ -22,13 +22,11 @@ function yuzu_download()
   local url
 
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/flatimage/flatimage-yuzu/releases/latest 2>&1 |
+    url="$(_fetch_stdout https://api.github.com/repos/flatimage/flatimage-yuzu/releases/latest |
       jq -r ".assets.[0].browser_download_url")"
   else
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases 2>&1 |
-      grep -o "https://.*\.AppImage" | sort | tail -n1)"
+    url="$(_fetch_stdout https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases |
+      jq -r ".[0].assets.[0].browser_download_url")"
   fi
 
   msg "yuzu: ${url}"

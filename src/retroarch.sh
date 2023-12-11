@@ -23,9 +23,8 @@ function retroarch_download()
 
   # Get retroarch url
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/flatimage/flatimage-retroarch/releases/latest 2>&1 |
-      jq -r ".assets.[0].browser_download_url")"
+    url="$(_fetch_stdout "https://api.github.com/repos/flatimage/flatimage-retroarch/releases/latest" \
+      | jq -r ".assets.[0].browser_download_url")"
   else
     url="https://buildbot.libretro.com/nightly/linux/x86_64/RetroArch.7z"
   fi
@@ -39,7 +38,7 @@ function retroarch_download()
       # AppImage requires additional patching to avoid crashes
 
       # Get AppImage of retroarch
-      "$GIMG_SCRIPT_DIR"/busybox wget "$url"
+      _fetch "RetroArch.7z" "$url"
 
       # Extract and move
       "$GIMG_SCRIPT_DIR"/7zz x "RetroArch.7z"

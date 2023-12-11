@@ -23,13 +23,11 @@ function rpcs3_download()
   local url
 
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/flatimage/flatimage-rpcs3/releases/latest 2>&1 |
-      jq -r ".assets.[0].browser_download_url")"
+    url="$(_fetch_stdout "https://api.github.com/repos/flatimage/flatimage-rpcs3/releases/latest" \
+      | jq -r ".assets.[0].browser_download_url")"
   else
-    url="$("$GIMG_SCRIPT_DIR"/busybox wget -q --header="Accept: application/vnd.github+json" -O - \
-      https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest 2>&1 |
-      grep -o "https://.*\.AppImage")"
+    url="$(_fetch_stdout "https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest" \
+      | jq -r ".assets.[0].browser_download_url")"
   fi
 
   msg "rpcs3: ${url}"
