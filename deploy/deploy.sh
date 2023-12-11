@@ -32,7 +32,7 @@ staticx \
   -l "/lib/x86_64-linux-gnu/libxkbfile.so.1" \
   -l "/lib/x86_64-linux-gnu/libxklavier.so.16" \
   -l "/lib/x86_64-linux-gnu/libxml2.so.2" \
-  ./gui/wizard/target/release/gameimage-install-gui build/AppDir/usr/bin/gui
+  ./gui/wizard/target/release/gameimage-install-gui build/AppDir/usr/bin/gui-installer
 
 # Compile launcher
 cd gui/launcher && cargo build --release
@@ -54,7 +54,7 @@ staticx \
   -l "/lib/x86_64-linux-gnu/libxkbfile.so.1" \
   -l "/lib/x86_64-linux-gnu/libxklavier.so.16" \
   -l "/lib/x86_64-linux-gnu/libxml2.so.2" \
-  ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher
+  ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/gui-launcher
 
 # Include shared version
 cp ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher-shared
