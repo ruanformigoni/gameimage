@@ -32,6 +32,8 @@ export GIMG_CLI="${GIMG_CLI#"${GIMG_GUI}"}"
 export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-flatimage}"
 # # Install location for wine applications (overlayfs/unionfs/readonly/prefix)
 export GIMG_PKG_METHOD="${GIMG_PKG_METHOD:-overlayfs}"
+# # Make bundled executables available in PATH
+export PATH="$GIMG_SCRIPT_DIR:$PATH"
 
 GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
