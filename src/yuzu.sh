@@ -26,7 +26,7 @@ function yuzu_download()
       jq -r ".assets.[0].browser_download_url")"
   else
     url="$(_fetch_stdout https://api.github.com/repos/yuzu-emu/yuzu-mainline/releases |
-      jq -r ".[0].assets.[0].browser_download_url")"
+      jq -r ".[0].assets.[3].browser_download_url")"
   fi
 
   msg "yuzu: ${url}"

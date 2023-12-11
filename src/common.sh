@@ -235,10 +235,10 @@ function _fetch()
 
   # Fetch from link
   (
-    exec 1> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line"; done)
-    exec 2> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line" >&2; done)
-    aria2c --download-result=hide --summary-interval=0 --continue=true \
-      --auto-file-renaming=false -x4 -o "$name" "$url"
+    exec 1> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line"; done)
+    exec 2> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line" >&2; done)
+    aria2c --download-result=hide --summary-interval=5 --continue=true \
+      --show-console-readout=false --auto-file-renaming=false -x4 -o "$name" "$url"
   )
 
   # Make executable
@@ -259,9 +259,9 @@ function _fetch_stdout()
 
   # Fetch from link
   (
-    exec 1> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line"; done)
-    exec 2> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line" >&2; done)
-    eval "aria2c --download-result=hide --summary-interval=0 $args -d /tmp -o aria2c-stdout \"$url\" 1>&2"
+    exec 1> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line"; done)
+    exec 2> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line" >&2; done)
+    eval "aria2c --show-console-readout=false --download-result=hide --summary-interval=5 $args -d /tmp -o aria2c-stdout \"$url\" 1>&2"
   )
 
   cat "$stdout"
