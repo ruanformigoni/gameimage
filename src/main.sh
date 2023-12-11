@@ -1,4 +1,4 @@
-#!/usr/bin/env -S bash -euET -o pipefail -O inherit_errexit
+#!/usr/bin/env bash
 
 ######################################################################
 # @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
@@ -88,7 +88,7 @@ function main()
   fi
   
   if [[ "$#" -eq 0 ]]; then
-    "$GIMG_SCRIPT_DIR"/gui
+    "$GIMG_SCRIPT_DIR"/gui-installer
     exit
   elif [[ "$*" = "--version" ]]; then
     echo "TRUNK"

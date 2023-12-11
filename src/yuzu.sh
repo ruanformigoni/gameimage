@@ -142,7 +142,7 @@ function runner_create()
     { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
       :export GIMG_LAUNCHER_NAME="$name"
       :export GIMG_LAUNCHER_IMG="$RUNNER_LAUNCHER_IMG"
-      :gameimage-launcher
+      :gui-launcher
       :
 		END
   fi
@@ -195,7 +195,7 @@ function build_flatimage()
   # Copy launcher
   # shellcheck disable=2016
   "$bin_pkg" fim-root mkdir -p /fim/shared
-  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher-shared" '/fim/shared/gameimage-launcher'
+  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/gui-launcher" '/fim/shared/gui-launcher'
 
   # Set HOME dir
   # shellcheck disable=2016
