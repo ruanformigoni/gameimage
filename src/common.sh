@@ -231,15 +231,40 @@ function _fetch()
   local name="$1"
   local url="$2"
 
-  msg "$name: $url"
+  msg "Download $name: $url"
 
-  # Get appimagetool
-  if [ ! -f "./$name" ]; then
-    "$GIMG_SCRIPT_DIR"/busybox wget -O  "$name" "$url"
-  fi
+  # Fetch from link
+  (
+    exec 1> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line"; done)
+    exec 2> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line" >&2; done)
+    aria2c --download-result=hide --summary-interval=0 --continue=true \
+      --auto-file-renaming=false -x4 -o "$name" "$url"
+  )
 
   # Make executable
   chmod +x "$name"
+}
+
+# Fetches a url and dumps to stdout
+function _fetch_stdout()
+{
+  local url="$1"; shift
+  local args="$*"
+  local stdout="/tmp/aria2c-stdout"
+
+  msg "Fetch $url"
+
+  # Remove previous output
+  rm -f "$stdout"
+
+  # Fetch from link
+  (
+    exec 1> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line"; done)
+    exec 2> >(while IFS= read -r line; do sed '/NOTICE\|^$/d' <<< "$line" >&2; done)
+    eval "aria2c --download-result=hide --summary-interval=0 $args -d /tmp -o aria2c-stdout \"$url\" 1>&2"
+  )
+
+  cat "$stdout"
 }
 
 # Fetches appimagetool to current dir
