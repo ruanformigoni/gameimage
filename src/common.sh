@@ -124,7 +124,7 @@ function param_validate()
   local required="$3"
 
   if [ -d "$src_dir/$directory" ]; then
-    read -r query <<< "$(find "$src_dir/$directory" -regextype posix-extended -iregex "$pattern" -print -quit)"
+    read -r query <<< "$(find "$src_dir/$directory" -regex "$pattern" -print -quit)"
     [ -f "$query" ] || { die "Pattern '$pattern' not found in directory $directory"; }
     msg "Selected $directory: $query"
     echo "$query"
@@ -173,11 +173,11 @@ function params_validate()
 
   local core="$(param_validate "core" ".*\.so")"
 
-  local cover="$(param_validate "icon" ".*(\.jpg|\.png|\.svg)" "required")"
+  local cover="$(param_validate "icon" ".*\(\.jpg\|\.png\|\.svg\)" "required")"
 
-  local bios="$(param_validate "bios" ".*(\.bin|\.pup|\.zip|\.7z)")"
+  local bios="$(param_validate "bios" ".*\(\.bin\|\.pup\|\.zip\|\.7z\)")"
 
-  local keys="$(param_validate "keys" ".*(\.zip|\.7z)")"
+  local keys="$(param_validate "keys" ".*\(\.zip\|\.7z\)")"
 
   # Get name and normalize to dash separated lowercase
   local name="${1// /-}"
