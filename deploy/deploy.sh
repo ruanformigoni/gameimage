@@ -84,6 +84,13 @@ mv -f 7zz build/AppDir/usr/bin/7zz
 wget -q --show-progress --progress=dot:mega "https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox"
 mv -f busybox build/AppDir/usr/bin/busybox
 
+# Fetch fd
+basename_fd="fd-v8.7.1-x86_64-unknown-linux-musl"
+wget -q --show-progress --progress=dot:mega "https://github.com/sharkdp/fd/releases/download/v8.7.1/${basename_fd}.tar.gz"
+tar -xf "${basename_fd}.tar.gz"
+mv -f "${basename_fd}/fd" build/AppDir/usr/bin/fd
+rm -rf ./fd-*
+
 # Copy files
 cp -r ./src/* build/AppDir/usr/bin
 cp    ./doc/gameimage.png build/AppDir/

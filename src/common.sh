@@ -124,7 +124,7 @@ function param_validate()
   local required="$3"
 
   if [ -d "$src_dir/$directory" ]; then
-    read -r query <<< "$(find "$src_dir/$directory" -regex "$pattern" -print -quit)"
+    read -r query <<< "$(fd -i --max-results=1 "$pattern" "$src_dir/$directory")"
     [ -f "$query" ] || { die "Pattern '$pattern' not found in directory $directory"; }
     msg "Selected $directory: $query"
     echo "$query"
@@ -152,7 +152,7 @@ function params_validate()
   else
     declare -a files
 
-    readarray -t files < <(find "$src_dir/rom" -maxdepth 1 -type f)
+    readarray -t files < <(fd . "$src_dir/rom" --max-depth 1 --type f)
     [[ "${#files[@]}" -ne 0 ]] || { die "No file found in rom directory $src_dir/rom"; }
 
     if [[ "${#files[@]}" -eq 1 ]]; then
@@ -173,11 +173,11 @@ function params_validate()
 
   local core="$(param_validate "core" ".*\.so")"
 
-  local cover="$(param_validate "icon" ".*\(\.jpg\|\.png\|\.svg\)" "required")"
+  local cover="$(param_validate "icon" ".*(\.jpg|\.png|\.svg)" "required")"
 
-  local bios="$(param_validate "bios" ".*\(\.bin\|\.pup\|\.zip\|\.7z\)")"
+  local bios="$(param_validate "bios" ".*(.bin|\.pup|\.zip|\.7z)")"
 
-  local keys="$(param_validate "keys" ".*\(\.zip\|\.7z\)")"
+  local keys="$(param_validate "keys" ".*(\.zip|\.7z)")"
 
   # Get name and normalize to dash separated lowercase
   local name="${1// /-}"
