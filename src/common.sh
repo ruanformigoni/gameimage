@@ -359,6 +359,10 @@ function build_flatimage()
   if [[ "$GIMG_PKG_METHOD" = "overlayfs" ]]; then
     "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" "/prefix.dwarfs"
+    # BUG: Wait for unmount
+    # TODO: Investigate further
+    while lsof -t "$BIN_PKG" &>/dev/null; do sleep 1; done
+    # Remove temporary prefix
     rm "$DIR_BUILD/prefix.dwarfs"
     # Set up /prefix overlay
     "$BIN_PKG" fim-config-set overlay.prefix "/prefix overlay"
