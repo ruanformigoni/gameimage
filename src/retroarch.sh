@@ -34,6 +34,8 @@ function retroarch_download()
 
     if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
       _fetch "AppDir/usr/bin/retroarch" "$url"
+      # Set home directory to build dir
+      ./AppDir/usr/bin/retroarch fim-config-set home "$DIR_SRC"
     else
       # AppImage requires additional patching to avoid crashes
 
@@ -232,6 +234,9 @@ function main()
   local core="${_FN_RET[3]}"
   local cover="${_FN_RET[4]}"
   local rom="${_FN_RET[5]}"
+
+  # Export dir src
+  export DIR_SRC="$dir"
 
   # Create dirs
   cd "$(dir_build_create "$dir")"

@@ -35,6 +35,10 @@ function rpcs3_download()
   # Get rpcs3
   if [ ! -f "AppDir/usr/bin/rpcs3" ]; then
     _fetch "AppDir/usr/bin/rpcs3" "$url"
+    if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+      # Set home directory to build dir
+      ./AppDir/usr/bin/rpcs3 fim-config-set home "$DIR_SRC"
+    fi
   fi
 }
 
@@ -182,6 +186,9 @@ function main()
   local bios="${_FN_RET[2]}"
   local core="${_FN_RET[3]}"
   local cover="${_FN_RET[4]}"
+
+  # Export dir src
+  export DIR_SRC="$dir"
 
   # Create dirs
   cd "$(dir_build_create "$dir")"

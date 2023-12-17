@@ -34,6 +34,10 @@ function pcsx2_download()
   # Get pcsx2
   if [ ! -f "AppDir/usr/bin/pcsx2" ]; then
     _fetch "AppDir/usr/bin/pcsx2" "$url"
+    if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+      # Set home directory to build dir
+      ./AppDir/usr/bin/pcsx2 fim-config-set home "$DIR_SRC"
+    fi
   fi
 }
 
@@ -192,6 +196,9 @@ function main()
   local core="${_FN_RET[3]}"
   local cover="${_FN_RET[4]}"
   local rom="${_FN_RET[5]}"
+
+  # Export dir src
+  export DIR_SRC="$dir"
 
   # Create dirs
   cd "$(dir_build_create "$dir")"
