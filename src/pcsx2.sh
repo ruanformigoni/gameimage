@@ -143,7 +143,10 @@ function build_flatimage()
   cp "$BUILD_DIR/AppDir/usr/bin/pcsx2" "$bin_pkg"
 
   # Compress game dir
-  "$bin_pkg" fim-exec mkdwarfs -f -i "$BUILD_DIR"/AppDir/app -o "$BUILD_DIR"/app.dwarfs
+  "$bin_pkg" fim-exec mkdwarfs -f \
+    -i "$BUILD_DIR"/AppDir/app \
+    -o "$BUILD_DIR"/app.dwarfs \
+    -l"$GIMG_COMPRESSION_LEVEL"
 
   # Include inside image
   "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs

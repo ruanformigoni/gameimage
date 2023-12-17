@@ -17,6 +17,7 @@
   - [Usage (Command Line)](#usage-command-line)
   - [Configuration](#configuration)
     - [Global](#global)
+      - [Compression level](#compression-level)
       - [Additional search paths (besides rom)](#additional-search-paths-besides-rom)
     - [Wine Specific](#wine-specific)
       - [Disable Launcher](#disable-launcher)
@@ -172,6 +173,17 @@ platform, `./gameimage.AppImage` displays the following example:
 Consider a AppImage named `my-cool-game.AppImage` for the examples below.
 
 ### Global
+
+#### Compression level
+
+You can configure the compression strength for flatimage, it is a value between
+0 (no compression) and 9 (maximum compression), e.g.:
+
+```bash
+export GIMG_COMPRESSION_LEVEL=4
+```
+
+The default is 4.
 
 #### Additional search paths (besides rom)
 

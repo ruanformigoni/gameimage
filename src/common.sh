@@ -357,7 +357,10 @@ function build_flatimage()
   [[ -f "$BIN_PKG" ]] || die "BIN_PKG is not a file"
 
   if [[ "$GIMG_PKG_METHOD" = "overlayfs" ]]; then
-    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-exec mkdwarfs -f \
+      -i "$DIR_BUILD/AppDir/app/wine" \
+      -o "$DIR_BUILD/prefix.dwarfs" \
+      -l"$GIMG_COMPRESSION_LEVEL"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" "/prefix.dwarfs"
     # BUG: Wait for unmount
     # TODO: Investigate further
@@ -374,10 +377,16 @@ function build_flatimage()
   elif [[ "$GIMG_PKG_METHOD" = "unionfs" ]]; then
     die "unionfs is currently not implemented for flatimage (use overlayfs instead)"
   elif [[ "$GIMG_PKG_METHOD" = "copy" ]]; then
-    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/wine" -o "$DIR_BUILD/prefix.dwarfs"
+    "$BIN_PKG" fim-exec mkdwarfs -f \
+      -i "$DIR_BUILD/AppDir/app/wine" \
+      -o "$DIR_BUILD/prefix.dwarfs" \
+      -l"$GIMG_COMPRESSION_LEVEL"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" /
     rm "$DIR_BUILD/prefix.dwarfs"
-    "$BIN_PKG" fim-exec mkdwarfs -i "$DIR_BUILD/AppDir/app/rom" -o "$DIR_BUILD/rom.dwarfs"
+    "$BIN_PKG" fim-exec mkdwarfs -f \
+      -i "$DIR_BUILD/AppDir/app/rom" \
+      -o "$DIR_BUILD/rom.dwarfs" \
+      -l"$GIMG_COMPRESSION_LEVEL"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/rom.dwarfs" /
     rm "$DIR_BUILD/rom.dwarfs"
   elif [[ "$GIMG_PKG_METHOD" = "prefix" ]]; then

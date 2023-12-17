@@ -32,6 +32,8 @@ export GIMG_CLI="${GIMG_CLI#"${GIMG_GUI}"}"
 export GIMG_PKG_TYPE="${GIMG_PKG_TYPE:-flatimage}"
 # # Install location for wine applications (overlayfs/unionfs/readonly/prefix)
 export GIMG_PKG_METHOD="${GIMG_PKG_METHOD:-overlayfs}"
+# # Compression level of dwarfs
+export GIMG_COMPRESSION_LEVEL="${GIMG_COMPRESSION_LEVEL:-4}"
 # # Make bundled executables available in PATH
 export PATH="$GIMG_SCRIPT_DIR:$PATH"
 
@@ -88,6 +90,9 @@ function main()
   else
     msg "Package type: $GIMG_PKG_TYPE"
   fi
+
+  # Export compression level for flatimage
+  export FIM_COMPRESSION_LEVEL="$GIMG_COMPRESSION_LEVEL"
   
   if [[ "$#" -eq 0 ]]; then
     "$GIMG_SCRIPT_DIR"/gui-installer
