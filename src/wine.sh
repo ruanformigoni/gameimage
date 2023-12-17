@@ -466,7 +466,7 @@ function runner_create_flatimage()
   "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/yq" "\$FIM_DIR_STATIC"
 
   # Launcher
-  "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/gui-launcher" "\$FIM_DIR_STATIC/gui-launcher"
+  "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/gui-launcher-shared" "\$FIM_DIR_STATIC/gui-launcher"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/gameimage.sh | sed -e 's/^/-- /'; } <<-END

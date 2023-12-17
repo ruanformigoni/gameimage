@@ -57,7 +57,7 @@ staticx \
   ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/gui-launcher
 
 # Include shared version
-cp ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/launcher-shared
+cp ./gui/launcher/target/release/gameimage-launcher build/AppDir/usr/bin/gui-launcher-shared
 
 # Fetch unionfs
 wget -q --show-progress --progress=dot:mega https://github.com/ruanformigoni/unionfs-fuse/releases/download/ebac73a/unionfs
