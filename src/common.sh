@@ -362,9 +362,6 @@ function build_flatimage()
       -o "$DIR_BUILD/prefix.dwarfs" \
       -l"$GIMG_COMPRESSION_LEVEL"
     "$BIN_PKG" fim-include-path "$DIR_BUILD/prefix.dwarfs" "/prefix.dwarfs"
-    # BUG: Wait for unmount
-    # TODO: Investigate further
-    while lsof -t "$BIN_PKG" &>/dev/null; do sleep 1; done
     # Remove temporary prefix
     rm "$DIR_BUILD/prefix.dwarfs"
     # Set up /prefix overlay
