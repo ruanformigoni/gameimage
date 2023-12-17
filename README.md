@@ -89,17 +89,14 @@ Files displayed on the `thunar` file manager.
 
 GameImage comes with a GUI installer
 
-<img src="doc/gui-installer-1.png"  width="400">
-<img src="doc/gui-installer-2.png"  width="400">
-<img src="doc/gui-installer-3.png"  width="400">
+<img src="doc/gui-installer-1.png"  width="400"><img src="doc/gui-installer-2.png"  width="400"><img src="doc/gui-installer-3.png"  width="400">
 
 ### GUI Launcher
 
 After a GameImage is created, it has a built-in launcher to configure your games
 before launching. In the latest version it also supports emulators.
 
-<img src="doc/gui-launcher-1.png"  width="250">
-<img src="doc/gui-launcher-2.png"  width="250">
+<img src="doc/gui-launcher-1.png"  width="250"><img src="doc/gui-launcher-2.png"  width="250">
 
 ## Dependencies
 
