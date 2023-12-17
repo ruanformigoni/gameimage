@@ -43,6 +43,8 @@ function _fetch_wine()
         # Fetch packages
         _fetch "wine" "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
         _fetch "opt.dwarfs" "$url"
+        # Set home directory to build dir
+        ./wine fim-config-set home "$DIR_SRC"
         # Merge flatimage with wine binaries
         ./wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
         # Remove downloaded wine binaries
@@ -624,6 +626,9 @@ function main()
   local name="${_FN_RET[0]}"
   local dir_src="${_FN_RET[1]}"
   local cover="${_FN_RET[4]}"
+
+  # Export dir src
+  export DIR_SRC="$dir_src"
 
   # Create & cd in build dir
   export DIR_BUILD="$(dir_build_create "$dir_src")"
