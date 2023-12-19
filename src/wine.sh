@@ -701,10 +701,13 @@ function main()
         local dir_installation="${_FN_RET[0]}"
         local basename_executable="${_FN_RET[1]}"
 
+        # Convert cover
+        ./imagemagick "$cover" "AppDir/${name}.png"
+
         if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
           # Copy cover
           "$BIN_WINE" fim-exec mkdir -p /fim/desktop-integration
-          "$BIN_WINE" fim-exec cp "$cover" /fim/desktop-integration/icon.png
+          "$BIN_WINE" fim-exec cp "AppDir/${name}.png" /fim/desktop-integration/icon.png
           # Define path to release package
           export BIN_PKG="$DIR_BUILD/${name}.${GIMG_PKG_TYPE}"
           # Copy wine to build dir
@@ -716,8 +719,6 @@ function main()
         elif [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
           # Create runner script
           runner_create "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
-          # Copy cover
-          ./imagemagick "$cover" "AppDir/${name}.png"
           # Create desktop entry
           desktop_entry_create "$name"
           # Build appimage
