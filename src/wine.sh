@@ -109,7 +109,7 @@ function wine_configure()
     if [ "$GIMG_INSTALL_DXVK" -eq 1 ]; then
       "$BIN_WINETRICKS" dxvk
     fi
-  elif _select_bool "Install dxvk for directx 9/10/11?" "Y"; then
+  elif _select_bool "Install dxvk for directx 9/10/11?" "N"; then
     "$BIN_WINETRICKS" dxvk
   fi
   ## VKD3D
@@ -117,7 +117,7 @@ function wine_configure()
     if [ "$GIMG_INSTALL_VKD3D" -eq 1 ]; then
       "$BIN_WINETRICKS" vkd3d
     fi
-  elif _select_bool "Install vkd3d for directx 12?" "Y"; then
+  elif _select_bool "Install vkd3d for directx 12?" "N"; then
     "$BIN_WINETRICKS" vkd3d
   fi
 
