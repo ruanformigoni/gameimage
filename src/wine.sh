@@ -18,7 +18,11 @@ GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && p
 source "$GIMG_SCRIPT_DIR/common.sh"
 
 # Default options for GIMG_WINE_DIST
-GIMG_WINE_DIST_VALUES="ge,caffe,vaniglia,soda"
+if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+  GIMG_WINE_DIST_VALUES="caffe,vaniglia,soda,ge,staging,tkg,osu-tkg"
+else
+  GIMG_WINE_DIST_VALUES="caffe,vaniglia,soda,ge,staging"
+fi
 
 # Get wine appimage and define wine alias
 function _fetch_wine()
@@ -27,7 +31,7 @@ function _fetch_wine()
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
     fi < <(_fetch_stdout "https://gitlab.com/api/v4/projects/45732205/releases/Continuous" |
-        "$GIMG_SCRIPT_DIR"/jq -e -r '.assets.links.[].direct_asset_url | match("'".*$GIMG_WINE_DIST.*"'").string')
+        "$GIMG_SCRIPT_DIR"/jq -e -r '.assets.links.[].direct_asset_url | match("'".*wine/continuous/$GIMG_WINE_DIST-.*"'").string')
   else
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"

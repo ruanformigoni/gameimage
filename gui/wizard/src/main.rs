@@ -287,6 +287,11 @@ impl Gui
     let mut group = Group::default().with_size(self.width, self.height);
     group.set_frame(FrameType::FlatBox);
 
+    // Check if is flatimage {{{
+    let is_flatimage : bool = env::var("GIMG_PKG_TYPE").is_ok_and(|e| e == "flatimage");
+
+    // }}}
+
     // frame_top {{{
     let frame_top = self.make_frame(self.width, self.height);
     let mut header = Output::default()
@@ -298,6 +303,10 @@ impl Gui
     // }}}
 
     // frame_content {{{
+
+    //
+    // Create layout
+    //
     let width_btn = 120;
     let height_btn = 30;
 
@@ -329,20 +338,30 @@ impl Gui
       btn
     };
 
-    // Create labels / menubuttons
+    // Select the package type
     let mut btn_package_type = f_make_entry_menubutton("Package Type", 1);
     btn_package_type.add_choice("overlayfs|unionfs|readonly|prefix");
-    let hash_package_type : HashSet<&str> = vec!["overlayfs", "unionfs", "readonly", "prefix"].into_iter().collect();
+    let hash_package_type : HashSet<&str> = vec!["overlayfs", "unionfs", "copy", "prefix"].into_iter().collect();
 
+    // Select the wine dist
     let mut btn_wine_dist = f_make_entry_menubutton("Wine Distribution", 2);
-    btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda");
-    let hash_wine_dist : HashSet<&str> = vec!["ge","staging","caffe","vaniglia","soda"].into_iter().collect();
+
+    if is_flatimage
+    {
+      btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda|tkg|osu-tkg");
+    } // if
+    else
+    {
+      btn_wine_dist.add_choice("ge|staging|caffe|vaniglia|soda");
+    } // else
 
     let mut btn_check_dxvk = f_make_entry_checkbutton("Install dxvk for directx 9/10/11?", 3);
 
     let mut btn_check_vkd3d = f_make_entry_checkbutton("Install vkd3d for directx 12?", 4);
 
+    //
     // Initialize defaults
+    //
     let f_initialize_entry = |var: &str, default: &str, hash: HashSet<&str>, btn: &mut MenuButton|
     {
       match env::var(var)
@@ -362,18 +381,37 @@ impl Gui
       }
     };
 
-    f_initialize_entry("GIMG_PKG_TYPE", "overlayfs", hash_package_type, &mut btn_package_type);
+    f_initialize_entry("GIMG_PKG_METHOD", "overlayfs", hash_package_type, &mut btn_package_type);
 
-    f_initialize_entry("GIMG_WINE_DIST", "ge", hash_wine_dist, &mut btn_wine_dist);
+    if is_flatimage
+    {
+      f_initialize_entry("GIMG_WINE_DIST"
+        , "ge"
+        , vec!["ge","staging","caffe","vaniglia","soda","tkg","osu-tkg"]
+          .into_iter()
+          .collect()
+        , &mut btn_wine_dist);
+    } // if
+    else
+    {
+      f_initialize_entry("GIMG_WINE_DIST"
+        , "ge"
+        , vec!["ge","staging","caffe","vaniglia","soda"]
+          .into_iter()
+          .collect()
+        , &mut btn_wine_dist);
+    } // else
 
     env::set_var("GIMG_INSTALL_DXVK", "0");
 
     env::set_var("GIMG_INSTALL_VKD3D", "0");
 
+    //
     // Set callbacks
+    //
     btn_package_type.set_callback(|e|
     {
-      e.choice().as_ref().map(|f| { e.set_label(f); env::set_var("GIMG_PKG_TYPE", f); });
+      e.choice().as_ref().map(|f| { e.set_label(f); env::set_var("GIMG_PKG_METHOD", f); });
     });
 
     btn_wine_dist.set_callback(|e|
@@ -721,6 +759,6 @@ fn main() {
   let _gui = Gui::new().frame_switcher();
 } // fn: main }}}
 
-// cmd: !cargo build --release
+// cmd: !GIMG_PKG_TYPE=flatimage cargo run --release
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
