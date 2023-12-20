@@ -256,7 +256,6 @@ The key differences are:
 The `GIMG_PKG_METHOD` option defines the packaging method, options are:
 
 1. `overlayfs` : Inside the image, writeable with overlayfs. `[default, recommended]`
-1. `dynamic`   : Inside the image, writeable.
 1. `unionfs`   : Inside the image, writeable with unionfs.
 1. `copy`      : Inside the image, read-only. 
 1. `prefix`    : Outside the image (in a hidden folder called `.my-game.[flatimage,AppImage].config`).
@@ -281,11 +280,13 @@ export GIMG_PKG_METHOD=prefix
 #### Select Wine Distribution
 
 Default distribution is [ge](https://github.com/ruanformigoni/wine). Available are:
-* ge
-* staging
 * caffe
 * vaniglia
 * soda
+* ge
+* staging
+* tkg
+* osu-tkg
 
 To change it, export the variable before running the image, e.g:
 
