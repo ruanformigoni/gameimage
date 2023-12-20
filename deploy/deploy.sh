@@ -91,6 +91,9 @@ tar -xf "${basename_fd}.tar.gz"
 mv -f "${basename_fd}/fd" build/AppDir/usr/bin/fd
 rm -rf ./fd-*
 
+# Fetch aria2c
+wget -q --show-progress --progress=dot:mega "https://github.com/ruanformigoni/aria2-static-musl/releases/download/2d7f402/aria2c" -o build/AppDir/usr/bin/aria2c
+
 # Copy files
 cp -r ./src/* build/AppDir/usr/bin
 cp    ./doc/gameimage.png build/AppDir/
