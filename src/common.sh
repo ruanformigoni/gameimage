@@ -277,7 +277,8 @@ function _fetch_appimagetool()
 # Fetches imagemagick to current dir
 function _fetch_imagemagick()
 {
-  local url="$(_fetch_stdout "https://api.github.com/repos/ImageMagick/ImageMagick/releases/latest" \
+  local url="$(_fetch_stdout \
+    "https://api.github.com/repos/ruanformigoni/imagemagick-static-musl/releases/latest" \
     | jq -e -r '.assets.[0].browser_download_url')"
 
   _fetch "imagemagick" "$url"
