@@ -628,6 +628,7 @@ function main()
   params_validate "wine" "$@"
 
   local name="${_FN_RET[0]}"
+  name="${name// /-}"
   local dir_src="${_FN_RET[1]}"
   local cover="${_FN_RET[4]}"
 
@@ -704,18 +705,23 @@ function main()
         # Convert cover
         ./imagemagick "$cover" "AppDir/${name}.png"
 
+        # Generated image name
+        local name_image="${name}.${GIMG_PKG_TYPE}"
+
         if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
           # Copy cover
           "$BIN_WINE" fim-exec mkdir -p /fim/desktop-integration
           "$BIN_WINE" fim-exec cp "AppDir/${name}.png" /fim/desktop-integration/icon.png
           # Define path to release package
-          export BIN_PKG="$DIR_BUILD/${name}.${GIMG_PKG_TYPE}"
+          export BIN_PKG="$DIR_BUILD/$name_image"
           # Copy wine to build dir
           cp "$BIN_WINE" "$BIN_PKG"
           # Compress & include prefix 
           build_flatimage
           # Create runner script
           runner_create_flatimage "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
+          # Print finished status
+          msg "Created '$BIN_PKG'!"
         elif [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
           # Create runner script
           runner_create "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
@@ -723,9 +729,12 @@ function main()
           desktop_entry_create "$name"
           # Build appimage
           build_appimage
-          # Rename AppImage file
-          [ -f "${name}.AppImage" ] && rm "${name}.AppImage"
-          mv ./*.AppImage "${name// /-}.AppImage"
+          # Remove if exists
+          rm -f "$name_image"
+          # Rename created image
+          mv ./*.AppImage "$name_image"
+          # Print finished status
+          msg "Created '$name_image'!"
         else
           die "Invalid package type '$GIMG_PKG_TYPE'"
         fi
