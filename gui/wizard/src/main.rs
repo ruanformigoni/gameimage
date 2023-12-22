@@ -530,8 +530,7 @@ impl Gui
       , clone mut btn_send, clone input_cmd, |e|
     {
       let mut btn_build = e.clone();
-      let env_appdir = env::var("APPDIR").unwrap_or(String::from("."));
-      let cmd_main = format!("{}{}{}", env_appdir, "/usr/bin/", "main.sh");
+      let cmd_main = "env LD_PRELOAD='' main.sh";
 
       btn_build.deactivate();
       btn_prev.deactivate();
