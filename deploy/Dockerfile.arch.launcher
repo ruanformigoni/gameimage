@@ -1,0 +1,22 @@
+FROM archlinux:latest
+
+# Install dependencies
+RUN pacman -Sy
+RUN pacman -S --noconfirm base-devel git cmake gtk3
+
+# Setup rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH "/root/.cargo/bin:$PATH"
+
+# Fetch sources
+RUN git clone https://gitlab.com/formigoni/gameimage.git
+
+# Enter src dir
+WORKDIR gameimage
+
+# Compile
+RUN cd gui/launcher && cargo build --release
+
+# Make dist
+RUN mkdir /dist
+RUN cp ./gui/launcher/target/release/launcher /dist/launcher

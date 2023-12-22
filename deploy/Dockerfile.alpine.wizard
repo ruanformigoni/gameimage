@@ -1,0 +1,39 @@
+FROM alpine:latest
+
+# Switch to edge
+RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/main/ > /etc/apk/repositories
+RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories
+RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
+
+# Install packages
+RUN apk update
+RUN apk add git wget curl patchelf py3-pip pipx file build-base cmake \
+  fuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev pango \
+  pango-dev libayatana-appindicator libayatana-appindicator-dev gtk+3.0-dev \
+  bash fuse fuse3 zlib-static glib-static cairo-static lddtree
+
+# Symlink compilers
+RUN ln -sfT /usr/bin/gcc /usr/bin/musl-gcc
+RUN ln -sfT /usr/bin/g++ /usr/bin/musl-g++
+
+# Compile as shared libraries
+ENV RUSTFLAGS='-C target-feature=-crt-static'
+
+# Install rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+# Update env
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Fetch sources
+RUN git clone https://gitlab.com/formigoni/gameimage.git
+
+# Enter src dir
+WORKDIR gameimage
+
+# Compile gui & launcher
+RUN cd gui/wizard && cargo build --release --target=x86_64-unknown-linux-musl
+
+# Make dist
+RUN mkdir /dist
+RUN cp ./gui/wizard/target/x86_64-unknown-linux-musl/release/wizard /dist/wizard
