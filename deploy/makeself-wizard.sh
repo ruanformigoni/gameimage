@@ -48,12 +48,12 @@ cp "$PATH_BINARY" "$PATH_OUT"
 patchelf --set-interpreter "$PATH_INTER"/ld-musl-x86_64.so.1 "$PATH_OUT/$FILE_BINARY"
 patchelf --set-rpath '$ORIGIN' "$PATH_OUT/$FILE_BINARY"
 
+# Binary patch /usr out of everything
+sed -i 's|/usr|----|g' "$PATH_OUT"/*
+
+
 # Copy interpreter
 cp /lib/ld-musl-x86_64.so.1 "$PATH_OUT"
-
-# Compile preloader sandbox
-gcc -fPIC -shared -o preload-sandbox.so preload-sandbox.c -ldl
-cp preload-sandbox.so "$PATH_OUT"
 
 # Setup script
 { cat | tee "$PATH_OUT"/start.sh; } <<-"END"
@@ -72,8 +72,10 @@ END
 
 chmod +x "$PATH_OUT"/start.sh
 
-# Binary patch /usr out of everything
-sed -i 's|/usr|----|g' "$PATH_OUT"/*
+# Compile preloader sandbox
+gcc -fPIC -shared -o preload-sandbox.so preload-sandbox.c -ldl
+patchelf --set-rpath '$ORIGIN' preload-sandbox.so
+cp ./preload-sandbox.so "$PATH_OUT"
 
 # Package
 makeself.sh --xz "$PATH_OUT" "${FILE_BINARY%%.sh}.run" "$FILE_BINARY" './start.sh'
