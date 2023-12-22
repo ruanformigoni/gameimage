@@ -1,5 +1,5 @@
 [package]
-name = "gameimage-install-gui"
+name = "wizard"
 version = "0.1.0"
 edition = "2021"
 
