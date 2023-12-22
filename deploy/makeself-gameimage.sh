@@ -89,8 +89,14 @@ wget -q --show-progress --progress=dot:mega "https://github.com/ruanformigoni/co
 tar -xf "coreutils-x86_64.tar.xz" -C"$BIN_DIR" --strip-components=1
 rm "coreutils-x86_64.tar.xz"
 
-# Fetch gnu tools
-cp /home/ruan/Repositories/gnu-static-musl/dist/* "$BIN_DIR"
+# Fetch sed
+_fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/sed" "$BIN_DIR"/sed
+
+# Fetch grep
+_fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/grep" "$BIN_DIR"/grep
+
+# Fetch tar
+_fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/tar" "$BIN_DIR"/tar
 
 # Copy files
 cp -r ./src/* "$BUILD_DIR"/app/bin
