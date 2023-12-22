@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/tmp/gameimage/bin/bash
 
 ######################################################################
 # @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/tmp/gameimage/bin/bash
 
 ######################################################################
 # @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
@@ -256,7 +256,7 @@ function runner_create()
   cp "${GIMG_SCRIPT_DIR}/yq" "AppDir/usr/bin"
 
   # Launcher
-  cp "${GIMG_SCRIPT_DIR}/gui-launcher" "AppDir/usr/bin"
+  cp "${GIMG_SCRIPT_DIR}/launcher" "AppDir/usr/bin"
 
   if ! _select_bool "Include wine inside the appimage?" "N"; then
     # Move from default location to build dir
@@ -399,7 +399,7 @@ function runner_create()
     :
     :# Start application
     :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
-    :  LAUNCHER="\$APPDIR/usr/bin/gui-launcher"
+    :  LAUNCHER="\$APPDIR/usr/bin/launcher"
     :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
     :  export GIMG_LAUNCHER_NAME="$name"
     :  export GIMG_LAUNCHER_IMG="\$APPDIR/.DirIcon"
@@ -470,7 +470,7 @@ function runner_create_flatimage()
   "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/yq" "\$FIM_DIR_STATIC"
 
   # Launcher
-  "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/gui-launcher-shared" "\$FIM_DIR_STATIC/gui-launcher"
+  "$BIN_PKG" fim-root cp "${GIMG_SCRIPT_DIR}/launcher" "\$FIM_DIR_STATIC/launcher"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/gameimage.sh | sed -e 's/^/-- /'; } <<-END
@@ -571,7 +571,7 @@ function runner_create_flatimage()
    :  export GIMG_LAUNCHER_NAME="$name"
    :  export GIMG_LAUNCHER_IMG="\$FIM_DIR_MOUNT/fim/desktop-integration/icon.png"
    :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \;)"
-   :  gui-launcher
+   :  launcher
    :else
    :  if [ -z "\$BIN_WINE" ]; then
    :   echo "-- Wine runner is missing"

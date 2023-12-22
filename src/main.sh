@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/tmp/gameimage/bin/bash
 
 ######################################################################
 # @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
@@ -95,7 +95,7 @@ function main()
   export FIM_COMPRESSION_LEVEL="$GIMG_COMPRESSION_LEVEL"
   
   if [[ "$#" -eq 0 ]]; then
-    "$GIMG_SCRIPT_DIR"/gui-installer
+    "$GIMG_SCRIPT_DIR"/wizard
     exit
   elif [[ "$*" = "--version" ]]; then
     echo "TRUNK"
