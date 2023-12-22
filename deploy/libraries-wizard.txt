@@ -1,0 +1,8 @@
+/usr/lib/libayatana-appindicator3.so.1
+/usr/lib/libayatana-appindicator3.so
+/usr/lib/libayatana-appindicator3.so.1.0.0
+/usr/lib/libayatana-indicator3.so.7.0.0
+/usr/lib/libayatana-indicator3.so.7
+/usr/lib/libayatana-appindicator3.so
+/usr/lib/libayatana-ido3-0.4.so.0
+/usr/lib/libayatana-ido3-0.4.so.0.0.0
