@@ -48,4 +48,4 @@ RUN chmod +x ./deploy/makeself-wizard.sh && ./deploy/makeself-wizard.sh "/gameim
 
 # Make dist
 RUN mkdir /dist
-RUN cp ./deploy/wizard.run /dist/wizard
+RUN cp -r ./deploy/makeself-wizard /dist

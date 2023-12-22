@@ -31,9 +31,8 @@ mkdir -p "$BIN_DIR"
 
 # Compile wizard, patch, and package with makeself
 docker build . -t wizard:alpine -f deploy/Dockerfile.alpine.wizard
-docker run -it --rm -v "$(pwd)":/workdir wizard:alpine cp /dist/wizard /workdir
-cp ./wizard "$BIN_DIR"
-rm -f ./wizard
+docker run -it --rm -v "$(pwd)":/workdir wizard:alpine cp -r /dist/makeself-wizard /workdir
+cp -r ./makeself-wizard/. "$BIN_DIR"
 
 # Launcher does not need to be static since it runs inside the arch container
 docker build . -t launcher:alpine -f deploy/Dockerfile.arch.launcher

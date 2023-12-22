@@ -22,7 +22,7 @@ cd "$PATH_SCRIPT"
 PATH_BINARY="$(readlink -f "$1")"
 FILE_BINARY="$(basename "$PATH_BINARY")"
 PATH_INTER="/tmp/gameimage/preloader"
-PATH_OUT="$(pwd)/out"
+PATH_OUT="$(pwd)/makeself-wizard"
 
 # Cleanup
 rm -rf "$PATH_OUT" && mkdir "$PATH_OUT"
@@ -56,8 +56,8 @@ sed -i 's|/usr|----|g' "$PATH_OUT"/*
 cp /lib/ld-musl-x86_64.so.1 "$PATH_OUT"
 
 # Setup script
-{ cat | tee "$PATH_OUT"/start.sh; } <<-"END"
-#!/bin/bash
+{ cat | tee "$PATH_OUT"/wizard.sh; } <<-"END"
+#!/tmp/gameimage/bin/bash
 
 PATH_SCRIPT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -65,12 +65,14 @@ PATH="$PATH_SCRIPT:$PATH"
 
 mkdir -p /tmp/gameimage/preloader
 
-cp  "$(pwd)"/ld-musl-x86_64.so.1 /tmp/gameimage/preloader
+cp  "$PATH_SCRIPT"/ld-musl-x86_64.so.1 /tmp/gameimage/preloader
 
-LD_PRELOAD="$(pwd)/preload-sandbox.so" "$(pwd)/wizard"
+cd "$USER_PWD"
+
+LD_PRELOAD="$PATH_SCRIPT/preload-sandbox.so" "$PATH_SCRIPT/wizard"
 END
 
-chmod +x "$PATH_OUT"/start.sh
+chmod +x "$PATH_OUT"/wizard.sh
 
 # Compile preloader sandbox
 gcc -fPIC -shared -o preload-sandbox.so preload-sandbox.c -ldl
@@ -78,6 +80,5 @@ patchelf --set-rpath '$ORIGIN' preload-sandbox.so
 cp ./preload-sandbox.so "$PATH_OUT"
 
 # Package
-makeself.sh --xz "$PATH_OUT" "${FILE_BINARY%%.sh}.run" "$FILE_BINARY" './start.sh'
-
-rm -rf "$PATH_OUT"
+# makeself.sh --xz "$PATH_OUT" "${FILE_BINARY%%.sh}.run" "$FILE_BINARY" './start.sh'
+# rm -rf "$PATH_OUT"

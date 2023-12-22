@@ -95,7 +95,7 @@ function main()
   export FIM_COMPRESSION_LEVEL="$GIMG_COMPRESSION_LEVEL"
   
   if [[ "$#" -eq 0 ]]; then
-    "$GIMG_SCRIPT_DIR"/wizard
+    "$GIMG_SCRIPT_DIR"/wizard.sh
     exit
   elif [[ "$*" = "--version" ]]; then
     echo "TRUNK"
