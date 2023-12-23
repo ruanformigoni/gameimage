@@ -14,6 +14,9 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+#include <stdlib.h>
 
 // Define a path for the debug log file
 #define DEBUG_LOG_FILE "/tmp/gameimage/preload-sandbox.log"
@@ -29,99 +32,103 @@
   } \
 } while(0)
 
-// Prototypes for the original functions
-ssize_t (*original_readlink)(const char *, char *, size_t) = NULL;
-ssize_t (*original_read)(int, void *, size_t) = NULL;
+// Redirect paths
+#define REPLACEMENT_PATH "/tmp/gameimage"
 
+char *redirect_path(const char *original) {
+    DEBUG_PRINT("%s: Path %s\n", __FUNCTION__, original);
+    const char *prefix = "/usr";
+    if (strncmp(original, prefix, strlen(prefix)) == 0) {
+        static char new_path[PATH_MAX];
+        snprintf(new_path, sizeof(new_path), "%s%s", REPLACEMENT_PATH, original + strlen(prefix));
+        DEBUG_PRINT("%s: Redirect %s\n", __FUNCTION__, new_path);
+        return new_path;
+    }
+    return (char *)original; // Return the original if no replacement is needed
+}
+
+// Prototypes for the original functions
+typedef ssize_t (*readlink_func_t)(const char *, char *, size_t);
+ssize_t (*original_readlink)(const char *, char *, size_t) = NULL;
+
+typedef int (*access_func_t)(const char *, int);
 int (*original_access)(const char *, int) = NULL;
 
+typedef int (*stat_func_t)(const char *, struct stat *);
 int (*original_stat)(const char *, struct stat *) = NULL;
+typedef int (*lstat_func_t)(const char *pathname, struct stat *statbuf);
 int (*original_lstat)(const char *pathname, struct stat *statbuf) = NULL;
 
+typedef int (*open_func_t)(const char *pathname, int flags, ...);
 int (*original_open)(const char *pathname, int flags, ...) = NULL;
-
+typedef int (*openat_func_t)(int, const char *, int, ...);
 int (*original_openat)(int, const char *, int, ...) = NULL;
 
 
 // readlink override
 ssize_t readlink(const char *path, char *buf, size_t bufsiz)
 {
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, path);
+  path = redirect_path(path);
 
-  if (strncmp(path, "/usr", 4) == 0)
+  if (buf && strncmp(path, "/usr", 4) == 0)
   {
-    DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, path);
+    DEBUG_PRINT("%s: BBlock %s\n", __FUNCTION__, buf);
     return -1; // Block the readlink operation
   }
 
-  if (!original_readlink) {
-    original_readlink = dlsym(RTLD_NEXT, "readlink");
+  if (strncmp(path, "/usr", 4) == 0)
+  {
+    DEBUG_PRINT("%s: PBlock %s\n", __FUNCTION__, path);
+    return -1; // Block the readlink operation
+  }
+
+  if (!original_readlink)
+  {
+    original_readlink = (readlink_func_t) dlsym(RTLD_NEXT, "readlink");
   }
 
   return original_readlink(path, buf, bufsiz);
 }
 
 
-// read override
-ssize_t read(int fd, void *buf, size_t count) {
-  DEBUG_PRINT("%s: Read %s\n", __FUNCTION__, (char*) buf);
-
-  char path[1024];
-  sprintf(path, "/proc/self/fd/%d", fd);
-
-  char actualpath[1024];
-  ssize_t len = readlink(path, actualpath, sizeof(actualpath));
-
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, actualpath);
-  if (len > 0 && strncmp(actualpath, "/usr", 4) == 0) {
-    DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, actualpath);
-    return -1; // Block the read operation
-  }
-
-  if (!original_read) {
-    original_read = dlsym(RTLD_NEXT, "read");
-  }
-  return original_read(fd, buf, count);
-}
-
 // access override
 int access(const char *pathname, int mode) {
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, pathname);
+  pathname = redirect_path(pathname);
   if (strncmp(pathname, "/usr", 4) == 0) {
     DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
     return -1; // Block the access operation
   }
 
   if (!original_access) {
-    original_access = dlsym(RTLD_NEXT, "access");
+    original_access = (access_func_t) dlsym(RTLD_NEXT, "access");
   }
   return original_access(pathname, mode);
 }
 
 // stat override
 int stat(const char *pathname, struct stat *statbuf) {
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, pathname);
+  pathname = redirect_path(pathname);
   if (strncmp(pathname, "/usr", 4) == 0) {
     DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
     return -1; // Block the stat operation
   }
 
   if (!original_stat) {
-    original_stat = dlsym(RTLD_NEXT, "stat");
+    original_stat = (stat_func_t) dlsym(RTLD_NEXT, "stat");
   }
   return original_stat(pathname, statbuf);
 }
 
 
 int lstat(const char *pathname, struct stat *statbuf) {
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, pathname);
+  pathname = redirect_path(pathname);
   if (strncmp(pathname, "/usr", 4) == 0) {
     DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
     return -1; // Block access to /usr
   }
 
   if (!original_lstat) {
-    original_lstat = dlsym(RTLD_NEXT, "lstat");
+    original_lstat = (lstat_func_t) dlsym(RTLD_NEXT, "lstat");
   }
 
   return original_lstat(pathname, statbuf);
@@ -129,8 +136,9 @@ int lstat(const char *pathname, struct stat *statbuf) {
 
 // open override
 int open(const char *pathname, int flags, ...) {
+  pathname = redirect_path(pathname);
   if (strncmp(pathname, "/usr", 4) == 0) {
-    /* DEBUG_PRINT("Block to open %s\n", pathname); */
+    DEBUG_PRINT("Block to open %s\n", pathname);
     return -1; // Block the open operation
   }
 
@@ -145,7 +153,7 @@ int open(const char *pathname, int flags, ...) {
   }
 
   if (!original_open) {
-    original_open = dlsym(RTLD_NEXT, "open");
+    original_open = (open_func_t) dlsym(RTLD_NEXT, "open");
   }
   if (flags & O_CREAT) {
     return original_open(pathname, flags, mode);
@@ -156,7 +164,7 @@ int open(const char *pathname, int flags, ...) {
 
 // openat override
 int openat(int dirfd, const char *pathname, int flags, ...) {
-  DEBUG_PRINT("%s: Try %s\n", __FUNCTION__, pathname);
+  pathname = redirect_path(pathname);
   if (strncmp(pathname, "/usr", 4) == 0) {
     DEBUG_PRINT("Block %s\n", __FUNCTION__);
     return -1; // Block the openat operation
@@ -173,7 +181,7 @@ int openat(int dirfd, const char *pathname, int flags, ...) {
   }
 
   if (!original_openat) {
-    original_openat = dlsym(RTLD_NEXT, "openat");
+    original_openat = (openat_func_t) dlsym(RTLD_NEXT, "openat");
   }
 
   if (flags & O_CREAT) {
