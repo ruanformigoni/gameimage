@@ -15,7 +15,7 @@ create:
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
     - cat /etc/*-release
-    - apk add bash wget git
+    - apk add bash wget git font-noto
     - mkdir build
     - ./deploy/makeself-gameimage.sh
   artifacts:
