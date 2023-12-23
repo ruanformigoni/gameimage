@@ -98,6 +98,9 @@ _fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122e
 # Fetch tar
 _fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/tar" "$BIN_DIR"/tar
 
+# Fetch xz
+_fetch "https://github.com/ruanformigoni/xz-static-musl/releases/download/fec8a15/xz" "$BIN_DIR"/xz
+
 # Copy files
 cp -r ./src/* "$BUILD_DIR"/app/bin
 cp    ./doc/gameimage.png "$BUILD_DIR"/app
