@@ -10,7 +10,7 @@ RUN apk update
 RUN apk add git wget curl patchelf py3-pip pipx file build-base cmake \
   fuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev pango \
   pango-dev libayatana-appindicator libayatana-appindicator-dev gtk+3.0-dev \
-  bash fuse fuse3 zlib-static glib-static cairo-static lddtree
+  bash fuse fuse3 zlib-static glib-static cairo-static lddtree font-noto
 
 # Symlink compilers
 RUN ln -sfT /usr/bin/gcc /usr/bin/musl-gcc
@@ -44,7 +44,8 @@ WORKDIR gameimage
 RUN cd gui/wizard && cargo build --release --target=x86_64-unknown-linux-musl
 
 # Patch
-RUN chmod +x ./deploy/makeself-wizard.sh && ./deploy/makeself-wizard.sh "/gameimage/gui/wizard/target/x86_64-unknown-linux-musl/release/wizard"
+RUN chmod +x ./deploy/makeself-wizard.sh 
+RUN ./deploy/makeself-wizard.sh "/gameimage/gui/wizard/target/x86_64-unknown-linux-musl/release/wizard"
 
 # Make dist
 RUN mkdir /dist

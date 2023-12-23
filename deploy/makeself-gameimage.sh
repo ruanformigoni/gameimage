@@ -134,6 +134,10 @@ cd "$BUILD_DIR"
 END
 chmod +x "$BUILD_DIR"/app/start.sh
 
+# Include fonts
+mkdir -p "$BUILD_DIR"/app/share
+cp -r /usr/share/fonts "$BUILD_DIR"/app/share
+
 # Package
 mkdir -p tools
 wget -O ./tools/makeself "https://github.com/megastep/makeself/releases/download/release-2.5.0/makeself-2.5.0.run"

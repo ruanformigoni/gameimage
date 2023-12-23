@@ -51,7 +51,6 @@ patchelf --set-rpath '$ORIGIN' "$PATH_OUT/$FILE_BINARY"
 # Binary patch /usr out of everything
 sed -i 's|/usr|----|g' "$PATH_OUT"/*
 
-
 # Copy interpreter
 cp /lib/ld-musl-x86_64.so.1 "$PATH_OUT"
 
