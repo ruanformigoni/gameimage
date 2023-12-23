@@ -120,14 +120,15 @@ cd "$BUILD_DIR"
 { sed -E 's/^\s+://' | tee "$BUILD_DIR"/app/start.sh; } <<-"END"
   :#!/bin/sh
   :
-  :PATH_SCRIPT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+  :# In makeself the extracted directory is the initial reference
+  :PATH_SCRIPT="$(pwd)"
   :
-  :PATH="$PATH_SCRIPT:$PATH"
-  :PATH="$PATH_SCRIPT/bin:$PATH"
-  :PATH="/tmp/gameimage/bin:$PATH"
+  :export PATH="$PATH_SCRIPT:$PATH"
+  :export PATH="$PATH_SCRIPT/bin:$PATH"
+  :export PATH="/tmp/gameimage/bin:$PATH"
   :
   :mkdir -p /tmp/gameimage/bin
-  :cp ./bin/bash /tmp/gameimage/bin
+  :cp "$PATH_SCRIPT/bin/bash" /tmp/gameimage/bin
   :
   :main.sh "$@"
 END
