@@ -101,6 +101,9 @@ _fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122e
 # Fetch xz
 _fetch "https://github.com/ruanformigoni/xz-static-musl/releases/download/fec8a15/xz" "$BIN_DIR"/xz
 
+# Export to use them to build
+export PATH="$BIN_DIR:$PATH"
+
 # Copy files
 cp -r ./src/* "$BUILD_DIR"/app/bin
 cp    ./doc/gameimage.png "$BUILD_DIR"/app
