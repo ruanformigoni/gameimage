@@ -2,7 +2,7 @@ stages:
   - build
   - release
 
-create-appimage:
+create:
   stage: build
   image: docker:latest
   when: manual
@@ -14,16 +14,17 @@ create-appimage:
   before_script:
     - echo GE_JOB_ID=$CI_JOB_ID >> generate_executables.env
   script:
+    - cat /etc/*-release
+    - apk add bash wget git
     - mkdir build
-    - docker build -t $CI_REGISTRY/$IMAGE_NAME .
-    - docker run --rm -v $(pwd):/workdir $CI_REGISTRY/$IMAGE_NAME cp /gameimage/build/GameImage-x86_64.AppImage /workdir/build
+    - ./deploy/makeself-gameimage.sh
   artifacts:
     paths:
-      - ./build/GameImage-x86_64.AppImage
+      - ./build/gameimage.run
     reports:
       dotenv: generate_executables.env
 
-deploy-appimage:
+deploy:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
@@ -37,8 +38,8 @@ deploy-appimage:
     description: '$CI_COMMIT_TAG'
     assets:
       links:
-        - name: 'GameImage-x86_64.AppImage'
-          url: 'https://gitlab.com/formigoni/gameimage/-/jobs/${GE_JOB_ID}/artifacts/file/build/GameImage-x86_64.AppImage'
+        - name: 'gameimage.run'
+          url: 'https://gitlab.com/formigoni/gameimage/-/jobs/${GE_JOB_ID}/artifacts/file/build/gameimage.run'
   needs:
-    - job: create-appimage
+    - job: create
       artifacts: true
