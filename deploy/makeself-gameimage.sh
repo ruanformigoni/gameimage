@@ -143,6 +143,9 @@ cp -r /usr/share/fonts "$BUILD_DIR"/app/share
 
 # Package
 mkdir -p tools
-wget -O ./tools/makeself "https://github.com/megastep/makeself/releases/download/release-2.5.0/makeself-2.5.0.run"
-chmod +x ./tools/makeself && ./tools/makeself --target ./tools && chmod +x ./tools/*.sh
+wget -O ./tools/makeself "https://github.com/ruanformigoni/makeself/releases/download/v2.5.1/makeself-2.5.1.run"
+chmod +x ./tools/makeself
+export MAKESELF_CLI_LOOP=1
+./tools/makeself --target ./tools
+chmod +x ./tools/*.sh
 ./tools/makeself.sh --xz "$BUILD_DIR/app" "gameimage.run" "Gameimage" './start.sh'
