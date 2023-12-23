@@ -18,7 +18,7 @@ RUN ln -sfT /usr/bin/g++ /usr/bin/musl-g++
 
 # Fetch tools
 RUN mkdir -p /tools
-RUN wget -O /tools/tar "https://github.com/ruanformigoni/tar-static/releases/download/d7ad540/tar-x86_64"
+RUN wget -O /tools/tar "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/tar"
 RUN chmod +x /tools/tar
 RUN wget -O /tools/makeself "https://github.com/megastep/makeself/releases/download/release-2.5.0/makeself-2.5.0.run"
 RUN chmod +x /tools/makeself && /tools/makeself --target /tools && chmod +x /tools/*.sh
