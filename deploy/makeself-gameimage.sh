@@ -113,6 +113,11 @@ for i in "$BUILD_DIR"/app/bin/*; do
   chmod +x "$i"
 done
 
+# Resize image
+wget -O magick https://github.com/ruanformigoni/imagemagick-static-musl/releases/download/cc3f21c/magick-x86_64
+chmod +x magick
+./magick "$BUILD_DIR"/app/gameimage.png -resize 200x200 "$BUILD_DIR"/app/gameimage.png
+
 #
 # Build
 #
@@ -137,6 +142,9 @@ cd "$BUILD_DIR"
   :
   :# Copy fonts
   :cp -r "$PATH_SCRIPT/share" /tmp/gameimage
+  :
+  :# Copy icon
+  :cp "$PATH_SCRIPT/gameimage.png" /tmp/gameimage/gameimage.png
   :
   :main.sh "$@"
 END

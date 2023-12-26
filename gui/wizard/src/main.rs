@@ -75,6 +75,16 @@ impl Gui
     app::set_selection_color(color.0, color.1, color.2);
     app::set_frame_type(FrameType::BorderBox);
 
+    // Window icon
+    if let Some(shared_image) = fltk::image::PngImage::load("/tmp/gameimage/gameimage.png").ok()
+    {
+      wind.lock().unwrap().set_icon(Some(shared_image));
+    } // if
+    else
+    {
+      println!("Failed to load icon image");
+    } // else
+
     Gui
     {
       app,
