@@ -581,12 +581,12 @@ function runner_create_flatimage()
    :  fi
    :
    :  # Parse runner location
-   :  if read -r RUNNER < <("\$YQ" -re '.runner | select(.!=null)' "\$YAML" | xargs); then
+   :  if read -r RUNNER < <(yq -re '.runner | select(.!=null)' "\$YAML" | xargs); then
    :    BIN_WINE="\${RUNNER:-"\$BIN_WINE"}"
    :  fi
    :  
    :  # Parse startup command
-   :  if read -r CMD < <("\$YQ" -re '.cmd | select(.!=null)' "\$YAML" | xargs); then
+   :  if read -r CMD < <(yq -re '.cmd | select(.!=null)' "\$YAML" | xargs); then
    :    # Run custom command, replaces {wine} and {exec} strings
    :    CMD="\${CMD//\{wine\}/\"\$BIN_WINE\"}"
    :    CMD="\${CMD//\{exec\}/\"\$GIMG_DEFAULT_EXEC\"}"
