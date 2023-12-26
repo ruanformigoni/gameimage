@@ -51,7 +51,7 @@ Advantages:
 - [x] Storage: Smaller file sizes than loose files, since the images uses
     squashfs/dwarfs.
 
-![](doc/not-aidan-tutorial.mp4){width=1000px}
+![](doc/not-aidan-tutorial.mp4){width=100%}
 
 Also watch it on [youtube](https://www.youtube.com/watch?v=_15QkwCS7bg), thanks Not Aidan.
 
