@@ -131,7 +131,12 @@ cd "$BUILD_DIR"
   :export PATH="/tmp/gameimage/bin:$PATH"
   :
   :mkdir -p /tmp/gameimage/bin
+  :
+  :# Copy static bash
   :cp "$PATH_SCRIPT/bin/bash" /tmp/gameimage/bin
+  :
+  :# Copy fonts
+  :cp -r "$PATH_SCRIPT/share" /tmp/gameimage
   :
   :main.sh "$@"
 END
