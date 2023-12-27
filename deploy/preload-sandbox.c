@@ -37,10 +37,18 @@
 
 char *redirect_path(const char *original) {
     DEBUG_PRINT("%s: Path %s\n", __FUNCTION__, original);
-    const char *prefix = "/usr";
-    if (strncmp(original, prefix, strlen(prefix)) == 0) {
-        static char new_path[PATH_MAX];
-        snprintf(new_path, sizeof(new_path), "%s%s", REPLACEMENT_PATH, original + strlen(prefix));
+    const char *prefix_usr = "/usr";
+    const char *prefix_etc = "/etc";
+    static char new_path[PATH_MAX];
+    if (strncmp(original, prefix_usr, strlen(prefix_usr)) == 0)
+    {
+        snprintf(new_path, sizeof(new_path), "%s/usr/%s", REPLACEMENT_PATH, original + strlen(prefix_usr));
+        DEBUG_PRINT("%s: Redirect %s\n", __FUNCTION__, new_path);
+        return new_path;
+    }
+    else if (strncmp(original, prefix_etc, strlen(prefix_etc)) == 0)
+    {
+        snprintf(new_path, sizeof(new_path), "%s/etc/%s", REPLACEMENT_PATH, original + strlen(prefix_etc));
         DEBUG_PRINT("%s: Redirect %s\n", __FUNCTION__, new_path);
         return new_path;
     }
@@ -70,18 +78,6 @@ ssize_t readlink(const char *path, char *buf, size_t bufsiz)
 {
   path = redirect_path(path);
 
-  if (buf && strncmp(path, "/usr", 4) == 0)
-  {
-    DEBUG_PRINT("%s: BBlock %s\n", __FUNCTION__, buf);
-    return -1; // Block the readlink operation
-  }
-
-  if (strncmp(path, "/usr", 4) == 0)
-  {
-    DEBUG_PRINT("%s: PBlock %s\n", __FUNCTION__, path);
-    return -1; // Block the readlink operation
-  }
-
   if (!original_readlink)
   {
     original_readlink = (readlink_func_t) dlsym(RTLD_NEXT, "readlink");
@@ -94,38 +90,28 @@ ssize_t readlink(const char *path, char *buf, size_t bufsiz)
 // access override
 int access(const char *pathname, int mode) {
   pathname = redirect_path(pathname);
-  if (strncmp(pathname, "/usr", 4) == 0) {
-    DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
-    return -1; // Block the access operation
-  }
 
   if (!original_access) {
     original_access = (access_func_t) dlsym(RTLD_NEXT, "access");
   }
+
   return original_access(pathname, mode);
 }
 
 // stat override
 int stat(const char *pathname, struct stat *statbuf) {
   pathname = redirect_path(pathname);
-  if (strncmp(pathname, "/usr", 4) == 0) {
-    DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
-    return -1; // Block the stat operation
-  }
 
   if (!original_stat) {
     original_stat = (stat_func_t) dlsym(RTLD_NEXT, "stat");
   }
+
   return original_stat(pathname, statbuf);
 }
 
 
 int lstat(const char *pathname, struct stat *statbuf) {
   pathname = redirect_path(pathname);
-  if (strncmp(pathname, "/usr", 4) == 0) {
-    DEBUG_PRINT("%s: Block %s\n", __FUNCTION__, pathname);
-    return -1; // Block access to /usr
-  }
 
   if (!original_lstat) {
     original_lstat = (lstat_func_t) dlsym(RTLD_NEXT, "lstat");
@@ -137,10 +123,6 @@ int lstat(const char *pathname, struct stat *statbuf) {
 // open override
 int open(const char *pathname, int flags, ...) {
   pathname = redirect_path(pathname);
-  if (strncmp(pathname, "/usr", 4) == 0) {
-    DEBUG_PRINT("Block to open %s\n", pathname);
-    return -1; // Block the open operation
-  }
 
   mode_t mode = 0;
 
@@ -165,10 +147,6 @@ int open(const char *pathname, int flags, ...) {
 // openat override
 int openat(int dirfd, const char *pathname, int flags, ...) {
   pathname = redirect_path(pathname);
-  if (strncmp(pathname, "/usr", 4) == 0) {
-    DEBUG_PRINT("Block %s\n", __FUNCTION__);
-    return -1; // Block the openat operation
-  }
 
   mode_t mode = 0;
 

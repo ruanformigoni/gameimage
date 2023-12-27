@@ -141,7 +141,8 @@ cd "$BUILD_DIR"
   :cp "$PATH_SCRIPT/bin/bash" /tmp/gameimage/bin
   :
   :# Copy fonts
-  :cp -r "$PATH_SCRIPT/share" /tmp/gameimage
+  :cp -r "$PATH_SCRIPT/usr" /tmp/gameimage
+  :cp -r "$PATH_SCRIPT/etc" /tmp/gameimage
   :
   :# Copy icon
   :cp "$PATH_SCRIPT/gameimage.png" /tmp/gameimage/gameimage.png
@@ -151,8 +152,13 @@ END
 chmod +x "$BUILD_DIR"/app/start.sh
 
 # Include fonts
-mkdir -p "$BUILD_DIR"/app/share
-cp -r /usr/share/fonts "$BUILD_DIR"/app/share
+mkdir -p "$BUILD_DIR"/app/usr/share
+cp -Lr /usr/share/fonts "$BUILD_DIR"/app/usr/share
+mkdir -p "$BUILD_DIR"/app/etc
+cp -Lr /etc/fonts "$BUILD_DIR"/app/etc
+sed -i 's|/usr/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
+sed -i 's|/usr/local/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
+sed -i 's|~/.fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
 
 # Package
 mkdir -p tools
