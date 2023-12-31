@@ -389,13 +389,20 @@ function build_flatimage_emu()
   "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
 
   # Copy cover
-  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
-  "$bin_pkg" fim-exec cp "$DIR_BUILD/AppDir/${name_app}.png" /fim/desktop-integration/icon.png
+  "$bin_pkg" fim-exec mkdir -p /fim/desktop
+  "$bin_pkg" fim-exec cp "$DIR_BUILD/AppDir/${name_app}.png" /fim/desktop/icon.png
 
   # Copy launcher
   # shellcheck disable=2016
   "$bin_pkg" fim-root mkdir -p /fim/shared
   "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher" '/fim/shared/launcher'
+
+  # Set application info
+  "$bin_pkg" fim-config-set name "$name_app"
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set icon '"$FIM_DIR_MOUNT"/fim/desktop/icon.png'
+  "$bin_pkg" fim-config-set categories "Game"
+  "$bin_pkg" fim-config-set desktop 1
 
   # Set HOME dir
   # shellcheck disable=2016

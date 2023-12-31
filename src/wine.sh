@@ -569,7 +569,7 @@ function runner_create_flatimage()
    :if [ -z "\$GIMG_LAUNCHER_DISABLE" ]; then
    :  export GIMG_CONFIG_FILE="\$CFGDIR/config.yml"
    :  export GIMG_LAUNCHER_NAME="$name"
-   :  export GIMG_LAUNCHER_IMG="\$FIM_DIR_MOUNT/fim/desktop-integration/icon.png"
+   :  export GIMG_LAUNCHER_IMG="\$FIM_DIR_MOUNT/fim/desktop/icon.png"
    :  export GIMG_LAUNCHER_EXECUTABLES="\$(find . -iname '*.exe' -exec echo -n '{}|' \;)"
    :  launcher
    :else
@@ -709,17 +709,23 @@ function main()
         local name_image="${name}.${GIMG_PKG_TYPE}"
 
         if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-          # Copy cover
-          "$BIN_WINE" fim-exec mkdir -p /fim/desktop-integration
-          "$BIN_WINE" fim-exec cp "AppDir/${name}.png" /fim/desktop-integration/icon.png
           # Define path to release package
           export BIN_PKG="$DIR_BUILD/$name_image"
           # Copy wine to build dir
           cp "$BIN_WINE" "$BIN_PKG"
+          # Copy cover
+          "$BIN_PKG" fim-exec mkdir -p /fim/desktop
+          "$BIN_PKG" fim-exec cp "AppDir/${name}.png" /fim/desktop/icon.png
           # Compress & include prefix 
           build_flatimage_wine
           # Create runner script
           runner_create_flatimage "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
+          # Set application info
+          "$BIN_PKG" fim-config-set name "$name"
+          # shellcheck disable=2016
+          "$BIN_PKG" fim-config-set icon '"$FIM_DIR_MOUNT"/fim/desktop/icon.png'
+          "$BIN_PKG" fim-config-set categories "Game"
+          "$BIN_PKG" fim-config-set desktop 1
           # Print finished status
           msg "Created '$BIN_PKG'!"
         elif [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then

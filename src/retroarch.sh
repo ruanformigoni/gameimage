@@ -93,7 +93,7 @@ function runner_create()
     export RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     export RUNNER_ASSETS=/assets/.config/retroarch
     export RUNNER_BIN='/fim/scripts/retroarch.sh'
-    export RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop-integration/icon.png'
+    export RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop/icon.png'
   else
     export RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     export RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'

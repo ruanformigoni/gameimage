@@ -58,7 +58,7 @@ function runner_create()
     RUNNER_XDG_DATA_HOME='${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app/mount/xdg/data'
     RUNNER_MOUNTPOINT='$FIM_DIR_MOUNT'
     RUNNER_BIN='/fim/scripts/pcsx2.sh'
-    RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop-integration/icon.png'
+    RUNNER_LAUNCHER_IMG='$FIM_DIR_MOUNT/fim/desktop/icon.png'
   else
     RUNNER_PATH='$APPDIR/usr/bin:$PATH'
     RUNNER_XDG_CONFIG_HOME='$(dirname "$APPIMAGE")/.$(basename "$APPIMAGE").config/xdg/config'
