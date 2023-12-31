@@ -28,6 +28,9 @@ use fltk::{
 
 use fltk_theme::{ColorTheme, color_themes};
 
+// Scaling
+mod scaling;
+
 // Icons {{{
 const ICON_BACKGROUND: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="317" height="50" class="bi bi-play-fill" viewBox="0 0 30 20">
@@ -176,8 +179,17 @@ impl Gui
   // fn: new {{{
   pub fn new(sender: mpsc::Sender<i32>, receiver: mpsc::Receiver<()>) -> Self
   {
-    let width = 264;
-    let height = 352;
+    // Default for 1920x1080
+    let mut width : i32 = 300;
+    let mut height : i32 = 450;
+
+    // Try to scale
+    if let Some(display_info) = scaling::compute()
+    {
+      width = (width as f32 * (display_info.width as f32 / 1920.0)).ceil() as i32;
+      height = (height as f32 * (display_info.width as f32 / 1920.0)).ceil() as i32;
+    }
+
     let border = 2;
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind = Window::default()
