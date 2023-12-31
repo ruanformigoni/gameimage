@@ -355,7 +355,58 @@ function build_appimage()
   ARCH=x86_64 ./appimagetool AppDir
 }
 
-function build_flatimage()
+function build_flatimage_emu()
+{
+  [[ -d "$DIR_BUILD" ]] || die "Build dir no specified"
+
+  local name_app="$1"
+  local name_platform="$2"
+  local bin_pkg="$DIR_BUILD/$name_platform"
+
+  # Copy vanilla retroarch package
+  cp "$DIR_BUILD/AppDir/usr/bin/retroarch" "$bin_pkg"
+
+  # Compress game dir
+  "$bin_pkg" fim-exec mkdwarfs -f \
+    -i "$DIR_BUILD"/AppDir/app \
+    -o "$DIR_BUILD"/app.dwarfs \
+    -l"$GIMG_COMPRESSION_LEVEL"
+
+  # Include inside image
+  "$bin_pkg" fim-include-path "$DIR_BUILD"/app.dwarfs /app.dwarfs
+
+  # Configure /app overlay
+  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
+  "$bin_pkg" fim-config-set overlay.app.cont '/app'
+
+  # Include launcher script
+  "$bin_pkg" fim-root mkdir -p /fim/scripts
+  "$bin_pkg" fim-root cp "$DIR_BUILD/AppDir/AppRun" /fim/scripts/gameimage.sh
+
+  # Default command -> runner script
+  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
+
+  # Copy cover
+  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
+  "$bin_pkg" fim-exec cp "$DIR_BUILD/AppDir/${name_app}.png" /fim/desktop-integration/icon.png
+
+  # Copy launcher
+  # shellcheck disable=2016
+  "$bin_pkg" fim-root mkdir -p /fim/shared
+  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher" '/fim/shared/launcher'
+
+  # Set HOME dir
+  # shellcheck disable=2016
+  "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
+
+  # Rename binary
+  mv "$bin_pkg" "$DIR_BUILD/${name_app}.fim"
+
+}
+
+function build_flatimage_wine()
 {
   [[ -d "$DIR_BUILD" ]] || die "Build dir no specified"
   [[ -f "$BIN_PKG" ]] || die "BIN_PKG is not a file"

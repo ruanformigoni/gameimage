@@ -176,53 +176,6 @@ function runner_create()
   chmod +x AppDir/AppRun
 }
 
-function build_flatimage()
-{
-  local name="$1"
-  local bin_pkg="$BUILD_DIR"/retroarch
-
-  # Copy vanilla retroarch package
-  cp "$BUILD_DIR/AppDir/usr/bin/retroarch" "$bin_pkg"
-
-  # Compress game dir
-  "$bin_pkg" fim-exec mkdwarfs -f \
-    -i "$BUILD_DIR"/AppDir/app \
-    -o "$BUILD_DIR"/app.dwarfs \
-    -l"$GIMG_COMPRESSION_LEVEL"
-
-  # Include inside image
-  "$bin_pkg" fim-include-path "$BUILD_DIR"/app.dwarfs /app.dwarfs
-
-  # Configure /app overlay
-  "$bin_pkg" fim-config-set overlay.app '/app Overlay'
-  # shellcheck disable=2016
-  "$bin_pkg" fim-config-set overlay.app.host '${FIM_DIR_BINARY}/.${FIM_FILE_BINARY}.config/overlays/app'
-  "$bin_pkg" fim-config-set overlay.app.cont '/app'
-
-  # Include launcher script
-  "$bin_pkg" fim-root mkdir -p /fim/scripts
-  "$bin_pkg" fim-root cp "$BUILD_DIR/AppDir/AppRun" /fim/scripts/gameimage.sh
-
-  # Default command -> runner script
-  "$bin_pkg" fim-cmd /fim/scripts/gameimage.sh
-
-  # Copy cover
-  "$bin_pkg" fim-exec mkdir -p /fim/desktop-integration
-  "$bin_pkg" fim-exec cp "$BUILD_DIR/AppDir/${name}.png" /fim/desktop-integration/icon.png
-
-  # Copy launcher
-  # shellcheck disable=2016
-  "$bin_pkg" fim-root mkdir -p /fim/shared
-  "$bin_pkg" fim-root cp "${GIMG_SCRIPT_DIR}/launcher" '/fim/shared/launcher'
-
-  # Set HOME dir
-  # shellcheck disable=2016
-  "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
-
-  # Rename binary
-  mv "$bin_pkg" "$BUILD_DIR/${name}.fim"
-}
-
 function main()
 {
   # Validate params
@@ -241,7 +194,7 @@ function main()
   # Create dirs
   cd "$(dir_build_create "$dir")"
 
-  BUILD_DIR="$(pwd)"
+  export DIR_BUILD="$(pwd)"
 
   dir_appdir_create
 
@@ -259,7 +212,7 @@ function main()
 
   # Create runner script and build image
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    build_flatimage "$name"
+    build_flatimage_emu "$name" "retroarch"
   else
     desktop_entry_create "$name"
     build_appimage

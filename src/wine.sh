@@ -717,7 +717,7 @@ function main()
           # Copy wine to build dir
           cp "$BIN_WINE" "$BIN_PKG"
           # Compress & include prefix 
-          build_flatimage
+          build_flatimage_wine
           # Create runner script
           runner_create_flatimage "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
           # Print finished status
