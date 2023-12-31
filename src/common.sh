@@ -299,7 +299,7 @@ function files_copy()
 
   # Copy image to AppDir
   ## Convert image to png
-  ./imagemagick "$cover" AppDir/"${name}".png
+  ./imagemagick "$cover" -resize '600x900^' -gravity center -extent 600x900 AppDir/"${name}".png
 
   # Bios
   if [ "$bios" != "null" ]; then

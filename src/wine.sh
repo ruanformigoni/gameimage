@@ -703,7 +703,7 @@ function main()
         local basename_executable="${_FN_RET[1]}"
 
         # Convert cover
-        ./imagemagick "$cover" "AppDir/${name}.png"
+        ./imagemagick "$cover" -resize '600x900^' -gravity center -extent 600x900 "AppDir/${name}.png"
 
         # Generated image name
         local name_image="${name}.${GIMG_PKG_TYPE}"
