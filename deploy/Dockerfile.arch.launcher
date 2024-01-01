@@ -1,8 +1,10 @@
 FROM archlinux:latest
 
+# Update
+RUN pacman -Syu --noconfirm
+
 # Install dependencies
-RUN pacman -Sy
-RUN pacman -S --noconfirm base-devel git cmake gtk3
+RUN pacman -S --noconfirm autoconf automake binutils bison debugedit fakeroot file findutils flex gawk gcc gettext grep groff gzip libtool m4 make patch pkgconf sed sudo texinfo which git cmake gtk3 
 
 # Setup rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
