@@ -363,8 +363,8 @@ function build_flatimage_emu()
   local name_platform="$2"
   local bin_pkg="$DIR_BUILD/$name_platform"
 
-  # Copy vanilla retroarch package
-  cp "$DIR_BUILD/AppDir/usr/bin/retroarch" "$bin_pkg"
+  # Copy vanilla package
+  cp "$DIR_BUILD/AppDir/usr/bin/$name_platform" "$bin_pkg"
 
   # Compress game dir
   "$bin_pkg" fim-exec mkdwarfs -f \
