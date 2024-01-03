@@ -97,13 +97,6 @@ function runner_create()
     :# Runner binary path
     :echo "RUNNER_BIN: $RUNNER_BIN"
     :
-    :echo "bios: ${bios}"
-    :
-    :# Check if bios is installed
-    :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
-    :  "$RUNNER_BIN" --installfw "$RUNNER_MOUNTPOINT/app/bios/${bios}"
-    :fi
-    :
 	END
 
   if [[ "$GIMG_PKG_TYPE" = flatimage ]]; then
@@ -116,6 +109,13 @@ function runner_create()
   fi
 
   { sed -E 's/^\s+://' | tee -a AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
+    :echo "bios: ${bios}"
+    :
+    :# Check if bios is installed
+    :if ! find "\${XDG_CONFIG_HOME}/rpcs3/dev_flash/sys/internal" -iname "*.sprx" -print -quit &>/dev/null; then
+    :  "$RUNNER_BIN" --installfw "$RUNNER_MOUNTPOINT/app/bios/${bios}"
+    :fi
+    :
     :if [[ "\$*" = "--config" ]]; then
     :  "$RUNNER_BIN"
     :elif [[ "\$*" ]]; then
@@ -123,6 +123,7 @@ function runner_create()
     :else
     :  "$RUNNER_BIN" --no-gui "$RUNNER_MOUNTPOINT/app/rom"
     :fi
+    :
 	END
 
   # Allow executable
