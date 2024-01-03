@@ -169,8 +169,6 @@ function wine_install()
 
 function wine_test()
 {
-  _select_bool "Test the installed software?" "N" || return 0
-
   while :; do
     _eval_select "find " "\"$1\"" " -not -path '*drive_c/windows/*.exe' -iname '*.exe'" || break
     #shellcheck disable=2005
