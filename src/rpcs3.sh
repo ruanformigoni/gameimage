@@ -105,6 +105,8 @@ function runner_create()
       :export GIMG_LAUNCHER_IMG="$RUNNER_LAUNCHER_IMG"
       :launcher
       :
+      :# Workdaround for 'cannot start from temporary location'
+      :rm -f "\${FIM_DIR_BINARY}/.\${FIM_FILE_BINARY}.config/overlays/app/mount"
 		END
   fi
 
