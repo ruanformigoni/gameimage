@@ -409,7 +409,7 @@ function build_flatimage_emu()
   "$bin_pkg" fim-config-set home '$FIM_DIR_BINARY/.${FIM_FILE_BINARY}.config'
 
   # Rename binary
-  mv "$bin_pkg" "$DIR_BUILD/${name_app}.fim"
+  mv "$bin_pkg" "$DIR_BUILD/${name_app}.flatimage"
 
 }
 
