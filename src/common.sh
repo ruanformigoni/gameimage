@@ -135,15 +135,21 @@ function param_validate()
 
 function params_validate()
 {
-  local platform="$1"; shift
+  # Get platform
+  local platform="$1"
+
+  # Get Name
+  local name="$2"
 
   # Convert path to absolute
-  local src_dir="$(readlink -f "$2")"
+  local src_dir="$(readlink -f "$3")"
 
+  # Validate src dir
   [ -d "$src_dir" ] || { die "Invalid src dir ${src_dir}"; }
   [ -d "$src_dir/rom" ] || { die "Invalid no rom folder in src dir ${src_dir}"; }
   [ -d "$src_dir/icon" ] || { die "Invalid no icon folder in src dir ${src_dir}"; }
 
+  # Validate rom
   local rom
   if [ "$platform" = "wine" ]; then
     rom="null"
@@ -180,8 +186,8 @@ function params_validate()
   local keys="$(param_validate "keys" ".*(\.zip|\.7z)")"
 
   # Get name and normalize to dash separated lowercase
-  local name="${1// /-}"
-  local name="${1//,/;}"
+  local name="${name// /-}"
+  local name="${name//,/;}"
   local name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
 
   # Return
@@ -209,7 +215,7 @@ function dir_build_create()
 
 function dir_appdir_create()
 {
-  local appdir="AppDir"
+  local appdir="$1/AppDir"
 
   if [ -d "$appdir" ] && [ -z "${GIMG_YAML}" ]; then
     msg "%b" "AppDir from previous run found, remove it? [y/N]: "
@@ -455,3 +461,56 @@ function build_flatimage_wine()
     die "Unsupported package install method '$GIMG_PKG_METHOD'"
   fi
 }
+
+function build_emu()
+{
+  local platform="$1"
+  local name="$2"
+  local dir="$3"
+
+  # Validate params
+  params_validate "$platform" "$name" "$dir"
+
+  local name="${_FN_RET[0]}"
+  local dir="${_FN_RET[1]}"
+  local bios="${_FN_RET[2]}"
+  local core="${_FN_RET[3]}"
+  local cover="${_FN_RET[4]}"
+  local rom="${_FN_RET[5]}"
+  local keys="${_FN_RET[6]}"
+
+  # Export dir src
+  export DIR_SRC="$dir"
+
+  # Create dir build
+  cd "$(dir_build_create "$dir")"
+
+  # Export dir build
+  export DIR_BUILD="$(pwd)"
+
+  # Create AppDir structure inside build dir
+  dir_appdir_create "$DIR_BUILD"
+
+  # Download tools
+  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
+    _fetch_appimagetool
+  fi
+  eval "${platform}_download"
+  _fetch_imagemagick
+
+  # Populate AppDir
+  files_copy "$name" "$dir" "$bios" "$core" "$cover" "$keys"
+
+  # Create runner
+  runner_create "$name" "$bios" "$rom" "$core" "$keys"
+
+  # Build Package
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    build_flatimage_emu "$name" "$platform"
+  else
+    desktop_entry_create "$name"
+    build_appimage
+  fi
+}
+
+#  vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

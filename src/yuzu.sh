@@ -44,9 +44,7 @@ function yuzu_download()
 function runner_create()
 {
   local name="$1"
-  local bios="$(basename "$2")"
-  local keys="$(basename "$3")"
-  local rom="$(basename "$4")"
+  local rom="$(basename "$3")"
 
   msg "Install the updates and DLC to pack into the AppImage (not the game itself)"
 
@@ -84,8 +82,6 @@ function runner_create()
     export XDG_DATA_HOME="$BUILDER_XDG_DATA_HOME"
     AppDir/usr/bin/yuzu
   )
-
-  local bios="${bios#null}"
 
   # Create runner script
   { sed -E 's/^\s+://' | tee AppDir/AppRun | sed -e 's/^/-- /'; } <<-END
@@ -165,45 +161,7 @@ function runner_create()
 
 function main()
 {
-  # Validate params
-  params_validate "yuzu" "$@"
-
-  local name="${_FN_RET[0]}"
-  local dir="${_FN_RET[1]}"
-  local bios="${_FN_RET[2]}"
-  local cover="${_FN_RET[4]}"
-  local rom="${_FN_RET[5]}"
-  local keys="${_FN_RET[6]}"
-
-  # Export dir src
-  export DIR_SRC="$dir"
-
-  # Create dirs
-  cd "$(dir_build_create "$dir")"
-
-  export DIR_BUILD="$(pwd)"
-
-  dir_appdir_create
-
-  # Download tools
-  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
-    _fetch_appimagetool
-  fi
-  yuzu_download
-  _fetch_imagemagick
-
-  # Populate appdir
-  files_copy "$name" "$dir" "$bios" "null" "$cover" "$keys"
-
-  runner_create "$name" "$bios" "$keys" "$rom"
-
-  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    build_flatimage_emu "$name" "yuzu"
-  else
-    desktop_entry_create "$name"
-    build_appimage
-  fi
-
+  build_emu "yuzu" "$@"
 }
 
 main "$@"

@@ -134,43 +134,7 @@ function runner_create()
 
 function main()
 {
-  # Validate params
-  params_validate "rpcs3" "$@"
-
-  local name="${_FN_RET[0]}"
-  local dir="${_FN_RET[1]}"
-  local bios="${_FN_RET[2]}"
-  local core="${_FN_RET[3]}"
-  local cover="${_FN_RET[4]}"
-
-  # Export dir src
-  export DIR_SRC="$dir"
-
-  # Create dirs
-  cd "$(dir_build_create "$dir")"
-
-  export DIR_BUILD="$(pwd)"
-
-  dir_appdir_create
-
-  # Download tools
-  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
-    _fetch_appimagetool
-  fi
-  rpcs3_download
-  _fetch_imagemagick
-
-  # Populate appdir
-  files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
-
-  runner_create "$name" "$bios"
-
-  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    build_flatimage_emu "$name" "rpcs3"
-  else
-    desktop_entry_create "$name"
-    build_appimage
-  fi
+  build_emu "rpcs3" "$@"
 }
 
 main "$@"

@@ -79,8 +79,8 @@ function runner_create()
 {
   local name="$1"
   local bios="$(basename "$2")"
-  local core="$(basename "$3")"
-  local rom="$(basename "$4")"
+  local rom="$(basename "$3")"
+  local core="$(basename "$4")"
 
   [ "$bios" == "null" ] && local bios=""
 
@@ -178,45 +178,7 @@ function runner_create()
 
 function main()
 {
-  # Validate params
-  params_validate "retroarch" "$@"
-
-  local name="${_FN_RET[0]}"
-  local dir="${_FN_RET[1]}"
-  local bios="${_FN_RET[2]}"
-  local core="${_FN_RET[3]}"
-  local cover="${_FN_RET[4]}"
-  local rom="${_FN_RET[5]}"
-
-  # Export dir src
-  export DIR_SRC="$dir"
-
-  # Create dirs
-  cd "$(dir_build_create "$dir")"
-
-  export DIR_BUILD="$(pwd)"
-
-  dir_appdir_create
-
-  # Download tools
-  if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
-    _fetch_appimagetool
-  fi
-  retroarch_download
-  _fetch_imagemagick
-
-  # Populate appdir
-  files_copy "$name" "$dir" "$bios" "$core" "$cover" "null"
-
-  runner_create "$name" "$bios" "$core" "$rom"
-
-  # Create runner script and build image
-  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-    build_flatimage_emu "$name" "retroarch"
-  else
-    desktop_entry_create "$name"
-    build_appimage
-  fi
+  build_emu "retroarch" "$@"
 }
 
 main "$@"
