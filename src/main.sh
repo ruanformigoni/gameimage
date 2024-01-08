@@ -81,6 +81,9 @@ function main()
 {
   declare -A args
 
+  # Remove logs
+  rm -rf /tmp/gameimage/logs
+
   # Validate GIMG_PKG_TYPE
   ## Default it to lowercase
   GIMG_PKG_TYPE="${GIMG_PKG_TYPE,,}"
