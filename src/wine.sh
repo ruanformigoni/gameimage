@@ -39,25 +39,20 @@ function _fetch_wine()
       "$GIMG_SCRIPT_DIR"/jq -e -r '.[].assets.[].browser_download_url | match(".*wine-'"$GIMG_WINE_DIST"'.*x86_64.AppImage").string | select (.!=null)')
   fi
 
-  if [ ! -f "AppDir/usr/bin/wine" ]; then
-    if [ -f "./wine" ]; then
-      mv wine AppDir/usr/bin/wine
-    else
-      if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
-        # Fetch packages
-        _fetch "wine" "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
-        _fetch "opt.dwarfs" "$url"
-        # Set home directory to build dir
-        ./wine fim-config-set home "$DIR_SRC"
-        # Merge flatimage with wine binaries
-        ./wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
-        # Remove downloaded wine binaries
-        rm -f ./opt.dwarfs
-      else
-        _fetch "wine" "$url"
-      fi
-      mv wine AppDir/usr/bin/wine
+  if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+    # Fetch base
+    _fetch "AppDir/usr/bin/wine" \
+      "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
+    # Fetch wine
+    _fetch "opt.dwarfs" "$url"
+    if [[ -f "opt.dwarfs" ]] && [[ -f "AppDir/usr/bin/wine" ]]; then
+      # Set home directory to build dir
+      ./AppDir/usr/bin/wine fim-config-set home "$DIR_SRC"
+      # Merge flatimage with wine binaries
+      ./AppDir/usr/bin/wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
     fi
+  else
+    _fetch "AppDir/usr/bin/wine" "$url"
   fi
 
   # Create winetricks
