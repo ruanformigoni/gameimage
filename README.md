@@ -135,7 +135,7 @@ sudo abroot exec apt install libc6-i386
 
 ## Install
 
-Download the appimage in the [releases](https://gitlab.com/formigoni/gameimage/-/releases) page.
+Download the `.run` file in the [releases](https://gitlab.com/formigoni/gameimage/-/releases) page.
 
 ## Usage (Command Line)
 
