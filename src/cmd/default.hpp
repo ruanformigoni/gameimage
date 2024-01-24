@@ -13,7 +13,7 @@ namespace ns_default
 {
 
 // set() {{{
-void set(std::string const& s)
+inline void set(std::string const& s)
 {
   // Tries to open default config file
   ns_json::Json json = ns_json::from_default_file();
@@ -29,7 +29,7 @@ void set(std::string const& s)
 } // set() }}}
 
 // get() {{{
-std::string get()
+inline std::string get()
 {
   // Tries to open default config file
   ns_json::Json json = ns_json::from_default_file();

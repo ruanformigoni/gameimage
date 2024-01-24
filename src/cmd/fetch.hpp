@@ -30,7 +30,7 @@ struct DataDownload
 }; // }}}
 
 // dispatch_progress() {{{
-void dispatch_progress(fs::path const& path_fifo, std::string const& data)
+inline void dispatch_progress(fs::path const& path_fifo, std::string const& data)
 {
   // Create fifo
   fifo::create(path_fifo.c_str());
@@ -42,7 +42,7 @@ void dispatch_progress(fs::path const& path_fifo, std::string const& data)
 
 // fetch_callback() {{{
 // Progress callback function
-bool fetch_callback(cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t userdata)
+inline bool fetch_callback(cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t userdata)
 {
   static std::chrono::steady_clock::time_point prev = std::chrono::steady_clock::now();
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -62,7 +62,7 @@ bool fetch_callback(cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cp
 } // }}}
 
 // fetch_to_file() {{{
-void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
+inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
 {
   // Fetch a file
   auto f_fetch = [](fs::path path, cpr::Url url)
@@ -141,7 +141,7 @@ void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
 } // fetch_to_file() }}}
 
 // fetch() {{{
-void fetch(std::string str_platform, fs::path str_name_file)
+inline void fetch(std::string str_platform, fs::path str_name_file)
 {
   // Validate input
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);

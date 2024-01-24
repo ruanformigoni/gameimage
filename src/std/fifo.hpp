@@ -21,7 +21,7 @@ namespace fs = std::filesystem;
 
 // create() {{{
 // Create a FIFO for writing progress data
-void create(const char* str_name)
+inline void create(const char* str_name)
 {
   // Check if already exists
   if (struct stat buf; stat(str_name, &buf) == 0 && S_ISFIFO(buf.st_mode) )
@@ -51,7 +51,7 @@ void create(const char* str_name)
 } // create() }}}
 
 // push() {{{
-void push(const char* str_name, std::string data)
+inline void push(const char* str_name, std::string data)
 {
   if (int fd = open(str_name, O_WRONLY | O_NONBLOCK); fd != -1)
   {

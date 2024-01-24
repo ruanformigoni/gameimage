@@ -15,7 +15,7 @@ namespace ns_package
 namespace fs = std::filesystem;
 
 // package() {{{
-void package(fs::path path_setup, fs::path path_out)
+inline void package(fs::path path_setup, fs::path path_out)
 {
   // Install path
   fs::path path_flatimage  = fs::path{path_setup} /= "AppDir/usr/bin/base.flatimage";

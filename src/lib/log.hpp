@@ -16,7 +16,7 @@ namespace ns_log
 
 namespace fs = std::filesystem;
 
-void init(int argc, char** argv)
+inline void init(int argc, char** argv)
 {
   START_EASYLOGGINGPP(argc, argv);
   // Logfile

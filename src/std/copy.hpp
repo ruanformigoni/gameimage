@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 
 // file() {{{
 template<typename F>
-void file(fs::path const& path_src, fs::path const& path_dst, F&& f_progress_callback)
+inline void file(fs::path const& path_src, fs::path const& path_dst, F&& f_progress_callback)
 {
   std::ifstream file_src(path_src, std::ios::binary);
   std::ofstream file_dst(path_dst, std::ios::binary);

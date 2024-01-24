@@ -25,7 +25,7 @@ namespace match = matchit;
 
 
 // wine() {{{
-void wine(std::vector<std::string> args)
+inline void wine(std::vector<std::string> args)
 {
   // Get default path
   ns_json::Json json = ns_json::from_default_file();

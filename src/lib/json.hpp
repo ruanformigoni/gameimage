@@ -99,7 +99,7 @@ class Json
 }; // class: Json }}}
 
 // operator<< {{{
-std::ostream& operator<<(std::ostream& os, Json const& json)
+inline std::ostream& operator<<(std::ostream& os, Json const& json)
 {
   os << json.m_json;
   return os;
@@ -122,19 +122,19 @@ void to_file(Json const& json, T&& t)
 } // function: to_file }}}
 
 // default_file() {{{
-fs::path default_file()
+inline fs::path default_file()
 {
   return fs::current_path() /= "gameimage.json";
 } // default_file() }}}
 
 // from_default_file() {{{
-Json from_default_file()
+inline Json from_default_file()
 {
   return from_file(default_file());
 } // function: from_default_file }}}
 
 // to_default_file() {{{
-void to_default_file(Json const& json)
+inline void to_default_file(Json const& json)
 {
   to_file(json, default_file());
 } // function: to_default_file }}}

@@ -44,7 +44,7 @@ enum class Stage
 };
 
 template<Enum U, std::convertible_to<std::string> T>
-decltype(auto) from_string(T&& t)
+inline decltype(auto) from_string(T&& t)
 {
 	if ( auto opt = magic::enum_cast<U>(t, magic::case_insensitive); opt )
 	{
@@ -57,7 +57,7 @@ decltype(auto) from_string(T&& t)
 }
 
 template<Enum T>
-decltype(auto) to_string(T&& t)
+inline decltype(auto) to_string(T&& t)
 {
 	return magic::enum_name(t);
 }

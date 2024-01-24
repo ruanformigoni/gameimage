@@ -25,7 +25,7 @@ std::string to_string(T&& t);
 
 // User defined literals {{{
 // Format strings with user-defined literals
-decltype(auto) operator ""_fmt(const char* str, size_t)
+inline decltype(auto) operator ""_fmt(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
@@ -35,7 +35,7 @@ decltype(auto) operator ""_fmt(const char* str, size_t)
 
 // User defined literals {{{
 // Format strings with user-defined literals
-decltype(auto) operator ""_throw(const char* str, size_t)
+inline decltype(auto) operator ""_throw(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
@@ -50,7 +50,7 @@ namespace ns_common
 
 // to_string() {{{
 template<typename T>
-std::string to_string(T&& t)
+inline std::string to_string(T&& t)
 {
   if constexpr ( ns_concept::StringConvertible<T> )
   {

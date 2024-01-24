@@ -25,7 +25,7 @@ enum class Replace
 
 // dir() {{{
 // Fetches a directory path from an environment variable
-fs::path dir(const char* name)
+inline fs::path dir(const char* name)
 {
   // Get environment variable
   const char * value = std::getenv(name) ;
@@ -51,14 +51,14 @@ fs::path dir(const char* name)
 
 // set() {{{
 // Sets an environment variable
-void set(const char* name, const char* value, Replace replace)
+inline void set(const char* name, const char* value, Replace replace)
 {
   setenv(name, value, (replace == Replace::Y));
 } // set() }}}
 
 // concat() {{{
 // Appends 'extra' to an environment variable 'name'
-void concat(const char* name, std::string const& extra)
+inline void concat(const char* name, std::string const& extra)
 {
   // Append to var
   if ( const char* var_curr = std::getenv(name); var_curr )

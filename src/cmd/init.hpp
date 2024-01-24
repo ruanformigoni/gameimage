@@ -26,7 +26,7 @@ namespace ns_init
 namespace fs    = std::filesystem;
 
 // init() {{{
-void init(std::string const& str_platform
+inline void init(std::string const& str_platform
   , std::string const& str_path_app
   , std::string const& str_path_image)
 {
