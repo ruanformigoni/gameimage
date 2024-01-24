@@ -1,3 +1,7 @@
 build/
 gui/launcher/target
 gui/wizard/target
+src/build
+src/conan2
+*.tar.xz
+*.fim

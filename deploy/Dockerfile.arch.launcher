@@ -1,17 +1,21 @@
 FROM archlinux:latest
 
 # Update
-RUN pacman -Syu --noconfirm
+RUN pacman -Sy --noconfirm
+RUN cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.ref
+RUN pacman -S pacman-contrib --noconfirm
+RUN rankmirrors -n 6 /etc/pacman.d/mirrorlist.ref > /etc/pacman.d/mirrorlist
 
 # Install dependencies
 RUN pacman -S --noconfirm autoconf automake binutils bison debugedit fakeroot file findutils flex gawk gcc gettext grep groff gzip libtool m4 make patch pkgconf sed sudo texinfo which git cmake gtk3 
 
 # Setup rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
 ENV PATH "/root/.cargo/bin:$PATH"
 
-# Fetch sources
-RUN git clone https://gitlab.com/formigoni/gameimage.git
+# Copy files
+RUN mkdir /gameimage
+COPY . /gameimage/
 
 # Enter src dir
 WORKDIR gameimage

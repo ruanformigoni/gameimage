@@ -50,6 +50,11 @@ function extract()
 # $2 = default option [y/n]
 function _select_bool()
 {
+  # Default to NO if noninteractive
+  if [[ "$GIMG_INTERACTIVE" = "0" ]]; then
+    return 1;
+  fi
+
   if [ "${2,,}" != "y" ] && [ "${2,,}" != "n" ]; then
     msg "Invalid default option for _select_bool"
   fi
@@ -119,18 +124,33 @@ function _eval_select()
 
 function param_validate()
 {
-  local directory="$1"
-  local pattern="$2"
-  local required="$3"
+  local env_var="$1"
+  local directory="$2"
+  local pattern="$3"
 
-  if [ -d "$src_dir/$directory" ]; then
-    read -r query <<< "$(fd -i --max-results=1 "$pattern" "$src_dir/$directory")"
-    [ -f "$query" ] || { die "Pattern '$pattern' not found in directory $directory"; }
-    msg "Selected $directory: $query"
+  # Check with env_var first
+  if [[ -v "$env_var" ]]; then
+    # Check if is a valid icon
+    if ! [[ "$GIMG_ICON" =~ $pattern ]]; then
+      die "Invalid icon '$GIMG_ICON'"
+    fi
     echo "$query"
+    msg "$env_var: $query"
+    return
+  # Try to search dir instead
   else
-    [ "$required" ] && die "Directory '$directory' does not exist" || echo "null"
+    # Use as cover
+    if [ -d "$directory" ]; then
+      read -r query <<< "$(fd -i --max-results=1 "$pattern" "$directory")"
+      [ -f "$query" ] || { die "Pattern '$pattern' not found in directory $directory"; }
+      echo "$query"
+      msg "$env_var: $query"
+      return
+    fi
   fi
+
+  die "'$env_var' not found"
+
 }
 
 function params_validate()
@@ -138,66 +158,35 @@ function params_validate()
   # Get platform
   local platform="$1"
 
-  # Get Name
-  local name="$2"
-
-  # Convert path to absolute
-  local src_dir="$(readlink -f "$3")"
-
-  # Validate src dir
-  [ -d "$src_dir" ] || { die "Invalid src dir ${src_dir}"; }
-  [ -d "$src_dir/rom" ] || { die "Invalid no rom folder in src dir ${src_dir}"; }
-  [ -d "$src_dir/icon" ] || { die "Invalid no icon folder in src dir ${src_dir}"; }
-
-  # Validate rom
-  local rom
-  if [ "$platform" = "wine" ]; then
-    rom="null"
-  elif [ ! -d "$src_dir/rom" ]; then
-    die "Directory \"$src_dir/rom\" not found"
-  else
-    declare -a files
-
-    readarray -t files < <(fd . "$src_dir/rom" --max-depth 1 --type f)
-    [[ "${#files[@]}" -ne 0 ]] || { die "No file found in rom directory $src_dir/rom"; }
-
-    if [[ "${#files[@]}" -eq 1 ]]; then
-      rom="${files[0]}"
-    elif [ -z "$GIMG_YAML" ]; then
-      msg "Select the rom file to boot when the appimage is clicked"
-      msg "It must be a number between 1 and ${#files[@]}"
-      msg "Tip: In retroarch, you can change discs with F1 -> disc control -> load new disc"
-      _select "${files[@]}"
-      rom="${_FN_RET[0]}"
-    else
-      rom="$("$GIMG_SCRIPT_DIR/yq" -e '.rom' "$GIMG_YAML")"
-      [ -f "$rom" ] || { die "Invalid rom path in $GIMG_YAML"; }
-    fi
-
-    msg "Selected rom: $rom"
-  fi
-
-  local core="$(param_validate "core" ".*\.so")"
-
-  local cover="$(param_validate "icon" ".*(\.jpg|\.png|\.svg)" "required")"
-
-  local bios="$(param_validate "bios" ".*(.bin|\.pup|\.zip|\.7z)")"
-
-  local keys="$(param_validate "keys" ".*(\.zip|\.7z)")"
-
   # Get name and normalize to dash separated lowercase
+  local name="$2"
   local name="${name// /-}"
   local name="${name//,/;}"
   local name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
 
+  # Convert path to absolute
+  local dir_src="$(readlink -f "$3")"
+
+  # Validate source dir
+  if ! [ -d "$dir_src" ]; then
+    die "Invalid source dir '$dir_src'"
+  fi
+  msg "GIMG_DIR: $dir_src"
+
+  # # Validate cover image
+  # local cover="$(param_validate "GIMG_ICON" "$dir_src/icon" ".*(\.jpg|\.png|\.svg)")"
+  #
+  # # Validate by platform
+  # local rom="$(param_validate "GIMG_ROM" "$dir_src/rom" ".*(\.exe|\.msi)")"
+
   # Return
-  _FN_RET[0]="$name"
-  _FN_RET[1]="$src_dir"
-  _FN_RET[2]="$bios"
-  _FN_RET[3]="$core"
-  _FN_RET[4]="$cover"
-  _FN_RET[5]="$rom"
-  _FN_RET[6]="$keys"
+  export GIMG_NAME="$name"
+  export GIMG_DIR="$dir_src"
+  # _FN_RET[2]="$bios"
+  # _FN_RET[3]="$core"
+  # _FN_RET[4]="$cover"
+  # _FN_RET[5]="$rom"
+  # _FN_RET[6]="$keys"
 }
 
 function dir_build_create()
@@ -234,21 +223,35 @@ function dir_appdir_create()
 # $2 = url
 function _fetch()
 {
-  local name="$1"
+  local dest="$1"
   local url="$2"
 
-  msg "Download $name: $url"
+  msg "Download $dest: $url"
 
-  # Fetch from link
-  (
-    exec 1> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line"; done)
-    exec 2> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line" >&2; done)
-    aria2c --download-result=hide --summary-interval=5 --continue=true \
-      --show-console-readout=false --auto-file-renaming=false -x4 -o "$name" "$url"
-  )
-
-  # Make executable
-  chmod +x "$name"
+  # Keep a log of "[dest]":"[link]"
+  mkdir -p /tmp/gameimage/logs
+  local file_log_key="/tmp/gameimage/logs/_fetch_keys.log"
+  local file_log_val="/tmp/gameimage/logs/_fetch_vals.log"
+  echo "${dest}" >> "$file_log_key"
+  echo "${url}" >> "$file_log_val"
+  if [[ -v GIMG_FETCH_DRY ]]; then
+    # If GIMG_FETCH_DRY is defined, do not actually fetch
+    :
+  else
+    if [[ -f "$dest" ]]; then
+      msg "File '$dest' exists"
+    else
+      # Fetch from link
+      (
+        exec 1> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line"; done)
+        exec 2> >(while IFS= read -r line; do sed '/\[#.*\]/!d' <<< "$line" >&2; done)
+        aria2c --download-result=hide --summary-interval=5 --continue=true \
+          --show-console-readout=false --auto-file-renaming=false -x4 -o "$dest" "$url"
+      )
+      # Make executable
+      chmod +x "$dest"
+    fi
+  fi
 }
 
 # Fetches a url and dumps to stdout
@@ -276,18 +279,26 @@ function _fetch_stdout()
 # Fetches appimagetool to current dir
 function _fetch_appimagetool()
 {
-  _fetch  "appimagetool" \
+  # Create fetch dir
+  local dir_fetch="${GIMG_DIR_BUILD:?"GIMG_DIR_BUILD is undefined"}/tools-wine"
+  mkdir -p "$dir_fetch"
+
+  _fetch  "$dir_fetch/appimagetool" \
     "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
 }
 
 # Fetches imagemagick to current dir
 function _fetch_imagemagick()
 {
+  # Create fetch dir
+  local dir_fetch="${GIMG_DIR_BUILD:?"GIMG_DIR_BUILD is undefined"}/tools-wine"
+  mkdir -p "$dir_fetch"
+
   local url="$(_fetch_stdout \
     "https://api.github.com/repos/ruanformigoni/imagemagick-static-musl/releases/latest" \
     | jq -e -r '.assets.[0].browser_download_url')"
 
-  _fetch "imagemagick" "$url"
+  _fetch "$dir_fetch/imagemagick" "$url"
 }
 
 function files_copy()
@@ -317,7 +328,7 @@ function files_copy()
     fi
   fi
 
-  # Keys [yuzu]
+  # Keys [ryujinx]
   if [ "$keys" != "null" ]; then
     mkdir -p AppDir/app/keys
     if [[ "$keys" =~ (\.zip|\.7z) ]]; then
