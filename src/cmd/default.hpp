@@ -18,6 +18,9 @@ void set(std::string const& s)
   // Tries to open default config file
   ns_json::Json json = ns_json::from_default_file();
 
+  // Check if exists or throw
+  json.contains<true>(s);
+
   // Updates default
   json["default"] = s;
 

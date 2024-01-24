@@ -52,6 +52,20 @@ class Json
       m_json = json::parse(ifile);
     } // Json
 
+    template<bool _throw = true, IsString T>
+    bool contains(T&& t)
+    {
+      if constexpr ( _throw )
+      {
+        if ( ! m_json.contains(t) )
+        {
+          "'{}' not found in json"_throw(t);
+        } // if
+      } // if
+
+      return m_json.contains(t);
+    } // function: contains
+
     operator std::string() const
     {
       return m_json;

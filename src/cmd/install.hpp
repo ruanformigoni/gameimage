@@ -42,6 +42,11 @@ void wine(std::vector<std::string> args)
   // Path to wine prefix
   fs::path path_wineprefix = fs::path{path_cwd} /= "wine";
 
+  // Log
+  ns_log::write('i', "application: ", str_app);
+  ns_log::write('i', "image: ", path_flatimage);
+  ns_log::write('i', "prefix: ", path_wineprefix);
+
   // Export prefix
   ns_env::set("WINEPREFIX", path_wineprefix.c_str(), ns_env::Replace::N);
 

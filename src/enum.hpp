@@ -39,6 +39,7 @@ enum class Stage
 	DEFAULT,
 	INSTALL,
 	TEST,
+	COMPRESS,
 	PACKAGE,
 };
 

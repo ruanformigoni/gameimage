@@ -141,6 +141,18 @@ class Install : public Parser
     } // Install
 }; // class: Install }}}
 
+// class Compress {{{
+class Compress : public Parser
+{
+  public:
+    Compress(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::COMPRESS;
+    } // Compress
+}; // class: Compress }}}
+
 } // namespace ns_parser
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

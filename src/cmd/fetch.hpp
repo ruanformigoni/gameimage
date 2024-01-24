@@ -141,15 +141,20 @@ void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
 } // fetch_to_file() }}}
 
 // fetch() {{{
-void fetch(ns_enum::Platform platform, fs::path path_dest)
+void fetch(std::string str_platform, fs::path str_name_file)
 {
-  // Make path absolute to parent dir
-  path_dest = fs::absolute(path_dest.parent_path()) /= path_dest.filename();
+  // Validate input
+  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
+  fs::path path_image       = ns_fs::ns_path::file_exists<true>(str_name_file)._ret;
+
+  // Log
+  ns_log::write('i', "platform: ", str_platform);
+  ns_log::write('i', "image: ", path_image);
 
   // Fetch files
   try
   {
-    ns_fetch::fetch_to_file(platform, fs::path(path_dest));
+    ns_fetch::fetch_to_file(platform, fs::path(path_image));
   }
   catch(std::exception const& e)
   {

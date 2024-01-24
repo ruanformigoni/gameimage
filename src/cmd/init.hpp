@@ -26,10 +26,20 @@ namespace ns_init
 namespace fs    = std::filesystem;
 
 // init() {{{
-void init(ns_enum::Platform platform
-  , fs::path const& path_app
-  , fs::path const& path_image)
+void init(std::string const& str_platform
+  , std::string const& str_path_app
+  , std::string const& str_path_image)
 {
+  // Validate
+  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
+  fs::path path_image        = ns_fs::ns_path::file_exists<true>(str_path_image)._ret;
+  fs::path path_app          = ns_fs::ns_path::dir_exists<true>(str_path_app)._ret;
+
+  // Log
+  ns_log::write('i', "platform: ", str_platform);
+  ns_log::write('i', "image: ", path_image);
+  ns_log::write('i', "dir: ", path_app);
+
   // Check if data file exists
   ns_fs::ns_path::file_exists<true>(path_image);
 
