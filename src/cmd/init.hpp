@@ -33,7 +33,7 @@ inline void init(std::string const& str_platform
   // Validate
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
   fs::path path_image        = ns_fs::ns_path::file_exists<true>(str_path_image)._ret;
-  fs::path path_app          = ns_fs::ns_path::dir_exists<true>(str_path_app)._ret;
+  fs::path path_app          = ns_fs::ns_path::dir_create<true>(str_path_app)._ret;
 
   // Log
   ns_log::write('i', "platform: ", str_platform);
@@ -59,7 +59,7 @@ inline void init(std::string const& str_platform
   } // try
   catch( std::exception const& e )
   {
-    ns_log::write('i', e.what());
+    ns_log::write('i', "File ", ns_json::default_file(), " not found");
     ns_log::write('i', "Creating {}"_fmt(ns_json::default_file()));
   } // catch
 

@@ -8,18 +8,21 @@
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <variant>
 
 #include "../common.hpp"
 
 #include "../std/filesystem.hpp"
+
+#include "../lib/log.hpp"
 
 namespace ns_json
 {
 
 namespace fs = std::filesystem;
 
-using json = nlohmann::json;
-using Exception = json::exception;
+using json_t = nlohmann::json;
+using Exception = json_t::exception;
 
 template<typename T>
 concept IsString =
@@ -30,10 +33,31 @@ concept IsString =
 class Json
 {
   private:
-    json m_json;
+    std::variant<json_t, std::reference_wrapper<json_t>> m_json;
+
+    Json(std::reference_wrapper<json_t> json)
+    {
+      m_json = json;
+    } // Json
+
+    json_t& data()
+    {
+      if (std::holds_alternative<std::reference_wrapper<json_t>>(m_json))
+      {
+        return std::get<std::reference_wrapper<json_t>>(m_json).get();
+      } // if
+      
+      return std::get<json_t>(m_json);
+    } // get
+
+    json_t data() const
+    {
+      return const_cast<Json*>(this)->data();
+    } // get
 
   public:
     Json()
+      : m_json(json_t{})
     {} // Json
 
     Json(Json const& json)
@@ -41,15 +65,21 @@ class Json
       m_json = json.m_json;
     } // Json
 
-    template<IsString T>
-    Json(T&& t)
+    Json(fs::path t)
     {
-      std::ifstream ifile{t};
-      if ( ! ifile.good() )
+      try
       {
-        "Failed to open '{}'"_throw(t);
-      } // if
-      m_json = json::parse(ifile);
+        std::ifstream ifile{t};
+        if ( ! ifile.good() )
+        {
+          "Failed to open '{}'"_throw(t);
+        } // if
+        m_json = json_t::parse(ifile);
+      } // try
+      catch(std::exception const& e)
+      {
+        "Could not open file '{}'"_throw(t, e.what());
+      } // catch
     } // Json
 
     template<bool _throw = true, IsString T>
@@ -57,34 +87,55 @@ class Json
     {
       if constexpr ( _throw )
       {
-        if ( ! m_json.contains(t) )
+        if ( ! data().contains(t) )
         {
           "'{}' not found in json"_throw(t);
         } // if
       } // if
 
-      return m_json.contains(t);
+      return data().contains(t);
     } // function: contains
 
     operator std::string() const
     {
-      return m_json;
+      return data();
     } // operator std::string
 
-    template<IsString T>
-    json& operator[](T&& t)
+    operator fs::path() const
     {
-      if ( ! m_json.contains(std::forward<T>(t)) )
+      return data();
+    } // operator fs::path
+
+    template<IsString T>
+    Json operator[](T&& t)
+    {
+      // Check if key is present
+      if ( ! data().contains(std::forward<T>(t)) )
       {
         "Key '{}' not present in json file"_fmt(t);
       } // if
-      return m_json[std::forward<T>(t)];
+
+      // Get reference to current value
+      json_t& json = data()[std::forward<T>(t)];
+
+      // Access key
+      try
+      {
+        return Json{std::reference_wrapper<json_t>(json)};
+      } // try
+      catch(std::exception const& e)
+      {
+        "Failed to parse json key '{}': {}"_throw(e.what());
+      } // catch
+
+      // Unreachable, used to suppress no return warning
+      return {};
     } // operator[]
 
     template<IsString T>
     T operator=(T&& t)
     {
-      m_json[t];
+      data() = t;
       return t;
     } // operator=
 
@@ -101,7 +152,7 @@ class Json
 // operator<< {{{
 inline std::ostream& operator<<(std::ostream& os, Json const& json)
 {
-  os << json.m_json;
+  os << json.data();
   return os;
 } // operator<< }}}
 

@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <cpr/cpr.h>
 #include <fmt/ranges.h>
+#include <iostream>
 
 #include "../common.hpp"
 #include "../enum.hpp"
@@ -103,14 +104,19 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
   // Create temporary directory
   fs::create_directories(dir_dest);
 
+  std::cerr << "Hello1" << std::endl;
+
   // Open file list
   ns_json::Json json_fetch = ns_json::from_file(path_json);
+
+  std::cerr << "Hello2" << std::endl;
 
   // Fetch tools by platform
   switch(platform)
   {
     case ns_enum::Platform::WINE:
     {
+      std::cerr << "Hello3" << std::endl;
       // Determine paths for base and wine
       fs::path path_wine = fs::path{dir_dest} /= "opt.dwarfs";
       fs::path path_base = fs::path{dir_dest} /= "base.flatimage";

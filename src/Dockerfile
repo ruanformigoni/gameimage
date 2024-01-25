@@ -8,7 +8,7 @@ RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/reposit
 # Install deps
 RUN apk update && apk upgrade
 RUN apk add --no-cache build-base git libbsd-dev py3-pip pipx git patchelf cmake gcc \
-  bash e2fsprogs xz curl zstd gawk debootstrap m4 gcompat
+  bash e2fsprogs xz curl zstd gawk debootstrap m4 gcompat nasm
 
 # Install conan
 RUN pipx install conan
@@ -27,7 +27,10 @@ COPY . /gameimage/
 WORKDIR /gameimage
 
 # Compile
-RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build
+RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
+# nasm bug when on musl system "undefined symbol"
+RUN cp "$(command -v nasm)" /root/.conan2/p/nasmc*/p/bin/nasm
+RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
 RUN cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release
 RUN cmake --build --preset conan-release
 

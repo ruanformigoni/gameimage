@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <concepts>
+#include <functional>
 
 #include "../common.hpp"
 
@@ -19,8 +20,10 @@ namespace ns_copy
 namespace fs = std::filesystem;
 
 // file() {{{
-template<typename F>
-inline void file(fs::path const& path_src, fs::path const& path_dst, F&& f_progress_callback)
+template<typename F = std::function<void(double,fs::path,fs::path)> >
+inline void file(fs::path const& path_src
+  , fs::path const& path_dst
+  , F&& f_progress_callback = [](auto&&,auto&&,auto&&){})
 {
   std::ifstream file_src(path_src, std::ios::binary);
   std::ofstream file_dst(path_dst, std::ios::binary);

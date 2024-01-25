@@ -20,6 +20,15 @@ namespace ns_enum
 template<typename T>
 concept Enum = std::is_enum_v<std::remove_cvref_t<T>>;
 
+// Image Format
+enum class ImageFormat
+{
+	PNG,
+	JPG,
+	JPEG,
+};
+
+
 // Platform
 enum class Platform
 {

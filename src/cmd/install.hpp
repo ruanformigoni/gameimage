@@ -9,10 +9,15 @@
 #include <filesystem>
 #include <matchit.h>
 
+#include <boost/gil.hpp>
+#include <boost/gil/extension/io/jpeg.hpp>
+#include <boost/gil/extension/io/png.hpp>
+
 #include "../enum.hpp"
 #include "../common.hpp"
 
 #include "../std/env.hpp"
+#include "../std/copy.hpp"
 
 #include "../lib/subprocess.hpp"
 #include "../lib/json.hpp"
@@ -23,6 +28,46 @@ namespace ns_install
 namespace fs = std::filesystem;
 namespace match = matchit;
 
+
+// icon() {{{
+inline void icon(std::string str_file_icon)
+{
+  namespace gil = boost::gil;
+
+  // Current application
+  ns_json::Json json = ns_json::from_default_file();
+  std::string str_app = json["default"];
+
+  // Current application directory
+  fs::path path_app = json[str_app]["path-app"];
+
+  // Validate that file exists
+  fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
+
+  // File extension
+  std::string ext = path_file_icon_src.extension();
+
+  // Create icon directory and set file name
+  fs::path path_dir_icon = path_app /= "icon";
+  ns_fs::ns_path::dir_create<true>(path_dir_icon);
+  fs::path path_file_icon_dst = path_dir_icon /= "icon.png";
+
+  gil::rgb8_image_t img;
+  switch ( ns_enum::from_string<ns_enum::ImageFormat>(ext) )
+  {
+    // Convert jpg to png
+    case ns_enum::ImageFormat::JPG:
+    case ns_enum::ImageFormat::JPEG:
+      gil::read_image(path_file_icon_src, img, gil::jpeg_tag());
+      gil::write_view(path_file_icon_dst, gil::view(img), gil::png_tag());
+      break;
+    // Copy
+    case ns_enum::ImageFormat::PNG:
+      ns_copy::file(path_file_icon_src, path_file_icon_dst);
+      break;
+  } // switch
+  
+} // icon() }}}
 
 // wine() {{{
 inline void wine(std::vector<std::string> args)
@@ -87,6 +132,30 @@ inline void wine(std::vector<std::string> args)
     match::pattern | match::_     = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
   );
 } // wine() }}}
+
+// install() {{{
+void install(std::string const& str_platform, std::vector<std::string> const& args)
+{
+  ns_json::Json json = ns_json::from_default_file();
+  std::string str_app = json[json["default"]]["platform"];
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
+
+  switch(enum_platform)
+  {
+    case ns_enum::Platform::WINE:
+      ns_install::wine(args);
+      break;
+    case ns_enum::Platform::RETROARCH:
+      break;
+    case ns_enum::Platform::PCSX2:
+      break;
+    case ns_enum::Platform::RPCS3:
+      break;
+    case ns_enum::Platform::YUZU:
+      break;
+  } // switch
+  
+} // install() }}}
 
 } // namespace ns_install
 

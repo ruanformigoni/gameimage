@@ -33,13 +33,30 @@ inline decltype(auto) operator ""_fmt(const char* str, size_t)
   };
 } // }}}
 
+// class Exception {{{
+class Exception : public std::exception
+{
+  private:
+    std::string m_msg;
+
+  public:
+    Exception(std::string const& msg)
+      : m_msg(msg)
+    {
+    } // Exception
+    const char * what() const noexcept override
+    {
+      return m_msg.c_str();
+    } // what()
+}; // class: Exception }}}
+
 // User defined literals {{{
 // Format strings with user-defined literals
 inline decltype(auto) operator ""_throw(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
-    throw std::runtime_error(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+    throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
   };
 } // }}}
 
