@@ -111,7 +111,7 @@ Ret<std::string> file_name(fs::path const& path)
 // dir_create() {{{
 // Creates directories in 'path' if not exists
 template<bool _throw> 
-Ret<fs::path> dir_create(fs::path const& path_dir)
+Ret<fs::path> dir_create(fs::path path_dir)
 {
   if( fs::exists(path_dir) && ! fs::is_directory(path_dir) )
   {
@@ -146,15 +146,16 @@ Ret<fs::path> dir_exists(fs::path path_dir)
   return Ret(canonical<_throw>(path_dir)._ret, true, "");
 } // dir_exists() }}}
 
-// dir_exists() {{{
+// dir_parent_exists() {{{
 // Parent file exists and is a directory
 template<bool _throw> 
 Ret<fs::path> dir_parent_exists(fs::path path)
 {
-  path = dir_exists<_throw>(path.parent_path())._ret /= ns_fs::ns_path::file_name<_throw>(path)._ret;
+  path = dir_exists<_throw>(canonical<_throw>(path.parent_path())._ret)._ret
+      /= file_name<_throw>(path)._ret;
 
   return Ret(path, true, "");
-} // dir_exists() }}}
+} // dir_parent_exists() }}}
 
 } // namespace ns_path }}}
 
