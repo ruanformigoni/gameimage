@@ -67,9 +67,9 @@ inline void init(std::string const& str_platform
   std::string str_name = path_app.filename();
 
   // Set data
-  json_config[str_name]["path-image"] = path_image;
-  json_config[str_name]["path-app"]   = path_app;
-  json_config[str_name]["platform"]   = ns_enum::to_string(platform);
+  json_config(str_name)("path-image") = path_image;
+  json_config(str_name)("path-app")   = path_app;
+  json_config(str_name)("platform")   = ns_enum::to_string(platform);
 
   // Write to json file
   ns_json::to_default_file(json_config);

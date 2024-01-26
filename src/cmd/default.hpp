@@ -22,7 +22,7 @@ inline void set(std::string const& s)
   json.contains<true>(s);
 
   // Updates default
-  json["default"] = s;
+  json("default") = s;
 
   // Tries to write back to default config file
   ns_json::to_default_file(json);

@@ -109,19 +109,18 @@ class Json
     template<IsString T>
     Json operator[](T&& t)
     {
+      json_t& json = data();
+
       // Check if key is present
-      if ( ! data().contains(std::forward<T>(t)) )
+      if ( ! json.contains(t) )
       {
         "Key '{}' not present in json file"_throw(t);
       } // if
 
-      // Get reference to current value
-      json_t& json = data()[std::forward<T>(t)];
-
       // Access key
       try
       {
-        return Json{std::reference_wrapper<json_t>(json)};
+        return Json{std::reference_wrapper<json_t>(json[t])};
       } // try
       catch(std::exception const& e)
       {
@@ -131,6 +130,25 @@ class Json
       // Unreachable, used to suppress no return warning
       return {};
     } // operator[]
+
+    template<IsString T>
+    Json operator()(T&& t)
+    {
+      json_t& json = data();
+
+      // Access key
+      try
+      {
+        return Json{std::reference_wrapper<json_t>(json[t])};
+      } // try
+      catch(std::exception const& e)
+      {
+        "Failed to parse json key '{}': {}"_throw(e.what());
+      } // catch
+
+      // Unreachable, used to suppress no return warning
+      return {};
+    } // operator()
 
     template<IsString T>
     T operator=(T&& t)
