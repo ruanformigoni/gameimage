@@ -31,6 +31,9 @@ find_package(matchit REQUIRED)
 find_package(magic_enum REQUIRED)
 find_package(Boost REQUIRED)
 find_package(easyloggingpp REQUIRED)
+find_package(libjpeg-turbo REQUIRED)
+find_package(PNG REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # Main executable
 add_executable(main main.cpp)
@@ -43,5 +46,8 @@ target_link_libraries(main PRIVATE
   magic_enum::magic_enum
   boost::boost
   easyloggingpp::easyloggingpp
+  libjpeg-turbo::libjpeg-turbo
+  PNG::PNG
+  ZLIB::ZLIB
 )
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})

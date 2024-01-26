@@ -73,6 +73,41 @@ Ret<fs::path> canonical(fs::path const& path)
   return Ret(ret, true, "");
 } // function: canonical }}}
 
+// file_exists() {{{
+// File exists and is a regular file
+template<bool _throw> 
+Ret<fs::path> file_exists(fs::path path_file)
+{
+  // Does not exist
+  if ( ! fs::exists(path_file) )
+  {
+    return should_throw<_throw, fs::path>("File '{}' does not exist"_fmt(path_file));
+  } // if
+
+  // Exists, but is not dir
+  if ( ! fs::is_regular_file(path_file) )
+  {
+    return should_throw<_throw, fs::path>("Path '{}' exists but is not a regular file"_fmt(path_file));
+  } // if
+
+  return Ret(canonical<_throw>(path_file)._ret, true, "");
+} // file_exists() }}}
+
+// file_name() {{{
+// Check if last component is a file name
+template<bool _throw> 
+Ret<std::string> file_name(fs::path const& path)
+{
+  std::string str_name = path.filename().string();
+
+  if ( str_name.empty() or str_name == "." or str_name == ".." )
+  {
+    return should_throw<_throw, std::string>("Empty file name for path {}"_fmt(path));
+  }
+
+  return Ret(str_name, true, "");
+} // function: file_name }}}
+
 // dir_create() {{{
 // Creates directories in 'path' if not exists
 template<bool _throw> 
@@ -111,40 +146,15 @@ Ret<fs::path> dir_exists(fs::path path_dir)
   return Ret(canonical<_throw>(path_dir)._ret, true, "");
 } // dir_exists() }}}
 
-// file_exists() {{{
-// File exists and is a regular file
+// dir_exists() {{{
+// Parent file exists and is a directory
 template<bool _throw> 
-Ret<fs::path> file_exists(fs::path path_file)
+Ret<fs::path> dir_parent_exists(fs::path path)
 {
-  // Does not exist
-  if ( ! fs::exists(path_file) )
-  {
-    return should_throw<_throw, fs::path>("File '{}' does not exist"_fmt(path_file));
-  } // if
+  path = dir_exists<_throw>(path.parent_path())._ret /= ns_fs::ns_path::file_name<_throw>(path)._ret;
 
-  // Exists, but is not dir
-  if ( ! fs::is_regular_file(path_file) )
-  {
-    return should_throw<_throw, fs::path>("Path '{}' exists but is not a regular file"_fmt(path_file));
-  } // if
-
-  return Ret(canonical<_throw>(path_file)._ret, true, "");
-} // file_exists() }}}
-
-// file_name() {{{
-// Check if last component is a file name
-template<bool _throw> 
-Ret<std::string> file_name(fs::path const& path)
-{
-  std::string str_name = path.filename().string();
-
-  if ( str_name.empty() or str_name == "." or str_name == ".." )
-  {
-    return should_throw<_throw, std::string>("Empty file name for path {}"_fmt(path));
-  }
-
-  return Ret(str_name, true, "");
-} // function: file_name }}}
+  return Ret(path, true, "");
+} // dir_exists() }}}
 
 } // namespace ns_path }}}
 

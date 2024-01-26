@@ -107,7 +107,7 @@ int main(int argc, char** argv)
       match::pattern | "default"  = [&]{ parser = std::make_unique<ns_parser::Default>("default");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
-      match::pattern | match::_   = [&] { "Invalid stage '{}'"_throw(str_stage); }
+      match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage); }
     );
     // Parse args
     parser->parse_args(argc-1, argv+1);
