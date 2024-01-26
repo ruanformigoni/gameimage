@@ -112,7 +112,7 @@ class Json
       // Check if key is present
       if ( ! data().contains(std::forward<T>(t)) )
       {
-        "Key '{}' not present in json file"_fmt(t);
+        "Key '{}' not present in json file"_throw(t);
       } // if
 
       // Get reference to current value
