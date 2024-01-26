@@ -123,7 +123,7 @@ inline void wine(std::vector<std::string> args)
   ns_json::Json json = ns_json::from_default_file();
 
   // Current application
-  std::string str_app = json["default"];
+  std::string str_app = json["project"];
 
   // Default working directory
   fs::path path_cwd = ns_fs::ns_path::canonical<true>(str_app)._ret;
@@ -199,7 +199,7 @@ inline void install(std::vector<std::string> args)
 
   // Forward arguments by platform
   ns_json::Json json = ns_json::from_default_file();
-  std::string str_app = json[json["default"]]["platform"];
+  std::string str_app = json[json["project"]]["platform"];
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
 
   switch(enum_platform)
