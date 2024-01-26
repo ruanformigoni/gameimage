@@ -105,22 +105,22 @@ class Init : public Parser
     } // Init
 }; // class: Init }}}
 
-// class Default {{{
-class Default : public Parser
+// class Project {{{
+class Project : public Parser
 {
   public:
-    Default(std::string name)
+    Project(std::string name)
       : Parser(name)
     {
       // Set stage
-      m_enum_stage = ns_enum::Stage::DEFAULT;
+      m_enum_stage = ns_enum::Stage::PROJECT;
       // Set platform
-      m_parser.add_argument("default")
-        .action([&](std::string const& s){ m_map_option_value["default"]=s; })
+      m_parser.add_argument("project")
+        .action([&](std::string const& s){ m_map_option_value["project"]=s; })
         .required()
         .help("Sets the current application to configure");
-    } // Default
-}; // class: Default }}}
+    } // Project
+}; // class: Project }}}
 
 // class Install {{{
 class Install : public Parser

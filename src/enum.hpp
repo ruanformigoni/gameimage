@@ -45,7 +45,7 @@ enum class Stage
 	NONE,
 	FETCH,
 	INIT,
-	DEFAULT,
+	PROJECT,
 	INSTALL,
 	TEST,
 	COMPRESS,

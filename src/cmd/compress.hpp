@@ -20,16 +20,16 @@ inline decltype(auto) compress()
 {
   ns_json::Json json = ns_json::from_default_file();
 
-  // Current application
-  std::string str_default = json["default"];
+  // Current project
+  std::string str_project = json["project"];
 
-  ns_log::write('i', "application: ", str_default);
+  ns_log::write('i', "project: ", str_project);
 
   // Path to current application
-  std::string str_app = ns_fs::ns_path::dir_exists<true>(json[str_default]["path-app"])._ret;
+  std::string str_app = ns_fs::ns_path::dir_exists<true>(json[str_project]["path-app"])._ret;
 
   // Path to image
-  std::string str_image = ns_fs::ns_path::file_exists<true>(json[str_default]["path-image"])._ret;
+  std::string str_image = ns_fs::ns_path::file_exists<true>(json[str_project]["path-image"])._ret;
 
   // Output file
   std::string str_target = str_app + ".dwarfs";

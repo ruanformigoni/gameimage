@@ -51,6 +51,7 @@ class Exception : public std::exception
 }; // class: Exception }}}
 
 // User defined literals {{{
+
 // Format strings with user-defined literals
 inline decltype(auto) operator ""_throw(const char* str, size_t)
 {
@@ -58,7 +59,37 @@ inline decltype(auto) operator ""_throw(const char* str, size_t)
   {
     throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
   };
-} // }}}
+} 
+
+// Format strings with user-defined literals, throws if condition is false
+inline decltype(auto) operator ""_throw_if(const char* str, size_t)
+{
+  return [str]<typename F, typename... Args>(F&& f, Args&&... args)
+  {
+    if ( ! f() )
+    {
+      throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+    }
+  };
+}
+
+// Format strings with user-defined literals, throws if condition is false
+inline decltype(auto) operator ""_try(const char* str, size_t)
+{
+  return [str]<typename F, typename... Args>(F&& f, Args&&... args)
+  {
+    try
+    {
+      f();
+    } // try
+    catch(std::exception const& e)
+    {
+      throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+    } // catch
+  };
+}
+
+// }}}
 
 // ns_common {{{
 

@@ -12,6 +12,8 @@
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
 #include <boost/gil/extension/io/png.hpp>
+#include <boost/gil/extension/numeric/sampler.hpp>
+#include <boost/gil/extension/numeric/resample.hpp>
 
 #include "../enum.hpp"
 #include "../common.hpp"
@@ -36,7 +38,7 @@ inline void icon(std::string str_file_icon)
 
   // Current application
   ns_json::Json json = ns_json::from_default_file();
-  std::string str_app = json["default"];
+  std::string str_app = json["project"];
 
   // Current application directory
   fs::path path_app = json[str_app]["path-app"];
@@ -47,26 +49,71 @@ inline void icon(std::string str_file_icon)
   // File extension
   std::string ext = path_file_icon_src.extension();
 
+  // // Check result
+  "Empty file extension"_throw_if([&]{ return ! ext.empty(); });
+
+  // // Remove the leading dot
+  ext.erase(ext.begin());
+
   // Create icon directory and set file name
   fs::path path_dir_icon = path_app /= "icon";
   ns_fs::ns_path::dir_create<true>(path_dir_icon);
   fs::path path_file_icon_dst = path_dir_icon /= "icon.png";
 
-  gil::rgb8_image_t img;
-  switch ( ns_enum::from_string<ns_enum::ImageFormat>(ext) )
+  // Get enum option
+  ns_enum::ImageFormat image_format;
+
+  // Check image type
+  "Image type '{}' is not supported, supported types are '.jpg, .jpeg, .png'"_try(
+    [&]{ image_format = ns_enum::from_string<ns_enum::ImageFormat>(ext); }
+    , ext
+  );
+
+  ns_log::write('i', "Reading image from ", path_file_icon_src);
+  gil::rgb8_image_t img; 
+  switch ( image_format )
   {
     // Convert jpg to png
     case ns_enum::ImageFormat::JPG:
     case ns_enum::ImageFormat::JPEG:
       gil::read_image(path_file_icon_src, img, gil::jpeg_tag());
-      gil::write_view(path_file_icon_dst, gil::view(img), gil::png_tag());
       break;
     // Copy
     case ns_enum::ImageFormat::PNG:
-      ns_copy::file(path_file_icon_src, path_file_icon_dst);
+      gil::read_image(path_file_icon_src, img, gil::png_tag());
       break;
   } // switch
+
+  ns_log::write('i', "Image size is ", std::to_string(img.width()), "x", std::to_string(img.height()));
+
+  // Target dimms
+  int const width = 600;
+  int const height = 900;
+
+  // Calculate desired and current aspected ratios
+  double src_aspect = static_cast<double>(img.width()) / img.height();
+  double dst_aspect = static_cast<double>(width) / height;
+
+  // Calculate novel dimensions that preserve the aspect ratio
+  int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
+  int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
+
+  // Resize
+  gil::rgb8_image_t img_resized(width_new, height_new);
+  ns_log::write('i', "Image  aspect ratio is ", std::to_string(src_aspect));
+  ns_log::write('i', "Target aspect ratio is ", std::to_string(dst_aspect));
+  ns_log::write('i', "Resizing image to ", std::to_string(width_new), "x", std::to_string(height_new));
+  gil::resize_view(gil::const_view(img), gil::view(img_resized), gil::bilinear_sampler());
+
+  // Calculate crop
+  int crop_x = (width_new - width) / 2;
+  int crop_y = (height_new - height) / 2;
+
+  // Crop the image
+  auto view_img_cropped = gil::subimage_view(gil::view(img_resized), crop_x, crop_y, width, height);
   
+  ns_log::write('i', "Writing image to ", path_file_icon_dst);
+  gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
 } // icon() }}}
 
 // wine() {{{
@@ -134,8 +181,23 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // install() {{{
-void install(std::string const& str_platform, std::vector<std::string> const& args)
+inline void install(std::vector<std::string> args)
 {
+  if ( args.empty() ) { "Empty arguments for install command"_throw(); }
+
+  // Install icon
+  if ( args.front() == "icon" )
+  {
+    // Pop front
+    args.erase(args.begin());
+    // Check if has icon path
+    "No file name specified for icon"_throw_if([&]{ return args.empty(); });
+    // Create icon
+    icon(args.front());
+    return;
+  } // if
+
+  // Forward arguments by platform
   ns_json::Json json = ns_json::from_default_file();
   std::string str_app = json[json["default"]]["platform"];
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);

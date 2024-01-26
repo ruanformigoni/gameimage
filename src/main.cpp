@@ -14,7 +14,7 @@
 
 #include "cmd/fetch.hpp"
 #include "cmd/init.hpp"
-#include "cmd/default.hpp"
+#include "cmd/project.hpp"
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
 
@@ -40,18 +40,16 @@ void init(ns_parser::Parser const& parser)
   ns_init::init(parser["--platform"], parser["--dir"], parser["--image"]);
 } // init() }}}
 
-// def() {{{
-void def(ns_parser::Parser const& parser)
+// project() {{{
+void project(ns_parser::Parser const& parser)
 {
-  ns_default::set(parser["default"]);
-} // def() }}}
+  ns_project::set(parser["project"]);
+} // project() }}}
 
 // install() {{{
 void install(ns_parser::Parser const& parser)
 {
-  ns_json::Json json = ns_json::from_default_file();
-  std::string str_platform = json[json["default"]]["platform"];
-  ns_install::install(ns_json::from_default_file(), parser.remaining());
+  ns_install::install(parser.remaining());
 } // install() }}}
 
 // compress() {{{
@@ -59,7 +57,7 @@ void compress()
 {
   ns_json::Json json = ns_json::from_default_file();
 
-  std::string str_app = json["default"];
+  std::string str_app = json["project"];
   std::string str_platform = json[str_app]["platform"];
 
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
@@ -104,7 +102,7 @@ int main(int argc, char** argv)
     (
       match::pattern | "fetch"    = [&]{ parser = std::make_unique<ns_parser::Fetch>("fetch");       },
       match::pattern | "init"     = [&]{ parser = std::make_unique<ns_parser::Init>("init");         },
-      match::pattern | "default"  = [&]{ parser = std::make_unique<ns_parser::Default>("default");   },
+      match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage); }
@@ -135,9 +133,9 @@ int main(int argc, char** argv)
         init(*parser);
       } // case
       break;
-      case ns_enum::Stage::DEFAULT:
+      case ns_enum::Stage::PROJECT:
       {
-        def(*parser);
+        project(*parser);
       } // case
       break;
       case ns_enum::Stage::INSTALL:
@@ -150,7 +148,6 @@ int main(int argc, char** argv)
         compress();
       } // case
       break;
-    //           break;
     //         case ns_enum::Stage::INSTALL:
     //           ns_install::install(parser.m_stage->path_init(), parser.m_stage->remaining());
     //           break;
