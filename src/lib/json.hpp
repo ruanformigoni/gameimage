@@ -106,6 +106,7 @@ class Json
       return data();
     } // operator fs::path
 
+    // Key exists and is accessed
     template<IsString T>
     Json operator[](T&& t)
     {
@@ -131,6 +132,7 @@ class Json
       return {};
     } // operator[]
 
+    // Key exists or is created, and is accessed
     template<IsString T>
     Json operator()(T&& t)
     {
