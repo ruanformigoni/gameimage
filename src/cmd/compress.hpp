@@ -18,7 +18,7 @@ namespace ns_compress
 // compress() {{{
 inline decltype(auto) compress()
 {
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
 
   // Current project
   std::string str_project = json["project"];

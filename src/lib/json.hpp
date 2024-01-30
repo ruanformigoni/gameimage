@@ -69,16 +69,19 @@ class Json
     {
       try
       {
+        // Open file as read
         std::ifstream ifile{t};
         if ( ! ifile.good() )
         {
           "Failed to open '{}'"_throw(t);
         } // if
+
+        // Parse json
         m_json = json_t::parse(ifile);
       } // try
       catch(std::exception const& e)
       {
-        "Could not open file '{}'"_throw(t, e.what());
+        "Could not open file '{}': {}"_throw(t, e.what());
       } // catch
     } // Json
 
@@ -125,7 +128,7 @@ class Json
       } // try
       catch(std::exception const& e)
       {
-        "Failed to parse json key '{}': {}"_throw(e.what());
+        "Failed to parse json key '{}': {}"_throw(t, e.what());
       } // catch
 
       // Unreachable, used to suppress no return warning
@@ -145,7 +148,7 @@ class Json
       } // try
       catch(std::exception const& e)
       {
-        "Failed to parse json key '{}': {}"_throw(e.what());
+        "Failed to parse json key '{}': {}"_throw(t, e.what());
       } // catch
 
       // Unreachable, used to suppress no return warning
@@ -192,23 +195,44 @@ void to_file(Json const& json, T&& t)
   ofile_json.close();
 } // function: to_file }}}
 
-// default_file() {{{
-inline fs::path default_file()
+// file_default() {{{
+inline fs::path file_default()
 {
   return fs::current_path() /= "gameimage.json";
-} // default_file() }}}
+} // file_default() }}}
 
-// from_default_file() {{{
-inline Json from_default_file()
+// file_project() {{{
+inline fs::path file_project()
 {
-  return from_file(default_file());
-} // function: from_default_file }}}
+  Json json = from_file(file_default());
+  std::string str_project = json["project"];
+  fs::path path_project = json[str_project]["path-app"];
+  return path_project /= "gameimage.json";
+} // file_project() }}}
 
-// to_default_file() {{{
-inline void to_default_file(Json const& json)
+// from_file_default() {{{
+inline Json from_file_default()
 {
-  to_file(json, default_file());
-} // function: to_default_file }}}
+  return from_file(file_default());
+} // function: from_file_default }}}
+
+// from_file_project() {{{
+inline Json from_file_project()
+{
+  return from_file(file_project());
+} // function: from_file_project }}}
+
+// to_file_default() {{{
+inline void to_file_default(Json const& json)
+{
+  to_file(json, file_default());
+} // function: to_file_default }}}
+
+// to_file_project() {{{
+inline void to_file_project(Json const& json)
+{
+  to_file(json, file_project());
+} // function: to_file_project }}}
 
 } // namespace ns_json
 

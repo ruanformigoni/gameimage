@@ -73,6 +73,7 @@ class Fetch : public Parser
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
         .required()
         .help("Specity the platform to download the flatimage");
+      // Set output file
       m_parser.add_argument("--output-file")
         .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
         .required()
@@ -94,10 +95,12 @@ class Init : public Parser
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
         .required()
         .help("The platform to init the new directory");
+      // Set directory name
       m_parser.add_argument("--dir")
         .action([&](std::string const& s){ m_map_option_value["--dir"]=s; })
         .required()
         .help("The directory to init the application");
+      // Set path to image
       m_parser.add_argument("--image")
         .action([&](std::string const& s){ m_map_option_value["--image"]=s; })
         .required()
@@ -114,7 +117,7 @@ class Project : public Parser
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::PROJECT;
-      // Set platform
+      // Set default project
       m_parser.add_argument("project")
         .action([&](std::string const& s){ m_map_option_value["project"]=s; })
         .required()
@@ -132,7 +135,7 @@ class Install : public Parser
       // Set stage
       m_enum_stage = ns_enum::Stage::INSTALL;
 
-      // Set platform
+      // Set args
       m_parser.add_argument("args")
         .nargs(argparse::nargs_pattern::at_least_one)
         .remaining()
@@ -152,6 +155,25 @@ class Compress : public Parser
       m_enum_stage = ns_enum::Stage::COMPRESS;
     } // Compress
 }; // class: Compress }}}
+
+// class Boot {{{
+class Boot : public Parser
+{
+  public:
+    Boot(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::BOOT;
+
+      // Set args
+      m_parser.add_argument("args")
+        .nargs(argparse::nargs_pattern::at_least_one)
+        .remaining()
+        .required()
+        .help("Select the subcommand for boot");
+    } // Boot
+}; // class: Boot }}}
 
 } // namespace ns_parser
 

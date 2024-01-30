@@ -17,6 +17,7 @@
 #include "cmd/project.hpp"
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
+#include "cmd/boot.hpp"
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
@@ -55,7 +56,7 @@ void install(ns_parser::Parser const& parser)
 // compress() {{{
 void compress()
 {
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
 
   std::string str_app = json["project"];
   std::string str_platform = json[str_app]["platform"];
@@ -76,6 +77,12 @@ void compress()
   } // switch
 
 } // compress() }}}
+
+// boot() {{{
+void boot(ns_parser::Parser const& parser)
+{
+  ns_boot::boot(parser.remaining());
+} // boot() }}}
 
 // main() {{{
 int main(int argc, char** argv)
@@ -105,6 +112,7 @@ int main(int argc, char** argv)
       match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
+      match::pattern | "boot"     = [&]{ parser = std::make_unique<ns_parser::Boot>("boot"); },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage); }
     );
     // Parse args
@@ -146,6 +154,11 @@ int main(int argc, char** argv)
       case ns_enum::Stage::COMPRESS:
       {
         compress();
+      } // case
+      break;
+      case ns_enum::Stage::BOOT:
+      {
+        boot(*parser);
       } // case
       break;
     //         case ns_enum::Stage::INSTALL:

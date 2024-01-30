@@ -34,6 +34,7 @@ find_package(easyloggingpp REQUIRED)
 find_package(libjpeg-turbo REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(cppcoro REQUIRED)
 
 # Main executable
 add_executable(main main.cpp)
@@ -49,5 +50,6 @@ target_link_libraries(main PRIVATE
   libjpeg-turbo::libjpeg-turbo
   PNG::PNG
   ZLIB::ZLIB
+  cppcoro::cppcoro
 )
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})

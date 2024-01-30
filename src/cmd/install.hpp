@@ -37,7 +37,7 @@ inline void icon(std::string str_file_icon)
   namespace gil = boost::gil;
 
   // Current application
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
   std::string str_app = json["project"];
 
   // Current application directory
@@ -50,7 +50,7 @@ inline void icon(std::string str_file_icon)
   std::string ext = path_file_icon_src.extension();
 
   // // Check result
-  "Empty file extension"_throw_if([&]{ return ! ext.empty(); });
+  "Empty file extension"_throw_if([&]{ return ext.empty(); });
 
   // // Remove the leading dot
   ext.erase(ext.begin());
@@ -120,7 +120,7 @@ inline void icon(std::string str_file_icon)
 inline void wine(std::vector<std::string> args)
 {
   // Get default path
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
 
   // Current application
   std::string str_app = json["project"];
@@ -140,7 +140,7 @@ inline void wine(std::vector<std::string> args)
   ns_log::write('i', "prefix: ", path_wineprefix);
 
   // Export prefix
-  ns_env::set("WINEPREFIX", path_wineprefix.c_str(), ns_env::Replace::N);
+  ns_env::set("WINEPREFIX", path_wineprefix.c_str(), ns_env::Replace::Y);
 
   // Set debug level
   ns_env::set("WINEDEBUG", "fixme-all", ns_env::Replace::N);
@@ -198,7 +198,7 @@ inline void install(std::vector<std::string> args)
   } // if
 
   // Forward arguments by platform
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
   std::string str_app = json[json["project"]]["platform"];
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
 

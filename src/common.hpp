@@ -14,6 +14,8 @@
 
 #include "std/concepts.hpp"
 
+#include "lib/log.hpp"
+
 const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
 
 // ns_common {{{
@@ -29,7 +31,7 @@ inline decltype(auto) operator ""_fmt(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
-    return fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...);
+    return fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))... ) ;
   };
 } // }}}
 
@@ -62,11 +64,27 @@ inline decltype(auto) operator ""_throw(const char* str, size_t)
 } 
 
 // Format strings with user-defined literals, throws if condition is false
+inline decltype(auto) operator ""_catch(const char* str, size_t)
+{
+  return [str]<typename F, typename... Args>(F&& f, Args&&... args)
+  {
+    try
+    {
+      f();
+    } // try
+    catch(std::exception const& e)
+    {
+      ns_log::write('i', fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+    } // catch
+  };
+}
+
+// Format strings with user-defined literals, throws if condition is false
 inline decltype(auto) operator ""_throw_if(const char* str, size_t)
 {
   return [str]<typename F, typename... Args>(F&& f, Args&&... args)
   {
-    if ( ! f() )
+    if ( f() )
     {
       throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
     }

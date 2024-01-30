@@ -10,6 +10,7 @@ easyloggingpp/9.97.1
 libjpeg-turbo/3.0.1
 libpng/1.6.40
 zlib/1.3
+andreasbuhr-cppcoro/cci.20230629
 
 [generators]
 CMakeDeps

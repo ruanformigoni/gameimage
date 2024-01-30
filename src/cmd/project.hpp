@@ -16,7 +16,7 @@ namespace ns_project
 inline void set(std::string const& s)
 {
   // Tries to open default config file
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
 
   // Check if exists or throw
   json.contains<true>(s);
@@ -25,14 +25,14 @@ inline void set(std::string const& s)
   json("project") = s;
 
   // Tries to write back to default config file
-  ns_json::to_default_file(json);
+  ns_json::to_file_default(json);
 } // set() }}}
 
 // get() {{{
 inline std::string get()
 {
   // Tries to open default config file
-  ns_json::Json json = ns_json::from_default_file();
+  ns_json::Json json = ns_json::from_file_default();
 
   // Returns default
   return json["project"];

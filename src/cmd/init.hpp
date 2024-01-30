@@ -55,12 +55,12 @@ inline void init(std::string const& str_platform
   // Try to open default file if exists
   try
   {
-    json_config = ns_json::from_default_file();
+    json_config = ns_json::from_file_default();
   } // try
   catch( std::exception const& e )
   {
-    ns_log::write('i', "File ", ns_json::default_file(), " not found");
-    ns_log::write('i', "Creating {}"_fmt(ns_json::default_file()));
+    ns_log::write('i', "File ", ns_json::file_default(), " not found");
+    ns_log::write('i', "Creating {}"_fmt(ns_json::file_default()));
   } // catch
 
   // App name is Dir name
@@ -72,7 +72,7 @@ inline void init(std::string const& str_platform
   json_config(str_name)("platform")   = ns_enum::to_string(platform);
 
   // Write to json file
-  ns_json::to_default_file(json_config);
+  ns_json::to_file_default(json_config);
 } // function: init }}}
 
 } // namespace ns_init

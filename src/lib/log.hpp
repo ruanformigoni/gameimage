@@ -8,8 +8,7 @@
 
 #include <filesystem>
 #include <easylogging++.h>
-
-#include "../common.hpp"
+#include <fmt/core.h>
 
 namespace ns_log
 {
@@ -51,11 +50,11 @@ inline void init(int argc, char** argv)
   try
   {
     fs::path path_file_log = fs::canonical(str_file_log);
-    LOG(INFO) << "Log file {}"_fmt(path_file_log.string());
+    LOG(INFO) << fmt::format(fmt::runtime("Log file {}"), path_file_log.string());
   } // try
   catch (std::exception const& e)
   {
-    LOG(ERROR) << "Could not make canonical path for log file"_fmt(str_file_log);
+    LOG(ERROR) << fmt::format("Could not make canonical path for log file '{}'", str_file_log);
   } // catch: 
   // To set GLOBAL configurations you may use
   el::Loggers::reconfigureLogger("default", default_conf);
