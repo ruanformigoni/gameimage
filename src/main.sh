@@ -36,6 +36,24 @@ export GIMG_PKG_METHOD="${GIMG_PKG_METHOD:-overlayfs}"
 export GIMG_COMPRESSION_LEVEL="${GIMG_COMPRESSION_LEVEL:-4}"
 # # Make bundled executables available in PATH
 export PATH="$GIMG_SCRIPT_DIR:$PATH"
+# # Asking for use input from stdin
+export GIMG_INTERACTIVE="${GIMG_INTERACTIVE:-1}"
+# # Source directory
+export GIMG_DIR
+# # Selected platform
+export GIMG_PLATFORM
+# # Selected name
+export GIMG_NAME
+# # Selected icon
+export GIMG_ICON
+# # Selected rom
+export GIMG_ROM
+# # Wine architecture (win32/win64)
+export GIMG_ARCH
+# # Custom command for wine
+export GIMG_WINE_INSTALL_CUSTOM
+# # Custom command for winetricks
+export GIMG_WINETRICKS_CUSTOM
 
 GIMG_SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -97,18 +115,16 @@ function main()
   # Export compression level for flatimage
   export FIM_COMPRESSION_LEVEL="$GIMG_COMPRESSION_LEVEL"
   
-  if [[ "$#" -eq 0 ]]; then
-    "$GIMG_SCRIPT_DIR"/wizard.sh
-    exit
-  elif [[ "$*" = "--version" ]]; then
+  if [[ "$*" = "--version" ]]; then
     echo "TRUNK"
     exit
-  elif [ "$*" = "--yaml" ]; then
-    export GIMG_YAML="/tmp/gameimage.yml"
-    msg "Yaml: $GIMG_YAML"
-    args[--name]="$("$GIMG_SCRIPT_DIR/yq" -e '.name' "$GIMG_YAML")"
-    args[--platform]="$("$GIMG_SCRIPT_DIR/yq" -e '.platform' "$GIMG_YAML")"
-    args[--dir]="$("$GIMG_SCRIPT_DIR/yq" -e '.dir' "$GIMG_YAML")"
+  elif [[ "$*" = "--gui" ]]; then
+    "$GIMG_SCRIPT_DIR"/wizard.sh
+    exit
+  elif [ "$*" = "--env" ]; then
+    ${GIMG_NAME:?GIMG_NAME is not set}
+    ${GIMG_PLATFORM:?GIMG_PLATFORM is not set}
+    ${GIMG_DIR:?GIMG_DIR is not set}
   else
     for i; do
       [[ "$i" =~ --platform=(.*) ]] && args[--platform]="${BASH_REMATCH[1]}" && continue

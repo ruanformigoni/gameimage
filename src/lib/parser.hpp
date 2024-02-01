@@ -156,24 +156,24 @@ class Compress : public Parser
     } // Compress
 }; // class: Compress }}}
 
-// class Boot {{{
-class Boot : public Parser
+// class Target {{{
+class Target : public Parser
 {
   public:
-    Boot(std::string name)
+    Target(std::string name)
       : Parser(name)
     {
       // Set stage
-      m_enum_stage = ns_enum::Stage::BOOT;
+      m_enum_stage = ns_enum::Stage::TARGET;
 
       // Set args
       m_parser.add_argument("args")
         .nargs(argparse::nargs_pattern::at_least_one)
         .remaining()
         .required()
-        .help("Select the subcommand for boot");
-    } // Boot
-}; // class: Boot }}}
+        .help("Select the subcommand for target");
+    } // Target
+}; // class: Target }}}
 
 } // namespace ns_parser
 

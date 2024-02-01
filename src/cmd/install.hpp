@@ -56,7 +56,7 @@ inline void icon(std::string str_file_icon)
   ext.erase(ext.begin());
 
   // Create icon directory and set file name
-  fs::path path_dir_icon = path_app /= "icon";
+  fs::path path_dir_icon = path_app / "icon";
   ns_fs::ns_path::dir_create<true>(path_dir_icon);
   fs::path path_file_icon_dst = path_dir_icon /= "icon.png";
 
@@ -114,6 +114,15 @@ inline void icon(std::string str_file_icon)
   
   ns_log::write('i', "Writing image to ", path_file_icon_dst);
   gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
+
+  // Save icon path in project database
+  ns_json::Json json_project;
+  // Try to open existing file
+  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
+  json_project("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
+  // Save to file
+  ns_json::to_file_project(json_project);
+  
 } // icon() }}}
 
 // wine() {{{
@@ -151,12 +160,12 @@ inline void wine(std::vector<std::string> args)
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename... _Args>(_Args&&... args)
   {
-    ns_subprocess::subprocess(path_flatimage, "fim-exec", "wine", std::forward<_Args>(args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "wine", std::forward<_Args>(args)...);
   };
 
   auto f_winetricks = [&]<typename... _Args>(_Args&&... args)
   {
-    ns_subprocess::subprocess(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(args)...);
   };
 
   // No command

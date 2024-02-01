@@ -8,6 +8,8 @@
 
 #include "../common.hpp"
 
+#include "../std/filesystem.hpp"
+
 #pragma once
 
 // Environment variable handling {{{
@@ -25,6 +27,7 @@ enum class Replace
 
 // dir() {{{
 // Fetches a directory path from an environment variable
+// Tries to create if not exists
 inline fs::path dir(const char* name)
 {
   // Get environment variable
@@ -34,25 +37,22 @@ inline fs::path dir(const char* name)
   {
     "Variable {} not set"_throw(name);
   } // if
-  // Create filesystem path
-  fs::path path{value};
-  // Check if path exists
-  if ( ! fs::exists(path) )
-  {
-    // Try to create destination directory if not exists
-    if ( ! fs::create_directories(path) )
-    {
-      "Could not create directory '{}'"_throw(value);
-    }
-  }
+
+  // Create if not exists
+  fs::path path_env = ns_fs::ns_path::dir_create<true>(value)._ret;
+
+  // Log
+  ns_log::write('i', "ns_env::dir ", name, " -> ", path_env);
+
   // Return validated directory path
-  return path;
+  return path_env;
 } // dir() }}}
 
 // set() {{{
 // Sets an environment variable
 inline void set(const char* name, const char* value, Replace replace)
 {
+  ns_log::write('i', "ns_env::set ", name, " -> ", value);
   setenv(name, value, (replace == Replace::Y));
 } // set() }}}
 
@@ -63,9 +63,21 @@ inline void concat(const char* name, std::string const& extra)
   // Append to var
   if ( const char* var_curr = std::getenv(name); var_curr )
   {
+    ns_log::write('i', "ns_env::concat ", name, " -> ", extra);
     setenv(name, std::string{var_curr + extra}.c_str(), 1);
   } // if
 } // concat() }}}
+
+// get() {{{
+// Get an env variable if exists
+inline const char* get(const char* name)
+{
+  const char* ret = std::getenv(name);
+
+  ns_log::write('i', "ns_env::get ", name, " -> ", ret);
+
+  return ret;
+} // get() }}}
 
 } // namespace ns_env }}}
 

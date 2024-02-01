@@ -24,14 +24,27 @@ else
   GIMG_WINE_DIST_VALUES="caffe,vaniglia,soda,ge,staging"
 fi
 
-# Get wine appimage and define wine alias
+# function _fetch_wine {{{
+# Get wine appimage and define wine alias 
 function _fetch_wine()
 {
+  # Check env
+  msg "GIMG_DIR_BUILD: ${GIMG_DIR_BUILD:?GIMG_DIR_BUILD is undefined}"
+  msg "GIMG_PKG_TYPE: ${GIMG_PKG_TYPE:?GIMG_PKG_TYPE is undefined}"
+  msg "GIMG_SCRIPT_DIR: ${GIMG_SCRIPT_DIR:?GIMG_SCRIPT_DIR is undefined}"
+  msg "GIMG_WINE_DIST: ${GIMG_WINE_DIST:?GIMG_WINE_DIST is undefined}"
+  msg "GIMG_WINE_DIST_VALUES: ${GIMG_WINE_DIST_VALUES:?GIMG_WINE_DIST_VALUES is undefined}"
+  msg "GIMG_DIR_FETCH: ${GIMG_DIR_FETCH:?GIMG_DIR_FETCH is undefined}"
+
+  # Create fetch dir
+  mkdir -p "$GIMG_DIR_FETCH"
+
+  # Check package type
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
-    fi < <(_fetch_stdout "https://gitlab.com/api/v4/projects/45732205/releases/Continuous" |
-        "$GIMG_SCRIPT_DIR"/jq -e -r '.assets.links.[].direct_asset_url | match("'".*wine/continuous/$GIMG_WINE_DIST-.*"'").string')
+    fi < <(_fetch_stdout "https://api.github.com/repos/flatimage/flatimage-wine/releases" |
+        "$GIMG_SCRIPT_DIR"/jq -e -r '.[].assets.[].browser_download_url | match(".*/continuous_wine/'"$GIMG_WINE_DIST"'-.*dwarfs$").string | select (.!=null)')
   else
     if ! read -r url; then
       die "Could not fetch wine url for '$GIMG_WINE_DIST', valid values are '$GIMG_WINE_DIST_VALUES'"
@@ -39,24 +52,20 @@ function _fetch_wine()
       "$GIMG_SCRIPT_DIR"/jq -e -r '.[].assets.[].browser_download_url | match(".*wine-'"$GIMG_WINE_DIST"'.*x86_64.AppImage").string | select (.!=null)')
   fi
 
+  # Fetch by package type
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     # Fetch base
-    _fetch "AppDir/usr/bin/wine" \
-      "https://gitlab.com/api/v4/projects/45732205/packages/generic/wine/continuous/base-arch.fim"
+    _fetch "$GIMG_DIR_FETCH/base-arch.flatimage" \
+      "https://github.com/flatimage/flatimage-wine/releases/download/continuous_base/base-arch.flatimage"
     # Fetch wine
-    _fetch "opt.dwarfs" "$url"
-    if [[ -f "opt.dwarfs" ]] && [[ -f "AppDir/usr/bin/wine" ]]; then
-      # Set home directory to build dir
-      ./AppDir/usr/bin/wine fim-config-set home "$DIR_SRC"
-      # Merge flatimage with wine binaries
-      ./AppDir/usr/bin/wine fim-include-path ./opt.dwarfs "/opt.dwarfs"
-    fi
+    _fetch "$GIMG_DIR_FETCH/wine.dwarfs" "$url"
   else
-    _fetch "AppDir/usr/bin/wine" "$url"
+    # Fetch wine
+    _fetch "$GIMG_DIR_FETCH/wine" "$url"
   fi
 
   # Create winetricks
-  local path_winetricks="AppDir/usr/bin/winetricks"
+  local path_winetricks="$GIMG_DIR_FETCH/winetricks"
   if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
     { sed -E 's/^\s+://' | tee "$path_winetricks" &>/dev/null; } <<-"END"
     :#!/usr/bin/env bash
@@ -66,64 +75,115 @@ function _fetch_wine()
     :PATH="$PATH:/opt/wine/bin" "$SCRIPT_DIR"/wine fim-exec winetricks "$@"
 		END
   else
-    ln -sf wine AppDir/usr/bin/winetricks
+    ln -sf wine "$GIMG_DIR_FETCH/winetricks"
   fi
   chmod +x "$path_winetricks"
 }
+# }}}
 
+# function arch_select {{{
+# Select wine architecture
 function arch_select()
 {
-  if [ "$GIMG_YAML" ]; then
-    "$GIMG_SCRIPT_DIR/yq" -e '.arch' "$GIMG_YAML"
-  else
+  if [ "$GIMG_ARCH" = "win32" ] || [ "$GIMG_ARCH" = "win64" ]; then
+    echo "$GIMG_ARCH"
+  elif [ "$GIMG_INTERACTIVE" = 1 ]; then
     msg "Please select the architecture" >&2
     _select "win32" "win64"
     echo "${_FN_RET[0]}"
+  else
+    die "Could not select architecture"
   fi
 }
+# }}}
 
+# function wine_setup {{{
+# Setup wine files in their respective directories
+function wine_setup()
+{
+  msg "DIR_SRC: ${DIR_SRC:?DIR_SRC is undefined}"
+  msg "GIMG_DIR_BUILD: ${GIMG_DIR_BUILD:?GIMG_DIR_BUILD is undefined}"
+  msg "GIMG_PKG_TYPE: ${GIMG_PKG_TYPE:?GIMG_PKG_TYPE is undefined}"
+  msg "GIMG_DIR_FETCH: ${GIMG_DIR_FETCH:?GIMG_DIR_FETCH is undefined}"
+  msg "GIMG_WINETRICKS: ${GIMG_WINETRICKS:?GIMG_WINETRICKS is undefined}"
+  msg "GIMG_WINE: ${GIMG_WINE:?GIMG_WINE is undefined}"
+
+  # Copy files
+  if [[ ! -f "$GIMG_DIR_BUILD/AppDir/usr/bin/wine" ]]; then
+    if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
+      if [[ ! -f "AppDir/usr/bin/wine" ]]; then
+        # Copy winetricks
+        cp "$GIMG_DIR_FETCH/winetricks"  "$GIMG_WINETRICKS"
+        # Copy base
+        cp "$GIMG_DIR_FETCH/base-arch.flatimage"  "$GIMG_WINE"
+        # Merge flatimage with wine binaries
+        "$GIMG_WINE" fim-include-path "$GIMG_DIR_FETCH/wine.dwarfs" "/opt.dwarfs"
+        # Set home directory to build dir
+        "$GIMG_WINE" fim-config-set home "$DIR_SRC"
+      fi
+    else
+      cp "$GIMG_DIR_FETCH/wine"  "$GIMG_WINE"
+      ln -sfnT "$GIMG_DIR_BUILD/AppDir/usr/bin/wine" "$GIMG_DIR_BUILD/AppDir/usr/bin/winetricks"
+    fi
+  fi
+}
+# }}}
+
+# function wine_configure {{{
+# Configure the wine prefix with wine and winetricks
 function wine_configure()
 {
-  export WINEPREFIX="$(pwd)/AppDir/app/wine"
+  # Check env
+  msg "GIMG_DIR_FETCH: ${GIMG_DIR_FETCH:?GIMG_DIR_FETCH is undefined}"
+  msg "GIMG_DIR_BUILD: ${GIMG_DIR_BUILD:?GIMG_DIR_BUILD is undefined}"
+  msg "GIMG_PKG_TYPE: ${GIMG_PKG_TYPE:?GIMG_PKG_TYPE is undefined}"
+  msg "GIMG_WINE: ${GIMG_WINE:?GIMG_WINE is undefined}"
+  msg "GIMG_WINETRICKS: ${GIMG_WINETRICKS:?GIMG_WINETRICKS is undefined}"
+  msg "WINEPREFIX: ${WINEPREFIX:?WINEPREFIX is undefined}"
 
+  # Setup wine files
+  wine_setup
+
+  # Setup prefix
   if [ ! -d "$WINEPREFIX" ]; then
     # Update prefix
     export WINEARCH="$(arch_select)"
     # Avoid symlinks
-    "$BIN_WINETRICKS" sandbox
+    "$GIMG_WINETRICKS" sandbox
     # Leave the root drive binding
     ln -sfT / "$WINEPREFIX/dosdevices/z:"
     # Smooth fonts
-    "$BIN_WINETRICKS" fontsmooth=rgb
+    "$GIMG_WINETRICKS" fontsmooth=rgb
   fi
 
   # If the variable is unset, ask
   # If the variable is set, use value to determine if should install or not
   ## DXVK
-  if [ -v GIMG_INSTALL_DXVK ]; then
-    if [ "$GIMG_INSTALL_DXVK" -eq 1 ]; then
-      "$BIN_WINETRICKS" dxvk
-    fi
+  if [ -v GIMG_INSTALL_DXVK ] && [ "$GIMG_INSTALL_DXVK" -eq 1 ]; then
+      "$GIMG_WINETRICKS" dxvk
   elif _select_bool "Install dxvk for directx 9/10/11?" "N"; then
-    "$BIN_WINETRICKS" dxvk
+    "$GIMG_WINETRICKS" dxvk
   fi
   ## VKD3D
-  if [ -v GIMG_INSTALL_VKD3D ]; then
-    if [ "$GIMG_INSTALL_VKD3D" -eq 1 ]; then
-      "$BIN_WINETRICKS" vkd3d
-    fi
+  if [ -v GIMG_INSTALL_VKD3D ] && [ "$GIMG_INSTALL_VKD3D" -eq 1 ]; then
+      "$GIMG_WINETRICKS" vkd3d
   elif _select_bool "Install vkd3d for directx 12?" "N"; then
-    "$BIN_WINETRICKS" vkd3d
+    "$GIMG_WINETRICKS" vkd3d
+  fi
+  ## Custom command for winetricks
+  if [ -n "$GIMG_WINETRICKS_CUSTOM" ]; then
+    echo "$GIMG_WINETRICKS" "$GIMG_WINETRICKS_CUSTOM"
+    "$GIMG_WINETRICKS" "$GIMG_WINETRICKS_CUSTOM"
   fi
 
   # Output current wine version
-  "$BIN_WINE" --version
+  "$GIMG_WINE" --version
 
   local dir_current="$(pwd)"
   msg "configuration phase, use it to install dependencies, type continue to skip"
   msg "Commands are 'winetricks ...' and 'wine ...', example 'wine winecfg'"
   msg "You can also type any bash cmd, e.g., 'ls -l'"
-  while :; do
+  while [ "$GIMG_INTERACTIVE" = "1" ]; do
     # Read user input
     echo -n "config> "
     read -ra args
@@ -132,53 +192,92 @@ function wine_configure()
     # Stop on continue
     [ "${args[0]}" = "continue"   ] && break
     # Check if is a local command
-    [ "${args[0]}" = "wine"       ] && { "$BIN_WINE" "${args[*]:1}" || true; continue; }
-    [ "${args[0]}" = "winetricks" ] && { "$BIN_WINETRICKS" "${args[*]:1}" || true; continue; }
+    [ "${args[0]}" = "wine"       ] && { "$GIMG_WINE" "${args[*]:1}" || true; continue; }
+    [ "${args[0]}" = "winetricks" ] && { "$GIMG_WINETRICKS" "${args[*]:1}" || true; continue; }
     # Use it as a bash command
     eval "${args[*]}" || continue
   done
   cd "$dir_current"
 }
+# }}}
 
+# function wine_install {{{
+# Install applications with wine
 function wine_install()
 {
-  msg "Showing executable files in $1/rom"
+  # Check env
+  msg "GIMG_WINE: ${GIMG_WINE:?GIMG_WINE is undefined}"
+  msg "GIMG_DIR: ${GIMG_DIR:?GIMG_DIR is undefined}"
+  msg "GIMG_INTERACTIVE: ${GIMG_INTERACTIVE:?GIMG_INTERACTIVE is undefined}"
+
+  # Setup wine files
+  wine_setup
+
+  # Run the specified command on a non-interactive manner
+  if [ "$GIMG_INTERACTIVE" = "0" ]; then
+    "$GIMG_WINE" "$GIMG_WINE_INSTALL_CUSTOM"
+    return
+  fi
+
+  # List files, select, install
+  msg "Showing executable files in $GIMG_DIR/rom"
   msg "Select the file to install"
-  while :; do
+  while [ "$GIMG_INTERACTIVE" = "1" ]; do
+
     if [ -n "$GIMG_DIR_ROM_EXTRA" ]; then
-      _eval_select 'find -L ' "\"$1/rom\" " "\"$GIMG_DIR_ROM_EXTRA\"" ' -iname "*.exe"' || break
+      _eval_select 'find -L ' "\"$GIMG_DIR/rom\" " "\"$GIMG_DIR_ROM_EXTRA\"" ' -iname "*.exe"' || break
     else
-      _eval_select 'find -L ' "\"$1/rom\" " ' -iname "*.exe"' || break
+      _eval_select 'find -L ' "\"$GIMG_DIR/rom\" " ' -iname "*.exe"' || break
     fi
 
-    [ ! -f "${_FN_RET[0]}" ] && die "No valid file found in $1/rom"
+    [ ! -f "${_FN_RET[0]}" ] && die "No valid file found in $GIMG_DIR/rom"
 
     #shellcheck disable=2005
     if _select_bool "Install $(basename "${_FN_RET[0]}")?" "Y"; then
-      echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$BIN_WINE" "${_FN_RET[0]}")"
+      echo "$(cd "$(dirname "${_FN_RET[0]}")" && "$GIMG_WINE" "${_FN_RET[0]}")"
     fi
 
     _select_bool "Install another file?" "N" || break
   done
 }
+# }}}
 
+# function wine_test {{{
+# Test installed applications
 function wine_test()
 {
-  while :; do
-    _eval_select "find " "\"$1\"" " -not -path '*drive_c/windows/*.exe' -iname '*.exe'" || break
+  msg "GIMG_WINE: ${GIMG_WINE:?GIMG_WINE is undefined}"
+  msg "GIMG_DIR_BUILD: ${GIMG_DIR_BUILD:?GIMG_DIR_BUILD is undefined}"
+
+  local path="$GIMG_DIR_BUILD/AppDir/app/wine"
+
+  # Run the specified command
+  if [ "$GIMG_INTERACTIVE" = "0" ]; then
+    (cd "$(dirname "$GIMG_WINE_TEST_CUSTOM")" && "$GIMG_WINE" "$GIMG_WINE_TEST_CUSTOM")
+  fi
+
+  # Select from list
+  while [ "$GIMG_INTERACTIVE" = "1" ]; do
+    _eval_select "find " "\"$path\"" " -not -path '*drive_c/windows/*.exe' -iname '*.exe'" || break
     #shellcheck disable=2005
-    echo "$(cd "$(dirname "$_FN_RET")" && "$BIN_WINE" "$_FN_RET")"
+    echo "$(cd "$(dirname "$_FN_RET")" && "$GIMG_WINE" "$_FN_RET")"
     _select_bool "Test the another file?" "N" || break
   done
 }
+# }}}
 
+# function wine_executable_select {{{
+# Select the default executable for the image
 function wine_executable_select()
 {
   msg "Select the main executable"
   _eval_select 'find "AppDir/app/wine" -not -path "*drive_c/windows/*.exe" -iname "*.exe"'
   echo "$_FN_RET"
 }
+# }}}
 
+# function wine_package_method {{{
+# Configure the packaging method
 function wine_package_method()
 {
   msg "Install method: $GIMG_PKG_METHOD"
@@ -207,7 +306,7 @@ function wine_package_method()
     mkdir -p "$dir_target"
     # Move installed software to target directory
     msg "Moving '$dir_installation' to '$dir_target'"
-    mv "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
+    cp -r "AppDir/app/wine/drive_c/$dir_installation" "$dir_target"
   ## Keep prefix as is
   elif [ "${GIMG_PKG_METHOD}" = "prefix" ]; then
     dir_target="$dir_build/.${name}.${GIMG_PKG_TYPE}.config"
@@ -225,8 +324,11 @@ function wine_package_method()
   _FN_RET[0]="$dir_installation"
   _FN_RET[1]="$executable"
 }
+# }}}
 
-function runner_create()
+# function runner_create_appimage {{{
+# Create the runner for the application inside the image
+function runner_create_appimage()
 {
   # Build Dir
   local dir_build="$1"; shift
@@ -253,7 +355,7 @@ function runner_create()
 
   if ! _select_bool "Include wine inside the appimage?" "N"; then
     # Move from default location to build dir
-    if [ -f "$BIN_WINE" ]; then mv "$BIN_WINE" "$dir_build"; fi
+    if [ -f "$GIMG_WINE" ]; then mv "$GIMG_WINE" "$dir_build"; fi
   fi
 
   # Create runner script
@@ -439,7 +541,10 @@ function runner_create()
   msg "%b" "AppRun written, make further changes to it if you desire, then press enter..."
   read -r
 }
+# }}}
 
+# function runner_create_flatimage {{{
+# Create flatimage
 function runner_create_flatimage()
 {
   # Build Dir
@@ -614,49 +719,34 @@ function runner_create_flatimage()
   msg "%b" "Runner script written, make further changes to it if you desire, then press enter..."
   read -r
 }
+# }}}
 
+# function main {{{
+# Entry point for the script
 function main()
 {
   # Validate params
+  # # Defines GIMG_NAME
+  # # Defines GIMG_DIR
   params_validate "wine" "$@"
 
-  local name="${_FN_RET[0]}"
-  name="${name// /-}"
-  local dir_src="${_FN_RET[1]}"
-  local cover="${_FN_RET[4]}"
+  # Create build dir
+  export GIMG_DIR_BUILD="$(dir_build_create "$GIMG_DIR")"
 
-  # Export dir src
-  export DIR_SRC="$dir_src"
+  # Enter build dir
+  cd "$GIMG_DIR_BUILD"
 
-  # Create & cd in build dir
-  export DIR_BUILD="$(dir_build_create "$dir_src")"
-  cd "$DIR_BUILD"
+  # Set file download dir
+  export GIMG_DIR_FETCH="${GIMG_DIR_BUILD}/tools-wine"
 
-  # Revert prefix
-  if [[ -d "AppDir/app/rom" ]]; then
-    mv -vf "AppDir/app/rom"/* "AppDir/app/wine/drive_c/"
-    rmdir "AppDir/app/rom"
-  fi
-
-  # Revert copy GIMG_PKG_METHOD
-  if [[ -d "$DIR_BUILD/.${name}.${GIMG_PKG_TYPE}.config/wine" ]]; then
-    # If it exists, just erase the one from the config dir
-    if [[ -d "$DIR_BUILD/AppDir/app/wine" ]]; then
-      msg "Remove $DIR_BUILD/.${name}.${GIMG_PKG_TYPE}.config/wine"
-      rm -rf "$DIR_BUILD/.${name}.${GIMG_PKG_TYPE}.config/wine"
-    else
-      msg "Move '$DIR_BUILD/.${name}.${GIMG_PKG_TYPE}.config/wine' to '$DIR_BUILD/AppDir/app'"
-      mv -f "$DIR_BUILD/.${name}.${GIMG_PKG_TYPE}.config/wine" "$DIR_BUILD/AppDir/app"
-    fi
-  fi
-
+  # Configure wine prefix & binaries
   export WINEPREFIX="$(pwd)/AppDir/app/wine"
-  export BIN_WINE="$(pwd)/AppDir/usr/bin/wine"
-  export BIN_WINETRICKS="$(pwd)/AppDir/usr/bin/winetricks"
+  export GIMG_WINE="$(pwd)/AppDir/usr/bin/wine"
+  export GIMG_WINETRICKS="$(pwd)/AppDir/usr/bin/winetricks"
 
   # Check if wine was moved by the build stage
-  if [ -f "$DIR_BUILD"/wine ]; then
-    mv "$DIR_BUILD"/wine "$BIN_WINE" 
+  if [ -f "$GIMG_DIR_BUILD"/wine ]; then
+    mv "$GIMG_DIR_BUILD"/wine "$GIMG_WINE" 
   fi
 
   dir_appdir_create
@@ -665,7 +755,6 @@ function main()
 
     case "$GIMG_STAGE" in
       fetch) 
-        # Download tools
         if [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
           _fetch_appimagetool
         fi
@@ -674,47 +763,50 @@ function main()
       ;;
 
       configure)
-        # Install and configure application
         wine_configure
       ;;
 
       install)
-        wine_install "$dir_src"
+        wine_install
       ;;
 
       test)
-        wine_test "$DIR_BUILD/AppDir/app/wine"
+        wine_test
       ;;
 
       build)
         # Select main executable
-        local path_executable="$(wine_executable_select "$DIR_BUILD" "$name")"
+        local path_executable="$(wine_executable_select "$GIMG_DIR_BUILD" "$GIMG_NAME")"
 
         # Adjust tree structure based on package method
-        wine_package_method "$path_executable" "$DIR_BUILD" "$name"
+        wine_package_method "$path_executable" "$GIMG_DIR_BUILD" "$GIMG_NAME"
         local dir_installation="${_FN_RET[0]}"
         local basename_executable="${_FN_RET[1]}"
 
         # Convert cover
-        ./imagemagick "$cover" -resize '600x900^' -gravity center -extent 600x900 "AppDir/${name}.png"
+        ./imagemagick "${GIMG_ICON:?}" \
+          -resize '600x900^' \
+          -gravity center \
+          -extent 600x900 \
+          "AppDir/${GIMG_NAME}.png"
 
-        # Generated image name
-        local name_image="${name}.${GIMG_PKG_TYPE}"
+        # Generated image GIMG_NAME
+        local name_image="${GIMG_NAME}.${GIMG_PKG_TYPE}"
 
         if [[ "$GIMG_PKG_TYPE" = "flatimage" ]]; then
           # Define path to release package
-          export BIN_PKG="$DIR_BUILD/$name_image"
+          export BIN_PKG="$GIMG_DIR_BUILD/$name_image"
           # Copy wine to build dir
-          cp "$BIN_WINE" "$BIN_PKG"
+          cp "$GIMG_WINE" "$BIN_PKG"
           # Copy cover
           "$BIN_PKG" fim-exec mkdir -p /fim/desktop
-          "$BIN_PKG" fim-exec cp "AppDir/${name}.png" /fim/desktop/icon.png
+          "$BIN_PKG" fim-exec cp "AppDir/${GIMG_NAME}.png" /fim/desktop/icon.png
           # Compress & include prefix 
           build_flatimage_wine
           # Create runner script
-          runner_create_flatimage "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
+          runner_create_flatimage "$GIMG_DIR_BUILD" "$GIMG_NAME" "$dir_installation" "$basename_executable"
           # Set application info
-          "$BIN_PKG" fim-config-set name "$name"
+          "$BIN_PKG" fim-config-set name "$GIMG_NAME"
           # shellcheck disable=2016
           "$BIN_PKG" fim-config-set icon '"$FIM_DIR_MOUNT"/fim/desktop/icon.png'
           "$BIN_PKG" fim-config-set categories "Game"
@@ -723,9 +815,9 @@ function main()
           msg "Created '$BIN_PKG'!"
         elif [[ "$GIMG_PKG_TYPE" = "appimage" ]]; then
           # Create runner script
-          runner_create "$DIR_BUILD" "$name" "$dir_installation" "$basename_executable"
+          runner_create_appimage "$GIMG_DIR_BUILD" "$GIMG_NAME" "$dir_installation" "$basename_executable"
           # Create desktop entry
-          desktop_entry_create "$name"
+          desktop_entry_create "$GIMG_NAME"
           # Build appimage
           build_appimage
           # Remove if exists
@@ -741,7 +833,7 @@ function main()
     esac
 
     # Allow for single-stage execution without user input (for the GUI)
-    if [ -n "$GIMG_STAGE_SINGLE" ]; then
+    if [ "$GIMG_INTERACTIVE" = "0" ]; then
       break
     else
       msg "Select one of the stages listed below"
@@ -750,6 +842,7 @@ function main()
     fi
   done
 }
+# }}}
 
 main "$@"
 

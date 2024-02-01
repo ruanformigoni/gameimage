@@ -17,7 +17,7 @@
 #include "cmd/project.hpp"
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
-#include "cmd/boot.hpp"
+#include "cmd/target.hpp"
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
@@ -78,11 +78,11 @@ void compress()
 
 } // compress() }}}
 
-// boot() {{{
-void boot(ns_parser::Parser const& parser)
+// target() {{{
+void target(ns_parser::Parser const& parser)
 {
-  ns_boot::boot(parser.remaining());
-} // boot() }}}
+  ns_target::target(parser.remaining());
+} // target() }}}
 
 // main() {{{
 int main(int argc, char** argv)
@@ -112,8 +112,8 @@ int main(int argc, char** argv)
       match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
-      match::pattern | "boot"     = [&]{ parser = std::make_unique<ns_parser::Boot>("boot"); },
-      match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage); }
+      match::pattern | "target"   = [&]{ parser = std::make_unique<ns_parser::Target>("target");     },
+      match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
     // Parse args
     parser->parse_args(argc-1, argv+1);
@@ -156,9 +156,9 @@ int main(int argc, char** argv)
         compress();
       } // case
       break;
-      case ns_enum::Stage::BOOT:
+      case ns_enum::Stage::TARGET:
       {
-        boot(*parser);
+        target(*parser);
       } // case
       break;
     //         case ns_enum::Stage::INSTALL:

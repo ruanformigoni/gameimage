@@ -45,7 +45,7 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
 
 // subprocess() {{{
 template<typename... Args>
-void subprocess(fs::path binary, Args&&... args)
+void sync(fs::path binary, Args&&... args)
 {
   // Process arguments
   std::vector<std::string> arguments;
@@ -64,7 +64,7 @@ void subprocess(fs::path binary, Args&&... args)
   {
     for(std::string line; pipe_stream_stdout && std::getline(pipe_stream_stdout, line) && !line.empty();)
     {
-    ns_log::write('i', "[subprocess o] :: ", line);
+      ns_log::write('i', "[subprocess o] :: ", line);
     } // for
   }); // t1
 
@@ -72,14 +72,14 @@ void subprocess(fs::path binary, Args&&... args)
   {
     for(std::string line; pipe_stream_stderr && std::getline(pipe_stream_stderr, line) && !line.empty();)
     {
-    ns_log::write('i', "[subprocess e] :: ", line);
+      ns_log::write('i', "[subprocess e] :: ", line);
     } // for
   }); // t1
 
+  child.wait();
+
   t1.join();
   t2.join();
-
-  child.wait();
 
   if ( child.exit_code() != 0 )
   {

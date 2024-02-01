@@ -23,7 +23,7 @@ inline void package(fs::path path_setup, fs::path path_out)
   // mkdwarfs command
   auto f_mkdwarfs = [&]<typename... _Args>(_Args&&... args)
   {
-    ns_subprocess::subprocess(path_flatimage, "fim-exec", "mkdwarfs", std::forward<_Args>(args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "mkdwarfs", std::forward<_Args>(args)...);
   };
 
   // Create dwarfs filesystem

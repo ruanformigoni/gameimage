@@ -53,3 +53,21 @@ target_link_libraries(main PRIVATE
   cppcoro::cppcoro
 )
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})
+
+# Boot executables for each platform
+add_executable(wine boot/wine.cpp)
+target_link_libraries(wine PRIVATE
+  fmt::fmt 
+  argparse::argparse 
+  cpr::cpr 
+  nlohmann_json::nlohmann_json
+  matchit::matchit
+  magic_enum::magic_enum
+  boost::boost
+  easyloggingpp::easyloggingpp
+  libjpeg-turbo::libjpeg-turbo
+  PNG::PNG
+  ZLIB::ZLIB
+  cppcoro::cppcoro
+)
+target_include_directories(wine PRIVATE ${fmt_INCLUDE_DIRS})

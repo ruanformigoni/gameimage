@@ -94,7 +94,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/31b73dfe42bd5741d63114d5140b8d56b65f81be/fetch.json"}
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/6f7ecbd213a8360ac74d3d36b361985cdffe41b9/fetch.json"}
   );
 
   // Set temporary directory
@@ -117,7 +117,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
       f_fetch(path_wine, cpr::Url{json_fetch["wine-tkg"]});
       f_fetch(path_base, cpr::Url{json_fetch["base-wine"]});
       // Merge files
-      ns_subprocess::subprocess(path_base, "fim-include-path", path_wine, "/opt.dwarfs");
+      ns_subprocess::sync(path_base, "fim-include-path", path_wine, "/opt.dwarfs");
       // Move to target
       fs::rename(path_base, path_dest);
       // Remove dwarfs file

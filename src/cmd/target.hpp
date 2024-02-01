@@ -1,6 +1,6 @@
 ///
 // @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
-// @file        : boot
+// @file        : target
 ///
 
 #pragma once
@@ -20,7 +20,7 @@
 #include "../lib/log.hpp"
 #include "../lib/json.hpp"
 
-namespace ns_boot
+namespace ns_target
 {
 
 namespace fs = std::filesystem;
@@ -77,7 +77,7 @@ inline void search(ns_enum::Platform enum_platform, fs::path path)
   {
     case ns_enum::Platform::WINE:
       // Enter drive_c
-      path = (path /= "wine") /= "drive_c";
+      path = (path / "wine") / "drive_c";
       // Search executables
       for(auto i : ns_impl::search(path, R"(.*\.exe$)", R"(windows)"))
       {
@@ -98,13 +98,13 @@ inline void select(ns_enum::Platform enum_platform, fs::path dir_base, fs::path 
     {
       ns_json::Json json_project;
       // Try to open existing file
-      "Creating {}"_catch([&]{ ns_json::from_file_project(); }, ns_json::file_project());
+      "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
       // Enter drive_c
       path_file = (fs::path("wine") /= "drive_c") /= path_file;
       // Check if is regular file
       ns_fs::ns_path::file_exists<true>(dir_base /= path_file);
-      // Set as default boot file
-      json_project("boot") = path_file;
+      // Set as default target file
+      json_project("path-file-target") = path_file;
       // Save to file
       ns_json::to_file_project(json_project);
     } // case
@@ -113,8 +113,8 @@ inline void select(ns_enum::Platform enum_platform, fs::path dir_base, fs::path 
 
 } // select() }}}
 
-// boot() {{{
-inline void boot(std::vector<std::string> args)
+// target() {{{
+inline void target(std::vector<std::string> args)
 {
   ns_json::Json json = ns_json::from_file_default();
   std::string str_project = json["project"];
@@ -122,7 +122,7 @@ inline void boot(std::vector<std::string> args)
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
 
   // Check if args were passed
-  "Empty arguments for boot command"_throw_if([&]{ return args.empty(); });
+  "Empty arguments for target command"_throw_if([&]{ return args.empty(); });
 
   // Retrieve user-input operation
   std::string str_operation{args.front()};
@@ -134,14 +134,14 @@ inline void boot(std::vector<std::string> args)
     match::pattern | "search" = [&]{ search(enum_platform, json[str_project]["path-app"]); },
     match::pattern | "select" = [&]
     {
-      "No file provided to set as the default boot file"_throw_if([&]{ return args.empty(); });
+      "No file provided to set as the default target file"_throw_if([&]{ return args.empty(); });
       select(enum_platform, json[str_project]["path-app"], args.front());
     },
-    match::pattern | match::_ = [&]{ "Invalid boot argument '{}'"_throw(str_operation); }
+    match::pattern | match::_ = [&]{ "Invalid target argument '{}'"_throw(str_operation); }
   );
 
 } // }}}
 
-} // namespace ns_boot
+} // namespace ns_target
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

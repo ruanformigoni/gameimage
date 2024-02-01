@@ -47,7 +47,7 @@ enum class Stage
 	INIT,
 	PROJECT,
 	INSTALL,
-	BOOT,
+	TARGET,
 	TEST,
 	COMPRESS,
 	PACKAGE,

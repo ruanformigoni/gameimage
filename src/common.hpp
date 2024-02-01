@@ -16,7 +16,7 @@
 
 #include "lib/log.hpp"
 
-const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
+inline const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
 
 // ns_common {{{
 namespace ns_common
