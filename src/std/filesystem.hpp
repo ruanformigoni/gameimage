@@ -157,6 +157,24 @@ Ret<fs::path> dir_parent_exists(fs::path path)
   return Ret(path, true, "");
 } // dir_parent_exists() }}}
 
+// dir_executable() {{{
+template<bool _throw> 
+inline Ret<fs::path> dir_executable() {
+  char result[PATH_MAX];
+
+  // Read self path
+  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+
+  // Check read if was successful
+  if (count <= 0)
+  {
+    return should_throw<_throw, fs::path>("Could not find path to self");
+  }
+
+  // Create parent path
+  return Ret(fs::path{result}.parent_path(), true, "");
+} // dir_executable() }}}
+
 } // namespace ns_path }}}
 
 } // namespace ns_fs

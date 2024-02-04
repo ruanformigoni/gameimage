@@ -18,11 +18,11 @@
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
 #include "cmd/target.hpp"
+#include "cmd/package.hpp"
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
 
-// #include "package.hpp"
 
 // Start logging
 INITIALIZE_EASYLOGGINGPP
@@ -84,6 +84,12 @@ void target(ns_parser::Parser const& parser)
   ns_target::target(parser.remaining());
 } // target() }}}
 
+// package() {{{
+void package(ns_parser::Parser const& parser)
+{
+  ns_package::package(parser["dwarfs"]);
+} // package() }}}
+
 // main() {{{
 int main(int argc, char** argv)
 {
@@ -94,7 +100,14 @@ int main(int argc, char** argv)
   if ( argc < 2 )
   {
     ns_log::write('e', "No arguments provided for GameImage");
+    return EXIT_FAILURE;
   } // if
+
+  // Export path to self directory
+  ns_env::set("GIMG_SCRIPT_DIR"
+    , ns_fs::ns_path::dir_executable<true>()._ret.c_str()
+    , ns_env::Replace::Y
+  );
 
   std::unique_ptr<ns_parser::Parser> parser;
 
@@ -113,6 +126,7 @@ int main(int argc, char** argv)
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
       match::pattern | "target"   = [&]{ parser = std::make_unique<ns_parser::Target>("target");     },
+      match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
     // Parse args
@@ -159,6 +173,11 @@ int main(int argc, char** argv)
       case ns_enum::Stage::TARGET:
       {
         target(*parser);
+      } // case
+      break;
+      case ns_enum::Stage::PACKAGE:
+      {
+        package(*parser);
       } // case
       break;
     //         case ns_enum::Stage::INSTALL:

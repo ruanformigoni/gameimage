@@ -13,6 +13,7 @@
 
 #include "../std/filesystem.hpp"
 #include "../std/copy.hpp"
+#include "../std/env.hpp"
 
 #include "../lib/log.hpp"
 #include "../lib/json.hpp"
@@ -23,7 +24,7 @@
 namespace ns_init
 {
 
-namespace fs    = std::filesystem;
+namespace fs = std::filesystem;
 
 // init() {{{
 inline void init(std::string const& str_platform
@@ -73,6 +74,14 @@ inline void init(std::string const& str_platform
 
   // Write to json file
   ns_json::to_file_default(json_config);
+
+  // Copy boot file for platform
+  fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
+    ns_env::dir("GIMG_SCRIPT_DIR") / "wine"
+  )._ret;
+  fs::copy_file(path_file_boot, path_app / "boot", fs::copy_options::overwrite_existing);
+  ns_log::write('i', "Copy ", path_file_boot, " -> ", path_app / "boot");
+
 } // function: init }}}
 
 } // namespace ns_init

@@ -39,7 +39,7 @@ inline fs::path dir(const char* name)
   } // if
 
   // Create if not exists
-  fs::path path_env = ns_fs::ns_path::dir_create<true>(value)._ret;
+  fs::path path_env = ns_fs::ns_path::dir_exists<true>(value)._ret;
 
   // Log
   ns_log::write('i', "ns_env::dir ", name, " -> ", path_env);
@@ -47,6 +47,30 @@ inline fs::path dir(const char* name)
   // Return validated directory path
   return path_env;
 } // dir() }}}
+
+// file() {{{
+// Fetches a directory path from an environment variable
+// Tries to create if not exists
+inline fs::path file(const char* name)
+{
+  // Get environment variable
+  const char * value = std::getenv(name) ;
+
+  // Check if variable exists
+  if ( ! value )
+  {
+    "Variable {} not set"_throw(name);
+  } // if
+
+  // Create if not exists
+  fs::path path_env = ns_fs::ns_path::file_exists<true>(value)._ret;
+
+  // Log
+  ns_log::write('i', "ns_env::file ", name, " -> ", path_env);
+
+  // Return validated directory path
+  return path_env;
+} // file() }}}
 
 // set() {{{
 // Sets an environment variable

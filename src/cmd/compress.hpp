@@ -29,7 +29,9 @@ void validate()
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:
-      ns_json::Json json_project = ns_json::from_file_project();
+      ns_json::Json json_project;
+      // Project file
+      "Project is not configured"_try([&]{ json_project = ns_json::from_file_project(); });
       // Target
       "Target file is not defined"_try([&]
       {

@@ -175,6 +175,24 @@ class Target : public Parser
     } // Target
 }; // class: Target }}}
 
+// class Package {{{
+class Package : public Parser
+{
+  public:
+    Package(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::PACKAGE;
+
+      // Set args
+      m_parser.add_argument("dwarfs")
+        .action([&](std::string const& s){ m_map_option_value["dwarfs"]=s; })
+        .required()
+        .help("Path to the dwarfs filesystem to include in the project image");
+    } // Package
+}; // class: Package }}}
+
 } // namespace ns_parser
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/
