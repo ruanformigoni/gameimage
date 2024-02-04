@@ -154,9 +154,6 @@ inline void wine(std::vector<std::string> args)
   // Set debug level
   ns_env::set("WINEDEBUG", "fixme-all", ns_env::Replace::N);
 
-  // Update PATH
-  ns_env::concat("PATH",":/opt/wine/bin");
-
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename... _Args>(_Args&&... args)
   {

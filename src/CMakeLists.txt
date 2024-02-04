@@ -55,8 +55,8 @@ target_link_libraries(main PRIVATE
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})
 
 # Boot executables for each platform
-add_executable(wine boot/wine.cpp)
-target_link_libraries(wine PRIVATE
+add_executable(boot boot/boot.cpp)
+target_link_libraries(boot PRIVATE
   fmt::fmt 
   argparse::argparse 
   cpr::cpr 
@@ -70,4 +70,4 @@ target_link_libraries(wine PRIVATE
   ZLIB::ZLIB
   cppcoro::cppcoro
 )
-target_include_directories(wine PRIVATE ${fmt_INCLUDE_DIRS})
+target_include_directories(boot PRIVATE ${fmt_INCLUDE_DIRS})
