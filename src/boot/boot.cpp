@@ -9,6 +9,7 @@
 #include <filesystem>
 
 #include "../common.hpp"
+#include "../enum.hpp"
 
 #include "../std/filesystem.hpp"
 #include "../std/env.hpp"
@@ -35,23 +36,33 @@ int main(int argc, char** argv)
   // Path to self directory
   fs::path path_dir_self = ns_fs::ns_path::dir_exists<true>(fs::path(argv[0]).parent_path())._ret;
 
-  // Set wine prefix
-  ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
-
   // Database file
   ns_json::Json json(path_dir_self / "gameimage.json");
 
-  // Binary to execute
-  fs::path path_file_target = ns_fs::ns_path::file_exists<true>(path_dir_self / json["path-file-target"])._ret;
+  // Get platform
+  auto platform = ns_enum::from_string<ns_enum::Platform>(std::string(json["platform"]));
 
-  // Enter directory of target file
-  fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_target.parent_path())._ret);
+  switch(platform)
+  {
+    case ns_enum::Platform::WINE:
+    {
+      // Set wine prefix
+      ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
 
-  // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_WINE");
+      // Binary to execute
+      fs::path path_file_target = ns_fs::ns_path::file_exists<true>(path_dir_self / json["path-file-target"])._ret;
 
-  // Start application
-  ns_subprocess::sync(str_cmd.c_str(), path_file_target);
+      // Enter directory of target file
+      fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_target.parent_path())._ret);
+
+      // Get boot command
+      std::string str_cmd = ns_env::get("FIM_BINARY_WINE");
+
+      // Start application
+      ns_subprocess::sync(str_cmd.c_str(), path_file_target);
+    }
+    break;
+  } // switch
 
   return EXIT_SUCCESS;
 } // main

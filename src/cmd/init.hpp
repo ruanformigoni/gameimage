@@ -51,12 +51,12 @@ inline void init(std::string const& str_platform
   ns_fs::ns_path::dir_create<true>(path_app);
 
   // Create json obj
-  ns_json::Json json_config; 
+  ns_json::Json json_global; 
 
   // Try to open default file if exists
   try
   {
-    json_config = ns_json::from_file_default();
+    json_global = ns_json::from_file_default();
   } // try
   catch( std::exception const& e )
   {
@@ -67,20 +67,32 @@ inline void init(std::string const& str_platform
   // App name is Dir name
   std::string str_name = path_app.filename();
 
+  // Set as default project
+  json_global("project") = path_app.filename();
+
   // Set data
-  json_config(str_name)("path-image") = path_image;
-  json_config(str_name)("path-app")   = path_app;
-  json_config(str_name)("platform")   = ns_enum::to_string(platform);
+  json_global(str_name)("path-image") = path_image;
+  json_global(str_name)("path-app")   = path_app;
+  json_global(str_name)("platform")   = ns_enum::to_string(platform);
 
   // Write to json file
-  ns_json::to_file_default(json_config);
+  ns_json::to_file_default(json_global);
 
   // Copy boot file for platform
   fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
-    ns_env::dir("GIMG_SCRIPT_DIR") / "wine"
+    ns_env::dir("GIMG_SCRIPT_DIR") / "boot"
   )._ret;
   fs::copy_file(path_file_boot, path_app / "boot", fs::copy_options::overwrite_existing);
   ns_log::write('i', "Copy ", path_file_boot, " -> ", path_app / "boot");
+
+  // Open project json
+  ns_json::Json json_project;
+
+  // Save platform
+  json_project("platform") = ns_enum::to_string(platform);
+
+  // Write to json file
+  ns_json::to_file_project(json_project);
 
 } // function: init }}}
 
