@@ -268,7 +268,7 @@ inline fs::path file_project()
 {
   Json json = from_file(file_default());
   std::string str_project = json["project"];
-  fs::path path_project = json[str_project]["path-app"];
+  fs::path path_project = json[str_project]["path-project"];
   return path_project /= "gameimage.json";
 } // file_project() }}}
 

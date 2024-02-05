@@ -28,7 +28,7 @@ namespace cr = cppcoro;
 
 enum class Op
 {
-  TARGET,
+  ROM,
   CORE,
 };
 
@@ -83,11 +83,12 @@ inline void search(std::vector<std::string> args)
   std::string str_project = json["project"];
   std::string str_app = json[str_project]["platform"];
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
-  fs::path path_project = json[str_project]["path-app"];
+  fs::path path_project = json[str_project]["path-project"];
 
   // Retrieve operation selected by user
   Op op;
-  "Invalid operation '{}'"_try([&]
+  "Invalid operation '{}'\n"
+  "Valid values are rom, core"_try([&]
   { 
     op = ns_enum::from_string<Op>(args.front());
   }, args.front());
@@ -97,6 +98,10 @@ inline void search(std::vector<std::string> args)
   {
     case ns_enum::Platform::WINE:
     {
+      // Get op as str
+      std::string str_op = ns_string::to_lower(ns_enum::to_string(op));
+      // Check if is rom
+      "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
       path_project = (path_project / "wine") / "drive_c";
       // Search executables
@@ -109,13 +114,15 @@ inline void search(std::vector<std::string> args)
     break;
     case ns_enum::Platform::RETROARCH:
     {
-      // Enter drive_c
-      path_project = path_project / "rom";
-      // Search executables
-      for(auto i : ns_impl::search(path_project, R"(.*\.exe$)", R"(windows)"))
+      // Get op as str
+      std::string str_op = ns_enum::to_string_lower(op);
+      // Enter directory
+      path_project = path_project / str_op;
+      // Search for targets
+      for(auto i : ns_impl::search(path_project, R"(.*)", ""))
       {
         i = fs::relative(i, path_project);
-        ns_log::write('i', "Found :: ", i);
+        ns_log::write('i', "Found :: ", str_op / i);
       } // for
     } // case
     break;

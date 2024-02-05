@@ -41,7 +41,7 @@ inline void icon(std::string str_file_icon)
   std::string str_app = json["project"];
 
   // Current application directory
-  fs::path path_app = json[str_app]["path-app"];
+  fs::path path_app = json[str_app]["path-project"];
 
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -199,7 +199,7 @@ inline void retroarch(std::vector<std::string> args)
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
 
   // Path to project
-  fs::path path_project = ns_fs::ns_path::dir_exists<true>(json[str_app]["path-app"])._ret;
+  fs::path path_project = ns_fs::ns_path::dir_exists<true>(json[str_app]["path-project"])._ret;
 
   // Path to rom / core
   fs::path path_dir_rom = fs::path{path_dir_project} / "rom";
@@ -241,16 +241,12 @@ inline void retroarch(std::vector<std::string> args)
     json_project(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
   }; // f_install
 
-  auto f_install_files = [&](std::string const& type, fs::path path_dir_dst, std::vector<std::string> const& args)
+  auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
-    std::ranges::for_each(args, [&](fs::path e){ f_install(type, e, path_dir_dst / e.filename()); });
+    // Check for arguments of command
+    "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
+    std::ranges::for_each(args, [&](fs::path e){ f_install(cmd, e, path_dir_dst / e.filename()); });
   }; // f_install_roms
-
-  for(auto&& i : json_project("paths-file-rom"))
-  {
-    fmt::println("rom: {}", std::string(i));
-  } // for
-
 
   // Get command
   std::string str_cmd = args.front();

@@ -23,7 +23,7 @@ inline void validate()
   auto json_global = ns_json::from_file_default();
   std::string str_project = json_global["project"];
   std::string str_platform = json_global[str_project]["platform"];
-  fs::path path_app = json_global[str_project]["path-app"];
+  fs::path path_app = json_global[str_project]["path-project"];
   auto enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 
   ns_json::Json json_project;
@@ -41,34 +41,34 @@ inline void validate()
   {
     case ns_enum::Platform::WINE:
     {
-      // Target
+      // Rom
       "Default executable is not selected"_try([&]
       {
-        fs::path path_file_target = path_app / json_project["path-file-target"];
-        ns_fs::ns_path::file_exists<true>(path_file_target);
-        ns_log::write('i', "Found target '", path_file_target, "'");
+        fs::path path_file_rom = path_app / json_project["path-file-rom"];
+        ns_fs::ns_path::file_exists<true>(path_file_rom);
+        ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
     }
     break;
     case ns_enum::Platform::RETROARCH:
-      // Target default rom
+      // rom
       "Default rom is not selected"_try([&]
       {
-        fs::path path_file_target = path_app / json_project["path-file-target"];
-        ns_fs::ns_path::file_exists<true>(path_file_target);
-        ns_log::write('i', "Found target '", path_file_target, "'");
+        fs::path path_file_rom = path_app / json_project["path-file-rom"];
+        ns_fs::ns_path::file_exists<true>(path_file_rom);
+        ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
-      // Target default core
+      // default core
       "Default core is not selected"_try([&]
       {
-        fs::path path_file_target = path_app / json_project["path-file-core"];
-        ns_fs::ns_path::file_exists<true>(path_file_target);
-        ns_log::write('i', "Found target '", path_file_target, "'");
+        fs::path path_file_core = path_app / json_project["path-file-core"];
+        ns_fs::ns_path::file_exists<true>(path_file_core);
+        ns_log::write('i', "Found core '", path_file_core, "'");
       });
       // Rom
       "Failed to validate rom paths"_try([&]
       {
-        "Invalid rom path in json for '{}'"_for(json_project["paths-file-target"]
+        "Invalid rom path in json for '{}'"_for(json_project["paths-file-rom"]
           , [&](fs::path path_file)
           {
             return ns_fs::ns_path::file_exists<false>(path_app / path_file)._bool;
@@ -113,7 +113,7 @@ inline decltype(auto) compress()
   ns_log::write('i', "project: ", str_project);
 
   // Path to current application
-  std::string str_app = ns_fs::ns_path::dir_exists<true>(json[str_project]["path-app"])._ret;
+  std::string str_app = ns_fs::ns_path::dir_exists<true>(json[str_project]["path-project"])._ret;
 
   // Path to image
   std::string str_image = ns_fs::ns_path::file_exists<true>(json[str_project]["path-image"])._ret;

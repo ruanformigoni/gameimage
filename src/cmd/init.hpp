@@ -72,7 +72,7 @@ inline void init(std::string const& str_platform
 
   // Set data
   json_global(str_name)("path-image") = path_image;
-  json_global(str_name)("path-app")   = path_app;
+  json_global(str_name)("path-project")   = path_app;
   json_global(str_name)("platform")   = ns_enum::to_string(platform);
 
   // Write to json file

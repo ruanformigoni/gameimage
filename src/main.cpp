@@ -113,6 +113,7 @@ int main(int argc, char** argv)
       match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
+      match::pattern | "search"   = [&]{ parser = std::make_unique<ns_parser::Search>("search");     },
       match::pattern | "select"   = [&]{ parser = std::make_unique<ns_parser::Select>("select");     },
       match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }

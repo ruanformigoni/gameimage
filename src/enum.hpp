@@ -10,6 +10,8 @@
 
 #include "common.hpp"
 
+#include "std/string.hpp"
+
 namespace magic = magic_enum;
 
 // namespace ns_enum {{{
@@ -68,9 +70,16 @@ inline decltype(auto) from_string(T&& t)
 }
 
 template<Enum T>
-inline decltype(auto) to_string(T&& t)
+inline std::string to_string(T&& t)
 {
-	return magic::enum_name(t);
+	return std::string(magic::enum_name(t));
+}
+
+
+template<Enum T>
+inline std::string to_string_lower(T&& t)
+{
+	return ns_string::to_lower(std::string(magic::enum_name(t)));
 }
 
 } // namespace ns_enum }}}

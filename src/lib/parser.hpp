@@ -156,6 +156,25 @@ class Compress : public Parser
     } // Compress
 }; // class: Compress }}}
 
+// class Search {{{
+class Search : public Parser
+{
+  public:
+    Search(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::SEARCH;
+
+      // Set args
+      m_parser.add_argument("args")
+        .nargs(argparse::nargs_pattern::at_least_one)
+        .remaining()
+        .required()
+        .help("Search the subcommand for search");
+    } // Search
+}; // class: Search }}}
+
 // class Select {{{
 class Select : public Parser
 {

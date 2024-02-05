@@ -1,7 +1,6 @@
 ///
 // @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
 // @file        : path
-// @created     : Friday Jan 19, 2024 18:26:40 -03
 ///
 
 #pragma once
@@ -9,8 +8,6 @@
 #include <filesystem>
 
 #include "../common.hpp"
-
-
 
 namespace ns_fs
 {

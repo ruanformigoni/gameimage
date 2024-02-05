@@ -9,7 +9,6 @@
 #include <filesystem>
 #include <regex>
 
-#include <cppcoro/generator.hpp>
 #include <matchit.h>
 
 #include "../common.hpp"
@@ -25,88 +24,13 @@ namespace ns_select
 {
 
 namespace fs = std::filesystem;
-namespace cr = cppcoro;
 
 enum class Op
 {
-  TARGET,
+  ROM,
   CORE,
 };
 
-
-// namespace ns_impl {{{
-namespace ns_impl
-{
-
-// search() {{{
-inline cr::generator<fs::path> search(fs::path path_dir
-  , char const* str_pattern
-  , char const* str_exclude)
-{
-  // Validate file path
-  ns_fs::ns_path::dir_exists<true>(path_dir);
-
-  ns_log::write('i', "Search directory '", path_dir.c_str(), "'");
-
-  // Create regex
-  std::regex regex_pattern(str_pattern);
-  std::regex regex_exclude(str_exclude);
-
-  // Find all files that match pattern
-  for(auto entry = fs::recursive_directory_iterator(path_dir);
-    entry != fs::recursive_directory_iterator();
-    ++entry)
-  {
-    std::string target = ns_fs::ns_path::file_name<true>(*entry)._ret;
-
-    if (fs::is_directory(entry->path()) && std::regex_match(target, regex_exclude))
-    {
-      ns_log::write('i', "Exclude directory '", ns_common::to_string(*entry), "'");
-      entry.disable_recursion_pending();
-      continue;
-    } // if
-
-    if ( fs::is_regular_file(entry->path()) && std::regex_match(target, regex_pattern))
-    {
-      fs::path curr = entry->path();
-      co_yield curr;
-    } // if
-  } // for
-
-} // search() }}}
-
-} // namespace ns_impl }}}
-
-// search() {{{
-inline void search(ns_enum::Platform enum_platform, fs::path path)
-{
-  switch(enum_platform)
-  {
-    case ns_enum::Platform::WINE:
-      // Enter drive_c
-      path = (path / "wine") / "drive_c";
-      // Search executables
-      for(auto i : ns_impl::search(path, R"(.*\.exe$)", R"(windows)"))
-      {
-        i = fs::relative(i, path);
-        ns_log::write('i', "Found :: ", i);
-      }
-      break;
-    case ns_enum::Platform::RETROARCH:
-      "Not implemented"_throw();
-      break;
-    case ns_enum::Platform::PCSX2:
-      "Not implemented"_throw();
-      break;
-    case ns_enum::Platform::RPCS3:
-      "Not implemented"_throw();
-      break;
-    case ns_enum::Platform::YUZU:
-      "Not implemented"_throw();
-      break;
-  } // switch
-
-} // search() }}}
 
 // core() {{{
 inline void core(ns_enum::Platform enum_platform
@@ -155,10 +79,11 @@ inline void core(ns_enum::Platform enum_platform
 
 } // select() }}}
 
-// target() {{{
-inline void target(ns_enum::Platform enum_platform
+// rom() {{{
+inline void rom(ns_enum::Platform enum_platform
+  , Op op
   , fs::path path_dir_project
-  , fs::path path_file_target)
+  , fs::path path_file_rom)
 {
   ns_json::Json json_project;
   // Try to open existing file
@@ -168,12 +93,16 @@ inline void target(ns_enum::Platform enum_platform
   {
     case ns_enum::Platform::WINE:
     {
-      path_file_target = (fs::path("wine") / "drive_c") / path_file_target;
+      "Only rom selection is available for wine"_throw_if([&]{ return op != Op::ROM; });
+      path_file_rom = (fs::path("wine") / "drive_c") / path_file_rom;
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
     {
-      path_file_target = fs::path("rom") / path_file_target;
+      "Only rom and core selection are available for retroarch"_throw_if([&]
+      {
+        return op != Op::ROM && op != Op::CORE;
+      });
     } // case
     break;
     case ns_enum::Platform::PCSX2:
@@ -194,9 +123,9 @@ inline void target(ns_enum::Platform enum_platform
   } // switch
 
   // Check if is regular file
-  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_target);
-  // Set as default target file
-  json_project("path-file-target") = path_file_target;
+  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_rom);
+  // Set as default rom file
+  json_project("path-file-{}"_fmt(ns_enum::to_string_lower(op))) = path_file_rom;
   // Save to file
   ns_json::to_file_project(json_project);
 
@@ -212,7 +141,7 @@ inline void select(std::vector<std::string> args)
 
   // Check if args were passed
   "Empty arguments for select command\n"
-  "Valid options are target, core"_throw_if([&]{ return args.empty(); });
+  "Valid options are rom, core"_throw_if([&]{ return args.empty(); });
 
   // Retrieve operation selected by user
   Op op;
@@ -224,7 +153,7 @@ inline void select(std::vector<std::string> args)
 
   // Check if args were passed to the selected operation
   "No argument provided for the '{}' operation"_throw_if([&]{ return args.empty(); }, ns_enum::to_string(op));
-  target(enum_platform, json[str_project]["path-app"], args.front());
+  rom(enum_platform, op, json[str_project]["path-project"], args.front());
 } // }}}
 
 } // namespace ns_select
