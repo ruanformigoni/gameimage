@@ -10,6 +10,8 @@
 #include <easylogging++.h>
 #include <fmt/core.h>
 
+#include "../std/concepts.hpp"
+
 namespace ns_log
 {
 
@@ -60,7 +62,7 @@ inline void init(int argc, char** argv)
   el::Loggers::reconfigureLogger("default", default_conf);
 } // function: init
 
-template<std::convertible_to<std::string>... T>
+template<ns_concept::StreamInsertable... T>
 void write(char level, T&&... t)
 {
   std::stringstream ss;
@@ -69,9 +71,9 @@ void write(char level, T&&... t)
 
   switch (level)
   {
-    case 'i': LOG(INFO)  << ss.str(); break;
-    case 'e': LOG(ERROR) << ss.str(); break;
-    case 'd': LOG(DEBUG) << ss.str(); break;
+    case 'i': for(std::string line; std::getline(ss, line);) { LOG(INFO)  << line; }; break;
+    case 'e': for(std::string line; std::getline(ss, line);) { LOG(ERROR) << line; }; break;
+    case 'd': for(std::string line; std::getline(ss, line);) { LOG(DEBUG) << line; }; break;
   } // switch: level
 } // function: write
 

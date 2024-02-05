@@ -72,6 +72,21 @@ inline void file(fs::path const& path_src
   fs::permissions(path_dst, perms::owner_all | perms::group_all | perms::others_read);
 } // file() }}}
 
+// callback_seconds {{{
+template<typename F>
+decltype(auto) callback_seconds(std::chrono::seconds seconds, F&& f)
+{
+  return [=,time_ref = std::chrono::steady_clock::now()] (double percentage, fs::path src, fs::path dst) mutable
+  {
+    auto time_now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::seconds>(time_now - time_ref) >= seconds or percentage == 1.0)
+    {
+      f(percentage, src, dst);
+      time_ref = time_now;
+    } // if
+  };
+} // function: callback_seconds }}}
+
 } // namespace ns_copy
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

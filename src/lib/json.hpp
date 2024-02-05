@@ -29,6 +29,37 @@ concept IsString =
      std::convertible_to<std::decay_t<T>, std::string>
   or std::constructible_from<std::string, std::decay_t<T>>;
 
+// Custom iterator class
+template<typename IteratorType>
+class JsonIterator
+{
+  private:
+    IteratorType m_it;
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = typename IteratorType::value_type;
+    using difference_type = typename IteratorType::difference_type;
+    using pointer = typename IteratorType::pointer;
+    using reference = typename IteratorType::reference;
+
+    // Construct with an nlohmann::json iterator
+    explicit JsonIterator(IteratorType it) : m_it(it) {}
+
+    // Increment operators
+    JsonIterator& operator++() { ++m_it; return *this; }
+    JsonIterator operator++(int) { JsonIterator tmp = *this; ++(*this); return tmp; }
+
+    // Dereference operators
+    reference operator*() const { return *m_it; }
+    pointer operator->() const { return &(*m_it); }
+
+    // Comparison operators
+    bool operator==(const JsonIterator& other) const { return m_it == other.m_it; }
+    bool operator!=(const JsonIterator& other) const { return m_it != other.m_it; }
+};
+
+
 // class Json {{{
 class Json
 {
@@ -56,6 +87,17 @@ class Json
     } // get
 
   public:
+    // Iterators
+    using iterator = JsonIterator<json_t::iterator>;
+    using const_iterator = JsonIterator<json_t::const_iterator>;
+    const_iterator cbegin() const { return const_iterator(data().cbegin()); }
+    const_iterator cend() const { return const_iterator(data().cend()); }
+    iterator begin() { return iterator(data().begin()); }
+    iterator end() { return iterator(data().end()); }
+    const_iterator begin() const { return const_iterator(data().cbegin()); }
+    const_iterator end() const { return const_iterator(data().cend()); }
+
+    // Constructors
     Json()
       : m_json(json_t{})
     {} // Json
@@ -98,6 +140,12 @@ class Json
 
       return data().contains(t);
     } // function: contains
+
+
+    bool empty()
+    {
+      return data().empty();
+    } // function: empty
 
     operator std::string() const
     {
@@ -168,6 +216,20 @@ class Json
       return *this;
       // else
     } // operator=
+
+    template<IsString T>
+    Json& operator|=(T&& t)
+    {
+      auto& json = data();
+      if ( std::find_if(json.cbegin()
+        , json.cend()
+        , [&](auto&& e){ return std::string{e} == t; }) == json.cend() )
+      {
+        json.push_back(std::forward<T>(t));
+      } // if
+      return *this;
+      // else
+    } // operator|=
 
     friend std::ostream& operator<<(std::ostream& os, Json const& json);
 }; // class: Json }}}

@@ -58,7 +58,7 @@ inline void icon(std::string str_file_icon)
   // Create icon directory and set file name
   fs::path path_dir_icon = path_app / "icon";
   ns_fs::ns_path::dir_create<true>(path_dir_icon);
-  fs::path path_file_icon_dst = path_dir_icon /= "icon.png";
+  fs::path path_file_icon_dst = path_dir_icon / "icon.png";
 
   // Get enum option
   ns_enum::ImageFormat image_format;
@@ -135,13 +135,13 @@ inline void wine(std::vector<std::string> args)
   std::string str_app = json["project"];
 
   // Default working directory
-  fs::path path_cwd = ns_fs::ns_path::canonical<true>(str_app)._ret;
+  fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
 
   // Path to flatimage
   fs::path path_flatimage = ns_fs::ns_path::file_exists<true>(json[str_app]["path-image"])._ret;
 
   // Path to wine prefix
-  fs::path path_wineprefix = fs::path{path_cwd} /= "wine";
+  fs::path path_wineprefix = fs::path{path_dir_project} / "wine";
 
   // Log
   ns_log::write('i', "application: ", str_app);
@@ -155,14 +155,14 @@ inline void wine(std::vector<std::string> args)
   ns_env::set("WINEDEBUG", "fixme-all", ns_env::Replace::N);
 
   // Set callbacks for wine/winetricks
-  auto f_wine = [&]<typename... _Args>(_Args&&... args)
+  auto f_wine = [&]<typename... _Args>(_Args&&... _args)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "wine", std::forward<_Args>(args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "wine", std::forward<_Args>(_args)...);
   };
 
-  auto f_winetricks = [&]<typename... _Args>(_Args&&... args)
+  auto f_winetricks = [&]<typename... _Args>(_Args&&... _args)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(_args)...);
   };
 
   // No command
@@ -184,6 +184,86 @@ inline void wine(std::vector<std::string> args)
     match::pattern | "vkd3d"      = [&]{ f_winetricks("vkd3d"); },
     match::pattern | match::_     = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
   );
+} // wine() }}}
+
+// retroarch() {{{
+inline void retroarch(std::vector<std::string> args)
+{
+  // Get default path
+  ns_json::Json json = ns_json::from_file_default();
+
+  // Current application
+  std::string str_app = json["project"];
+
+  // Default working directory
+  fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
+
+  // Path to project
+  fs::path path_project = ns_fs::ns_path::dir_exists<true>(json[str_app]["path-app"])._ret;
+
+  // Path to rom / core
+  fs::path path_dir_rom = fs::path{path_dir_project} / "rom";
+  ns_fs::ns_path::dir_create<true>(path_dir_rom);
+
+  fs::path path_dir_core = fs::path{path_dir_project} / "core";
+  ns_fs::ns_path::dir_create<true>(path_dir_core);
+
+  // Log
+  ns_log::write('i', "application: ", str_app);
+  ns_log::write('i', "project: ", path_project);
+  ns_log::write('i', "path core: ", path_dir_core);
+  ns_log::write('i', "path rom: ", path_dir_rom);
+
+  // No command
+  if ( args.empty() )
+  {
+    ns_log::write('i', "No command passed to install phase");
+    return;
+  }
+
+  // Project database
+  ns_json::Json json_project;
+
+  "Could not find project json file"_try([&]{ json_project = ns_json::from_file_project(); });
+
+  auto f_install = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
+  {
+    // Verify if source file exists
+    ns_fs::ns_path::file_exists<true>(path_file_src);
+    // Copy to target file
+    ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
+      , [&](double percentage, auto&& path_src, auto&& path_dst)
+      {
+        ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
+      })
+    );
+    // Save in database
+    json_project(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
+  }; // f_install
+
+  auto f_install_files = [&](std::string const& type, fs::path path_dir_dst, std::vector<std::string> const& args)
+  {
+    std::ranges::for_each(args, [&](fs::path e){ f_install(type, e, path_dir_dst / e.filename()); });
+  }; // f_install_roms
+
+  for(auto&& i : json_project("paths-file-rom"))
+  {
+    fmt::println("rom: {}", std::string(i));
+  } // for
+
+
+  // Get command
+  std::string str_cmd = args.front();
+  args.erase(args.begin());
+
+  match::match(str_cmd)
+  (
+    match::pattern | "rom"    = [&]{ f_install_files("rom", path_dir_rom, args); },
+    match::pattern | "core"   = [&]{ f_install_files("core", path_dir_core, args); },
+    match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
+  );
+
+  ns_json::to_file_project(json_project);
 } // wine() }}}
 
 // install() {{{
@@ -214,12 +294,16 @@ inline void install(std::vector<std::string> args)
       ns_install::wine(args);
       break;
     case ns_enum::Platform::RETROARCH:
+      ns_install::retroarch(args);
       break;
     case ns_enum::Platform::PCSX2:
+      "Not implemented"_throw();
       break;
     case ns_enum::Platform::RPCS3:
+      "Not implemented"_throw();
       break;
     case ns_enum::Platform::YUZU:
+      "Not implemented"_throw();
       break;
   } // switch
   

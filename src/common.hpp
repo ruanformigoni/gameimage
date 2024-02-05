@@ -25,16 +25,6 @@ template<typename T>
 std::string to_string(T&& t);
 } // namespace ns_common }}}
 
-// User defined literals {{{
-// Format strings with user-defined literals
-inline decltype(auto) operator ""_fmt(const char* str, size_t)
-{
-  return [str]<typename... Args>(Args&&... args)
-  {
-    return fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))... ) ;
-  };
-} // }}}
-
 // class Exception {{{
 class Exception : public std::exception
 {
@@ -53,6 +43,15 @@ class Exception : public std::exception
 }; // class: Exception }}}
 
 // User defined literals {{{
+
+// Format strings with user-defined literals
+inline decltype(auto) operator ""_fmt(const char* str, size_t)
+{
+  return [str]<typename... Args>(Args&&... args)
+  {
+    return fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))... ) ;
+  };
+} //
 
 // Format strings with user-defined literals
 inline decltype(auto) operator ""_throw(const char* str, size_t)
@@ -74,7 +73,8 @@ inline decltype(auto) operator ""_catch(const char* str, size_t)
     } // try
     catch(std::exception const& e)
     {
-      ns_log::write('i', fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+      ns_log::write('e', e.what());
+      ns_log::write('e', fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
     } // catch
   };
 }
@@ -102,11 +102,36 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
     } // try
     catch(std::exception const& e)
     {
+      ns_log::write('e', e.what());
       throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
     } // catch
   };
 }
 
+// Format strings with user-defined literals, throws if condition is false
+inline decltype(auto) operator ""_for(const char* str, size_t)
+{
+  return [str]<typename T, typename F, typename... Args>(T&& t
+    , F&& f
+    , Args&&... args)
+  {
+    if ( t.empty() )
+    {
+      throw Exception(fmt::format(fmt::runtime(str), "{empty}", ns_common::to_string(std::forward<Args>(args))...));
+    } // if
+    
+    for( auto&& i : t )
+    {
+      if ( ! f(std::forward<decltype(i)>(i)) )
+      {
+        throw Exception(fmt::format(fmt::runtime(str)
+          , ns_common::to_string(i)
+          , ns_common::to_string(std::forward<Args>(args))...)
+        );
+      } // if
+    } // for
+  };
+}
 // }}}
 
 // ns_common {{{

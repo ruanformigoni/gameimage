@@ -8,9 +8,13 @@
 
 #include <string>
 #include <type_traits>
+#include <concepts>
 
 namespace ns_concept
 {
+
+template<typename T>
+concept IterableForward = std::forward_iterator<T>;
 
 template<typename T>
 concept StringConvertible = std::is_convertible_v<std::decay_t<T>, std::string>;

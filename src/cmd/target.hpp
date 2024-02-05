@@ -70,6 +70,12 @@ inline cr::generator<fs::path> search(fs::path path_dir
 
 } // namespace ns_impl }}}
 
+enum class TargetOperation
+{
+  TARGET,
+  CORE,
+};
+
 // search() {{{
 inline void search(ns_enum::Platform enum_platform, fs::path path)
 {
@@ -85,31 +91,73 @@ inline void search(ns_enum::Platform enum_platform, fs::path path)
         ns_log::write('i', "Found :: ", i);
       }
       break;
+    case ns_enum::Platform::RETROARCH:
+      "Not implemented"_throw();
+      break;
+    case ns_enum::Platform::PCSX2:
+      "Not implemented"_throw();
+      break;
+    case ns_enum::Platform::RPCS3:
+      "Not implemented"_throw();
+      break;
+    case ns_enum::Platform::YUZU:
+      "Not implemented"_throw();
+      break;
   } // switch
 
 } // search() }}}
 
 // select() {{{
-inline void select(ns_enum::Platform enum_platform, fs::path dir_base, fs::path path_file)
+inline void select(ns_enum::Platform enum_platform
+  , TargetOperation operation
+  , fs::path dir_base
+  , fs::path path_file)
 {
+  ns_json::Json json_project;
+  // Try to open existing file
+  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
+
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:
     {
-      ns_json::Json json_project;
-      // Try to open existing file
-      "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
+      // Wine only selects 'rom', a .exe or .msi
+      "Operation select for '{}' not available in wine"_throw_if(
+        [&]{ return operation != TargetOperation::TARGET; }
+      );
       // Enter drive_c
-      path_file = (fs::path("wine") /= "drive_c") /= path_file;
+      path_file = (fs::path("wine") / "drive_c") / path_file;
       // Check if is regular file
-      ns_fs::ns_path::file_exists<true>(dir_base /= path_file);
+      ns_fs::ns_path::file_exists<true>(dir_base / path_file);
       // Set as default target file
       json_project("path-file-target") = path_file;
-      // Save to file
-      ns_json::to_file_project(json_project);
     } // case
     break;
+    case ns_enum::Platform::RETROARCH:
+      // Check if is regular file
+      ns_fs::ns_path::file_exists<true>(dir_base / path_file);
+      // Save selected target
+      switch(operation)
+      {
+        case TargetOperation::TARGET: json_project("path-file-target") = path_file;
+        break;
+        case TargetOperation::CORE: json_project("path-file-core") = path_file;
+        break;
+      }
+      break;
+    case ns_enum::Platform::PCSX2:
+      "Not implemented"_throw();
+      break;
+    case ns_enum::Platform::RPCS3:
+      "Not implemented"_throw();
+      break;
+    case ns_enum::Platform::YUZU:
+      "Not implemented"_throw();
+      break;
   } // switch
+
+  // Save to file
+  ns_json::to_file_project(json_project);
 
 } // select() }}}
 
@@ -134,10 +182,24 @@ inline void target(std::vector<std::string> args)
     match::pattern | "search" = [&]{ search(enum_platform, json[str_project]["path-app"]); },
     match::pattern | "select" = [&]
     {
+      // Check if args were passed
+      "Empty sub-command for select\n"
+      "Valid commands are target and core"_throw_if([&]{ return args.empty(); });
+      std::string str_select_cmd = args.front(); args.erase(args.begin());
+
+      // Select target
       "No file provided to set as the default target file"_throw_if([&]{ return args.empty(); });
-      select(enum_platform, json[str_project]["path-app"], args.front());
+      select(enum_platform
+        , ns_enum::from_string<TargetOperation>(str_select_cmd)
+        , json[str_project]["path-app"]
+        , args.front()
+      );
     },
-    match::pattern | match::_ = [&]{ "Invalid target argument '{}'"_throw(str_operation); }
+    match::pattern | match::_ = [&]
+    {
+      "Invalid target command '{}'\n"
+      "Valid commands are search and select"_throw(str_operation);
+    }
   );
 
 } // }}}

@@ -56,26 +56,7 @@ void install(ns_parser::Parser const& parser)
 // compress() {{{
 void compress()
 {
-  ns_json::Json json = ns_json::from_file_default();
-
-  std::string str_app = json["project"];
-  std::string str_platform = json[str_app]["platform"];
-
-  switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
-  {
-    case ns_enum::Platform::WINE:
-      ns_compress::compress();
-      break;
-    case ns_enum::Platform::RETROARCH:
-      break;
-    case ns_enum::Platform::PCSX2:
-      break;
-    case ns_enum::Platform::RPCS3:
-      break;
-    case ns_enum::Platform::YUZU:
-      break;
-  } // switch
-
+  ns_compress::compress();
 } // compress() }}}
 
 // target() {{{

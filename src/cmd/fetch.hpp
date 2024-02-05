@@ -125,16 +125,16 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
-      f_fetch(fs::path{dir_dest} /= "retroarch" , cpr::Url{json_fetch["base-retroarch"]});
+      f_fetch(fs::path{dir_dest} / "retroarch" , cpr::Url{json_fetch["base-retroarch"]});
       break;
     case ns_enum::Platform::PCSX2:
-      f_fetch(fs::path{dir_dest} /= "pcsx2" , cpr::Url{json_fetch["base-pcsx2"]});
+      f_fetch(fs::path{dir_dest} / "pcsx2" , cpr::Url{json_fetch["base-pcsx2"]});
       break;
     case ns_enum::Platform::RPCS3:
-      f_fetch(fs::path{dir_dest} /= "rpcs3" , cpr::Url{json_fetch["base-rpcs3"]});
+      f_fetch(fs::path{dir_dest} / "rpcs3" , cpr::Url{json_fetch["base-rpcs3"]});
       break;
     case ns_enum::Platform::YUZU:
-      f_fetch(fs::path{dir_dest} /= "yuzu" , cpr::Url{json_fetch["base-yuzu"]});
+      f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{json_fetch["base-yuzu"]});
       break;
   }
 
