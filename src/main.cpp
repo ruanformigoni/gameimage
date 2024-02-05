@@ -17,7 +17,8 @@
 #include "cmd/project.hpp"
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
-#include "cmd/target.hpp"
+#include "cmd/select.hpp"
+#include "cmd/search.hpp"
 #include "cmd/package.hpp"
 
 #include "lib/log.hpp"
@@ -59,11 +60,17 @@ void compress()
   ns_compress::compress();
 } // compress() }}}
 
-// target() {{{
-void target(ns_parser::Parser const& parser)
+// select() {{{
+void select(ns_parser::Parser const& parser)
 {
-  ns_target::target(parser.remaining());
-} // target() }}}
+  ns_select::select(parser.remaining());
+} // select() }}}
+
+// search() {{{
+void search(ns_parser::Parser const& parser)
+{
+  ns_search::search(parser.remaining());
+} // search() }}}
 
 // package() {{{
 void package(ns_parser::Parser const& parser)
@@ -106,7 +113,7 @@ int main(int argc, char** argv)
       match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
       match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
-      match::pattern | "target"   = [&]{ parser = std::make_unique<ns_parser::Target>("target");     },
+      match::pattern | "select"   = [&]{ parser = std::make_unique<ns_parser::Select>("select");     },
       match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
@@ -151,9 +158,14 @@ int main(int argc, char** argv)
         compress();
       } // case
       break;
-      case ns_enum::Stage::TARGET:
+      case ns_enum::Stage::SEARCH:
       {
-        target(*parser);
+        search(*parser);
+      } // case
+      break;
+      case ns_enum::Stage::SELECT:
+      {
+        select(*parser);
       } // case
       break;
       case ns_enum::Stage::PACKAGE:

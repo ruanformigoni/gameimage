@@ -1,6 +1,7 @@
 ///
 // @author      : Ruan E. Formigoni (ruanformigoni@gmail.com)
-// @file        : target
+// @file        : select
+// @created     : Monday Feb 05, 2024 15:02:17 -03
 ///
 
 #pragma once
@@ -20,12 +21,18 @@
 #include "../lib/log.hpp"
 #include "../lib/json.hpp"
 
-namespace ns_target
+namespace ns_select
 {
 
 namespace fs = std::filesystem;
 namespace cr = cppcoro;
-namespace match = matchit;
+
+enum class Op
+{
+  TARGET,
+  CORE,
+};
+
 
 // namespace ns_impl {{{
 namespace ns_impl
@@ -70,12 +77,6 @@ inline cr::generator<fs::path> search(fs::path path_dir
 
 } // namespace ns_impl }}}
 
-enum class TargetOperation
-{
-  TARGET,
-  CORE,
-};
-
 // search() {{{
 inline void search(ns_enum::Platform enum_platform, fs::path path)
 {
@@ -107,11 +108,10 @@ inline void search(ns_enum::Platform enum_platform, fs::path path)
 
 } // search() }}}
 
-// select() {{{
-inline void select(ns_enum::Platform enum_platform
-  , TargetOperation operation
-  , fs::path dir_base
-  , fs::path path_file)
+// core() {{{
+inline void core(ns_enum::Platform enum_platform
+  , fs::path path_dir_project
+  , fs::path path_file_core)
 {
   ns_json::Json json_project;
   // Try to open existing file
@@ -121,48 +121,89 @@ inline void select(ns_enum::Platform enum_platform
   {
     case ns_enum::Platform::WINE:
     {
-      // Wine only selects 'rom', a .exe or .msi
-      "Operation select for '{}' not available in wine"_throw_if(
-        [&]{ return operation != TargetOperation::TARGET; }
-      );
-      // Enter drive_c
-      path_file = (fs::path("wine") / "drive_c") / path_file;
-      // Check if is regular file
-      ns_fs::ns_path::file_exists<true>(dir_base / path_file);
-      // Set as default target file
-      json_project("path-file-target") = path_file;
+      "Core selection is not available for the wine platform"_throw();
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
-      // Check if is regular file
-      ns_fs::ns_path::file_exists<true>(dir_base / path_file);
-      // Save selected target
-      switch(operation)
-      {
-        case TargetOperation::TARGET: json_project("path-file-target") = path_file;
-        break;
-        case TargetOperation::CORE: json_project("path-file-core") = path_file;
-        break;
-      }
-      break;
+    {
+      path_file_core = fs::path("core") / path_file_core;
+    } // case
+    break;
     case ns_enum::Platform::PCSX2:
+    {
       "Not implemented"_throw();
-      break;
+    } // case
+    break;
     case ns_enum::Platform::RPCS3:
+    {
       "Not implemented"_throw();
-      break;
+    } // case
+    break;
     case ns_enum::Platform::YUZU:
+    {
       "Not implemented"_throw();
-      break;
+    } // case
+    break;
   } // switch
 
+  // Check if is regular file
+  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_core);
+  // Set as default core file
+  json_project("path-file-core") = path_file_core;
   // Save to file
   ns_json::to_file_project(json_project);
 
 } // select() }}}
 
 // target() {{{
-inline void target(std::vector<std::string> args)
+inline void target(ns_enum::Platform enum_platform
+  , fs::path path_dir_project
+  , fs::path path_file_target)
+{
+  ns_json::Json json_project;
+  // Try to open existing file
+  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
+
+  switch(enum_platform)
+  {
+    case ns_enum::Platform::WINE:
+    {
+      path_file_target = (fs::path("wine") / "drive_c") / path_file_target;
+    } // case
+    break;
+    case ns_enum::Platform::RETROARCH:
+    {
+      path_file_target = fs::path("rom") / path_file_target;
+    } // case
+    break;
+    case ns_enum::Platform::PCSX2:
+    {
+      "Not implemented"_throw();
+    } // case
+    break;
+    case ns_enum::Platform::RPCS3:
+    {
+      "Not implemented"_throw();
+    } // case
+    break;
+    case ns_enum::Platform::YUZU:
+    {
+      "Not implemented"_throw();
+    } // case
+    break;
+  } // switch
+
+  // Check if is regular file
+  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_target);
+  // Set as default target file
+  json_project("path-file-target") = path_file_target;
+  // Save to file
+  ns_json::to_file_project(json_project);
+
+} // select() }}}
+
+// select() {{{
+inline void select(std::vector<std::string> args)
 {
   ns_json::Json json = ns_json::from_file_default();
   std::string str_project = json["project"];
@@ -170,40 +211,22 @@ inline void target(std::vector<std::string> args)
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
 
   // Check if args were passed
-  "Empty arguments for target command"_throw_if([&]{ return args.empty(); });
+  "Empty arguments for select command\n"
+  "Valid options are target, core"_throw_if([&]{ return args.empty(); });
 
-  // Retrieve user-input operation
-  std::string str_operation{args.front()};
+  // Retrieve operation selected by user
+  Op op;
+  "Invalid operation '{}'"_try([&]
+  { 
+    op = ns_enum::from_string<Op>(args.front());
+  }, args.front());
   args.erase(args.begin());
 
-  // Select operation
-  match::match(str_operation)
-  (
-    match::pattern | "search" = [&]{ search(enum_platform, json[str_project]["path-app"]); },
-    match::pattern | "select" = [&]
-    {
-      // Check if args were passed
-      "Empty sub-command for select\n"
-      "Valid commands are target and core"_throw_if([&]{ return args.empty(); });
-      std::string str_select_cmd = args.front(); args.erase(args.begin());
-
-      // Select target
-      "No file provided to set as the default target file"_throw_if([&]{ return args.empty(); });
-      select(enum_platform
-        , ns_enum::from_string<TargetOperation>(str_select_cmd)
-        , json[str_project]["path-app"]
-        , args.front()
-      );
-    },
-    match::pattern | match::_ = [&]
-    {
-      "Invalid target command '{}'\n"
-      "Valid commands are search and select"_throw(str_operation);
-    }
-  );
-
+  // Check if args were passed to the selected operation
+  "No argument provided for the '{}' operation"_throw_if([&]{ return args.empty(); }, ns_enum::to_string(op));
+  target(enum_platform, json[str_project]["path-app"], args.front());
 } // }}}
 
-} // namespace ns_target
+} // namespace ns_select
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/
