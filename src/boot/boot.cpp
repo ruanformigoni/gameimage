@@ -14,7 +14,7 @@
 #include "../std/filesystem.hpp"
 #include "../std/env.hpp"
 
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 #include "../lib/subprocess.hpp"
 
 // Start logging
@@ -37,10 +37,10 @@ int main(int argc, char** argv)
   fs::path path_dir_self = ns_fs::ns_path::dir_exists<true>(fs::path(argv[0]).parent_path())._ret;
 
   // Database file
-  ns_json::Json json(path_dir_self / "gameimage.json");
+  ns_db::Db db(path_dir_self / "gameimage.json");
 
   // Get platform
-  auto platform = ns_enum::from_string<ns_enum::Platform>(std::string(json["platform"]));
+  auto platform = ns_enum::from_string<ns_enum::Platform>(std::string(db["platform"]));
 
   switch(platform)
   {
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
       ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
 
       // Binary to execute
-      fs::path path_file_target = ns_fs::ns_path::file_exists<true>(path_dir_self / json["path-file-target"])._ret;
+      fs::path path_file_target = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-target"])._ret;
 
       // Enter directory of target file
       fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_target.parent_path())._ret);

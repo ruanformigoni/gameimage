@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_project
 {
@@ -16,26 +16,33 @@ namespace ns_project
 inline void set(std::string const& s)
 {
   // Tries to open default config file
-  ns_json::Json json = ns_json::from_file_default();
+  ns_db::from_file_default([&](auto&& db)
+  {
+    // Check if exists or throw
+    db.template contains<true>(s);
 
-  // Check if exists or throw
-  json.contains<true>(s);
+    // Updates default
+    db("project") = s;
 
-  // Updates default
-  json("project") = s;
-
-  // Tries to write back to default config file
-  ns_json::to_file_default(json);
+    ns_log::write('i', "Set default project to: ", s);
+  });
 } // set() }}}
 
 // get() {{{
 inline std::string get()
 {
-  // Tries to open default config file
-  ns_json::Json json = ns_json::from_file_default();
+  std::string ret;
+
+  // Get project from database
+  ns_db::from_file_default([&](auto&& db)
+  {
+    ret = db["project"];
+  });
+
+  ns_log::write('i', "Default project: ", ret);
 
   // Returns default
-  return json["project"];
+  return ret;
 } // get() }}}
 
 } // namespace ns_project

@@ -22,7 +22,7 @@
 #include "../std/copy.hpp"
 
 #include "../lib/subprocess.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_install
 {
@@ -37,11 +37,19 @@ inline void icon(std::string str_file_icon)
   namespace gil = boost::gil;
 
   // Current application
-  ns_json::Json json = ns_json::from_file_default();
-  std::string str_app = json["project"];
+  std::string str_app;
 
   // Current application directory
-  fs::path path_app = json[str_app]["path-project"];
+  fs::path path_app;
+
+  ns_db::from_file_default([&](auto&& db)
+  {
+    // Current application
+    str_app = db["project"];
+
+    // Current application directory
+    path_app = std::string(db[str_app]["path-project"]);
+  });
 
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -116,29 +124,33 @@ inline void icon(std::string str_file_icon)
   gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
 
   // Save icon path in project database
-  ns_json::Json json_project;
-  // Try to open existing file
-  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
-  json_project("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
-  // Save to file
-  ns_json::to_file_project(json_project);
-  
+  ns_db::from_file_project([&](auto&& db)
+  {
+    db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
+  });
 } // icon() }}}
 
 // wine() {{{
 inline void wine(std::vector<std::string> args)
 {
-  // Get default path
-  ns_json::Json json = ns_json::from_file_default();
-
   // Current application
-  std::string str_app = json["project"];
+  std::string str_app;
+
+  // Path to flatimage
+  fs::path path_flatimage;
+
+  // Get default path
+  ns_db::from_file_default([&](auto&& db)
+  {
+    // Current application
+    str_app = db["project"];
+
+    // Path to flatimage
+    path_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path-image"])._ret;
+  });
 
   // Default working directory
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
-
-  // Path to flatimage
-  fs::path path_flatimage = ns_fs::ns_path::file_exists<true>(json[str_app]["path-image"])._ret;
 
   // Path to wine prefix
   fs::path path_wineprefix = fs::path{path_dir_project} / "wine";
@@ -189,17 +201,21 @@ inline void wine(std::vector<std::string> args)
 // retroarch() {{{
 inline void retroarch(std::vector<std::string> args)
 {
-  // Get default path
-  ns_json::Json json = ns_json::from_file_default();
-
   // Current application
-  std::string str_app = json["project"];
+  std::string str_app;
+
+  // Path to project
+  fs::path path_project;
+
+  // Get default path
+  ns_db::from_file_default([&](auto&& db)
+  {
+    str_app = db["project"];
+    path_project = ns_fs::ns_path::dir_exists<true>(db[str_app]["path-project"])._ret;
+  });
 
   // Default working directory
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
-
-  // Path to project
-  fs::path path_project = ns_fs::ns_path::dir_exists<true>(json[str_app]["path-project"])._ret;
 
   // Path to rom / core
   fs::path path_dir_rom = fs::path{path_dir_project} / "rom";
@@ -221,11 +237,7 @@ inline void retroarch(std::vector<std::string> args)
     return;
   }
 
-  // Project database
-  ns_json::Json json_project;
-
-  "Could not find project json file"_try([&]{ json_project = ns_json::from_file_project(); });
-
+  // Install helpers
   auto f_install = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
     // Verify if source file exists
@@ -237,8 +249,12 @@ inline void retroarch(std::vector<std::string> args)
         ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
       })
     );
+
     // Save in database
-    json_project(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
+    ns_db::from_file_project([&](auto&& db)
+    {
+      db(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
+    });
   }; // f_install
 
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
@@ -258,8 +274,6 @@ inline void retroarch(std::vector<std::string> args)
     match::pattern | "core"   = [&]{ f_install_files("core", path_dir_core, args); },
     match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
   );
-
-  ns_json::to_file_project(json_project);
 } // wine() }}}
 
 // install() {{{
@@ -279,11 +293,15 @@ inline void install(std::vector<std::string> args)
     return;
   } // if
 
-  // Forward arguments by platform
-  ns_json::Json json = ns_json::from_file_default();
-  std::string str_app = json[json["project"]]["platform"];
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
+  // Get platform
+  ns_enum::Platform enum_platform;
+  ns_db::from_file_default([&](auto&& db)
+  { 
+    std::string str_app = db[db["project"]]["platform"];
+    enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
+  });
 
+  // Install based on platform
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:

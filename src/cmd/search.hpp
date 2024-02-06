@@ -18,7 +18,7 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_search
 {
@@ -26,12 +26,13 @@ namespace ns_search
 namespace fs = std::filesystem;
 namespace cr = cppcoro;
 
+// enum class Op {{{
 enum class Op
 {
   ROM,
   CORE,
 };
-
+// }}}
 
 // namespace ns_impl {{{
 namespace ns_impl
@@ -79,11 +80,15 @@ inline cr::generator<fs::path> search(fs::path path_dir
 // search() {{{
 inline void search(std::vector<std::string> args)
 {
-  ns_json::Json json = ns_json::from_file_default();
-  std::string str_project = json["project"];
-  std::string str_app = json[str_project]["platform"];
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
-  fs::path path_project = json[str_project]["path-project"];
+  std::string str_project;
+  std::string str_platform;
+  fs::path path_project;
+
+  ns_db::from_file_default([&](auto&& db){ str_project = db["project"]; });
+  ns_db::from_file_default([&](auto&& db){ str_platform = db[str_project]["platform"]; });
+  ns_db::from_file_default([&](auto&& db){ path_project = std::string(db[str_project]["path-project"]); });
+
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 
   // Retrieve operation selected by user
   Op op;

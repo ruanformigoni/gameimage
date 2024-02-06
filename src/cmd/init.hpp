@@ -16,7 +16,7 @@
 #include "../std/env.hpp"
 
 #include "../lib/log.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 //
 // Initializes a new directory configuration for gameimage
@@ -50,33 +50,20 @@ inline void init(std::string const& str_platform
   // Create directory
   ns_fs::ns_path::dir_create<true>(path_app);
 
-  // Create json obj
-  ns_json::Json json_global; 
-
-  // Try to open default file if exists
-  try
+  // Update global
+  ns_db::from_file_default([&](auto&& db_global)
   {
-    json_global = ns_json::from_file_default();
-  } // try
-  catch( std::exception const& e )
-  {
-    ns_log::write('i', "File ", ns_json::file_default(), " not found");
-    ns_log::write('i', "Creating {}"_fmt(ns_json::file_default()));
-  } // catch
+    // App name is Dir name
+    std::string str_name = path_app.filename();
 
-  // App name is Dir name
-  std::string str_name = path_app.filename();
+    // Set as default project
+    db_global("project") = path_app.filename();
 
-  // Set as default project
-  json_global("project") = path_app.filename();
-
-  // Set data
-  json_global(str_name)("path-image") = path_image;
-  json_global(str_name)("path-project")   = path_app;
-  json_global(str_name)("platform")   = ns_enum::to_string(platform);
-
-  // Write to json file
-  ns_json::to_file_default(json_global);
+    // Set data
+    db_global(str_name)("path-image")   = path_image;
+    db_global(str_name)("path-project") = path_app;
+    db_global(str_name)("platform")     = ns_enum::to_string(platform);
+  });
 
   // Copy boot file for platform
   fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
@@ -85,15 +72,11 @@ inline void init(std::string const& str_platform
   fs::copy_file(path_file_boot, path_app / "boot", fs::copy_options::overwrite_existing);
   ns_log::write('i', "Copy ", path_file_boot, " -> ", path_app / "boot");
 
-  // Open project json
-  ns_json::Json json_project;
-
-  // Save platform
-  json_project("platform") = ns_enum::to_string(platform);
-
-  // Write to json file
-  ns_json::to_file_project(json_project);
-
+  // Update project
+  ns_db::from_file_project([&](auto&& db_project)
+  {
+    db_project("platform") = ns_enum::to_string(platform);
+  });
 } // function: init }}}
 
 } // namespace ns_init

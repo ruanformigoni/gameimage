@@ -108,30 +108,6 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
   };
 }
 
-// Format strings with user-defined literals, throws if condition is false
-inline decltype(auto) operator ""_for(const char* str, size_t)
-{
-  return [str]<typename T, typename F, typename... Args>(T&& t
-    , F&& f
-    , Args&&... args)
-  {
-    if ( t.empty() )
-    {
-      throw Exception(fmt::format(fmt::runtime(str), "{empty}", ns_common::to_string(std::forward<Args>(args))...));
-    } // if
-    
-    for( auto&& i : t )
-    {
-      if ( ! f(std::forward<decltype(i)>(i)) )
-      {
-        throw Exception(fmt::format(fmt::runtime(str)
-          , ns_common::to_string(i)
-          , ns_common::to_string(std::forward<Args>(args))...)
-        );
-      } // if
-    } // for
-  };
-}
 // }}}
 
 // ns_common {{{

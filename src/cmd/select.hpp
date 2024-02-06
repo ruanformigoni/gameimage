@@ -18,83 +18,33 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_select
 {
 
 namespace fs = std::filesystem;
 
+// enum class Op {{{
 enum class Op
 {
   ROM,
   CORE,
 };
+// }}}
 
-
-// core() {{{
-inline void core(ns_enum::Platform enum_platform
-  , fs::path path_dir_project
-  , fs::path path_file_core)
-{
-  ns_json::Json json_project;
-  // Try to open existing file
-  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
-
-  switch(enum_platform)
-  {
-    case ns_enum::Platform::WINE:
-    {
-      "Core selection is not available for the wine platform"_throw();
-    } // case
-    break;
-    case ns_enum::Platform::RETROARCH:
-    {
-      path_file_core = fs::path("core") / path_file_core;
-    } // case
-    break;
-    case ns_enum::Platform::PCSX2:
-    {
-      "Not implemented"_throw();
-    } // case
-    break;
-    case ns_enum::Platform::RPCS3:
-    {
-      "Not implemented"_throw();
-    } // case
-    break;
-    case ns_enum::Platform::YUZU:
-    {
-      "Not implemented"_throw();
-    } // case
-    break;
-  } // switch
-
-  // Check if is regular file
-  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_core);
-  // Set as default core file
-  json_project("path-file-core") = path_file_core;
-  // Save to file
-  ns_json::to_file_project(json_project);
-
-} // select() }}}
-
-// rom() {{{
-inline void rom(ns_enum::Platform enum_platform
+// by_op() {{{
+inline void by_op(ns_enum::Platform enum_platform
   , Op op
   , fs::path path_dir_project
-  , fs::path path_file_rom)
+  , fs::path path_file_op)
 {
-  ns_json::Json json_project;
-  // Try to open existing file
-  "Creating {}"_catch([&]{ json_project = ns_json::from_file_project(); }, ns_json::file_project());
-
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:
     {
       "Only rom selection is available for wine"_throw_if([&]{ return op != Op::ROM; });
-      path_file_rom = (fs::path("wine") / "drive_c") / path_file_rom;
+      path_file_op = (fs::path("wine") / "drive_c") / path_file_op;
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
@@ -123,21 +73,34 @@ inline void rom(ns_enum::Platform enum_platform
   } // switch
 
   // Check if is regular file
-  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_rom);
-  // Set as default rom file
-  json_project("path-file-{}"_fmt(ns_enum::to_string_lower(op))) = path_file_rom;
-  // Save to file
-  ns_json::to_file_project(json_project);
+  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_op);
+
+  ns_db::from_file_project([&](auto&& db)
+  {
+    // Get op
+    std::string str_op = "path-file-{}"_fmt(ns_enum::to_string_lower(op));
+    // Set as default rom file
+    db(str_op) = path_file_op;
+    ns_log::write('i', "Selected ", str_op, ": ", path_file_op);
+  });
 
 } // select() }}}
 
 // select() {{{
 inline void select(std::vector<std::string> args)
 {
-  ns_json::Json json = ns_json::from_file_default();
-  std::string str_project = json["project"];
-  std::string str_app = json[str_project]["platform"];
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
+  std::string str_project;
+  std::string str_platform;
+  fs::path path_project;
+
+  ns_db::from_file_default([&](auto&& db)
+  {
+    str_project  = db["project"];
+    str_platform = db[str_project]["platform"];
+    path_project = fs::path(db[str_project]["path-project"]);
+  });
+
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 
   // Check if args were passed
   "Empty arguments for select command\n"
@@ -153,7 +116,7 @@ inline void select(std::vector<std::string> args)
 
   // Check if args were passed to the selected operation
   "No argument provided for the '{}' operation"_throw_if([&]{ return args.empty(); }, ns_enum::to_string(op));
-  rom(enum_platform, op, json[str_project]["path-project"], args.front());
+  by_op(enum_platform, op, path_project, args.front());
 } // }}}
 
 } // namespace ns_select

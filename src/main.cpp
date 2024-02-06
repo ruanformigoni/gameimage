@@ -17,9 +17,12 @@
 #include "cmd/project.hpp"
 #include "cmd/install.hpp"
 #include "cmd/compress.hpp"
-#include "cmd/select.hpp"
 #include "cmd/search.hpp"
-#include "cmd/package.hpp"
+#include "cmd/select.hpp"
+// #include "cmd/package.hpp"
+
+#include "std/env.hpp"
+#include "std/filesystem.hpp"
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
@@ -60,23 +63,23 @@ void compress()
   ns_compress::compress();
 } // compress() }}}
 
-// select() {{{
-void select(ns_parser::Parser const& parser)
-{
-  ns_select::select(parser.remaining());
-} // select() }}}
-
 // search() {{{
 void search(ns_parser::Parser const& parser)
 {
   ns_search::search(parser.remaining());
 } // search() }}}
 
-// package() {{{
-void package(ns_parser::Parser const& parser)
+// select() {{{
+void select(ns_parser::Parser const& parser)
 {
-  ns_package::package(parser["dwarfs"]);
-} // package() }}}
+  ns_select::select(parser.remaining());
+} // select() }}}
+
+// // package() {{{
+// void package(ns_parser::Parser const& parser)
+// {
+//   ns_package::package(parser["dwarfs"]);
+// } // package() }}}
 
 // main() {{{
 int main(int argc, char** argv)
@@ -115,7 +118,7 @@ int main(int argc, char** argv)
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
       match::pattern | "search"   = [&]{ parser = std::make_unique<ns_parser::Search>("search");     },
       match::pattern | "select"   = [&]{ parser = std::make_unique<ns_parser::Select>("select");     },
-      match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
+      // match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
     // Parse args
@@ -169,11 +172,11 @@ int main(int argc, char** argv)
         select(*parser);
       } // case
       break;
-      case ns_enum::Stage::PACKAGE:
-      {
-        package(*parser);
-      } // case
-      break;
+      // case ns_enum::Stage::PACKAGE:
+      // {
+      //   package(*parser);
+      // } // case
+      // break;
     //         case ns_enum::Stage::INSTALL:
     //           ns_install::install(parser.m_stage->path_init(), parser.m_stage->remaining());
     //           break;

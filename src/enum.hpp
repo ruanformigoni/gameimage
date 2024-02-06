@@ -11,6 +11,7 @@
 #include "common.hpp"
 
 #include "std/string.hpp"
+#include "std/concepts.hpp"
 
 namespace magic = magic_enum;
 
@@ -56,10 +57,10 @@ enum class Stage
 	PACKAGE,
 };
 
-template<Enum U, std::convertible_to<std::string> T>
+template<Enum U, ns_concept::StreamInsertable T>
 inline decltype(auto) from_string(T&& t)
 {
-	if ( auto opt = magic::enum_cast<U>(t, magic::case_insensitive); opt )
+	if ( auto opt = magic::enum_cast<U>(ns_common::to_string(t), magic::case_insensitive); opt )
 	{
 		return U{*opt};
 	} // if

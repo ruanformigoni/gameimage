@@ -16,7 +16,7 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_fetch
 {
@@ -104,39 +104,39 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
   fs::create_directories(dir_dest);
 
   // Open file list
-  ns_json::Json json_fetch = ns_json::from_file(path_json);
-
-  // Fetch tools by platform
-  switch(platform)
-  {
-    case ns_enum::Platform::WINE:
+  ns_db::from_file(path_json, [&](auto&& db_fetch){
+    // Fetch tools by platform
+    switch(platform)
     {
-      // Determine paths for base and wine
-      fs::path path_wine = fs::path{dir_dest} /= "opt.dwarfs";
-      fs::path path_base = fs::path{dir_dest} /= "base.flatimage";
-      f_fetch(path_wine, cpr::Url{json_fetch["wine-tkg"]});
-      f_fetch(path_base, cpr::Url{json_fetch["base-wine"]});
-      // Merge files
-      ns_subprocess::sync(path_base, "fim-include-path", path_wine, "/opt.dwarfs");
-      // Move to target
-      fs::rename(path_base, path_dest);
-      // Remove dwarfs file
-      fs::remove(path_wine);
-    } // case
-    break;
-    case ns_enum::Platform::RETROARCH:
-      f_fetch(fs::path{dir_dest} / "retroarch" , cpr::Url{json_fetch["base-retroarch"]});
+      case ns_enum::Platform::WINE:
+      {
+        // Determine paths for base and wine
+        fs::path path_wine = fs::path{dir_dest} /= "opt.dwarfs";
+        fs::path path_base = fs::path{dir_dest} /= "base.flatimage";
+        f_fetch(path_wine, cpr::Url{db_fetch["wine-tkg"]});
+        f_fetch(path_base, cpr::Url{db_fetch["base-wine"]});
+        // Merge files
+        ns_subprocess::sync(path_base, "fim-include-path", path_wine, "/opt.dwarfs");
+        // Move to target
+        fs::rename(path_base, path_dest);
+        // Remove dwarfs file
+        fs::remove(path_wine);
+      } // case
       break;
-    case ns_enum::Platform::PCSX2:
-      f_fetch(fs::path{dir_dest} / "pcsx2" , cpr::Url{json_fetch["base-pcsx2"]});
-      break;
-    case ns_enum::Platform::RPCS3:
-      f_fetch(fs::path{dir_dest} / "rpcs3" , cpr::Url{json_fetch["base-rpcs3"]});
-      break;
-    case ns_enum::Platform::YUZU:
-      f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{json_fetch["base-yuzu"]});
-      break;
-  }
+      case ns_enum::Platform::RETROARCH:
+        f_fetch(fs::path{dir_dest} / "retroarch" , cpr::Url{db_fetch["base-retroarch"]});
+        break;
+      case ns_enum::Platform::PCSX2:
+        f_fetch(fs::path{dir_dest} / "pcsx2" , cpr::Url{db_fetch["base-pcsx2"]});
+        break;
+      case ns_enum::Platform::RPCS3:
+        f_fetch(fs::path{dir_dest} / "rpcs3" , cpr::Url{db_fetch["base-rpcs3"]});
+        break;
+      case ns_enum::Platform::YUZU:
+        f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{db_fetch["base-yuzu"]});
+        break;
+    } // switch
+  });
 
 } // fetch_to_file() }}}
 
