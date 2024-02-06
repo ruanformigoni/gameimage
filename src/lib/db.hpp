@@ -294,7 +294,7 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
 
 // from_file() {{{
 template<IsString T, typename F>
-decltype(auto) from_file(T&& t, F&& f)
+void from_file(T&& t, F&& f)
 {
   f(Db(std::forward<T>(t)));
 } // function: from_file }}}
@@ -329,16 +329,16 @@ inline fs::path file_project()
 
 // from_file_default() {{{
 template<typename F>
-inline decltype(auto) from_file_default(F&& f)
+inline void from_file_default(F&& f)
 {
-  return from_file(file_default(), f);
+  from_file(file_default(), f);
 } // function: from_file_default }}}
 
 // from_file_project() {{{
 template<typename F>
-inline decltype(auto) from_file_project(F&& f)
+inline void from_file_project(F&& f)
 {
-  return from_file(file_project(), f);
+  from_file(file_project(), f);
 } // function: from_file_project }}}
 
 } // namespace ns_db
