@@ -57,7 +57,7 @@ inline void validate()
     }
     break;
     case ns_enum::Platform::RETROARCH:
-      // rom
+      // default rom
       "Default rom is not selected"_try([&]
       {
         fs::path path_file_rom;
@@ -72,7 +72,7 @@ inline void validate()
         ns_db::from_file_project([&](auto&& db){ path_file_core = path_app / db["path-file-core"]; });
         ns_log::write('i', "Found core '", path_file_core, "'");
       });
-      // Rom
+      // all roms
       "Failed to validate rom paths"_try([&]
       {
         ns_db::from_file_project([&](auto&& db)
@@ -86,7 +86,7 @@ inline void validate()
           }
         });
       });
-      // Core
+      // all cores
       "Failed to validate core paths"_try([&]
       {
         ns_db::from_file_project([&](auto&& db)
