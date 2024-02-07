@@ -22,13 +22,13 @@ inline void validate()
 {
   std::string str_project;
   std::string str_platform;
-  fs::path path_app;
+  fs::path path_project;
 
   ns_db::from_file_default([&](auto&& db)
   {
     str_project = db["project"];
     str_platform = db[str_project]["platform"];
-    path_app = std::string(db[str_project]["path-project"]);
+    path_project = std::string(db[str_project]["path-project"]);
   });
 
   auto enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
@@ -37,7 +37,7 @@ inline void validate()
   "Icon is not installed"_try([&]
   {
     fs::path path_file_icon;
-    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_app / db["path-file-icon"]; });
+    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; });
     ns_fs::ns_path::file_exists<true>(path_file_icon);
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
@@ -50,7 +50,7 @@ inline void validate()
       "Default executable is not selected"_try([&]
       {
         fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_app / db["path-file-rom"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; });
         ns_fs::ns_path::file_exists<true>(path_file_rom);
         ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
@@ -61,7 +61,7 @@ inline void validate()
       "Default rom is not selected"_try([&]
       {
         fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_app / db["path-file-rom"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; });
         ns_fs::ns_path::file_exists<true>(path_file_rom);
         ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
@@ -69,7 +69,7 @@ inline void validate()
       "Default core is not selected"_try([&]
       {
         fs::path path_file_core;
-        ns_db::from_file_project([&](auto&& db){ path_file_core = path_app / db["path-file-core"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_core = path_project / db["path-file-core"]; });
         ns_log::write('i', "Found core '", path_file_core, "'");
       });
       // all roms
@@ -81,7 +81,7 @@ inline void validate()
           {
             "Invalid rom path in json for '{}'"_try([&]
             {
-              ns_fs::ns_path::file_exists<true>(path_app / path_file);
+              ns_fs::ns_path::file_exists<true>(path_project / path_file);
             }, path_file);
           }
         });
@@ -95,7 +95,7 @@ inline void validate()
           {
             "Invalid core path in json for '{}'"_try([&]
             {
-              ns_fs::ns_path::file_exists<true>(path_app / path_file);
+              ns_fs::ns_path::file_exists<true>(path_project / path_file);
             }, path_file);
           }
         });
@@ -123,8 +123,8 @@ inline decltype(auto) compress()
   // Current project
   std::string str_project;
 
-  // Path to current application
-  std::string str_app;
+  // Path to current project
+  std::string str_path_project;
 
   // Path to image
   std::string str_image;
@@ -135,19 +135,19 @@ inline decltype(auto) compress()
     str_project = db["project"];
 
     // Path to current application
-    str_app = ns_fs::ns_path::dir_exists<true>(db[str_project]["path-project"])._ret;
+    str_path_project = ns_fs::ns_path::dir_exists<true>(db[str_project]["path-project"])._ret;
 
     // Path to image
     str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
   });
 
   // Output file
-  std::string str_target = str_app + ".dwarfs";
+  std::string str_target = str_path_project + ".dwarfs";
 
   // Log
   ns_log::write('i', "project: ", str_project);
   ns_log::write('i', "image: ", str_image);
-  ns_log::write('i', "dir: ", str_app);
+  ns_log::write('i', "dir: ", str_path_project);
   
   // Compress
   ns_subprocess::sync(str_image
@@ -155,7 +155,7 @@ inline decltype(auto) compress()
     , "mkdwarfs"
     , "-f"
     , "-i"
-    , str_app
+    , str_path_project
     , "-o"
     , str_target
   );
