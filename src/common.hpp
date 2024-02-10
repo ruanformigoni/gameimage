@@ -145,6 +145,13 @@ inline std::string to_string(T&& t)
   return {};
 } // to_string() }}}
 
+// check_and() {{{
+template<ns_concept::Enum T, ns_concept::Enum... Args>
+constexpr bool check_and(T&& t, Args&&... flags)
+{
+  return static_cast<int>(t) & ( static_cast<int>(flags) & ... );
+} // check_and() }}}
+
 } // namespace ns_common}}}
 
 

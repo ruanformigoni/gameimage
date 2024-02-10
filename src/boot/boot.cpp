@@ -60,7 +60,25 @@ int main(int argc, char** argv)
 
       // Start application
       ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
-    }
+    } // case
+    break;
+    case ns_enum::Platform::RETROARCH:
+    {
+      // Rom
+      fs::path path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+      // Core
+      fs::path path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+
+      // Enter directory of rom file
+      fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
+
+      // Get boot command
+      std::string str_cmd = ns_env::get("FIM_BINARY_RETROARCH");
+
+      // Start application
+      ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
+    } // case
     break;
   } // switch
 

@@ -12,6 +12,8 @@
 
 namespace ns_concept
 {
+template<typename T>
+concept Enum = std::is_enum_v<T>;
 
 template<typename T>
 concept IterableForward = std::forward_iterator<T>;

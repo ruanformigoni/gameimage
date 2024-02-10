@@ -35,6 +35,26 @@ concept StringVector = std::same_as<std::decay_t<T>, std::vector<std::string>>;
 // Forwards declarations
 inline void wait(fs::path path_file);
 
+// enum class SubProcessOptions {{{
+enum class SubProcessOptions
+{
+  NONE     = 0,
+  PRINT    = 1 << 0,
+  WAITFILE = 1 << 1,
+  CHECKERR = 1 << 2,
+}; // enum
+
+constexpr inline SubProcessOptions operator|(SubProcessOptions a, SubProcessOptions b)
+{
+  return static_cast<SubProcessOptions>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline SubProcessOptions operator&(SubProcessOptions a, SubProcessOptions b) {
+  return static_cast<SubProcessOptions>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+// enum class SubProcessOptions }}}
+
 // subprocess_arg() {{{
 // Process args which can be either std::string or std::vector<std::string>
 template<typename T>
@@ -51,7 +71,7 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
 } // }}}
 
 // subprocess() {{{
-template<typename... Args>
+template<SubProcessOptions options = SubProcessOptions::PRINT | SubProcessOptions::WAITFILE, typename... Args>
 decltype(auto) sync(fs::path path_file, Args&&... args)
 {
   struct ret_t
@@ -81,7 +101,10 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
     for(std::string line; pipe_stream_stdout && std::getline(pipe_stream_stdout, line) && !line.empty();)
     {
       data.ss_stdout << line;
-      ns_log::write('i', "[subprocess o] :: ", line);
+      if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
+      {
+        ns_log::write('i', "[subprocess o] :: ", line);
+      } // if
     } // for
   }); // t1
 
@@ -90,7 +113,10 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
     for(std::string line; pipe_stream_stderr && std::getline(pipe_stream_stderr, line) && !line.empty();)
     {
       data.ss_stderr << line;
-      ns_log::write('i', "[subprocess e] :: ", line);
+      if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
+      {
+        ns_log::write('i', "[subprocess e] :: ", line);
+      } // if
     } // for
   }); // t1
 
@@ -102,13 +128,20 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   // Save return
   data.exit_code = child.exit_code();
 
-  if ( child.exit_code() != 0 )
+  if ( child.exit_code() != 0 && ns_common::check_and(options, SubProcessOptions::CHECKERR) )
   {
-    "Command did not exit successfully: '{} {}'"_fmt(path_file, ns_string::from_container(arguments));
+    ns_log::write('e', "Command did not exit successfully: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
   } // if
+  else
+  {
+    ns_log::write('i', "Finished Command: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
+  } // else
 
-  // Wait for file
-  wait(path_file);
+  if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
+  {
+    // Wait for file
+    wait(path_file);
+  } // if
 
   return data;
 } // function: subprocess }}}
@@ -124,7 +157,7 @@ inline void wait(fs::path path_file)
   "Could not find lsof in PATH"_try([&]{ path_lsof = proc::search_path("lsof").string(); });
 
   // Get pids
-  auto ret = sync(path_lsof, "-t", path_file);
+  auto ret = sync<SubProcessOptions::NONE>(path_lsof, "-t", path_file);
 
   // Parse into pid vec
   std::vector<pid_t> pids;
@@ -157,7 +190,7 @@ inline void wait(fs::path path_file)
       pids.pop_back();
       ns_log::write('i', "Pid ", curr, " finished");
     } // if
-    
+
     // Wait before retry
     std::this_thread::sleep_for(std::chrono::seconds{1});
   } // while
