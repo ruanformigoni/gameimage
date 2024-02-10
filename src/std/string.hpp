@@ -24,6 +24,18 @@ std::string to_lower(T&& t)
   return ret;
 } // to_lower
 
+template<typename T>
+std::string from_container(T&& t, char sep = ' ')
+{
+  std::stringstream ret;
+  for( auto it = t.begin(); it != t.end(); ++it )
+  {
+    ret << *it;
+    if ( std::next(it) != t.end() ) { ret << sep; }
+  } // if
+  return ret.str();
+} // from_container
+
 } // namespace ns_string
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

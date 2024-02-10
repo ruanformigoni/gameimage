@@ -9,14 +9,18 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <signal.h>
+#include <sys/wait.h>
 
 #include <boost/process.hpp>
 #include <fmt/ranges.h>
 
+#include "log.hpp"
+
 #include "../common.hpp"
 
-
-#include "log.hpp"
+#include "../std/filesystem.hpp"
+#include "../std/string.hpp"
 
 namespace ns_subprocess
 {
@@ -27,6 +31,9 @@ namespace proc = boost::process;
 // Concepts
 template<typename T>
 concept StringVector = std::same_as<std::decay_t<T>, std::vector<std::string>>;
+
+// Forwards declarations
+inline void wait(fs::path path_file);
 
 // subprocess_arg() {{{
 // Process args which can be either std::string or std::vector<std::string>
@@ -45,8 +52,17 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
 
 // subprocess() {{{
 template<typename... Args>
-void sync(fs::path binary, Args&&... args)
+decltype(auto) sync(fs::path path_file, Args&&... args)
 {
+  struct ret_t
+  {
+    std::stringstream ss_stdout;
+    std::stringstream ss_stderr;
+    int exit_code;
+  };
+
+  ret_t data;
+  
   // Process arguments
   std::vector<std::string> arguments;
   (subprocess_arg(arguments, std::forward<Args>(args)), ...);
@@ -55,7 +71,7 @@ void sync(fs::path binary, Args&&... args)
   proc::ipstream pipe_stream_stderr;
 
   // Must include wine inside flatimage
-  proc::child child(binary.string()
+  proc::child child(path_file.string()
     , proc::args(arguments)
     , proc::std_out > pipe_stream_stdout
     , proc::std_err > pipe_stream_stderr);
@@ -64,6 +80,7 @@ void sync(fs::path binary, Args&&... args)
   {
     for(std::string line; pipe_stream_stdout && std::getline(pipe_stream_stdout, line) && !line.empty();)
     {
+      data.ss_stdout << line;
       ns_log::write('i', "[subprocess o] :: ", line);
     } // for
   }); // t1
@@ -72,6 +89,7 @@ void sync(fs::path binary, Args&&... args)
   {
     for(std::string line; pipe_stream_stderr && std::getline(pipe_stream_stderr, line) && !line.empty();)
     {
+      data.ss_stderr << line;
       ns_log::write('i', "[subprocess e] :: ", line);
     } // for
   }); // t1
@@ -81,11 +99,70 @@ void sync(fs::path binary, Args&&... args)
   t1.join();
   t2.join();
 
+  // Save return
+  data.exit_code = child.exit_code();
+
   if ( child.exit_code() != 0 )
   {
-    "Command did not exit successfully: '{} {}'"_throw(binary, arguments);
+    "Command did not exit successfully: '{} {}'"_fmt(path_file, ns_string::from_container(arguments));
   } // if
+
+  // Wait for file
+  wait(path_file);
+
+  return data;
 } // function: subprocess }}}
+
+// wait() {{{
+inline void wait(fs::path path_file)
+{
+  // Check if is regular file
+  ns_fs::ns_path::file_exists<true>(path_file);
+
+  // Find lsof in PATH
+  fs::path path_lsof;
+  "Could not find lsof in PATH"_try([&]{ path_lsof = proc::search_path("lsof").string(); });
+
+  // Get pids
+  auto ret = sync(path_lsof, "-t", path_file);
+
+  // Parse into pid vec
+  std::vector<pid_t> pids;
+  for(std::string line; std::getline(ret.ss_stdout, line);)
+  {
+    pids.push_back(std::atoi(line.c_str()));
+    ns_log::write('i', "Wait for pid ", line);
+  } // for
+
+  // Wait for pids
+  auto start{std::chrono::high_resolution_clock::now()};
+  std::chrono::seconds elapsed;
+  while( ! pids.empty() )
+  {
+    // Update elapsed time
+    elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start);
+
+    // Check if has passed limit
+    if ( elapsed >= std::chrono::seconds{30} )
+    {
+      std::ranges::for_each(pids, [](pid_t pid){ kill(pid, SIGKILL); });
+      break;
+    } // if
+
+    // Exited with error or success is != 0
+    // if == 0 then is running
+    int stat;
+    if (pid_t curr = waitpid(pids.back(), &stat, WNOHANG); curr != 0 )
+    {
+      pids.pop_back();
+      ns_log::write('i', "Pid ", curr, " finished");
+    } // if
+    
+    // Wait before retry
+    std::this_thread::sleep_for(std::chrono::seconds{1});
+  } // while
+} // wait() }}}
+
 
 } // namespace ns_subprocess
 

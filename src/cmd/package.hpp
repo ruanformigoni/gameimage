@@ -8,7 +8,7 @@
 #include <filesystem>
 
 #include "../lib/subprocess.hpp"
-#include "../lib/json.hpp"
+#include "../lib/db.hpp"
 
 namespace ns_package
 {
@@ -18,12 +18,15 @@ namespace fs = std::filesystem;
 // package() {{{
 inline void package(fs::path path_file_dwarfs)
 {
-  // Get current project
-  ns_json::Json json = ns_json::from_file_default();
-  std::string str_project = json["project"];
+  std::string str_project;
+  fs::path path_image;
 
-  // Image path
-  fs::path path_image = json[str_project]["path-image"];
+  // Get current project
+  ns_db::from_file_default([&](auto&& db)
+  {
+    str_project = db["project"];
+    path_image = fs::path(db[str_project]["path-image"]);
+  });
 
   // Verify that image exists
   ns_fs::ns_path::file_exists<true>(path_image);
@@ -44,8 +47,7 @@ inline void package(fs::path path_file_dwarfs)
     , path_dir_mount);
 
   // Setup overlayfs
-  std::string str_path_overlayfs = R"('"$FIM_FILE_BINARY".config/overlays/')";
-  str_path_overlayfs += str_stem_dwarfs;
+  std::string str_path_overlayfs = "\\$FIM_FILE_BINARY.config/overlays/{}"_fmt(str_stem_dwarfs);
   ns_subprocess::sync(path_image
     , "fim-dwarfs-overlayfs"
     , str_stem_dwarfs
