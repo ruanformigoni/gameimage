@@ -58,7 +58,10 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
     case ns_enum::Platform::PCSX2:
     {
-      "Not implemented"_throw();
+      "Only rom and bios selection are available for pcsx2"_throw_if([&]
+      {
+        return op != Op::ROM && op != Op::BIOS;
+      });
     } // case
     break;
     case ns_enum::Platform::RPCS3:

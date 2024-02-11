@@ -31,6 +31,7 @@ enum class Op
 {
   ROM,
   CORE,
+  BIOS,
 };
 // }}}
 
@@ -96,7 +97,7 @@ inline void search(std::vector<std::string> args)
   // Retrieve operation selected by user
   Op op;
   "Invalid operation '{}'\n"
-  "Valid values are rom, core"_try([&]
+  "Valid values are rom, core and bios"_try([&]
   { 
     op = ns_enum::from_string<Op>(args.front());
   }, args.front());
@@ -135,7 +136,18 @@ inline void search(std::vector<std::string> args)
     } // case
     break;
     case ns_enum::Platform::PCSX2:
-      "Not implemented"_throw();
+    {
+      // Get op as str
+      std::string str_op = ns_enum::to_string_lower(op);
+      // Enter directory
+      path_project = path_project / str_op;
+      // Search for targets
+      for(auto i : ns_impl::search(path_project, R"(.*)", ""))
+      {
+        i = fs::relative(i, path_project);
+        ns_log::write('i', "Found :: ", str_op / i);
+      } // for
+    } // case
     break;
     case ns_enum::Platform::RPCS3:
       "Not implemented"_throw();

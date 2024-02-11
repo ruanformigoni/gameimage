@@ -203,8 +203,8 @@ inline void wine(std::vector<std::string> args)
   );
 } // wine() }}}
 
-// retroarch() {{{
-inline void retroarch(std::vector<std::string> args)
+// emulator() {{{
+inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> args)
 {
   // Current application
   std::string str_app;
@@ -289,7 +289,14 @@ inline void retroarch(std::vector<std::string> args)
   (
     match::pattern | "bios"   = [&]{ f_install_files("bios", path_dir_bios, args); },
     match::pattern | "rom"    = [&]{ f_install_files("rom", path_dir_rom, args); },
-    match::pattern | "core"   = [&]{ f_install_files("core", path_dir_core, args); },
+    match::pattern | "core"   = [&]
+    {
+      if ( enum_platform != ns_enum::Platform::RETROARCH )
+      {
+        "Core install not implemented for platform '{}'"_throw(ns_enum::to_string(enum_platform));
+      } // if
+      f_install_files("core", path_dir_core, args);
+    },
     match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
   );
 } // wine() }}}
@@ -327,10 +334,8 @@ inline void install(std::vector<std::string> args)
       ns_install::wine(args);
       break;
     case ns_enum::Platform::RETROARCH:
-      ns_install::retroarch(args);
-      break;
     case ns_enum::Platform::PCSX2:
-      "Not implemented"_throw();
+      ns_install::emulator(enum_platform, args);
       break;
     case ns_enum::Platform::RPCS3:
       "Not implemented"_throw();

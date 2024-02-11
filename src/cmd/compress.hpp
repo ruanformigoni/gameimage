@@ -43,69 +43,63 @@ inline void validate()
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
 
+
+  auto f_file_default = [&](auto&& type)
+  {
+    "Default {} is not selected"_try([&]
+    {
+      std::string str_tag_db = "path-file-{}"_fmt(type);
+      fs::path path_file;
+      ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, std::ios_base::in);
+      ns_fs::ns_path::file_exists<true>(path_file);
+      ns_log::write('i', "Found ", type, " '", path_file, "'");
+    }, type);
+  };
+
+  auto f_files_validate = [&](auto&& type)
+  {
+    "Failed to validate {} paths"_try([&]
+    {
+      ns_db::from_file_project([&](auto&& db)
+      {
+        for(auto&& path_file : db["paths-file-{}"_fmt(type)])
+        {
+          "Invalid {} path in json for '{}'"_try([&]
+          {
+            ns_fs::ns_path::file_exists<true>(path_project / path_file);
+          }, type, path_file);
+        }
+      }
+      , std::ios_base::in);
+    }, type);
+  };
+
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:
     {
-      // Rom
-      "Default executable is not selected"_try([&]
-      {
-        fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; }, std::ios_base::in);
-        ns_fs::ns_path::file_exists<true>(path_file_rom);
-        ns_log::write('i', "Found rom '", path_file_rom, "'");
-      });
+      f_file_default("rom");
     }
     break;
     case ns_enum::Platform::RETROARCH:
       // default rom
-      "Default rom is not selected"_try([&]
-      {
-        fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; }, std::ios_base::in);
-        ns_fs::ns_path::file_exists<true>(path_file_rom);
-        ns_log::write('i', "Found rom '", path_file_rom, "'");
-      });
+      f_file_default("rom");
       // default core
-      "Default core is not selected"_try([&]
-      {
-        fs::path path_file_core;
-        ns_db::from_file_project([&](auto&& db){ path_file_core = path_project / db["path-file-core"]; }, std::ios_base::in);
-        ns_log::write('i', "Found core '", path_file_core, "'");
-      });
+      f_file_default("core");
       // all roms
-      "Failed to validate rom paths"_try([&]
-      {
-        ns_db::from_file_project([&](auto&& db)
-        {
-          for(auto&& path_file : db["paths-file-rom"])
-          {
-            "Invalid rom path in json for '{}'"_try([&]
-            {
-              ns_fs::ns_path::file_exists<true>(path_project / path_file);
-            }, path_file);
-          }
-        }
-        , std::ios_base::in);
-      });
+      f_files_validate("rom");
       // all cores
-      "Failed to validate core paths"_try([&]
-      {
-        ns_db::from_file_project([&](auto&& db)
-        {
-          for(auto&& path_file : db["paths-file-core"])
-          {
-            "Invalid core path in json for '{}'"_try([&]
-            {
-              ns_fs::ns_path::file_exists<true>(path_project / path_file);
-            }, path_file);
-          }
-        }
-        , std::ios_base::in);
-      });
+      f_files_validate("core");
     break;
     case ns_enum::Platform::PCSX2:
-      "Not implemented"_throw();
+      // default rom
+      f_file_default("rom");
+      // default core
+      f_file_default("bios");
+      // all roms
+      f_files_validate("rom");
+      // all cores
+      f_files_validate("bios");
     break;
     case ns_enum::Platform::RPCS3:
       "Not implemented"_throw();

@@ -143,6 +143,70 @@ int main(int argc, char** argv)
       ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
     } // case
     break;
+    case ns_enum::Platform::PCSX2:
+    {
+      // Rom
+      fs::path path_file_rom;
+
+      // Bios
+      fs::path path_file_bios;
+
+      // Database
+      ns_db::from_file(path_database
+      , [&](auto&& db)
+      {
+        // Rom
+        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+        // Bios
+        path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-bios"])._ret;
+      }
+      , std::ios_base::in);
+
+      // Check if has bios
+      ns_db::from_file(path_database
+      , [&](auto&& db)
+      {
+        if ( db.contains("path-file-bios"))
+        {
+          fs::path path_file_bios_src = path_dir_self / db["path-file-bios"];
+          fs::path xdg_config_home;
+          ns_log::write('i', "Found bios '", path_file_bios_src, "'");
+          // Override if XDG_CONFIG_HOME
+          if ( const char* str_config_home = ns_env::get("XDG_CONFIG_HOME"); str_config_home )
+          {
+            xdg_config_home = fs::path{str_config_home};
+          } // if
+          // Default to $HOME/.config
+          else if ( const char* str_dir_home = ns_env::get("HOME"); str_dir_home )
+          {
+            xdg_config_home = fs::path{str_dir_home} / ".config";
+          } // if
+          else
+          {
+            "Could not determine XDG_CONFIG_HOME, is HOME set?"_throw();
+          } // else
+          // Log XDG_CONFIG_HOME
+          ns_log::write('i', "XDG_CONFIG_HOME: '", xdg_config_home, "'");
+          // Create path for copy destination
+          fs::path path_file_bios_target = ( xdg_config_home / "PCSX2/bios") / path_file_bios_src.filename();
+          // Try to create directories to copy bios into
+          ns_fs::ns_path::dir_create<true>(path_file_bios_target.parent_path());
+          // Try to copy bios
+          ns_copy::file(path_file_bios_src, path_file_bios_target);
+        } // if
+      }
+      , std::ios_base::in);
+
+      // Enter directory of rom file
+      fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
+
+      // Get boot command
+      std::string str_cmd = ns_env::get("FIM_BINARY_PCSX2");
+
+      // Start application
+      ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
+    } // case
   } // switch
 
   return EXIT_SUCCESS;
