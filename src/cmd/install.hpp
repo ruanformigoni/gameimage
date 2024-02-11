@@ -230,11 +230,15 @@ inline void retroarch(std::vector<std::string> args)
   fs::path path_dir_core = fs::path{path_dir_project} / "core";
   ns_fs::ns_path::dir_create<true>(path_dir_core);
 
+  fs::path path_dir_bios = fs::path{path_dir_project} / "bios";
+  ns_fs::ns_path::dir_create<true>(path_dir_bios);
+
   // Log
   ns_log::write('i', "application: ", str_app);
   ns_log::write('i', "project: ", path_project);
   ns_log::write('i', "path core: ", path_dir_core);
   ns_log::write('i', "path rom: ", path_dir_rom);
+  ns_log::write('i', "path bios: ", path_dir_bios);
 
   // No command
   if ( args.empty() )
@@ -280,6 +284,7 @@ inline void retroarch(std::vector<std::string> args)
 
   match::match(str_cmd)
   (
+    match::pattern | "bios"   = [&]{ f_install_files("bios", path_dir_rom, args); },
     match::pattern | "rom"    = [&]{ f_install_files("rom", path_dir_rom, args); },
     match::pattern | "core"   = [&]{ f_install_files("core", path_dir_core, args); },
     match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
