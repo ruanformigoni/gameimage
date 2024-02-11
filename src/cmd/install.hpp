@@ -24,6 +24,8 @@
 #include "../lib/subprocess.hpp"
 #include "../lib/db.hpp"
 
+#include "select.hpp"
+
 namespace ns_install
 {
 
@@ -260,6 +262,9 @@ inline void retroarch(std::vector<std::string> args)
       db(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
     }
     , std::ios_base::out);
+
+    // Set as default
+    ns_select::select(std::vector<std::string>{type, path_file_dst});
   }; // f_install
 
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
