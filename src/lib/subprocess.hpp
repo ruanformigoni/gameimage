@@ -164,7 +164,7 @@ inline void wait(fs::path path_file)
   for(std::string line; std::getline(ret.ss_stdout, line);)
   {
     pids.push_back(std::atoi(line.c_str()));
-    ns_log::write('i', "Wait for pid ", line);
+    ns_log::write('i', "Wait for pid ", pids.back());
   } // for
 
   // Wait for pids
