@@ -30,6 +30,7 @@ enum class Op
 {
   ROM,
   CORE,
+  BIOS,
 };
 // }}}
 
@@ -49,9 +50,9 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
     case ns_enum::Platform::RETROARCH:
     {
-      "Only rom and core selection are available for retroarch"_throw_if([&]
+      "Only rom, core and bios selection are available for retroarch"_throw_if([&]
       {
-        return op != Op::ROM && op != Op::CORE;
+        return op != Op::ROM && op != Op::CORE && op != Op::BIOS;
       });
     } // case
     break;
@@ -106,7 +107,7 @@ inline void select(std::vector<std::string> args)
 
   // Check if args were passed
   "Empty arguments for select command\n"
-  "Valid options are rom, core"_throw_if([&]{ return args.empty(); });
+  "Valid options are rom, core and bios"_throw_if([&]{ return args.empty(); });
 
   // Retrieve operation selected by user
   Op op;

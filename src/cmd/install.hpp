@@ -260,15 +260,18 @@ inline void retroarch(std::vector<std::string> args)
       })
     );
 
+    // Relative path
+    fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
+
     // Save in database
     ns_db::from_file_project([&](auto&& db)
     {
-      db(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
+      db(fmt::format("paths-file-{}", type)) |= path_file_dst_relative;
     }
     , std::ios_base::out);
 
     // Set as default
-    ns_select::select(std::vector<std::string>{type, path_file_dst});
+    ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
   }; // f_install
 
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
@@ -284,7 +287,7 @@ inline void retroarch(std::vector<std::string> args)
 
   match::match(str_cmd)
   (
-    match::pattern | "bios"   = [&]{ f_install_files("bios", path_dir_rom, args); },
+    match::pattern | "bios"   = [&]{ f_install_files("bios", path_dir_bios, args); },
     match::pattern | "rom"    = [&]{ f_install_files("rom", path_dir_rom, args); },
     match::pattern | "core"   = [&]{ f_install_files("core", path_dir_core, args); },
     match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }

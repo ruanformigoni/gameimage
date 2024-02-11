@@ -13,6 +13,7 @@
 
 #include "../std/filesystem.hpp"
 #include "../std/env.hpp"
+#include "../std/copy.hpp"
 
 #include "../lib/db.hpp"
 #include "../lib/subprocess.hpp"
@@ -94,6 +95,41 @@ int main(int argc, char** argv)
 
         // Core
         path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+      }
+      , std::ios_base::in);
+
+      // Check if has bios
+      ns_db::from_file(path_database
+      , [&](auto&& db)
+      {
+        if ( db.contains("path-file-bios"))
+        {
+          fs::path path_file_bios_src = path_dir_self / db["path-file-bios"];
+          fs::path xdg_config_home;
+          ns_log::write('i', "Found bios '", path_file_bios_src, "'");
+          // Override if XDG_CONFIG_HOME
+          if ( const char* str_config_home = ns_env::get("XDG_CONFIG_HOME"); str_config_home )
+          {
+            xdg_config_home = fs::path{str_config_home};
+          } // if
+          // Default to $HOME/.config
+          else if ( const char* str_dir_home = ns_env::get("HOME"); str_dir_home )
+          {
+            xdg_config_home = fs::path{str_dir_home} / ".config";
+          } // if
+          else
+          {
+            "Could not determine XDG_CONFIG_HOME, is HOME set?"_throw();
+          } // else
+          // Log XDG_CONFIG_HOME
+          ns_log::write('i', "XDG_CONFIG_HOME: '", xdg_config_home, "'");
+          // Create path for copy destination
+          fs::path path_file_bios_target = ( xdg_config_home / "retroarch/system") / path_file_bios_src.filename();
+          // Try to create directories to copy bios into
+          ns_fs::ns_path::dir_create<true>(path_file_bios_target.parent_path());
+          // Try to copy bios
+          ns_copy::file(path_file_bios_src, path_file_bios_target);
+        } // if
       }
       , std::ios_base::in);
 
