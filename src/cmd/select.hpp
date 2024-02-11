@@ -82,7 +82,8 @@ inline void by_op(ns_enum::Platform enum_platform
     // Set as default rom file
     db(str_op) = path_file_op;
     ns_log::write('i', "Selected ", str_op, ": ", path_file_op);
-  });
+  }
+  , std::ios_base::out);
 
 } // select() }}}
 
@@ -98,7 +99,8 @@ inline void select(std::vector<std::string> args)
     str_project  = db["project"];
     str_platform = db[str_project]["platform"];
     path_project = fs::path(db[str_project]["path-project"]);
-  });
+  }
+  , std::ios_base::in);
 
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 

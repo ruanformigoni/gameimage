@@ -25,7 +25,8 @@ inline void set(std::string const& s)
     db("project") = s;
 
     ns_log::write('i', "Set default project to: ", s);
-  });
+  }
+  , std::ios_base::out);
 } // set() }}}
 
 // get() {{{
@@ -37,7 +38,8 @@ inline std::string get()
   ns_db::from_file_default([&](auto&& db)
   {
     ret = db["project"];
-  });
+  }
+  , std::ios_base::in);
 
   ns_log::write('i', "Default project: ", ret);
 

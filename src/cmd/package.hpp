@@ -26,7 +26,8 @@ inline void package(fs::path path_file_dwarfs)
   {
     str_project = db["project"];
     path_image = fs::path(db[str_project]["path-image"]);
-  });
+  }
+  , std::ios_base::in);
 
   // Verify that image exists
   ns_fs::ns_path::file_exists<true>(path_image);

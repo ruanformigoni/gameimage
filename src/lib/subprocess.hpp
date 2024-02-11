@@ -187,8 +187,8 @@ inline void wait(fs::path path_file)
     int stat;
     if (pid_t curr = waitpid(pids.back(), &stat, WNOHANG); curr != 0 )
     {
+      ns_log::write('i', "Pid ", pids.back(), " finished");
       pids.pop_back();
-      ns_log::write('i', "Pid ", curr, " finished");
     } // if
 
     // Wait before retry

@@ -63,7 +63,8 @@ inline void init(std::string const& str_platform
     db_global(str_name)("path-image")   = path_image;
     db_global(str_name)("path-project") = path_app;
     db_global(str_name)("platform")     = ns_enum::to_string(platform);
-  });
+  }
+  , std::ios_base::out);
 
   // Copy boot file for platform
   fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
@@ -76,7 +77,8 @@ inline void init(std::string const& str_platform
   ns_db::from_file_project([&](auto&& db_project)
   {
     db_project("platform") = ns_enum::to_string(platform);
-  });
+  }
+  , std::ios_base::out);
 } // function: init }}}
 
 } // namespace ns_init

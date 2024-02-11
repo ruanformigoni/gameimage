@@ -84,9 +84,12 @@ inline void search(std::vector<std::string> args)
   std::string str_platform;
   fs::path path_project;
 
-  ns_db::from_file_default([&](auto&& db){ str_project = db["project"]; });
-  ns_db::from_file_default([&](auto&& db){ str_platform = db[str_project]["platform"]; });
-  ns_db::from_file_default([&](auto&& db){ path_project = std::string(db[str_project]["path-project"]); });
+  ns_db::from_file_default([&](auto&& db)
+  {
+    str_project = db["project"];
+    str_platform = db[str_project]["platform"];
+    path_project = std::string(db[str_project]["path-project"]); 
+  }, std::ios_base::in);
 
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 

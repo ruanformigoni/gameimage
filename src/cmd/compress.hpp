@@ -29,7 +29,8 @@ inline void validate()
     str_project = db["project"];
     str_platform = db[str_project]["platform"];
     path_project = std::string(db[str_project]["path-project"]);
-  });
+  }
+  , std::ios_base::in);
 
   auto enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 
@@ -37,7 +38,7 @@ inline void validate()
   "Icon is not installed"_try([&]
   {
     fs::path path_file_icon;
-    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; });
+    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; }, std::ios_base::in);
     ns_fs::ns_path::file_exists<true>(path_file_icon);
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
@@ -50,7 +51,7 @@ inline void validate()
       "Default executable is not selected"_try([&]
       {
         fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; }, std::ios_base::in);
         ns_fs::ns_path::file_exists<true>(path_file_rom);
         ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
@@ -61,7 +62,7 @@ inline void validate()
       "Default rom is not selected"_try([&]
       {
         fs::path path_file_rom;
-        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_rom = path_project / db["path-file-rom"]; }, std::ios_base::in);
         ns_fs::ns_path::file_exists<true>(path_file_rom);
         ns_log::write('i', "Found rom '", path_file_rom, "'");
       });
@@ -69,7 +70,7 @@ inline void validate()
       "Default core is not selected"_try([&]
       {
         fs::path path_file_core;
-        ns_db::from_file_project([&](auto&& db){ path_file_core = path_project / db["path-file-core"]; });
+        ns_db::from_file_project([&](auto&& db){ path_file_core = path_project / db["path-file-core"]; }, std::ios_base::in);
         ns_log::write('i', "Found core '", path_file_core, "'");
       });
       // all roms
@@ -84,7 +85,8 @@ inline void validate()
               ns_fs::ns_path::file_exists<true>(path_project / path_file);
             }, path_file);
           }
-        });
+        }
+        , std::ios_base::in);
       });
       // all cores
       "Failed to validate core paths"_try([&]
@@ -98,7 +100,8 @@ inline void validate()
               ns_fs::ns_path::file_exists<true>(path_project / path_file);
             }, path_file);
           }
-        });
+        }
+        , std::ios_base::in);
       });
     break;
     case ns_enum::Platform::PCSX2:
@@ -139,7 +142,8 @@ inline decltype(auto) compress()
 
     // Path to image
     str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
-  });
+  }
+  , std::ios_base::in);
 
   // Output file
   std::string str_target = str_path_project + ".dwarfs";

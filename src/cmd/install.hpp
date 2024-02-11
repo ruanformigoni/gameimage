@@ -49,7 +49,8 @@ inline void icon(std::string str_file_icon)
 
     // Current application directory
     path_app = std::string(db[str_app]["path-project"]);
-  });
+  }
+  , std::ios_base::in);
 
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -127,7 +128,8 @@ inline void icon(std::string str_file_icon)
   ns_db::from_file_project([&](auto&& db)
   {
     db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
-  });
+  }
+  , std::ios_base::out);
 } // icon() }}}
 
 // wine() {{{
@@ -147,7 +149,8 @@ inline void wine(std::vector<std::string> args)
 
     // Path to flatimage
     path_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path-image"])._ret;
-  });
+  }
+  , std::ios_base::in);
 
   // Default working directory
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
@@ -212,7 +215,8 @@ inline void retroarch(std::vector<std::string> args)
   {
     str_app = db["project"];
     path_project = ns_fs::ns_path::dir_exists<true>(db[str_app]["path-project"])._ret;
-  });
+  }
+  , std::ios_base::in);
 
   // Default working directory
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
@@ -254,7 +258,8 @@ inline void retroarch(std::vector<std::string> args)
     ns_db::from_file_project([&](auto&& db)
     {
       db(fmt::format("paths-file-{}", type)) |= fs::relative(path_file_dst, path_dir_project);
-    });
+    }
+    , std::ios_base::out);
   }; // f_install
 
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
@@ -299,7 +304,8 @@ inline void install(std::vector<std::string> args)
   { 
     std::string str_app = db[db["project"]]["platform"];
     enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
-  });
+  }
+  , std::ios_base::in);
 
   // Install based on platform
   switch(enum_platform)

@@ -36,11 +36,18 @@ int main(int argc, char** argv)
   // Path to self directory
   fs::path path_dir_self = ns_fs::ns_path::dir_exists<true>(fs::path(argv[0]).parent_path())._ret;
 
-  // Database file
-  ns_db::Db db(path_dir_self / "gameimage.json");
-
   // Get platform
-  auto platform = ns_enum::from_string<ns_enum::Platform>(std::string(db["platform"]));
+  ns_enum::Platform platform;
+
+  fs::path path_database = path_dir_self / "gameimage.json";
+
+  // Database file
+  ns_db::from_file(path_database
+  , [&](auto&& db)
+  {
+    platform = ns_enum::from_string<ns_enum::Platform>(std::string(db["platform"]));
+  }
+  , std::ios_base::in);
 
   switch(platform)
   {
@@ -50,7 +57,15 @@ int main(int argc, char** argv)
       ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
 
       // Binary to execute
-      fs::path path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+      fs::path path_file_rom;
+
+      // Database
+      ns_db::from_file(path_database
+      , [&](auto&& db)
+      {
+        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+      }
+      , std::ios_base::in);
 
       // Enter directory of rom file
       fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
@@ -65,10 +80,22 @@ int main(int argc, char** argv)
     case ns_enum::Platform::RETROARCH:
     {
       // Rom
-      fs::path path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+      fs::path path_file_rom;
 
       // Core
-      fs::path path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+      fs::path path_file_core;
+
+      // Database
+      ns_db::from_file(path_database
+      , [&](auto&& db)
+      {
+        // Rom
+        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+        // Core
+        path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+      }
+      , std::ios_base::in);
 
       // Enter directory of rom file
       fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);

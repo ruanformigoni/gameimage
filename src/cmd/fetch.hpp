@@ -104,7 +104,8 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
   fs::create_directories(dir_dest);
 
   // Open file list
-  ns_db::from_file(path_json, [&](auto&& db_fetch){
+  ns_db::from_file(path_json, [&](auto&& db_fetch)
+  {
     // Fetch tools by platform
     switch(platform)
     {
@@ -136,7 +137,8 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
         f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{db_fetch["base-yuzu"]});
         break;
     } // switch
-  });
+  }
+  , std::ios::in);
 
 } // fetch_to_file() }}}
 

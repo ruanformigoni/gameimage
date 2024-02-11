@@ -85,7 +85,7 @@ class Db
     Db() = delete;
     Db(Db const&) = delete;
     Db(Db&&) = delete;
-    Db(fs::path t);
+    Db(fs::path t, std::ios_base::openmode mode);
 
     // Destructors
     ~Db();
@@ -119,12 +119,12 @@ inline Db::Db(std::reference_wrapper<json_t> json)
   m_json = json;
 } // Json
 
-inline Db::Db(fs::path t)
+inline Db::Db(fs::path t, std::ios_base::openmode mode)
 {
   if ( ns_fs::ns_path::file_exists<false>(t)._bool )
   {
     // Open file
-    std::ifstream ifile{t};
+    std::ifstream ifile{t, mode};
     // Check for failure
     "Failed to open '{}' for read"_throw_if([&]{ return ! ifile.good(); }, t);
     // Parse json
@@ -139,7 +139,7 @@ inline Db::Db(fs::path t)
   } // else
 
   // Open target file as write
-  m_file_database.open(t, std::ios_base::out);
+  m_file_database.open(t, mode);
   "Could not open database file '{}'"_throw_if([&]{ return ! m_file_database.good(); });
 } // Db
 
@@ -294,9 +294,9 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
 
 // from_file() {{{
 template<IsString T, typename F>
-void from_file(T&& t, F&& f)
+void from_file(T&& t, F&& f, std::ios_base::openmode mode)
 {
-  f(Db(std::forward<T>(t)));
+  f(Db(std::forward<T>(t), mode));
 } // function: from_file }}}
 
 // to_file() {{{
@@ -323,22 +323,22 @@ inline fs::path file_project()
   { 
     std::string str_project = db["project"];
     path_project = std::string(db[str_project]["path-project"]);
-  });
+  }, std::ios_base::in);
   return path_project /= "gameimage.json";
 } // file_project() }}}
 
 // from_file_default() {{{
 template<typename F>
-inline void from_file_default(F&& f)
+inline void from_file_default(F&& f, std::ios_base::openmode mode)
 {
-  from_file(file_default(), f);
+  from_file(file_default(), f, mode);
 } // function: from_file_default }}}
 
 // from_file_project() {{{
 template<typename F>
-inline void from_file_project(F&& f)
+inline void from_file_project(F&& f, std::ios_base::openmode mode)
 {
-  from_file(file_project(), f);
+  from_file(file_project(), f, mode);
 } // function: from_file_project }}}
 
 } // namespace ns_db
