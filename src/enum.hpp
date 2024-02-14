@@ -45,7 +45,6 @@ enum class Platform
 // Stage
 enum class Stage
 {
-	NONE,
 	FETCH,
 	INIT,
 	PROJECT,
@@ -53,6 +52,7 @@ enum class Stage
 	SEARCH,
 	SELECT,
 	TEST,
+	DESKTOP,
 	COMPRESS,
 	PACKAGE,
 };

@@ -19,6 +19,8 @@
 #include "cmd/compress.hpp"
 #include "cmd/search.hpp"
 #include "cmd/select.hpp"
+#include "cmd/test.hpp"
+#include "cmd/desktop.hpp"
 #include "cmd/package.hpp"
 
 #include "std/env.hpp"
@@ -75,6 +77,19 @@ void select(ns_parser::Parser const& parser)
   ns_select::select(parser.remaining());
 } // select() }}}
 
+// test() {{{
+void test()
+{
+  ns_test::test();
+} // test() }}}
+
+
+// desktop() {{{
+void desktop(ns_parser::Parser const& parser)
+{
+  ns_desktop::desktop(parser["icon"]);
+} // desktop() }}}
+
 // package() {{{
 void package(ns_parser::Parser const& parser)
 {
@@ -119,7 +134,9 @@ int main(int argc, char** argv)
       match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
       match::pattern | "search"   = [&]{ parser = std::make_unique<ns_parser::Search>("search");     },
       match::pattern | "select"   = [&]{ parser = std::make_unique<ns_parser::Select>("select");     },
-      match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
+      match::pattern | "test"     = [&]{ parser = std::make_unique<ns_parser::Test>("test");         },
+      match::pattern | "desktop"  = [&]{ parser = std::make_unique<ns_parser::Desktop>("desktop");   },
+      match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");   },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
   } // try
@@ -182,6 +199,16 @@ int main(int argc, char** argv)
       case ns_enum::Stage::SELECT:
       {
         select(*parser);
+      } // case
+      break;
+      case ns_enum::Stage::TEST:
+      {
+        test();
+      } // case
+      break;
+      case ns_enum::Stage::DESKTOP:
+      {
+        desktop(*parser);
       } // case
       break;
       case ns_enum::Stage::PACKAGE:

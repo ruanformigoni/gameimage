@@ -102,7 +102,7 @@ int main(int argc, char** argv)
       ns_db::from_file(path_database
       , [&](auto&& db)
       {
-        if ( db.contains("path-file-bios"))
+        if ( db.template contains<false>("path-file-bios"))
         {
           fs::path path_file_bios_src = path_dir_self / db["path-file-bios"];
           fs::path xdg_config_home;

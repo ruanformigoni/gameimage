@@ -14,6 +14,7 @@
 namespace ns_parser
 {
 
+// Constants {{{
 inline const char* HELP_FETCH
 {
   "Usage\n"
@@ -108,6 +109,22 @@ inline const char* HELP_PACKAGE
   "    :: Example: gameimage package my-game.dwarfs\n"
 };
 
+inline const char* HELP_TEST
+{
+  "Usage\n"
+  "    :: Short: Tests the current project\n"
+  "    :: Usage: gameimage test\n"
+  "    :: Example: gameimage test\n"
+};
+
+inline const char* HELP_DESKTOP
+{
+  "Usage\n"
+  "    :: Short: Setup desktop entry and file manager icon\n"
+  "    :: Usage: gameimage desktop ./path/to/icon.png\n"
+  "    :: Example: gameimage desktop ./my-image.png\n"
+};
+
 inline const char* HELP_ALL
 {
   "Usage\n"
@@ -124,6 +141,7 @@ inline const char* HELP_ALL
   "    :: package  - Package the a compressed project into the current image\n"
   "    :: desktop  - Enable desktop integration for gameimage\n"
 };
+// }}}
 
 // class Parser {{{
 class Parser
@@ -137,12 +155,10 @@ class Parser
     Parser(std::string name)
       : m_parser(name)
     {
-      m_enum_stage = ns_enum::Stage::NONE;
     }
 
-    virtual void usage() const noexcept
-    {
-    } // usage
+    // Command usage
+    virtual void usage() const noexcept = 0;
 
     // Fetch value from key
     std::string operator[](std::string const& key) const
@@ -342,6 +358,46 @@ class Select : public Parser
       ns_log::write('i', HELP_SELECT);
     } // usage
 }; // class: Select }}}
+
+// class Test {{{
+class Test : public Parser
+{
+  public:
+    Test(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::TEST;
+    } // Test
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_TEST);
+    } // usage
+}; // class: Test }}}
+
+// class Desktop {{{
+class Desktop : public Parser
+{
+  public:
+    Desktop(std::string name)
+      : Parser(name)
+    {
+      // Set stage
+      m_enum_stage = ns_enum::Stage::DESKTOP;
+
+      // Set args
+      m_parser.add_argument("icon")
+        .action([&](std::string const& s){ m_map_option_value["icon"]=s; })
+        .required()
+        .help("Path to the file to use as icon");
+    } // Desktop
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_DESKTOP);
+    } // usage
+}; // class: Desktop }}}
 
 // class Package {{{
 class Package : public Parser

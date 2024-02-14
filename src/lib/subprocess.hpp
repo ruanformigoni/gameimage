@@ -70,7 +70,7 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
   } // else
 } // }}}
 
-// subprocess() {{{
+// sync() {{{
 template<SubProcessOptions options = SubProcessOptions::PRINT | SubProcessOptions::WAITFILE, typename... Args>
 decltype(auto) sync(fs::path path_file, Args&&... args)
 {
@@ -144,7 +144,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   } // if
 
   return data;
-} // function: subprocess }}}
+} // function: sync }}}
 
 // wait() {{{
 inline void wait(fs::path path_file)
