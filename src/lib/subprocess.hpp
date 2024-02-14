@@ -74,11 +74,17 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
 template<SubProcessOptions options = SubProcessOptions::PRINT | SubProcessOptions::WAITFILE, typename... Args>
 decltype(auto) sync(fs::path path_file, Args&&... args)
 {
+  // Wait for busy file
+  if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
+  {
+    wait(path_file);
+  } // if
+
   struct ret_t
   {
-    std::stringstream ss_stdout;
-    std::stringstream ss_stderr;
-    int exit_code;
+    std::stringstream ss_stdout{};
+    std::stringstream ss_stderr{};
+    int exit_code{};
   };
 
   ret_t data;
@@ -100,7 +106,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   {
     for(std::string line; pipe_stream_stdout && std::getline(pipe_stream_stdout, line) && !line.empty();)
     {
-      data.ss_stdout << line;
+      data.ss_stdout << line << '\n';
       if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
       {
         ns_log::write('i', "[subprocess o] :: ", line);
@@ -132,14 +138,14 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   {
     ns_log::write('e', "Command did not exit successfully: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
   } // if
-  else
+  else if ( ns_common::check_and(options, SubProcessOptions::PRINT) )
   {
     ns_log::write('i', "Finished Command: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
   } // else
 
+  // Wait for busy file
   if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
   {
-    // Wait for file
     wait(path_file);
   } // if
 
@@ -169,23 +175,31 @@ inline void wait(fs::path path_file)
 
   // Wait for pids
   auto start{std::chrono::high_resolution_clock::now()};
-  std::chrono::seconds elapsed;
-  while( ! pids.empty() )
+  
+  namespace chrono = std::chrono;
+
+  for(chrono::seconds elapsed = chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - start)
+    ; ! pids.empty()
+    ;)
   {
     // Update elapsed time
     elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start);
 
+    fmt::println("Elapsed: {}", elapsed.count());
+
     // Check if has passed limit
     if ( elapsed >= std::chrono::seconds{30} )
     {
-      std::ranges::for_each(pids, [](pid_t pid){ kill(pid, SIGKILL); });
+      std::ranges::for_each(pids, [](pid_t pid)
+      {
+        kill(pid, SIGKILL);
+        ns_log::write('i', "Kill pid ", pid);
+      });
       break;
     } // if
 
-    // Exited with error or success is != 0
-    // if == 0 then is running
-    int stat;
-    if (pid_t curr = waitpid(pids.back(), &stat, WNOHANG); curr != 0 )
+    // Process exists if kill != 0
+    if (pid_t curr = kill(pids.back(), 0); curr != 0 )
     {
       ns_log::write('i', "Pid ", pids.back(), " finished");
       pids.pop_back();
