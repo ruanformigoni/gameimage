@@ -14,6 +14,117 @@
 namespace ns_parser
 {
 
+inline const char* HELP_FETCH
+{
+  "Usage\n"
+  "    :: Short: This is the fetch command, it is used to fetch an image from github\n"
+  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage\n"
+  "    :: Example: gameimage fetch --platform=wine --output-file=wine.flatimage\n"
+};
+
+inline const char* HELP_INIT
+{
+  "Usage\n"
+  "    :: Short: This is the init command, it creates a new project with the provided image\n"
+  "    :: Usage: gameimage init --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --dir=my-game --image=some-image.flatimage\n"
+  "    :: Example: gameimage init --platform=wine --dir=aliens --image=wine.flatimage\n"
+};
+
+inline const char* HELP_PROJECT
+{
+  "Usage\n"
+  "    :: Short: This is the project command, it switches between existing projects\n"
+  "    :: Usage: gameimage project /path/to/folder\n"
+  "    :: Example: gameimage project aliens\n"
+};
+
+inline const char* HELP_INSTALL
+{
+  "Usage\n"
+  "    :: Short: This command installs/configures programs into the current project\n"
+  "    :: Usage:\n"
+  "    ::    :: wine: gameimage install [icon,wine,winetricks,dxvk,vkd3d]\n"
+  "    ::    :: retroarch: gameimage install [bios,rom,core]\n"
+  "    ::    :: pcsx2: gameimage install [bios,rom]\n"
+  "    ::    :: rpcs3: gameimage install [bios,rom]\n"
+  "    ::    :: yuzu: gameimage install [rom, keys]\n"
+  "    :: Examples:\n"
+  "    ::    :: wine:\n"
+  "    ::    ::    gameimage install icon ./my-cover.png\n"
+  "    ::    ::    gameimage install winetricks dotnet40\n"
+  "    ::    ::    gameimage install dxvk\n"
+  "    ::    ::    gameimage install vkd3d\n"
+  "    ::    ::    gameimage install wine ./my-game.exe\n"
+  "    ::    :: retroarch:\n"
+  "    ::    ::    gameimage install icon ./my-cover.png\n"
+  "    ::    ::    gameimage install bios ./my-bios\n"
+  "    ::    ::    gameimage install rom ./my-rom.bin\n"
+  "    ::    ::    gameimage install rom ./my-rom.cue\n"
+  "    ::    ::    gameimage install core ./my-core.so\n"
+  "    ::    :: pcsx2:\n"
+  "    ::    ::    gameimage install icon ./my-cover.png\n"
+  "    ::    ::    gameimage install bios ./my-bios\n"
+  "    ::    ::    gameimage install rom ./my-rom.iso\n"
+  "    ::    :: rpcs3:\n"
+  "    ::    ::    gameimage install icon ./my-cover.png\n"
+  "    ::    ::    gameimage install bios ./my-bios\n"
+  "    ::    ::    gameimage install rom\n"
+  "    ::    :: yuzu:\n"
+  "    ::    ::    gameimage install icon ./my-cover.png\n"
+  "    ::    ::    gameimage install bios ./my-bios\n"
+  "    ::    ::    gameimage install keys ./my-keys\n"
+  "    ::    ::    gameimage install rom\n"
+};
+
+inline const char* HELP_COMPRESS
+{
+  "Usage\n"
+  "    :: Short: This command compresses (packages) the current project\n"
+  "    :: Usage: gameimage compress\n"
+  "    :: Example: gameimage compress\n"
+};
+
+inline const char* HELP_SEARCH
+{
+  "Usage\n"
+  "    :: Short: This command searches installed files on the project\n"
+  "    :: Usage: gameimage search [rom,core,bios,keys]\n"
+  "    :: Example: gameimage search rom\n"
+};
+
+inline const char* HELP_SELECT
+{
+  "Usage\n"
+  "    :: Short: This command selects the default between installed files\n"
+  "    :: Usage: gameimage select [rom,core,bios,keys] \"./some/file.something\"\n"
+  "    :: Example: gameimage select rom \"rom/my-rom.zip\"\n"
+};
+
+inline const char* HELP_PACKAGE
+{
+  "Usage\n"
+  "    :: Short: This command packages the project into the current image\n"
+  "    :: Usage: gameimage package ./path/to/game.dwarfs\n"
+  "    :: Example: gameimage package my-game.dwarfs\n"
+};
+
+inline const char* HELP_ALL
+{
+  "Usage\n"
+  "    :: Welcome to gameimage!\n"
+  "    :: This program packages games into a portable linux binary\n"
+  "    :: fetch    - Fetch an image from github\n"
+  "    :: init     - Init a new game project\n"
+  "    :: project  - Select the default game project\n"
+  "    :: install  - Install a file/rom to the current project\n"
+  "    :: test     - Test the current project\n"
+  "    :: compress - Validate and compress the current project\n"
+  "    :: search   - Search for installed [rom,core,bios,key]\n"
+  "    :: select   - Select the default [rom,core,bios,key]\n"
+  "    :: package  - Package the a compressed project into the current image\n"
+  "    :: desktop  - Enable desktop integration for gameimage\n"
+};
+
 // class Parser {{{
 class Parser
 {
@@ -29,12 +140,17 @@ class Parser
       m_enum_stage = ns_enum::Stage::NONE;
     }
 
+    virtual void usage() const noexcept
+    {
+    } // usage
+
     // Fetch value from key
     std::string operator[](std::string const& key) const
     {
       if ( ! m_map_option_value.contains(key) )
       {
         "Argument '{}' not found"_throw(key);
+        usage();
       } // if
 
       return m_map_option_value.at(key);
@@ -71,14 +187,17 @@ class Fetch : public Parser
       // Set platform
       m_parser.add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
-        .required()
         .help("Specity the platform to download the flatimage");
       // Set output file
       m_parser.add_argument("--output-file")
         .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
-        .required()
         .help("Specity the output file name for the flatimage");
     } // Fetch
+    
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_FETCH);
+    } // usage
 }; // class: Fetch }}}
 
 // class Init {{{
@@ -106,6 +225,11 @@ class Init : public Parser
         .required()
         .help("The flatimage to configure and package the program");
     } // Init
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_INIT);
+    } // usage
 }; // class: Init }}}
 
 // class Project {{{
@@ -123,6 +247,11 @@ class Project : public Parser
         .required()
         .help("Sets the current application to configure");
     } // Project
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_PROJECT);
+    } // usage
 }; // class: Project }}}
 
 // class Install {{{
@@ -142,6 +271,11 @@ class Install : public Parser
         .required()
         .help("Install an application into the default directory");
     } // Install
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_INSTALL);
+    } // usage
 }; // class: Install }}}
 
 // class Compress {{{
@@ -154,6 +288,11 @@ class Compress : public Parser
       // Set stage
       m_enum_stage = ns_enum::Stage::COMPRESS;
     } // Compress
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_COMPRESS);
+    } // usage
 }; // class: Compress }}}
 
 // class Search {{{
@@ -173,6 +312,11 @@ class Search : public Parser
         .required()
         .help("Search the subcommand for search");
     } // Search
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_SEARCH);
+    } // usage
 }; // class: Search }}}
 
 // class Select {{{
@@ -192,6 +336,11 @@ class Select : public Parser
         .required()
         .help("Select the subcommand for select");
     } // Select
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_SELECT);
+    } // usage
 }; // class: Select }}}
 
 // class Package {{{
@@ -210,6 +359,11 @@ class Package : public Parser
         .required()
         .help("Path to the dwarfs filesystem to include in the project image");
     } // Package
+
+    void usage() const noexcept override
+    {
+      ns_log::write('i', HELP_PACKAGE);
+    } // usage
 }; // class: Package }}}
 
 } // namespace ns_parser

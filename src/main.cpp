@@ -90,6 +90,7 @@ int main(int argc, char** argv)
 
   if ( argc < 2 )
   {
+    ns_log::write('i', ns_parser::HELP_ALL);
     ns_log::write('e', "No arguments provided for GameImage");
     return EXIT_FAILURE;
   } // if
@@ -121,11 +122,22 @@ int main(int argc, char** argv)
       match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");    },
       match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
     );
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_log::write('i', ns_parser::HELP_ALL);
+    ns_log::write('e', e.what());
+    return EXIT_FAILURE;
+  } // catch
+
+  try
+  {
     // Parse args
     parser->parse_args(argc-1, argv+1);
   } // try
   catch(std::exception const& e)
   {
+    parser->usage();
     ns_log::write('e', e.what());
     return EXIT_FAILURE;
   } // catch
@@ -177,18 +189,12 @@ int main(int argc, char** argv)
         package(*parser);
       } // case
       break;
-    //         case ns_enum::Stage::INSTALL:
-    //           ns_install::install(parser.m_stage->path_init(), parser.m_stage->remaining());
-    //           break;
-    //         case ns_enum::Stage::PACKAGE:
-    //           ns_package::package(parser.m_stage->path_init(), parser.m_stage->path_target());
-    //           break;
-      break;
     } // switch
   } // try
   catch(std::exception const& e)
   {
     ns_log::write('e', e.what());
+    parser->usage();
   } // catch
 
   return EXIT_SUCCESS;
