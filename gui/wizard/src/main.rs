@@ -1,37 +1,32 @@
-use std::env;
-use std::path::PathBuf;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
 
-use walkdir::WalkDir;
-use closure::closure;
 use fltk::{
   app,
+  app::{Sender,Receiver},
+  prelude::*,
   app::App,
   button::Button,
-  dialog::dir_chooser,
-  group::{Group, PackType},
-  input::{Input,FileInput},
-  output::Output,
-  menu::MenuButton,
-  prelude::{ImageExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
+  group::Group,
   window::Window,
-  enums::{Align,FrameType,Color},
-  frame::Frame,
-  image::SharedImage,
+  enums::{FrameType,Color},
 };
 use fltk_theme::{ColorTheme, color_themes};
 
 type SharedPtr<T> = Rc<RefCell<T>>;
 
 // Modules {{{
-mod dimm;
 mod common;
-mod wine;
+mod scaling;
+mod frame;
+mod dimm;
 mod download;
+mod db;
 // }}}
+
+use common::Msg;
+
 
 // struct: Gui {{{
 #[derive(Debug)]
@@ -43,6 +38,8 @@ struct Gui
   width: i32,
   height: i32,
   border: i32,
+  rx : Receiver<Msg>,
+  tx : Sender<Msg>,
 } // struct: Gui }}}
 
 // struct: FrameInstance {{{
@@ -91,6 +88,8 @@ impl Gui
       println!("Failed to load icon image");
     } // else
 
+    let (tx, rx) = fltk::app::channel();
+
     Gui
     {
       app,
@@ -99,8 +98,43 @@ impl Gui
       width,
       height,
       border,
+      rx,
+      tx
     }
   } // fn: new }}}
+
+// fn process() {{{
+fn process(&mut self, msg : Msg)
+{
+  self.wind.clear();
+  self.wind.begin();
+
+  match msg
+  {
+    Msg::DrawWelcome =>
+    {
+      frame::welcome::welcome(self.tx, "Welcome to GameImage");
+    }
+    Msg::DrawPlatform =>
+    {
+      frame::platform::platform(self.tx, "Select the game platform");
+    }
+    Msg::DrawFetch =>
+    {
+      frame::fetch::fetch(self.tx, "Fetch the required files");
+    }
+    Msg::Quit =>
+    {
+      app::quit();
+      app::flush();
+    }
+  } // match
+
+  self.wind.end();
+  app::redraw();
+  app::flush();
+  app::awake();
+} // }}}
 
 } // }}}
 
@@ -109,44 +143,22 @@ impl Drop for Gui
 {
   fn drop(&mut self)
   {
-    self.app.run().unwrap();
-    println!("Platform: {:?}", env::var("GIMG_PLATFORM"));
+    self.wind.show();
+    self.tx.send(Msg::DrawWelcome);
+    while self.app.wait()
+    {
+      match self.rx.recv()
+      {
+        Some(value) => self.process(value),
+        None => (),
+      } // match
+    } // while
   }
 } // }}}
 
-// fn: frame_switcher {{{
-fn frame_switcher()
-{
-  // Init GUI
-  let arc_gui_clone = Arc::new(Mutex::new(Gui::new()));
-  let mut gui = arc_gui_clone.lock().unwrap();
-  let mut clone_wind = gui.wind.clone();
-  let width_clone = gui.width;
-  let height_clone = gui.height;
-  let border_clone = gui.border;
-
-  let data_frame_default = common::frame_default(gui.app.clone(), clone_wind.clone(), "");
-  let mut btn_prev = data_frame_default.btn_prev.clone();
-  let mut btn_next = data_frame_default.btn_next.clone();
-  let txt_header = data_frame_default.header.clone();
-  let group_content = data_frame_default.group_content.clone();
-
-  common::frame_welcome(data_frame_default.clone());
-
-  let mut clone_wind = gui.wind.clone();
-  clone_wind.make_resizable(false);
-  clone_wind.end();
-  clone_wind.show();
-
-} // fn: frame_switcher }}}
-
 // fn: main {{{
 fn main() {
-  // Tell GameImage that GUI is used
-  env::set_var("GIMG_GUI", "Yes");
-
-  frame_switcher();
-
+  let _ = Gui::new();
 } // fn: main }}}
 
 // cmd: !GIMG_PKG_TYPE=flatimage cargo run --release

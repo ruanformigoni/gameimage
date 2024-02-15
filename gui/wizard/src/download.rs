@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::io::prelude::*;
@@ -97,7 +100,7 @@ pub fn sha(file_sha : PathBuf, file_target: PathBuf) -> anyhow::Result<()>
 {
   // Read sha
   let mut vec_sha : Vec<u8> = vec![0;64];
-  let file_sha = std::fs::File::open(file_sha)?.read_exact(&mut vec_sha);
+  let _ = std::fs::File::open(file_sha)?.read_exact(&mut vec_sha);
   let str_ref_sha = String::from_utf8(vec_sha)?;
 
   // Verify sha
@@ -110,17 +113,15 @@ pub fn sha(file_sha : PathBuf, file_target: PathBuf) -> anyhow::Result<()>
   Ok(())
 }
 
-pub fn download<F,G,H,I>(some_url : Option<Url::Url>
+pub fn download<F,G,H>(some_url : Option<Url::Url>
   , path_file_dest : PathBuf
   , f_begin : F
   , f_update : G
-  , mut f_finish : H
-  , mut f_err : I) -> anyhow::Result<()>
+  , mut f_finish : H) -> anyhow::Result<()>
 where
   F: FnMut() + Send + Sync + 'static + Clone,
   G: FnMut(f64) + Send + Sync + 'static + Clone,
   H: FnMut() + Send + Sync + 'static + Clone,
-  I: FnMut() + Send + Sync + 'static,
 {
   // Get sha file name
   let mut path_file_dest_sha = path_file_dest.clone();
@@ -151,7 +152,7 @@ where
   } // else
 
   // Get parent directory of file
-  let mut dir_download = path_file_dest.parent().ok_or(ah!("Failed to acquire parent dir"))?;
+  let dir_download = path_file_dest.parent().ok_or(ah!("Failed to acquire parent dir"))?;
 
   // Downloader instance
   let mut downloader = Downloader::builder()
@@ -169,12 +170,12 @@ where
 
   // Fetch sha
   println!("Start download sha");
-  let mut summary_sha = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
+  let summary_sha = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
   let summary_sha_file_name = summary_sha.file_name;
 
   // Fetch file
   println!("Start download file");
-  let mut summary_url = downloader.download(&[dl_url])?.pop().ok_or(ah!("Download failure"))??;
+  let summary_url = downloader.download(&[dl_url])?.pop().ok_or(ah!("Download failure"))??;
   let summary_url_file_name = summary_url.file_name;
   let summary_url_status = summary_url.status;
 
