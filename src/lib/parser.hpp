@@ -160,6 +160,12 @@ class Parser
     // Command usage
     virtual void usage() const noexcept = 0;
 
+    // Check if contains value
+    bool contains(std::string const& key) const noexcept
+    {
+      return m_map_option_value.contains(key);
+    } // contains
+
     // Fetch value from key
     std::string operator[](std::string const& key) const
     {
@@ -208,6 +214,10 @@ class Fetch : public Parser
       m_parser.add_argument("--output-file")
         .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
         .help("Specity the output file name for the flatimage");
+      // Only print, do not download
+      m_parser.add_argument("--dry-run")
+        .action([&](std::string const& s){ m_map_option_value["--dry-run"]=s; })
+        .help("Do not download, save fetch list to file instead");
     } // Fetch
     
     void usage() const noexcept override

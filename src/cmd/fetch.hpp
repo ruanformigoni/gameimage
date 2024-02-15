@@ -62,10 +62,12 @@ inline bool fetch_callback(cpr::cpr_off_t downloadTotal, cpr::cpr_off_t download
 } // }}}
 
 // fetch_to_file() {{{
-inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
+inline void fetch_to_file(ns_enum::Platform const& platform
+  , fs::path path_dest
+  , std::optional<fs::path> opt_path_dry_run)
 {
   // Fetch a file
-  auto f_fetch = [](fs::path path, cpr::Url url)
+  auto f_fetch_impl = [](fs::path path, cpr::Url url)
   {
     // Try to open destination file
     auto ofile = std::ofstream{path, std::ios::binary};
@@ -88,13 +90,73 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
     fs::permissions(path, perms::owner_all | perms::group_all | perms::others_read);
   };
 
+  // Fetch a file
+  auto f_fetch = [&](fs::path path, cpr::Url url, bool check_sha = false, bool dry_run = false)
+  {
+    // Check if is dry run
+    if ( dry_run )
+    {
+      ns_db::from_file(*opt_path_dry_run,
+      [&](ns_db::Db&& db)
+      {
+        db("paths") |= path.c_str();
+        db("urls") |= url.c_str();
+      }, std::ios_base::out);
+      return;
+    } // if
+
+    // No need to check SHA
+    if ( not check_sha )
+    {
+      f_fetch_impl(path, url);
+      return;
+    } // if
+
+    // File not found
+    if ( ! fs::exists(path) )
+    {
+      f_fetch_impl(path, url);
+      return;
+    }
+
+    // Check SHA
+    fs::path path_bin_sha256sum;
+    "Could not find sha256sum in PATH"_throw_if([&]
+    {
+      path_bin_sha256sum = boost::process::search_path("sha256sum").string();
+      return ! ns_fs::ns_path::file_exists<false>(path_bin_sha256sum)._bool;
+    });
+    ns_log::write('i', "sha256sum binary path: ", path_bin_sha256sum);
+
+    cpr::Url url_checksum = url.str() + ".sha256sum";
+    fs::path path_sha256sum = path.string() + ".sha256sum";
+    f_fetch_impl(path_sha256sum, url_checksum);
+    auto ret_proc = ns_subprocess::sync(path_bin_sha256sum, "-c", path_sha256sum);
+    if ( ret_proc.exit_code == 0)
+    {
+      ns_log::write('i', "SHA passed for ", path);
+    } // if
+    else
+    {
+      ns_log::write('i', "SHA failed for ", path, " re-downloading...");
+    f_fetch_impl(path, url);
+    } // else
+  };
+
+  // Erase previous dry run file if exists
+  if (opt_path_dry_run.has_value()
+    && ns_fs::ns_path::file_exists<false>(*opt_path_dry_run)._bool)
+  {
+    fs::remove(*opt_path_dry_run);
+  } // if
+
   // Create temporary fetch dir
   fs::create_directories(GIMG_PATH_JSON_FETCH);
 
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/6f7ecbd213a8360ac74d3d36b361985cdffe41b9/fetch.json"}
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/8b332855b0af90169f0fba3064aeb6d384978c74/fetch.json"}
   );
 
   // Set temporary directory
@@ -112,12 +174,13 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
       case ns_enum::Platform::WINE:
       {
         // Determine paths for base and wine
-        fs::path path_wine = fs::path{dir_dest} /= "opt.dwarfs";
-        fs::path path_base = fs::path{dir_dest} /= "base.flatimage";
-        f_fetch(path_wine, cpr::Url{db_fetch["wine-tkg"]});
-        f_fetch(path_base, cpr::Url{db_fetch["base-wine"]});
+        fs::path path_wine = fs::path{dir_dest} / "wine.dwarfs";
+        fs::path path_base = fs::path{dir_dest} / "base.flatimage";
+        f_fetch(path_wine, cpr::Url{db_fetch["dwarfs"]["wine"]}, true, opt_path_dry_run.has_value());
+        f_fetch(path_base, cpr::Url{db_fetch["base"]["wine"]}, true, opt_path_dry_run.has_value());
+        if ( opt_path_dry_run.has_value() ) { return; }
         // Merge files
-        ns_subprocess::sync(path_base, "fim-include-path", path_wine, "/opt.dwarfs");
+        ns_subprocess::sync(path_base, "fim-dwarfs-add", path_wine, "/fim/mount/wine");
         // Move to target
         fs::rename(path_base, path_dest);
         // Remove dwarfs file
@@ -125,17 +188,38 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
       } // case
       break;
       case ns_enum::Platform::RETROARCH:
-        f_fetch(fs::path{dir_dest} / "retroarch" , cpr::Url{db_fetch["base-retroarch"]});
-        break;
+      {
+        // Determine paths for base and retroarch
+        fs::path path_retroarch = fs::path{dir_dest} / "retroarch.dwarfs";
+        fs::path path_base_tarball = fs::path{dir_dest} / "retroarch.tar.xz";
+        f_fetch(path_retroarch, cpr::Url{db_fetch["dwarfs"]["retroarch"]}, true, opt_path_dry_run.has_value());
+        f_fetch(path_base_tarball, cpr::Url{db_fetch["base"]["retroarch"]}, true, opt_path_dry_run.has_value());
+        if ( opt_path_dry_run.has_value() ) { return; }
+        // Find tar in PATH
+        fs::path path_tar;
+        "Could not find tar in PATH"_throw_if([&]
+        {
+          path_tar = boost::process::search_path("tar").string();
+          return ! ns_fs::ns_path::file_exists<false>(path_tar)._bool;
+        });
+        // Extract base
+        ns_subprocess::sync(path_tar, "-xf", path_base_tarball);
+        // Merge files
+        fs::path path_base = fs::path{dir_dest} / "retroarch.flatimage";
+        ns_subprocess::sync(path_base, "fim-dwarfs-add", path_retroarch, "/fim/mount/retroarch");
+        // Move to target
+        fs::rename(path_base, path_dest);
+      } // base
+      break;
       case ns_enum::Platform::PCSX2:
         f_fetch(fs::path{dir_dest} / "pcsx2" , cpr::Url{db_fetch["base-pcsx2"]});
-        break;
+      break;
       case ns_enum::Platform::RPCS3:
         f_fetch(fs::path{dir_dest} / "rpcs3" , cpr::Url{db_fetch["base-rpcs3"]});
-        break;
+      break;
       case ns_enum::Platform::YUZU:
         f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{db_fetch["base-yuzu"]});
-        break;
+      break;
     } // switch
   }
   , std::ios::in);
@@ -143,11 +227,13 @@ inline void fetch_to_file(ns_enum::Platform const& platform, fs::path path_dest)
 } // fetch_to_file() }}}
 
 // fetch() {{{
-inline void fetch(std::string str_platform, fs::path str_name_file)
+inline void fetch(std::string str_platform
+  , fs::path path_file_name
+  , std::optional<fs::path> opt_path_dry_run)
 {
   // Validate input
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-  fs::path path_image        = ns_fs::ns_path::dir_parent_exists<true>(str_name_file)._ret;
+  fs::path path_image        = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
 
   // Log
   ns_log::write('i', "platform: ", str_platform);
@@ -156,7 +242,7 @@ inline void fetch(std::string str_platform, fs::path str_name_file)
   // Fetch files
   try
   {
-    ns_fetch::fetch_to_file(platform, path_image);
+    ns_fetch::fetch_to_file(platform, path_image, opt_path_dry_run);
   }
   catch(std::exception const& e)
   {

@@ -38,7 +38,10 @@ namespace match = matchit;
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
-  ns_fetch::fetch(parser["--platform"], parser["--output-file"]);
+  ns_fetch::fetch(parser["--platform"]
+    , parser["--output-file"]
+    , parser.contains("--dry-run") ? std::make_optional(parser["--dry-run"]) : std::nullopt
+  );
 } // fetch() }}}
 
 // init() {{{
@@ -82,7 +85,6 @@ void test()
 {
   ns_test::test();
 } // test() }}}
-
 
 // desktop() {{{
 void desktop(ns_parser::Parser const& parser)

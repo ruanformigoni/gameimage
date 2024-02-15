@@ -160,7 +160,11 @@ inline void wait(fs::path path_file)
 
   // Find lsof in PATH
   fs::path path_lsof;
-  "Could not find lsof in PATH"_try([&]{ path_lsof = proc::search_path("lsof").string(); });
+  "Could not find lsof in PATH"_throw_if([&]
+  {
+    path_lsof = proc::search_path("lsof").string();
+    return ! ns_fs::ns_path::file_exists<false>(path_lsof)._bool;
+  });
 
   // Get pids
   auto ret = sync<SubProcessOptions::NONE>(path_lsof, "-t", path_file);
