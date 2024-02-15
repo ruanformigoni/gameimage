@@ -30,15 +30,22 @@ mkdir -p "$BIN_DIR"
 #
 
 # Compile wizard, patch, and package with makeself
-docker build . -t wizard:alpine -f deploy/Dockerfile.alpine.wizard
-docker run --rm -v "$(pwd)":/workdir wizard:alpine cp -r /dist/makeself-wizard /workdir
-cp -r ./makeself-wizard/. "$BIN_DIR"
+# docker build . -t gameimage-wizard:alpine -f deploy/Dockerfile.alpine.wizard
+docker run --rm -v "$(pwd)":/workdir gameimage-wizard:alpine cp -r /dist/makeself-wizard /workdir
+cp -fr ./makeself-wizard/. "$BIN_DIR"
 
 # Launcher does not need to be static since it runs inside the arch container
-docker build . -t launcher:alpine -f deploy/Dockerfile.arch.launcher
-docker run --rm -v "$(pwd)":/workdir launcher:alpine cp /dist/launcher /workdir
-cp ./launcher "$BIN_DIR"
+# docker build . -t gameimage-launcher:arch -f deploy/Dockerfile.arch.launcher
+docker run --rm -v "$(pwd)":/workdir gameimage-launcher:arch cp /dist/launcher /workdir
+cp -fv ./launcher "$BIN_DIR"
 rm -f ./launcher
+
+# Create backend
+# docker build . -t gameimage-backend:alpine -f deploy/Dockerfile.alpine.backend
+docker run --rm -v "$(pwd)":/workdir gameimage-backend:alpine cp /dist/main /dist/boot /workdir
+cp -fv ./main "$BIN_DIR"/cli
+cp -fv ./boot "$BIN_DIR"/boot
+rm -f ./main ./boot
 
 #
 # Fetch tools
@@ -101,12 +108,14 @@ _fetch "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122e
 # Fetch xz
 _fetch "https://github.com/ruanformigoni/xz-static-musl/releases/download/fec8a15/xz" "$BIN_DIR"/xz
 
+# Fetch pv
+_fetch "https://github.com/ruanformigoni/pv-static-musl/releases/download/3398ec0/pv-x86_64" "$BIN_DIR"/pv
+
 # Export to use them to build
 export PATH="$BIN_DIR:$PATH"
 
 # Copy files
-cp -r ./src/* "$BUILD_DIR"/app/bin
-cp    ./doc/gameimage.png "$BUILD_DIR"/app
+cp ./doc/gameimage.png "$BUILD_DIR"/app
 
 for i in "$BUILD_DIR"/app/bin/*; do
   echo "$i"
@@ -128,34 +137,45 @@ cd "$BUILD_DIR"
 { sed -E 's/^\s+://' | tee "$BUILD_DIR"/app/start.sh; } <<-"END"
   :#!/bin/sh
   :
-  :# In makeself the extracted directory is the initial reference
-  :PATH_SCRIPT="$(pwd)"
+  :DIR_SCRIPT="${USER_PWD:+"$(pwd)"}"
+  :DIR_SCRIPT="${DIR_SCRIPT:-"$(dirname -- "$(readlink -f "$0")")"}"
   :
-  :export PATH="$PATH_SCRIPT:$PATH"
-  :export PATH="$PATH_SCRIPT/bin:$PATH"
+  :DIR_CALL="${USER_PWD:-"$(pwd)"}"
+  :
+  :DIR_BIN="$DIR_SCRIPT/bin"
+  :
+  :# Copy static bash
+  :cp "$DIR_SCRIPT/bin/bash" /tmp/gameimage/bin
+  :
+  :export PATH="$DIR_SCRIPT:$PATH"
+  :export PATH="$DIR_BIN:$PATH"
   :export PATH="/tmp/gameimage/bin:$PATH"
   :
   :mkdir -p /tmp/gameimage/bin
   :
-  :# Copy static bash
-  :cp "$PATH_SCRIPT/bin/bash" /tmp/gameimage/bin
-  :
   :# Copy fonts
-  :cp -r "$PATH_SCRIPT/usr" /tmp/gameimage
-  :cp -r "$PATH_SCRIPT/etc" /tmp/gameimage
+  :cp -r "$DIR_SCRIPT/usr" /tmp/gameimage
+  :cp -r "$DIR_SCRIPT/etc" /tmp/gameimage
   :
   :# Copy icon
-  :cp "$PATH_SCRIPT/gameimage.png" /tmp/gameimage/gameimage.png
+  :cp "$DIR_SCRIPT/gameimage.png" /tmp/gameimage/gameimage.png
   :
-  :main.sh "$@"
+  :export GIMG_BINARY_CLI="$DIR_BIN/main"
+  :
+  :# Start application
+  :cd "$DIR_CALL" && "$DIR_BIN"/main "$@"
 END
 chmod +x "$BUILD_DIR"/app/start.sh
 
 # Include fonts
+# # Copy from container
 mkdir -p "$BUILD_DIR"/app/usr/share
-cp -Lr /usr/share/fonts "$BUILD_DIR"/app/usr/share
+docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /usr/share/fonts "$BUILD_DIR"/app/usr/share
+docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/usr/share
 mkdir -p "$BUILD_DIR"/app/etc
-cp -Lr /etc/fonts "$BUILD_DIR"/app/etc
+docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /etc/fonts "$BUILD_DIR"/app/etc
+docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/etc
+# # Patch custom search path
 sed -i 's|/usr/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
 sed -i 's|/usr/local/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
 sed -i 's|~/.fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
