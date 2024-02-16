@@ -12,6 +12,7 @@ use fltk::{
   group::Group,
   image::SharedImage,
   input::FileInput,
+  output::Output,
   group::PackType,
   frame::Frame,
   dialog::dir_chooser,
@@ -38,6 +39,68 @@ fn url_basename(url : Url::Url) -> anyhow::Result<String>
     .to_string())
 } // fn: url_basename }}}
 
+// fn set_image_path() {{{
+fn set_image_path() -> anyhow::Result<()>
+{
+  let str_platform = env::var("GIMG_PLATFORM")?.to_lowercase();
+  env::set_var("GIMG_IMAGE", format!("{}.flatimage", str_platform));
+  Ok(())
+} // }}}
+
+// struct Data {{{
+#[derive(Clone)]
+struct Data
+{
+  some_url  : Option<Url::Url>,
+  file_dest : PathBuf,
+  prog      : Progress,
+  btn_fetch : Button,
+} // struct }}}
+
+// fn fetch_files() {{{
+fn fetch_files(vec_data : Vec<Data>
+  , mut output : Output) -> anyhow::Result<()>
+{
+  // Get platform
+  let str_platform = env::var("GIMG_PLATFORM")?.to_lowercase();
+
+  // Verify SHA for each file
+  for data in vec_data.clone()
+  {
+    // Create path to SHA file
+    let mut path_file_sha : String = data.file_dest
+      .to_str()
+      .ok_or(ah!("Failed to convert file_dest to string"))?
+      .into();
+    path_file_sha.push_str(".sha256sum");
+    // Use download modules to verify SHA
+    if let Err(e) = download::sha(PathBuf::from(path_file_sha), data.file_dest)
+    {
+      output.set_value("SHA verify failed, download the files before proceeding");
+      return Err(anyhow::anyhow!(e.to_string()));
+    } // if
+  } // for
+
+  // Run backend to merge files
+  output.set_value("Validating and extracting...");
+  fltk::app::flush();
+  if let Err(e) = common::gameimage_cmd(vec!["fetch".to_string()
+    , "--platform".to_string()
+    , str_platform.clone()
+    , "--output-file".to_string()
+    , format!("{}.flatimage", str_platform)
+  ])
+  {
+    output.set_value(&format!("Failed to run backend: {}", e.to_string()));
+    return Err(anyhow::anyhow!(e.to_string()));
+  };
+
+  // Export variable
+
+  Ok(())
+}
+// }}}
+
 // pub fn fetch() {{{
 pub fn fetch(tx: Sender<common::Msg>, title: &str)
 {
@@ -58,15 +121,8 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   frame_content.set_type(PackType::Vertical);
 
 
-  // Callback Data
-  #[derive(Clone)]
-  struct Data
-  {
-    some_url  : Option<Url::Url>,
-    file_dest : PathBuf,
-    prog      : Progress,
-    btn_fetch : Button,
-  } // struct
+  // Set callback to btn prev
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawPlatform);
 
   // Save the data here to configure the callback between the button press
   // , download and progress bar
@@ -204,26 +260,20 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   } // for
 
 
-  // Set callback to btn prev
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawPlatform);
-
   // Set callback to btn next
   let clone_vec_fetch = vec_fetch.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    for data in clone_vec_fetch.clone()
+    if fetch_files(clone_vec_fetch.clone(), clone_output_status.clone()).is_err()
     {
-      let mut str_file_sha = data.file_dest.to_str().unwrap_or("").to_owned();
-      str_file_sha.push_str(".sha256sum");
-      if download::sha(PathBuf::from(str_file_sha), data.file_dest).is_err()
-      {
-        clone_output_status.set_value("SHA verify failed, download the files before proceeding");
-        return;
-      } // if
-    } // for
-    clone_tx.send(common::Msg::DrawFetch);
+      return;
+    } // if
+    // Export name for expected image path
+    set_image_path();
+    // Draw package creator
+    clone_tx.send(common::Msg::DrawCreator);
   });
 }
 // }}}

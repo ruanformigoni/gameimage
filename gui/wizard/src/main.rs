@@ -23,9 +23,10 @@ mod frame;
 mod dimm;
 mod download;
 mod db;
-// }}}
+mod svg;
 
 use common::Msg;
+// }}}
 
 
 // struct: Gui {{{
@@ -103,8 +104,8 @@ impl Gui
     }
   } // fn: new }}}
 
-// fn process() {{{
-fn process(&mut self, msg : Msg)
+// fn redraw() {{{
+fn redraw(&mut self, msg : Msg)
 {
   self.wind.clear();
   self.wind.begin();
@@ -117,17 +118,34 @@ fn process(&mut self, msg : Msg)
     }
     Msg::DrawPlatform =>
     {
-      frame::platform::platform(self.tx, "Select the game platform");
+      frame::platform::platform(self.tx, "Select the Game Platform");
     }
     Msg::DrawFetch =>
     {
-      frame::fetch::fetch(self.tx, "Fetch the required files");
+      frame::fetch::fetch(self.tx, "Fetch the Required Files");
+    }
+    Msg::DrawCreator =>
+    {
+      frame::creator::creator(self.tx, "Create Packages to Include in the Image");
+    }
+    Msg::DrawRetroarchName =>
+    {
+      frame::wizard::retroarch::name(self.tx, "Select the Application Name");
+    }
+    Msg::DrawRetroarchIcon =>
+    {
+      frame::wizard::retroarch::icon(self.tx, "Select the Application Icon");
+    }
+    Msg::DrawRetroarchRom =>
+    {
+      frame::wizard::retroarch::rom(self.tx, "Install the Rom File(s)");
     }
     Msg::Quit =>
     {
       app::quit();
       app::flush();
     }
+    _ => (),
   } // match
 
   self.wind.end();
@@ -144,12 +162,12 @@ impl Drop for Gui
   fn drop(&mut self)
   {
     self.wind.show();
-    self.tx.send(Msg::DrawWelcome);
+    self.tx.send(Msg::DrawCreator);
     while self.app.wait()
     {
       match self.rx.recv()
       {
-        Some(value) => self.process(value),
+        Some(value) => self.redraw(value),
         None => (),
       } // match
     } // while

@@ -13,6 +13,7 @@ use crate::dimm;
 pub struct RetFrameHeader
 {
   pub frame: Frame,
+  pub frame_content : Frame,
   pub header: Frame,
   pub sep: Frame,
 } // struct RetFrameHeader
@@ -49,7 +50,12 @@ pub fn frame_header(title: &str) -> RetFrameHeader
     .below_of(&header, dimm::border());
   sep.set_frame(FrameType::BorderBox);
 
-  RetFrameHeader{ frame, header, sep }
+  let mut frame_content = Frame::default()
+    .with_size(dimm::width(), dimm::height() - dimm::height_header() - dimm::height_footer())
+    .below_of(&sep, 0);
+  frame_content.set_pos(0, frame_content.y());
+
+  RetFrameHeader{ frame, frame_content, header, sep }
 } // }}}
 
 // pub fn frame_footer() {{{
