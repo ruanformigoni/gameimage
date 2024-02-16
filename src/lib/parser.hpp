@@ -19,7 +19,7 @@ inline const char* HELP_FETCH
 {
   "Usage\n"
   "    :: Short: This is the fetch command, it is used to fetch an image from github\n"
-  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage\n"
+  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage --dry-run=some-file.json\n"
   "    :: Example: gameimage fetch --platform=wine --output-file=wine.flatimage\n"
 };
 
