@@ -69,7 +69,7 @@ class Db
     Db(std::reference_wrapper<json_t> json);
 
     json_t& data();
-    json_t data() const;
+    json_t& data() const;
   public:
     // Iterators
     using iterator = JsonIterator<json_t::iterator>;
@@ -102,7 +102,7 @@ class Db
     Db operator=(Db const&) = delete;
     Db operator=(Db&&) = delete;
     template<IsString T>
-    Db operator[](T&& t);
+    Db operator[](T&& t) const;
     template<IsString T>
     Db operator()(T&& t);
     template<IsString T>
@@ -170,7 +170,7 @@ inline json_t& Db::data()
 } // data() }}}
 
 // data() const {{{
-inline json_t Db::data() const
+inline json_t& Db::data() const
 {
   return const_cast<Db*>(this)->data();
 } // data() const }}}
@@ -217,7 +217,7 @@ inline Db::operator json_t() const
 // operator[] {{{
 // Key exists and is accessed
 template<IsString T>
-Db Db::operator[](T&& t)
+Db Db::operator[](T&& t) const
 {
   json_t& json = data();
 

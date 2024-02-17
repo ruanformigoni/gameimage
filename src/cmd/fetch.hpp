@@ -156,7 +156,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/8b332855b0af90169f0fba3064aeb6d384978c74/fetch.json"}
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/70a46314b950d3ad798baa5a009e7af8e8795432/fetch.json"}
   );
 
   // Set temporary directory
@@ -165,64 +165,62 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   // Create temporary directory
   fs::create_directories(dir_dest);
 
-  // Open file list
-  ns_db::from_file(path_json, [&](auto&& db_fetch)
+  // Helper to downloads/merge files
+  auto f_fetch_by_platform = [&](auto&& db_fetch, ns_enum::Platform platform)
   {
-    // Fetch tools by platform
-    switch(platform)
+    // Create platform string
+    auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
+
+    // Determine paths for base and platform
+    fs::path path_platform = fs::path{dir_dest} / "{}.dwarfs"_fmt(str_platform);
+    fs::path path_base_tarball = fs::path{dir_dest} / "{}.tar.xz"_fmt(str_platform);
+
+    // Fetch base and platform
+    f_fetch(path_platform, cpr::Url{db_fetch["dwarfs"][str_platform]}, true, opt_path_dry_run.has_value());
+    f_fetch(path_base_tarball, cpr::Url{db_fetch["base"][str_platform]}, true, opt_path_dry_run.has_value());
+
+    // Check if is dry run, if so stop here
+    if ( opt_path_dry_run.has_value() ) { return; }
+
+    // Find tar in PATH
+    fs::path path_tar;
+    "Could not find tar in PATH"_throw_if([&]
     {
-      case ns_enum::Platform::WINE:
-      {
-        // Determine paths for base and wine
-        fs::path path_wine = fs::path{dir_dest} / "wine.dwarfs";
-        fs::path path_base = fs::path{dir_dest} / "base.flatimage";
-        f_fetch(path_wine, cpr::Url{db_fetch["dwarfs"]["wine"]}, true, opt_path_dry_run.has_value());
-        f_fetch(path_base, cpr::Url{db_fetch["base"]["wine"]}, true, opt_path_dry_run.has_value());
-        if ( opt_path_dry_run.has_value() ) { return; }
-        // Merge files
-        ns_subprocess::sync(path_base, "fim-dwarfs-add", path_wine, "/fim/mount/wine");
-        // Move to target
-        fs::rename(path_base, path_dest);
-        // Remove dwarfs file
-        fs::remove(path_wine);
-      } // case
-      break;
-      case ns_enum::Platform::RETROARCH:
-      {
-        // Determine paths for base and retroarch
-        fs::path path_retroarch = fs::path{dir_dest} / "retroarch.dwarfs";
-        fs::path path_base_tarball = fs::path{dir_dest} / "retroarch.tar.xz";
-        f_fetch(path_retroarch, cpr::Url{db_fetch["dwarfs"]["retroarch"]}, true, opt_path_dry_run.has_value());
-        f_fetch(path_base_tarball, cpr::Url{db_fetch["base"]["retroarch"]}, true, opt_path_dry_run.has_value());
-        if ( opt_path_dry_run.has_value() ) { return; }
-        // Find tar in PATH
-        fs::path path_tar;
-        "Could not find tar in PATH"_throw_if([&]
-        {
-          path_tar = boost::process::search_path("tar").string();
-          return ! ns_fs::ns_path::file_exists<false>(path_tar)._bool;
-        });
-        // Extract base
-        ns_subprocess::sync(path_tar, "-xf", path_base_tarball);
-        // Merge files
-        fs::path path_base = fs::path{dir_dest} / "retroarch.flatimage";
-        ns_subprocess::sync(path_base, "fim-dwarfs-add", path_retroarch, "/fim/mount/retroarch");
-        // Move to target
-        fs::rename(path_base, path_dest);
-      } // base
-      break;
-      case ns_enum::Platform::PCSX2:
-        f_fetch(fs::path{dir_dest} / "pcsx2" , cpr::Url{db_fetch["base-pcsx2"]});
-      break;
-      case ns_enum::Platform::RPCS3:
-        f_fetch(fs::path{dir_dest} / "rpcs3" , cpr::Url{db_fetch["base-rpcs3"]});
-      break;
-      case ns_enum::Platform::YUZU:
-        f_fetch(fs::path{dir_dest} / "yuzu" , cpr::Url{db_fetch["base-yuzu"]});
-      break;
-    } // switch
-  }
-  , std::ios::in);
+      path_tar = boost::process::search_path("tar").string();
+      return ! ns_fs::ns_path::file_exists<false>(path_tar)._bool;
+    });
+
+    // Get file name inside the tarball
+    std::string tar_name_file =
+    [&]
+    {
+      auto ret = ns_subprocess::sync(path_tar, "-tf", path_base_tarball);
+      std::string file_name;
+      std::getline(ret.ss_stdout, file_name);
+      return file_name;
+    }();
+    ns_log::write('i', "Tarball contains '{}'"_fmt(tar_name_file));
+
+    // Extract base
+    ns_subprocess::sync(path_tar, "-xf", path_base_tarball, tar_name_file);
+
+    // Move to target name
+    fs::path path_base = fs::path{dir_dest} / "{}.flatimage"_fmt(str_platform);
+    fs::rename(tar_name_file, path_base);
+    ns_log::write('i', "Rename from '{}' to '{}'"_fmt(tar_name_file, path_base));
+
+    // Merge files
+    ns_subprocess::sync(path_base, "fim-dwarfs-add", path_platform, "/fim/mount/{}"_fmt(str_platform));
+
+    // Move to target
+    fs::rename(path_base, path_dest);
+  };
+
+  // Open file list
+  ns_db::from_file(path_json, [&]<typename T>(T&& db_fetch)
+  {
+    f_fetch_by_platform(std::forward<T>(db_fetch), platform);
+  }, std::ios::in);
 
 } // fetch_to_file() }}}
 
