@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+use std::ffi::OsStr;
 use std::env;
 use std::path;
+use image;
 use anyhow::anyhow as ah;
 
 #[derive(Debug, Clone, Copy)]
@@ -31,7 +34,7 @@ pub const STR_DESC_RPCS3 : &str = "RPCS3 is a multi-platform open-source Sony Pl
 pub const STR_DESC_YUZU : &str = "Yuzu is an experimental open-source emulator for the Nintendo Switch from the creators of Citra. It is written in C++ with portability in mind, with builds actively maintained for Windows, Linux and Android.";
 // }}}
 
-// fn gameimage_cmd() {{{
+// pub fn gameimage_cmd() {{{
 pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
 {
   let mut vec_cmd : Vec<String> = vec![];
@@ -75,6 +78,25 @@ pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
   Ok(status)
 } // fn: gameimage_cmd }}}
 
+// pub fn image_resize() {{{
+pub fn image_resize(path_out : PathBuf, path_in : PathBuf, width : u32, height : u32) -> anyhow::Result<()>
+{
+  let mut img = image::io::Reader::open(path_in)?.decode()?;
+  img = img.resize(width, height, image::imageops::FilterType::CatmullRom);
+  Ok(img.save(path_out)?)
+} // }}}
+
+// pub fn osstr_to_str() {{{
+pub fn osstr_to_str(osstr : Option<&OsStr>) -> String
+{
+  if osstr.is_none()
+  {
+    return String::new();
+
+  } // if
+   
+  osstr.unwrap().to_os_string().into_string().unwrap_or(String::new())
+} // fn: path_to_str }}}
 
 // // Imports {{{
 // // Constants

@@ -1,19 +1,25 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use std::env;
 use std::path::PathBuf;
 use std::fs::File;
+use std::ffi::OsStr;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
+  widget::Widget,
   app::Sender,
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
   button::Button,
-  group::Group,
+  group::{Group, Scroll},
   image::SharedImage,
   input::FileInput,
   group::PackType,
   frame::Frame,
+  output::Output,
   dialog::dir_chooser,
   enums::{Align,FrameType,Color},
   misc::Progress,
@@ -29,6 +35,79 @@ use crate::common;
 use crate::db;
 use crate::download;
 use crate::svg;
+
+// fn create_entries() {{{
+fn create_entries(entry : db::project::Entry
+  , parent_base : Widget
+  , parent_curr : Widget) -> Widget
+{
+  let mut frame_icon = Frame::default()
+    .with_size(dimm::height_button_rec()*2, dimm::height_button_rec()*3)
+    .below_of(&parent_curr, dimm::border());
+  frame_icon.set_frame(FrameType::BorderBox);
+
+  // Adjust position if parent is base
+  if parent_curr.is_same(&parent_base.as_base_widget())
+  {
+    frame_icon.set_pos(parent_base.x() + dimm::border(), parent_base.y() + dimm::border());
+  } // if
+
+  //
+  // Set icon
+  //
+  if let Some(path_file_icon) = entry.path_file_icon.clone()
+  {
+    let path_file_resized = PathBuf::from(path_file_icon.clone())
+      .parent()
+      .unwrap()
+      .join("icon.resized.png");
+    common::image_resize(path_file_resized.clone(), path_file_icon, frame_icon.w() as u32, frame_icon.h() as u32);
+    if let Ok(mut image) = fltk::image::SharedImage::load(path_file_resized)
+    {
+      image.scale(frame_icon.w(), frame_icon.h(), true, true);
+      frame_icon.set_image_scaled(Some(image));
+    } // if
+  } // if
+
+  //
+  // Set Info
+  //
+  let buffer = TextBuffer::default();
+  let mut frame_info = TextDisplay::default()
+    .with_size(parent_base.w() - dimm::border()*3 - dimm::height_button_rec()*2, dimm::height_button_rec()*3)
+    .right_of(&frame_icon, dimm::border());
+  frame_info.set_frame(FrameType::BorderBox);
+  frame_info.set_buffer(buffer.clone());
+
+  let f_add_entry = |title: &str, entry : Option<String>, push_newline: bool|
+  {
+    if let Some(value) = entry
+    {
+      frame_info.insert(title);
+      frame_info.insert(value.as_str());
+      if push_newline { frame_info.insert("\n"); }
+    }
+  }; // f_add_entry
+
+  f_add_entry("Platform: "
+    , entry.platform
+    , true
+  );
+  f_add_entry("Default rom: "
+    , entry.path_file_rom.clone().map(|e|{ common::osstr_to_str(e.file_name()) })
+    , true
+  );
+  f_add_entry("Default core: "
+    , entry.path_file_core.clone().map(|e|{ common::osstr_to_str(Some(e.as_os_str())) })
+    , true
+  );
+  f_add_entry("Default bios: "
+    , entry.path_file_bios.clone().map(|e|{ common::osstr_to_str(Some(e.as_os_str())) })
+    , false
+  );
+
+  frame_icon.as_base_widget()
+} // }}}
 
 // pub fn creator() {{{
 pub fn creator(tx: Sender<common::Msg>, title: &str)
@@ -52,6 +131,25 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
     .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
   frame_list.set_frame(FrameType::BorderBox);
+
+  let mut scroll = Scroll::default()
+    .with_size(frame_list.w(), frame_list.h())
+    .with_pos(frame_list.x(), frame_list.y());
+  scroll.set_frame(FrameType::BorderBox);
+  scroll.begin();
+
+  // Populate entries
+  if let Ok(results) = db::project::get()
+  {
+    let mut parent = scroll.as_base_widget();
+
+    for result in results
+    {
+      parent = create_entries(result.clone(), scroll.clone().as_base_widget(), parent.clone());
+    } // if
+  } // if
+
+  scroll.end();
 
   // Add new package
   let mut btn_add = Button::default()

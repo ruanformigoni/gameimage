@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::BTreeMap;
@@ -27,7 +29,6 @@ mod svg;
 
 use common::Msg;
 // }}}
-
 
 // struct: Gui {{{
 #[derive(Debug)]
@@ -80,9 +81,9 @@ impl Gui
     app::set_frame_type(FrameType::BorderBox);
 
     // Window icon
-    if let Some(shared_image) = fltk::image::PngImage::load("/tmp/gameimage/gameimage.png").ok()
+    if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
     {
-      wind.set_icon(Some(shared_image));
+      wind.set_icon(Some(image));
     } // if
     else
     {
