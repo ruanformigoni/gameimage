@@ -15,12 +15,14 @@
 #include <boost/process.hpp>
 #include <fmt/ranges.h>
 
+#include "db.hpp"
 #include "log.hpp"
 
 #include "../common.hpp"
 
 #include "../std/filesystem.hpp"
 #include "../std/string.hpp"
+#include "../std/env.hpp"
 
 namespace ns_subprocess
 {
@@ -70,10 +72,39 @@ void subprocess_arg(std::vector<std::string>& arguments, T&& arg)
   } // else
 } // }}}
 
+// set_flatimage_home() {{{
+inline void set_flatimage_home()
+{
+  if ( ! fs::exists(ns_db::file_default()) )
+  {
+    return;
+  } // if
+
+  ns_db::from_file_default([](ns_db::Db db)
+  {
+    // Get current project name
+    std::string str_project = db["project"];
+    fs::path path_image = db[str_project]["path-image"];
+    fs::path path_projects = ns_fs::ns_path::dir_exists<true>(path_image.parent_path())._ret;
+    ns_env::set("FIM_HOME", path_projects.c_str(), ns_env::Replace::N);
+    ns_log::write('i', "Set FIM_HOME to '{}'"_fmt(path_projects));
+  }, std::ios_base::in);
+} // set_flatimage_home() }}}
+
 // sync() {{{
 template<SubProcessOptions options = SubProcessOptions::PRINT | SubProcessOptions::WAITFILE, typename... Args>
 decltype(auto) sync(fs::path path_file, Args&&... args)
 {
+  // Try to set FIM_HOME
+  try
+  {
+    set_flatimage_home();
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_log::write('e', "Failure to set FIM_HOME: {}"_fmt(e.what()));
+  } // catch
+
   // Wait for busy file
   if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
   {

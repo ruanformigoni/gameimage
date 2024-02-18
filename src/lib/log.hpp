@@ -17,11 +17,11 @@ namespace ns_log
 
 namespace fs = std::filesystem;
 
-inline void init(int argc, char** argv)
+inline void init(int argc
+  , char** argv
+  , fs::path path_file_log)
 {
   START_EASYLOGGINGPP(argc, argv);
-  // Logfile
-  const char * str_file_log = "gameimage.log";
   // Configure
   el::Configurations default_conf;
   // To default
@@ -39,24 +39,24 @@ inline void init(int argc, char** argv)
   // Configuration file
   default_conf.set(el::Level::Info
     , el::ConfigurationType::Filename
-    , str_file_log);
+    , path_file_log);
   default_conf.set(el::Level::Error
     , el::ConfigurationType::Filename
-    , str_file_log);
+    , path_file_log);
   default_conf.set(el::Level::Debug
     , el::ConfigurationType::Filename
-    , str_file_log);
+    , path_file_log);
   // default logger uses default configurations
   el::Loggers::reconfigureLogger("default", default_conf);
   // Try to make canonical path for log file
   try
   {
-    fs::path path_file_log = fs::canonical(str_file_log);
+    path_file_log = fs::canonical(path_file_log);
     LOG(INFO) << fmt::format(fmt::runtime("Log file {}"), path_file_log.string());
   } // try
   catch (std::exception const& e)
   {
-    LOG(ERROR) << fmt::format("Could not make canonical path for log file '{}'", str_file_log);
+    LOG(ERROR) << fmt::format("Could not make canonical path for log file '{}'", path_file_log.c_str());
   } // catch: 
   // To set GLOBAL configurations you may use
   el::Loggers::reconfigureLogger("default", default_conf);

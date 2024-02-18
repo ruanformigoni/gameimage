@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 {
 
   // Init log
-  ns_log::init(argc, argv);
+  ns_log::init(argc, argv, "gameimage.log");
 
   if ( argc < 2 )
   {

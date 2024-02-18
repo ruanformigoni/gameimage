@@ -6,6 +6,7 @@
 #pragma once
 
 #include <filesystem>
+#include <boost/dll.hpp>
 
 #include "../common.hpp"
 
@@ -69,6 +70,21 @@ Ret<fs::path> canonical(fs::path const& path)
 
   return Ret(ret, true, "");
 } // function: canonical }}}
+
+// dir_self() {{{
+template<bool _throw> 
+Ret<fs::path> dir_self()
+{
+  boost::dll::fs::error_code err;
+  fs::path path_dir_self = boost::dll::program_location(err).parent_path().c_str();
+
+  if ( err )
+  {
+    return should_throw<_throw, fs::path>("Failed to fetch location of self");
+  } // if
+
+  return Ret(canonical<_throw>(path_dir_self)._ret, true, "");
+} // dir_self() }}}
 
 // file_exists() {{{
 // File exists and is a regular file
