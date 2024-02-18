@@ -69,20 +69,13 @@ pub fn new() -> Self
   app::set_frame_type(FrameType::BorderBox);
 
   // Window icon
-  if let Some(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG").ok()
+  if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
   {
-    if let Some(shared_image) = fltk::image::PngImage::load(env_image_launcher).ok()
-    {
-      wind.set_icon(Some(shared_image));
-    } // if
-    else
-    {
-      println!("Failed to load icon image");
-    } // else
+    wind.set_icon(Some(image));
   } // if
   else
   {
-    println!("Failed to fetch environment variable GIMG_LAUNCHER_IMG")
+    println!("Failed to load icon image");
   } // else
 
   let (tx, rx) = fltk::app::channel();
@@ -179,7 +172,6 @@ impl Drop for Gui
           {
             some_child = Some(process);
           } // if
-          self.tx.send(Msg::Quit);
         }
         Some(Msg::Quit) =>
         {
