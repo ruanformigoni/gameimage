@@ -79,7 +79,7 @@ inline cr::generator<fs::path> search(fs::path path_dir
 } // namespace ns_impl }}}
 
 // search() {{{
-inline void search(std::vector<std::string> args)
+inline void search(std::optional<fs::path> to_json, std::optional<std::string> query)
 {
   std::string str_project;
   std::string str_platform;
@@ -96,12 +96,18 @@ inline void search(std::vector<std::string> args)
 
   // Retrieve operation selected by user
   Op op;
-  "Invalid operation '{}'\n"
-  "Valid values are rom, core and bios"_try([&]
+
+  // Check if has query
+  if ( ! query )
+  {
+    "Empty operation for search"_throw();
+  } // if
+
+  // Fetch query
+  "Invalid operation for search\n"_try([&]
   { 
-    op = ns_enum::from_string<Op>(args.front());
-  }, args.front());
-  args.erase(args.begin());
+    op = ns_enum::from_string<Op>(*query);
+  });
 
   switch(enum_platform)
   {
@@ -127,12 +133,31 @@ inline void search(std::vector<std::string> args)
       std::string str_op = ns_enum::to_string_lower(op);
       // Enter directory
       path_project = path_project / str_op;
+      // Save to vec for json
+      std::vector<fs::path> vec_paths;
       // Search for targets
       for(auto i : ns_impl::search(path_project, R"(.*)", ""))
       {
         i = fs::relative(i, path_project);
         ns_log::write('i', "Found :: ", str_op / i);
+        vec_paths.push_back(i);
       } // for
+
+      // Write to json
+      if ( to_json.has_value() )
+      {
+        // Erase file if exists
+        fs::remove(*to_json);
+
+        // Open file list
+        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
+        {
+          for(fs::path const& path_file : vec_paths)
+          {
+            db(str_op) |= path_file;
+          }
+        }, std::ios::out);
+      } // if
     } // case
     break;
     case ns_enum::Platform::PCSX2:

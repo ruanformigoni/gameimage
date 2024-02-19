@@ -87,7 +87,6 @@ inline void set_flatimage_home()
     fs::path path_image = db[str_project]["path-image"];
     fs::path path_projects = ns_fs::ns_path::dir_exists<true>(path_image.parent_path())._ret;
     ns_env::set("FIM_HOME", path_projects.c_str(), ns_env::Replace::N);
-    ns_log::write('i', "Set FIM_HOME to '{}'"_fmt(path_projects));
   }, std::ios_base::in);
 } // set_flatimage_home() }}}
 

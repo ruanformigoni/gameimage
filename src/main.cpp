@@ -40,7 +40,8 @@ void fetch(ns_parser::Parser const& parser)
 {
   ns_fetch::fetch(parser["--platform"]
     , parser["--output-file"]
-    , parser.contains("--dry-run") ? std::make_optional(parser["--dry-run"]) : std::nullopt
+    , parser.contains("--sha")
+    , parser.optional("--json")
   );
 } // fetch() }}}
 
@@ -71,7 +72,7 @@ void compress()
 // search() {{{
 void search(ns_parser::Parser const& parser)
 {
-  ns_search::search(parser.remaining());
+  ns_search::search(parser.optional("--json"), parser.optional("query"));
 } // search() }}}
 
 // select() {{{
@@ -224,6 +225,7 @@ int main(int argc, char** argv)
   {
     ns_log::write('e', e.what());
     parser->usage();
+    return EXIT_FAILURE;
   } // catch
 
   return EXIT_SUCCESS;

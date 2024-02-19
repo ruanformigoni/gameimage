@@ -42,7 +42,7 @@ inline fs::path dir(const char* name)
   fs::path path_env = ns_fs::ns_path::dir_exists<true>(value)._ret;
 
   // Log
-  ns_log::write('i', "ns_env::dir ", name, " -> ", path_env);
+  // ns_log::write('d', "ns_env::dir ", name, " -> ", path_env);
 
   // Return validated directory path
   return path_env;
@@ -66,7 +66,7 @@ inline fs::path file(const char* name)
   fs::path path_env = ns_fs::ns_path::file_exists<true>(value)._ret;
 
   // Log
-  ns_log::write('i', "ns_env::file ", name, " -> ", path_env);
+  // ns_log::write('d', "ns_env::file ", name, " -> ", path_env);
 
   // Return validated directory path
   return path_env;
@@ -76,7 +76,7 @@ inline fs::path file(const char* name)
 // Sets an environment variable
 inline void set(const char* name, const char* value, Replace replace)
 {
-  ns_log::write('i', "ns_env::set ", name, " -> ", value);
+  // ns_log::write('d', "ns_env::set ", name, " -> ", value);
   setenv(name, value, (replace == Replace::Y));
 } // set() }}}
 
@@ -87,7 +87,7 @@ inline void concat(const char* name, std::string const& extra)
   // Append to var
   if ( const char* var_curr = std::getenv(name); var_curr )
   {
-    ns_log::write('i', "ns_env::concat ", name, " -> ", extra);
+    // ns_log::write('d', "ns_env::concat ", name, " -> ", extra);
     setenv(name, std::string{var_curr + extra}.c_str(), 1);
   } // if
 } // concat() }}}
@@ -98,7 +98,7 @@ inline const char* get(const char* name)
 {
   const char* ret = std::getenv(name);
 
-  ns_log::write('i', "ns_env::get ", name, " -> ", ret);
+  // ns_log::write('d', "ns_env::get ", name, " -> ", ret);
 
   return ret;
 } // get() }}}

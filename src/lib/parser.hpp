@@ -19,7 +19,7 @@ inline const char* HELP_FETCH
 {
   "Usage\n"
   "    :: Short: This is the fetch command, it is used to fetch an image from github\n"
-  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage --dry-run=some-file.json\n"
+  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage --json=some-file.json\n"
   "    :: Example: gameimage fetch --platform=wine --output-file=wine.flatimage\n"
 };
 
@@ -89,7 +89,7 @@ inline const char* HELP_SEARCH
 {
   "Usage\n"
   "    :: Short: This command searches installed files on the project\n"
-  "    :: Usage: gameimage search [rom,core,bios,keys]\n"
+  "    :: Usage: gameimage search [rom,core,bios,keys] --json=some-file.json\n"
   "    :: Example: gameimage search rom\n"
 };
 
@@ -166,6 +166,13 @@ class Parser
       return m_map_option_value.contains(key);
     } // contains
 
+    // Check if contains value
+    std::optional<std::string> optional(std::string const& key) const noexcept
+    {
+      return m_map_option_value.contains(key)
+        ? std::make_optional(m_map_option_value.at(key)) : std::nullopt;
+    } // contains
+
     // Fetch value from key
     std::string operator[](std::string const& key) const
     {
@@ -214,10 +221,16 @@ class Fetch : public Parser
       m_parser.add_argument("--output-file")
         .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
         .help("Specity the output file name for the flatimage");
-      // Only print, do not download
-      m_parser.add_argument("--dry-run")
-        .action([&](std::string const& s){ m_map_option_value["--dry-run"]=s; })
-        .help("Do not download, save fetch list to file instead");
+      // Only check-sha, do not download
+      m_parser .add_argument("--sha")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--sha"]=s; })
+        .help("Do not download, only check SHA");
+      // Only write json, do not download
+      m_parser.add_argument("--json")
+        .action([&](std::string const& s){ m_map_option_value["--json"]=s; })
+        .help("Do not download, save fetch list to json instead");
     } // Fetch
     
     void usage() const noexcept override
@@ -331,12 +344,18 @@ class Search : public Parser
       // Set stage
       m_enum_stage = ns_enum::Stage::SEARCH;
 
+      // Write json with search results
+      m_parser.add_argument("--json")
+        .nargs(1)
+        .action([&](std::string const& s){ m_map_option_value["--json"]=s; })
+        .help("Save search results to json");
+
       // Set args
-      m_parser.add_argument("args")
-        .nargs(argparse::nargs_pattern::at_least_one)
-        .remaining()
-        .required()
-        .help("Search the subcommand for search");
+      auto&& arg_query = m_parser.add_argument("query");
+      arg_query.add_choice("rom");
+      arg_query.add_choice("bios");
+      arg_query.add_choice("core");
+      arg_query.action([&](std::string const& s){ m_map_option_value["query"]=s; });
     } // Search
 
     void usage() const noexcept override
