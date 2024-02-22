@@ -139,7 +139,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
       data.ss_stdout << line << '\n';
       if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
       {
-        ns_log::write('i', "[subprocess o] :: ", line);
+        ns_log::write('i', "[o] :: ", line);
       } // if
     } // for
   }); // t1
@@ -151,7 +151,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
       data.ss_stderr << line;
       if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
       {
-        ns_log::write('i', "[subprocess e] :: ", line);
+        ns_log::write('i', "[e] :: ", line);
       } // if
     } // for
   }); // t1

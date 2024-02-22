@@ -17,37 +17,55 @@ namespace ns_log
 
 namespace fs = std::filesystem;
 
-inline void init(int argc
-  , char** argv
-  , fs::path path_file_log)
+inline void logger_file(fs::path const& path_file_log)
 {
-  START_EASYLOGGINGPP(argc, argv);
   // Configure
   el::Configurations default_conf;
   // To default
   default_conf.setToDefault();
   // Values are always std::string
-  default_conf.set(el::Level::Info
+  default_conf.set(el::Level::Global
     , el::ConfigurationType::Format
-    , "%datetime{%H:%m:%s} %level :: %msg");
-  default_conf.set(el::Level::Error
-    , el::ConfigurationType::Format
-    , "%datetime{%H:%m:%s} %level :: %msg");
-  default_conf.set(el::Level::Debug
-    , el::ConfigurationType::Format
-    , "%datetime{%H:%m:%s} %level :: %msg");
+    , "%levshort :: %msg");
   // Configuration file
-  default_conf.set(el::Level::Info
+  default_conf.set(el::Level::Global
     , el::ConfigurationType::Filename
     , path_file_log);
-  default_conf.set(el::Level::Error
-    , el::ConfigurationType::Filename
-    , path_file_log);
-  default_conf.set(el::Level::Debug
-    , el::ConfigurationType::Filename
-    , path_file_log);
+  default_conf.set(el::Level::Global
+    , el::ConfigurationType::ToStandardOutput
+    , "false");
   // default logger uses default configurations
   el::Loggers::reconfigureLogger("default", default_conf);
+}
+
+inline void logger_stdout()
+{
+  // Configure
+  el::Configurations default_conf;
+  // To default
+  default_conf.setToDefault();
+  // Values are always std::string
+  default_conf.set(el::Level::Global
+    , el::ConfigurationType::Format
+    , "%levshort :: %msg");
+  default_conf.set(el::Level::Global
+    , el::ConfigurationType::ToStandardOutput
+    , "true");
+  // default logger uses default configurations
+  el::Loggers::reconfigureLogger("term", default_conf);
+}
+
+inline void init(int argc
+  , char** argv
+  , fs::path path_file_log)
+{
+  // Remove log file if exists
+  fs::remove(path_file_log);
+  // Start easylogging
+  START_EASYLOGGINGPP(argc, argv);
+  // Create loggers
+  logger_file(path_file_log);
+  logger_stdout();
   // Try to make canonical path for log file
   try
   {
@@ -58,8 +76,6 @@ inline void init(int argc
   {
     LOG(ERROR) << fmt::format("Could not make canonical path for log file '{}'", path_file_log.c_str());
   } // catch: 
-  // To set GLOBAL configurations you may use
-  el::Loggers::reconfigureLogger("default", default_conf);
 } // function: init
 
 template<ns_concept::StreamInsertable... T>
@@ -71,9 +87,24 @@ void write(char level, T&&... t)
 
   switch (level)
   {
-    case 'i': for(std::string line; std::getline(ss, line);) { LOG(INFO)  << line; }; break;
-    case 'e': for(std::string line; std::getline(ss, line);) { LOG(ERROR) << line; }; break;
-    case 'd': for(std::string line; std::getline(ss, line);) { LOG(DEBUG) << line; }; break;
+    case 'i':
+    for(std::string line; std::getline(ss, line);)
+    {
+      CLOG(INFO, "term")  << line;
+      CLOG(INFO, "default")  << line;
+    }
+    break;
+    case 'e':
+    for(std::string line; std::getline(ss, line);)
+    {
+      CLOG(INFO, "term")  << line;
+      CLOG(INFO, "default")  << line;
+    }; break;
+    case 'd':
+    for(std::string line; std::getline(ss, line);)
+    {
+      CLOG(INFO, "default")  << line;
+    }; break;
   } // switch: level
 } // function: write
 
