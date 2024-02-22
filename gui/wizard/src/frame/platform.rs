@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use std::env;
 use std::path::PathBuf;
 
@@ -154,7 +156,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
         "fetch".to_string()
       , format!("--output-file={}.flatimage", str_platform)
       , format!("--platform={}", str_platform)
-      , "--dry-run=gameimage.fetch.json".to_string()
+      , "--json=gameimage.fetch.json".to_string()
     ]);
 
     if cmd_result.is_err()

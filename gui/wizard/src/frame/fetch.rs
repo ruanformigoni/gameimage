@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use std::env;
 use std::path::PathBuf;
 use std::fs::File;

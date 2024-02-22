@@ -16,8 +16,13 @@ pub enum Msg
   DrawRetroarchName,
   DrawRetroarchIcon,
   DrawRetroarchRom,
+  DrawRetroarchCore,
+  DrawRetroarchBios,
   DrawRetroarchTest,
   DrawRetroarchCompress,
+
+  WindActivate,
+  WindDeactivate,
 
   Quit,
 }
@@ -37,8 +42,6 @@ pub const STR_DESC_YUZU : &str = "Yuzu is an experimental open-source emulator f
 // pub fn gameimage_cmd() {{{
 pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
 {
-  let mut vec_cmd : Vec<String> = vec![];
-
   let path_dir_gimg = path::PathBuf::from(env::var("GIMG_DIR")?);
 
   env::set_current_dir(path_dir_gimg)?;
@@ -52,7 +55,7 @@ pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
     .spawn();
 
   // Wait for back-end to execute
-  let mut some_status : Option<std::process::ExitStatus> = None;
+  let some_status : Option<std::process::ExitStatus>;
 
   if let Some(mut handle) = some_handle.ok()
   {

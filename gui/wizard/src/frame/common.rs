@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 // Gui
 use fltk::prelude::*;
 use fltk::{

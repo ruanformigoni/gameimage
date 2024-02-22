@@ -1,3 +1,4 @@
+pub mod term;
 pub mod common;
 pub mod welcome;
 pub mod platform;

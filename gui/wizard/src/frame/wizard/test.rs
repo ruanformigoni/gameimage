@@ -1,0 +1,87 @@
+#![allow(warnings)]
+
+use std::env;
+use std::path::PathBuf;
+use std::fs::File;
+
+// Gui
+use fltk::prelude::*;
+use fltk::{
+  app::Sender,
+  browser::HoldBrowser,
+  text::{TextBuffer,TextDisplay},
+  menu::MenuButton,
+  button::Button,
+  group::Group,
+  image::SharedImage,
+  input::FileInput,
+  group::PackType,
+  frame::Frame,
+  dialog::{dir_chooser,file_chooser},
+  enums::{Align,FrameType,Color},
+  misc::Progress,
+};
+
+use url as Url;
+use anyhow;
+use anyhow::anyhow as ah;
+
+use crate::dimm;
+use crate::frame;
+use crate::common;
+use crate::db;
+use crate::download;
+use crate::svg;
+
+// pub fn test() {{{
+pub fn test(tx: Sender<common::Msg>
+  , title: &str
+  , msg_prev: common::Msg
+  , msg_curr: common::Msg
+  , msg_next: common::Msg)
+{
+  let mut frame = Frame::default()
+    .with_size(dimm::width(), dimm::height());
+  frame.set_frame(FrameType::BorderBox);
+  frame.set_type(PackType::Vertical);
+
+  let ret_frame_header = frame::common::frame_header(title);
+  let ret_frame_footer = frame::common::frame_footer();
+
+  let frame_header = ret_frame_header.frame.clone();
+  let frame_content = ret_frame_header.frame_content.clone();
+  let frame_footer = ret_frame_footer.frame.clone();
+
+  // Set previous/next frame
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), msg_prev);
+  ret_frame_footer.btn_next.clone().emit(tx.clone(), msg_next);
+
+  // Add a 'test' button
+  let mut btn_test = Button::default()
+    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+    .with_label("Test");
+  btn_test.set_label_size(dimm::height_text());
+  btn_test.clone().center_x(&frame_content);
+  btn_test.set_pos(btn_test.x(), ret_frame_footer.btn_next.y());
+  btn_test.set_color(Color::Green);
+
+  let mut term = frame::term::Term::new(dimm::border()
+    , frame_content.w() - dimm::border()*2
+    , frame_content.h() - dimm::border()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border());
+
+  let clone_tx = tx.clone();
+  btn_test.set_callback(move |_|
+  {
+    clone_tx.send(common::Msg::WindDeactivate);
+    term.dispatch(vec!["$GIMG_BINARY_CLI test"]
+      , move ||
+      {
+        clone_tx.send(common::Msg::WindActivate);
+      }
+    );
+  });
+} // fn test() }}}
+
+// vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

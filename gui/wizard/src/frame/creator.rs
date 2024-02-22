@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+#![allow(warnings)]
 
 use std::env;
 use std::path::PathBuf;
@@ -124,6 +123,9 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
+  // Set previous frame
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawFetch);
+
   // List of currently built packages
   let mut frame_list = Frame::default()
     .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
@@ -171,7 +173,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_del.set_color(Color::Red);
 
   // Configure bottom buttons
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawFetch);
   ret_frame_footer.btn_next.clone().hide();
 }
 // }}}

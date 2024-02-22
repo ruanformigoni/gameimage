@@ -1,4 +1,6 @@
 mod icon;
 mod name;
-mod rom;
+mod install;
+mod compress;
+mod test;
 pub mod retroarch;

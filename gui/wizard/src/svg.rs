@@ -59,6 +59,13 @@ const ICON_JOYSTICK: &str = r#"
 </svg>
 "#;
 
+const ICON_SAVE: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-floppy2-fill" viewBox="0 0 16 16">
+  <path d="M12 2h-2v3h2z"/>
+  <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v13A1.5 1.5 0 0 0 1.5 16h13a1.5 1.5 0 0 0 1.5-1.5V2.914a1.5 1.5 0 0 0-.44-1.06L14.147.439A1.5 1.5 0 0 0 13.086 0zM4 6a1 1 0 0 1-1-1V1h10v4a1 1 0 0 1-1 1zM3 9h10a1 1 0 0 1 1 1v5H2v-5a1 1 0 0 1 1-1"/>
+</svg>
+"#;
+
 pub const ICON_GAMEIMAGE: &str = r##"
 <svg
    width="127.1859mm"
@@ -234,5 +241,6 @@ icon!(icon_list, ICON_LIST, 16, 16);
 icon!(icon_add, ICON_ADD, 24, 24);
 icon!(icon_del, ICON_DEL, 16, 16);
 icon!(icon_joystick, ICON_JOYSTICK, 16, 16);
+icon!(icon_save, ICON_SAVE, 16, 16);
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

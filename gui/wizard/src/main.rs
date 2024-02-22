@@ -1,22 +1,14 @@
 #![feature(let_chains)]
 
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::collections::BTreeMap;
-
 use fltk::{
   app,
   app::{Sender,Receiver},
   prelude::*,
   app::App,
-  button::Button,
-  group::Group,
   window::Window,
   enums::{FrameType,Color},
 };
 use fltk_theme::{ColorTheme, color_themes};
-
-type SharedPtr<T> = Rc<RefCell<T>>;
 
 // Modules {{{
 mod common;
@@ -36,21 +28,9 @@ struct Gui
 {
   app: App,
   wind: Window,
-  map_yaml: SharedPtr<BTreeMap::<String,String>>,
-  width: i32,
-  height: i32,
-  border: i32,
   rx : Receiver<Msg>,
   tx : Sender<Msg>,
 } // struct: Gui }}}
-
-// struct: FrameInstance {{{
-#[derive(Debug)]
-struct FrameInstance
-{
-  group: Group,
-  buttons: Vec<Button>,
-} // struct FrameInstance }}}
 
 // impl: Gui {{{
 impl Gui
@@ -59,15 +39,11 @@ impl Gui
   // fn: new {{{
   pub fn new() -> Self
   {
-    let width = 500;
-    let height = width;
-    let border = 30;
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind = Window::default()
       .with_label("GameImage")
-      .with_size(width, height)
+      .with_size(dimm::width(), dimm::height())
       .center_screen();
-    let map_yaml = Rc::new(RefCell::new(BTreeMap::<String,String>::new()));
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
     theme.apply();
@@ -96,10 +72,6 @@ impl Gui
     {
       app,
       wind,
-      map_yaml,
-      width,
-      height,
-      border,
       rx,
       tx
     }
@@ -141,6 +113,22 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::wizard::retroarch::rom(self.tx, "Install the Rom File(s)");
     }
+    Msg::DrawRetroarchCore =>
+    {
+      frame::wizard::retroarch::core(self.tx, "Install the Core File(s)");
+    }
+    Msg::DrawRetroarchBios =>
+    {
+      frame::wizard::retroarch::bios(self.tx, "Install the Bios File(s)");
+    }
+    Msg::DrawRetroarchTest =>
+    {
+      frame::wizard::retroarch::test(self.tx, "Test the created package");
+    }
+    Msg::DrawRetroarchCompress =>
+    {
+      frame::wizard::retroarch::compress(self.tx, "Compress the created package");
+    }
     Msg::Quit =>
     {
       app::quit();
@@ -163,11 +151,32 @@ impl Drop for Gui
   fn drop(&mut self)
   {
     self.wind.show();
-    self.tx.send(Msg::DrawCreator);
+    self.tx.send(Msg::DrawRetroarchTest);
     while self.app.wait()
     {
       match self.rx.recv()
       {
+        Some(common::Msg::WindActivate) =>
+        {
+          let children = self.wind.children();
+          for i in 0..children {
+            let mut widget = self.wind.child(i).unwrap();
+            widget.activate();
+          }
+          app::flush();
+          app::awake();
+        }
+        Some(common::Msg::WindDeactivate) =>
+        {
+          let children = self.wind.children();
+          for i in 0..children
+          {
+            let mut widget = self.wind.child(i).unwrap();
+            widget.deactivate();
+          }
+          app::flush();
+          app::awake();
+        }
         Some(value) => self.redraw(value),
         None => (),
       } // match

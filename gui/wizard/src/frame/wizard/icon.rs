@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+#![allow(warnings)]
 
 use std::env;
 use std::path::PathBuf;
@@ -81,7 +80,29 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 
   // Footer callbacks
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawRetroarchName);
-  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawRetroarchRom);
+
+  let clone_tx = tx.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  {
+    if let Ok(path_file_icon) = env::var("GIMG_ICON")
+    {
+      if ! PathBuf::from(path_file_icon).is_file()
+      {
+        println!("Icon file is invalid");
+        clone_output_status.set_value("Icon file is invalid");
+        return;
+      } // if
+    } // if
+    else
+    {
+      println!("Icon is not set");
+      clone_output_status.set_value("Icon is not set");
+      return;
+    } // else
+
+    clone_tx.send(common::Msg::DrawRetroarchRom);
+  });
 
   // Icon
   let mut input_icon = FileInput::default()

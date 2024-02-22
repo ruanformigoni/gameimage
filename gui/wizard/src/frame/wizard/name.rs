@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+#![allow(warnings)]
 
 use std::env;
 use std::path::PathBuf;
