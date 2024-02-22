@@ -1,3 +1,5 @@
+use fltk::widget::Widget;
+use fltk::prelude::WidgetExt;
 use std::path::PathBuf;
 use std::ffi::OsStr;
 use std::env;
@@ -39,12 +41,18 @@ pub const STR_DESC_RPCS3 : &str = "RPCS3 is a multi-platform open-source Sony Pl
 pub const STR_DESC_YUZU : &str = "Yuzu is an experimental open-source emulator for the Nintendo Switch from the creators of Citra. It is written in C++ with portability in mind, with builds actively maintained for Windows, Linux and Android.";
 // }}}
 
-// pub fn gameimage_cmd() {{{
-pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
+// pub fn dir_build() {{{
+pub fn dir_build() -> anyhow::Result<()>
 {
   let path_dir_gimg = path::PathBuf::from(env::var("GIMG_DIR")?);
 
-  env::set_current_dir(path_dir_gimg)?;
+  Ok(env::set_current_dir(path_dir_gimg)?)
+} // fn: dir_build }}}
+
+// pub fn gameimage_cmd() {{{
+pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
+{
+  dir_build()?;
 
   let path_binary_gameimage = path::PathBuf::from(env::var("GIMG_BINARY_CLI")?);
 
@@ -100,6 +108,60 @@ pub fn osstr_to_str(osstr : Option<&OsStr>) -> String
    
   osstr.unwrap().to_os_string().into_string().unwrap_or(String::new())
 } // fn: path_to_str }}}
+
+// pub trait WidgetExtExtra {{{
+pub trait WidgetExtExtra
+{
+  fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+}
+
+impl<T: WidgetExt + Clone> WidgetExtExtra for T
+{
+  fn right_bottom_of<W: WidgetExt>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + other.w() - self.w() + offset
+      , other.y() + other.h() - self.h() + offset
+    );
+    self.clone()
+  }
+
+  fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + offset
+      , other.y() + offset
+    );
+    self.clone()
+  }
+}
+// }}}
+
+// pub trait PathBufExt {{{
+pub trait PathBufExt
+{
+  fn string(&self) -> String;
+}
+
+impl PathBufExt for PathBuf
+{
+  fn string(&self) -> String
+  {
+    self.clone().into_os_string().into_string().unwrap_or(String::new())
+  } // fn: string
+}
+// }}}
+
+// pub fn common {{{
+pub fn common() -> anyhow::Result<()>
+{
+  // Enter build dir
+  dir_build()?;
+
+  Ok(())
+} // fn: common
+// }}}
 
 // // Imports {{{
 // // Constants

@@ -151,7 +151,8 @@ impl Drop for Gui
   fn drop(&mut self)
   {
     self.wind.show();
-    self.tx.send(Msg::DrawRetroarchTest);
+    // self.tx.send(Msg::DrawWelcome);
+    self.tx.send(Msg::DrawCreator);
     while self.app.wait()
     {
       match self.rx.recv()

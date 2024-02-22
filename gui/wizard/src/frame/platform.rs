@@ -34,12 +34,13 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_header = ret_frame_header.frame.clone();
+  let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
-  let mut frame_content = Frame::default()
-    .with_size(dimm::width(), dimm::height() - dimm::height_header() - dimm::height_footer())
-    .below_of(&frame_header, 0);
-  frame_content.set_type(PackType::Vertical);
+  if let Err(e) = common::common()
+  {
+    println!("Err: {}", e.to_string());
+  } // if
 
   // Menu options to select platform
   let mut btn_menu = MenuButton::default()

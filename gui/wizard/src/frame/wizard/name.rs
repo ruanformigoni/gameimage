@@ -64,16 +64,34 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
   input_name.set_pos(frame_content.x() + dimm::border()
     , input_name.y() - input_name.h() - dimm::border());
 
-  // // Check if GIMG_NAME exists
-  if let Some(env_name) = env::var("GIMG_NAME").ok()
+  // Sanitize game name
+  let f_sanitize = |input : String| -> String
   {
+    input
+      .chars()
+      .filter_map(|c|
+      {
+        if c.is_alphanumeric() { Some(c) }
+        else if c == '-' { Some(c) }
+        else if c == '_' { Some(c) }
+        else if c == ' ' { Some('-') }
+        else { None }
+      })
+      .collect()
+  };
+
+  // // Check if GIMG_NAME exists
+  if let Some(mut env_name) = env::var("GIMG_NAME").ok()
+  {
+    env_name = f_sanitize(env_name);
+    env::set_var("GIMG_NAME", &env_name);
     input_name.set_value(&env_name);
   } // if
 
   // // Set input_name callback
-  input_name.set_callback(|e|
+  input_name.set_callback(move |mut e|
   {
-    env::set_var("GIMG_NAME", e.value());
+    env::set_var("GIMG_NAME", f_sanitize(e.value()));
   });
 
   // Callback to previous

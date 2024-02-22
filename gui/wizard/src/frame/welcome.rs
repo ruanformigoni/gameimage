@@ -18,6 +18,7 @@ use fltk::{
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
 
 // pub fn welcome() {{{
 pub fn welcome(tx: Sender<common::Msg>, title: &str)
@@ -30,12 +31,13 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_header = ret_frame_header.frame.clone();
+  let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
-  let mut frame_content = Frame::default()
-    .with_size(dimm::width(), dimm::height() - dimm::height_header() - dimm::height_footer())
-    .below_of(&frame_header, 0);
-  frame_content.set_type(PackType::Vertical);
+  if let Err(e) = common::common()
+  {
+    println!("Err: {}", e.to_string());
+  } // if
   
   // Project Logo
   let mut frame_image = Frame::default()
@@ -60,41 +62,63 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   input_dir.set_pos(dimm::border(), input_dir.y());
   input_dir.set_readonly(true);
 
-  // // Check if GIMG_DIR exists
+  // Check if GIMG_DIR exists
   if let Some(env_dir_build) = env::var("GIMG_DIR").ok()
   {
     input_dir.set_value(&env_dir_build);
   } // if
 
-  // // Set input_dir callback
-  input_dir.set_callback(|e|
+  // Set input_dir callback
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  input_dir.set_callback(move |e|
   {
-    let choice = dir_chooser("Select the build directory", "", false);
-    let str_choice = choice.unwrap_or(String::from(""));
-    e.set_value(str_choice.as_str());
-    env::set_var("GIMG_DIR", str_choice.as_str());
+    let mut path_selected = if let Some(value) = dir_chooser("Select the build directory", "", false)
+    {
+      PathBuf::from(value)
+    }
+    else
+    {
+      clone_output_status.set_value("No file selected");
+      return;
+    }; // if
+
+    // Set build dir as chosen dir + /build
+    path_selected = path_selected.join("build");
+
+    // Update chosen dir in selection bar
+    e.set_value(&path_selected.string());
+
+    // Set env var to build dir
+    env::set_var("GIMG_DIR", &path_selected.string());
   });
 
   // First frame, no need for prev
   ret_frame_footer.btn_prev.clone().hide();
 
   // Set callback for next
-  let mut clone_btn_next = ret_frame_footer.btn_next.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
-  clone_btn_next.set_callback(move |_|
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    let env_gimg_dir = env::var("GIMG_DIR").ok();
-
-    if env_gimg_dir.is_none()
+    let env_gimg_dir = if let Ok(value) = env::var("GIMG_DIR")
+    {
+      value
+    }
+    else
     {
       clone_output_status.set_value("Invalid temporary files directory");
       return;
-    } // if
+    }; // if
 
-    if ! PathBuf::from(&env_gimg_dir.unwrap()).exists()
+    let path_selected = PathBuf::from(env_gimg_dir);
+
+    // Create build dir
+    let _ = std::fs::create_dir(path_selected.clone());
+
+    if   ! path_selected.exists()
+      && std::fs::create_dir(path_selected.clone()).is_err()
     {
-      clone_output_status.set_value("Selected path does not exist");
+      clone_output_status.set_value("Selected path could not be created");
       return;
     } // if
 

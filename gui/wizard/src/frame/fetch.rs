@@ -85,7 +85,7 @@ fn fetch_files(vec_data : Vec<Data>
 
   // Run backend to merge files
   output.set_value("Validating and extracting...");
-  fltk::app::flush();
+
   if let Err(e) = common::gameimage_cmd(vec!["fetch".to_string()
     , "--platform".to_string()
     , str_platform.clone()
@@ -115,16 +115,33 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_header = ret_frame_header.frame.clone();
+  let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
-  let mut frame_content = Frame::default()
-    .with_size(dimm::width(), dimm::height() - dimm::height_header() - dimm::height_footer())
-    .below_of(&frame_header, 0);
-  frame_content.set_type(PackType::Vertical);
-
+  if let Err(e) = common::common()
+  {
+    println!("Err: {}", e.to_string());
+  } // if
 
   // Set callback to btn prev
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawPlatform);
+
+  // Switch to build dir
+  if   let Ok(str_path) = env::var("GIMG_DIR")
+    && let Ok(_) = env::set_current_dir(&str_path)
+  {
+    ret_frame_footer
+      .output_status
+      .clone()
+      .set_value(format!("Switched dir to {}", str_path).as_str());
+  } // if
+  else
+  {
+    ret_frame_footer
+      .output_status
+      .clone()
+      .set_value(format!("Could not switch dir").as_str());
+  } // else
 
   // Save the data here to configure the callback between the button press
   // , download and progress bar
@@ -147,30 +164,32 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let file_dest = std::path::Path::new(&entry_path).to_path_buf();
 
     // Parse url
-    let some_url = Url::Url::parse(&entry_url).ok();
-
-    // Check
-    if some_url.is_none()
+    let url = if let Ok(value) = Url::Url::parse(&entry_url)
+    {
+      value
+    }
+    else
     {
       println!("Could not create url '{}'", entry_url);
       return;
-    } // if
+    }; // if
 
     // Get basename
-    let mut result_url_basename = url_basename(some_url.clone().unwrap());
-
-    // Check
-    if result_url_basename.is_err()
+    let mut url_basename = if let Ok(value) = url_basename(url.clone())
     {
-      println!("Could not get url basename: '{}'", result_url_basename.unwrap_err().to_string());
+      value
+    }
+    else
+    {
+      println!("Could not get url basename");
       return;
-    } // if
+    }; // if
 
     // Create progress bar
     let mut prog = Progress::default()
       .above_of(&base, - dimm::border())
       .with_size(frame_content.w() - dimm::width_button_wide() - dimm::border()*3, dimm::height_button_wide())
-      .with_label(result_url_basename.unwrap().as_str());
+      .with_label(url_basename.as_str());
     prog.set_pos(dimm::border(), base.y() + dimm::border());
     prog.set_frame(FrameType::FlatBox);
     prog.set_color(Color::Background2);
@@ -190,7 +209,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     base = btn_fetch.as_base_widget();
 
     // Save in data to create callback afterwards
-    vec_fetch.push(Data{some_url, file_dest, prog, btn_fetch});
+    vec_fetch.push(Data{some_url: Some(url), file_dest, prog, btn_fetch});
   } // for
 
   // Function to fetch a file
@@ -264,18 +283,29 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
   // Set callback to btn next
   let clone_vec_fetch = vec_fetch.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    if fetch_files(clone_vec_fetch.clone(), clone_output_status.clone()).is_err()
+    // Disable GUI
+    clone_tx.send(common::Msg::WindDeactivate);
+
+    let clone_vec_fetch = vec_fetch.clone();
+    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    std::thread::spawn(move ||
     {
-      return;
-    } // if
+      if fetch_files(clone_vec_fetch.clone(), clone_output_status.clone()).is_ok()
+      {
+        set_image_path();
+        // Draw package creator
+        clone_tx.send(common::Msg::DrawCreator);
+      } // if
+
+      // Re-enable GUI
+      clone_tx.send(common::Msg::WindActivate);
+    });
+
     // Export name for expected image path
-    set_image_path();
-    // Draw package creator
-    clone_tx.send(common::Msg::DrawCreator);
   });
 }
 // }}}

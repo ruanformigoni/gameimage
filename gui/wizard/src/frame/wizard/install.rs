@@ -8,7 +8,7 @@ use std::fs::File;
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  browser::HoldBrowser,
+  browser::MultiBrowser,
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
   button::Button,
@@ -17,6 +17,7 @@ use fltk::{
   input::FileInput,
   group::PackType,
   frame::Frame,
+  dialog,
   dialog::{dir_chooser,file_chooser},
   enums::{Align,FrameType,Color},
   misc::Progress,
@@ -29,6 +30,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -97,7 +99,7 @@ pub fn install(tx: Sender<common::Msg>
   ret_frame_footer.btn_next.clone().emit(tx.clone(), msg_next);
 
   // List of the currently installed items
-  let mut frame_list = HoldBrowser::default()
+  let mut frame_list = MultiBrowser::default()
     .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
       , frame_content.height() - dimm::border()*2)
     .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
@@ -124,26 +126,40 @@ pub fn install(tx: Sender<common::Msg>
   let clone_label : String = label.to_string();
   btn_add.set_callback(move |_|
   {
-    // Pick file to install
-    let choice = file_chooser("Select the item file to install", "*", ".", false);
+    // Pick files to install
+    let mut chooser = dialog::FileChooser::new("."
+      , "*"
+      , dialog::FileChooserType::Multi
+      , "Pick one or multiple files");
+
+    // Start dialog
+    chooser.show();
+
+    // Wait for choice(s)
+    while chooser.shown() { fltk::app::wait(); } // while
 
     // Check if choice is valid
-    if choice.is_none()
+    if chooser.value(1).is_none()
     {
       println!("No file selected");
       return;
     } // if
-    let str_choice = choice.unwrap();
 
-    // Install with backend
-    if let Err(e) = common::gameimage_cmd(vec![
-        "install".to_string()
-      , clone_label.clone()
-      , str_choice
-    ])
+    // Install files
+    for idx_choice in 1..chooser.count()+1
     {
-      println!("Failed to execute backend with {}", e.to_string());
-    } // if
+      // Fetch choice
+      let str_choice = chooser.value(idx_choice).unwrap();
+      // Install with backend
+      if let Err(e) = common::gameimage_cmd(vec![
+          "install".to_string()
+        , clone_label.clone()
+        , str_choice
+      ])
+      {
+        println!("Failed to execute backend with {}", e.to_string());
+      } // if
+    } // for
 
     clone_tx.send(msg_curr);
   });
@@ -161,9 +177,9 @@ pub fn install(tx: Sender<common::Msg>
   let clone_label = label.to_string();
   btn_del.set_callback(move |_|
   {
-    let line = frame_list.value();
+    let vec_indices = frame_list.selected_items();
 
-    if line == 0
+    if vec_indices.len() == 0
     {
       clone_output_status.set_value("No item selected for deletion");
       return;
@@ -177,21 +193,21 @@ pub fn install(tx: Sender<common::Msg>
       return;
     } // if
 
-    // Get selected text
-    let some_text = clone_frame_list.text(line);
-    if some_text.is_none()
-    {
-      clone_output_status.set_value("Could not get value to delete");
-    } // if
+    // Get items
+    let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ frame_list.text(e).unwrap() }).collect();
 
-    let path_file_target = some_path_dir_project.unwrap()
-      .join(clone_label.as_str())
-      .join(some_text.unwrap());
-
-    if std::fs::remove_file(path_file_target.clone()).is_err()
+    // Remove files
+    for item in vec_items
     {
-      clone_output_status.set_value(format!("Could not delete file {}", path_file_target.into_os_string().into_string().unwrap()).as_str());
-    } // if
+      let path_file_target = some_path_dir_project.as_ref().unwrap()
+        .join(clone_label.as_str())
+        .join(item);
+
+      if std::fs::remove_file(path_file_target.clone()).is_err()
+      {
+        clone_output_status.set_value(format!("Could not delete file {}", path_file_target.string()).as_str());
+      } // if
+    }
     
     clone_tx.send(msg_curr);
   });

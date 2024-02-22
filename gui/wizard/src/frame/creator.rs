@@ -1,8 +1,9 @@
 #![allow(warnings)]
 
+use std::sync::{Arc,Mutex};
 use std::env;
 use std::path::PathBuf;
-use std::fs::File;
+use std::fs;
 use std::ffi::OsStr;
 
 // Gui
@@ -12,13 +13,15 @@ use fltk::{
   app::Sender,
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
-  button::Button,
+  button::{Button,CheckButton},
   group::{Group, Scroll},
   image::SharedImage,
   input::FileInput,
+  output::MultilineOutput,
   group::PackType,
   frame::Frame,
   output::Output,
+  dialog,
   dialog::dir_chooser,
   enums::{Align,FrameType,Color},
   misc::Progress,
@@ -31,14 +34,16 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
+use crate::common::WidgetExtExtra;
 use crate::db;
 use crate::download;
 use crate::svg;
 
-// fn create_entries() {{{
-fn create_entries(entry : db::project::Entry
+// fn create_entry() {{{
+fn create_entry(entry : db::project::Entry
   , parent_base : Widget
-  , parent_curr : Widget) -> Widget
+  , parent_curr : Widget) -> (Widget, CheckButton, PathBuf)
 {
   let mut frame_icon = Frame::default()
     .with_size(dimm::height_button_rec()*2, dimm::height_button_rec()*3)
@@ -71,14 +76,16 @@ fn create_entries(entry : db::project::Entry
   //
   // Set Info
   //
+  // let buffer = TextBuffer::default();
   let buffer = TextBuffer::default();
   let mut frame_info = TextDisplay::default()
     .with_size(parent_base.w() - dimm::border()*3 - dimm::height_button_rec()*2, dimm::height_button_rec()*3)
     .right_of(&frame_icon, dimm::border());
   frame_info.set_frame(FrameType::BorderBox);
   frame_info.set_buffer(buffer.clone());
+  frame_info.set_color(Color::Background);
 
-  let f_add_entry = |title: &str, entry : Option<String>, push_newline: bool|
+  let mut f_add_entry = |title: &str, entry : Option<String>, push_newline: bool|
   {
     if let Some(value) = entry
     {
@@ -105,7 +112,29 @@ fn create_entries(entry : db::project::Entry
     , false
   );
 
-  frame_icon.as_base_widget()
+  //
+  // Set checkbox
+  //
+  let mut btn_checkbox = CheckButton::default()
+    .with_size(dimm::width_button_rec() / 2, dimm::height_button_rec() / 2)
+    .right_bottom_of(&frame_info, - dimm::border() / 2);
+  btn_checkbox.visible_focus(false);
+
+  let path_dir_project = entry
+    .path_file_rom
+    .unwrap_or(PathBuf::new())
+    .parent()
+    .map(|e|{ e.to_path_buf() })
+    .unwrap_or(PathBuf::new())
+    .parent()
+    .map(|e|{ e.to_path_buf() })
+    .unwrap_or(PathBuf::new());
+
+  (
+      frame_icon.as_base_widget()
+    , btn_checkbox
+    , path_dir_project
+  )
 } // }}}
 
 // pub fn creator() {{{
@@ -123,8 +152,21 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
-  // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawFetch);
+  if let Err(e) = common::common()
+  {
+    println!("Err: {}", e.to_string());
+  } // if
+
+  // Configure bottom buttons
+  let clone_tx = tx.clone();
+  ret_frame_footer.btn_prev.clone().set_callback(move |_|
+  {
+    if dialog::choice_default("This will reset the image, are you sure?", "No", "Yes", "") == 1
+    {
+      clone_tx.send(common::Msg::DrawFetch);
+    } // if
+  });
+  ret_frame_footer.btn_next.clone().hide();
 
   // List of currently built packages
   let mut frame_list = Frame::default()
@@ -141,14 +183,24 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   scroll.begin();
 
   // Populate entries
-  if let Ok(results) = db::project::get()
+
+  let vec_btn_checkbox = Arc::new(Mutex::new(Vec::<(CheckButton,PathBuf)>::new()));
+  if let Ok(projects) = db::project::get()
   {
     let mut parent = scroll.as_base_widget();
 
-    for result in results
+    for project in projects
     {
-      parent = create_entries(result.clone(), scroll.clone().as_base_widget(), parent.clone());
-    } // if
+      let ( parent_new,  checkbutton , path_dir_project ) =
+        create_entry(project.clone(), scroll.clone().as_base_widget(), parent.clone());
+
+      if let Ok(mut lock) = vec_btn_checkbox.lock()
+      {
+        lock.push((checkbutton, path_dir_project));
+      } // if
+      
+      parent = parent_new;
+    } // for
   } // if
 
   scroll.end();
@@ -171,9 +223,98 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_del.visible_focus(false);
   btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
   btn_del.set_color(Color::Red);
+  let clone_vec_checkbutton = vec_btn_checkbox.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_tx = tx.clone();
+  btn_del.set_callback(move |_|
+  {
+    if dialog::choice_default("Erase the selected projects?", "No", "Yes", "") != 1
+    {
+      return;
+    } // if
 
-  // Configure bottom buttons
-  ret_frame_footer.btn_next.clone().hide();
+    let lock = clone_vec_checkbutton.lock();
+
+    if lock.is_err()
+    {
+      clone_output_status.set_value("Could not acquire lock for checkbutton");
+    } // if
+
+    // Remove all currently selected projects
+    for (checkbutton, path_dir_project) in lock.unwrap().iter()
+    {
+      if checkbutton.is_checked()
+      {
+        fs::remove_file(path_dir_project.with_extension("dwarfs"));
+        fs::remove_dir_all(path_dir_project);
+      }
+    } // for
+
+    // Refresh
+    clone_tx.send(common::Msg::DrawCreator);
+  });
+
+  // Include inside image
+  let mut btn_insert = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .below_of(&btn_del, dimm::border());
+  btn_insert.set_color(Color::Blue);
+  btn_insert.set_frame(FrameType::RoundedFrame);
+  btn_insert.visible_focus(false);
+  btn_insert.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_box_heart(1.0).as_str()).unwrap()));
+  let clone_vec_checkbutton = vec_btn_checkbox.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_tx = tx.clone();
+  btn_insert.set_callback(move |_|
+  {
+    if dialog::choice_default("Include selected projects in image?", "No", "Yes", "") != 1
+    {
+      return;
+    } // if
+
+    // Set status
+    clone_output_status.set_value("Inserting projects in the image");
+
+    // Disable window
+    clone_tx.send(common::Msg::WindDeactivate);
+
+    // Update GUI
+    fltk::app::flush();
+    fltk::app::awake();
+
+    // Include files in new thread
+    let clone_vec_checkbutton = vec_btn_checkbox.clone();
+    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    std::thread::spawn(move ||
+    {
+      let lock = clone_vec_checkbutton.lock();
+
+      if lock.is_err()
+      {
+        clone_output_status.set_value("Could not acquire lock for checkbutton");
+      } // if
+
+      // Remove all currently selected projects
+      for (checkbutton, path_dir_project) in lock.unwrap().iter()
+      {
+        if ! checkbutton.is_checked()
+        {
+          continue;
+        } // if
+
+        let path_dir_dwarfs = path_dir_project.with_extension("dwarfs");
+        println!("File: {}", path_dir_dwarfs.string());
+        common::gameimage_cmd(vec!["package".to_string()
+          , path_dir_dwarfs.string()]
+        );
+      } // for
+
+      // Refresh
+      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send(common::Msg::DrawCreator);
+    });
+  });
+
 }
 // }}}
 
