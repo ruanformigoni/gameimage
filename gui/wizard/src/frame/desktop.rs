@@ -33,26 +33,19 @@ use crate::db;
 use crate::download;
 use crate::svg;
 
-
-// get_icon() {{{
-fn get_icon() -> anyhow::Result<PathBuf>
+// set_image_preview() {{{
+fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
 {
-  Ok((env::var("GIMG_PROJECT")? + "/icon/icon.png").into())
-} // fn: get_icon }}}
-
-// set_image() {{{
-fn set_image(mut frame : Frame) -> anyhow::Result<()>
-{
-  // Get image
-  let path_icon = get_icon()?;
-
-  // Resize
-  let path_icon_resized = PathBuf::from(path_icon.clone())
+  // Resize to preview how it looks
+  let path_icon_resized = PathBuf::from(path_file_icon.clone())
     .parent()
     .unwrap()
     .join("icon.wizard.resized.png");
-  common::image_resize(path_icon_resized.clone(), path_icon, frame.w() as u32, frame.h() as u32);
 
+  // Do the actual resizing
+  common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32);
+
+  // Set as icon in frame
   match fltk::image::PngImage::load(path_icon_resized)
   {
     Ok(png_image) =>
@@ -68,10 +61,10 @@ fn set_image(mut frame : Frame) -> anyhow::Result<()>
   } // if
 
   Err(ah!("Could not set cover frame image"))
-} // set_image() }}}
+} // set_image_preview() }}}
 
-// pub fn icon() {{{
-pub fn icon(tx: Sender<common::Msg>, title: &str)
+// pub fn desktop() {{{
+pub fn desktop(tx: Sender<common::Msg>, title: &str)
 {
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
@@ -88,30 +81,8 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   frame_icon.set_frame(FrameType::BorderBox);
 
   // Footer callbacks
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawRetroarchName);
-
-  let clone_tx = tx.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
-  {
-    if let Ok(path_file_icon) = env::var("GIMG_ICON")
-    {
-      if ! PathBuf::from(path_file_icon).is_file()
-      {
-        println!("Icon file is invalid");
-        clone_output_status.set_value("Icon file is invalid");
-        return;
-      } // if
-    } // if
-    else
-    {
-      println!("Icon is not set");
-      clone_output_status.set_value("Icon is not set");
-      return;
-    } // else
-
-    clone_tx.send(common::Msg::DrawRetroarchRom);
-  });
+  ret_frame_footer.btn_prev.clone().hide();
+  ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawName);
 
   // Icon
   let mut input_icon = FileInput::default()
@@ -122,62 +93,36 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
     , input_icon.y() - input_icon.h() - dimm::border());
   input_icon.set_readonly(true);
 
-  // Check if GIMG_ICON exists
-  if let Some(env_icon) = env::var("GIMG_ICON").ok()
-  {
-    // Set value of select field
-    input_icon.set_value(&env_icon);
-    // Update preview
-    if let Err(e) = set_image(frame_icon.clone())
-    {
-      ret_frame_footer.output_status
-        .clone()
-        .set_value(format!("Failed to load preview: {}", e.to_string()).as_str());
-    } // if
-  } // if
-
-  // // Set input_icon callback
+  // Set input_icon callback
   let clone_tx = tx.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   input_icon.set_callback(move |e|
   {
-    let choice = file_chooser("Select the icon", "*.jpg|*.png|*.svg", ".", false);
-
-    if choice.is_none()
+    let str_choice = if let Some(choice) = file_chooser("Select the icon", "*.jpg|*.png|*.svg", ".", false)
     {
-      return;
+      choice
     } // if
-
-    let str_choice = choice.unwrap();
+    else
+    {
+      clone_output_status.set_value("No file selected");
+      return;
+    }; // else
 
     // Show file path on selector
     e.set_value(str_choice.as_str());
 
     // Try to install icon
     clone_output_status.set_value("Installing icon...");
-    if let Err(e) = common::gameimage_cmd(vec![
-        "install".to_string()
-      , "icon".to_string()
-      , str_choice.clone()
-    ])
+
+    // Set as desktop entry icon for image
+    if let Err(e) = common::gameimage_cmd(vec!["desktop".to_string(), str_choice.clone()])
     {
       clone_output_status.set_value("Could not install icon, use .jpg or .png");
       return;
     } // if
 
-    // Set environment variable
-    match get_icon()
-    {
-      Ok(path_icon) => env::set_var("GIMG_ICON", path_icon),
-      Err(e) =>
-      {
-        println!("Could not get icon path: {}", e);
-        clone_output_status.set_value(format!("Could not get icon path: {}", e).as_str());
-      }
-    } // if
-
     // Set preview image
-    if let Err(e) = set_image(frame_icon.clone())
+    if let Err(e) = set_image_preview(frame_icon.clone(), str_choice.into())
     {
       clone_output_status.set_value("Failed to load icon image into preview");
     } // if

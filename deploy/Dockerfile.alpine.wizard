@@ -29,7 +29,7 @@ ENV PATH="/tools:$PATH"
 ENV RUSTFLAGS='-C target-feature=-crt-static'
 
 # Install rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
 
 # Update env
 ENV PATH="/root/.cargo/bin:$PATH"

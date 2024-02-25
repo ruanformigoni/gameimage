@@ -35,6 +35,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
 use crate::db;
 use crate::download;
@@ -64,7 +65,7 @@ fn create_entry(entry : db::project::Entry
     let path_file_resized = PathBuf::from(path_file_icon.clone())
       .parent()
       .unwrap()
-      .join("icon.resized.png");
+      .join("icon.creator.resized.png");
     common::image_resize(path_file_resized.clone(), path_file_icon, frame_icon.w() as u32, frame_icon.h() as u32);
     if let Ok(mut image) = fltk::image::SharedImage::load(path_file_resized)
     {
@@ -100,15 +101,24 @@ fn create_entry(entry : db::project::Entry
     , true
   );
   f_add_entry("Default rom: "
-    , entry.path_file_rom.clone().map(|e|{ common::osstr_to_str(e.file_name()) })
+    , entry.path_file_rom.clone().and_then(|e|
+      {
+        e.file_name().map(|e|{ e.string() })
+      })
     , true
   );
   f_add_entry("Default core: "
-    , entry.path_file_core.clone().map(|e|{ common::osstr_to_str(Some(e.as_os_str())) })
+    , entry.path_file_core.clone().and_then(|e|
+      {
+        e.file_name().map(|e|{ e.string() })
+      })
     , true
   );
   f_add_entry("Default bios: "
-    , entry.path_file_bios.clone().map(|e|{ common::osstr_to_str(Some(e.as_os_str())) })
+    , entry.path_file_bios.clone().and_then(|e|
+      {
+        e.file_name().map(|e|{ e.string() })
+      })
     , false
   );
 
@@ -166,7 +176,15 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       clone_tx.send(common::Msg::DrawFetch);
     } // if
   });
-  ret_frame_footer.btn_next.clone().hide();
+
+  // Finish package creation on click next
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  {
+    if dialog::choice_default("Finish image creation?", "No", "Yes", "") == 1
+    {
+      clone_tx.send(common::Msg::DrawDesktop);
+    } // if
+  });
 
   // List of currently built packages
   let mut frame_list = Frame::default()
@@ -267,7 +285,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   btn_insert.set_callback(move |_|
   {
-    if dialog::choice_default("Include selected projects in image?", "No", "Yes", "") != 1
+    if dialog::choice_default("Include selected projects in the image?", "No", "Yes", "") != 1
     {
       return;
     } // if

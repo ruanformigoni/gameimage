@@ -30,18 +30,18 @@ mkdir -p "$BIN_DIR"
 #
 
 # Compile wizard, patch, and package with makeself
-# docker build . -t gameimage-wizard:alpine -f deploy/Dockerfile.alpine.wizard
+docker build . -t gameimage-wizard:alpine -f deploy/Dockerfile.alpine.wizard
 docker run --rm -v "$(pwd)":/workdir gameimage-wizard:alpine cp -r /dist/makeself-wizard /workdir
 cp -fr ./makeself-wizard/. "$BIN_DIR"
 
 # Launcher does not need to be static since it runs inside the arch container
-# docker build . -t gameimage-launcher:arch -f deploy/Dockerfile.arch.launcher
+docker build . -t gameimage-launcher:arch -f deploy/Dockerfile.arch.launcher
 docker run --rm -v "$(pwd)":/workdir gameimage-launcher:arch cp /dist/launcher /workdir
 cp -fv ./launcher "$BIN_DIR"
 rm -f ./launcher
 
 # Create backend
-# docker build . -t gameimage-backend:alpine -f deploy/Dockerfile.alpine.backend
+docker build . -t gameimage-backend:alpine -f deploy/Dockerfile.alpine.backend
 docker run --rm -v "$(pwd)":/workdir gameimage-backend:alpine cp /dist/main /dist/boot /workdir
 cp -fv ./main "$BIN_DIR"/cli
 cp -fv ./boot "$BIN_DIR"/boot
@@ -115,8 +115,6 @@ _fetch "https://github.com/ruanformigoni/pv-static-musl/releases/download/3398ec
 export PATH="$BIN_DIR:$PATH"
 
 # Copy files
-cp ./doc/gameimage.png "$BUILD_DIR"/app
-
 for i in "$BUILD_DIR"/app/bin/*; do
   echo "$i"
   chmod +x "$i"
@@ -157,13 +155,10 @@ cd "$BUILD_DIR"
   :cp -r "$DIR_SCRIPT/usr" /tmp/gameimage
   :cp -r "$DIR_SCRIPT/etc" /tmp/gameimage
   :
-  :# Copy icon
-  :cp "$DIR_SCRIPT/gameimage.png" /tmp/gameimage/gameimage.png
-  :
   :export GIMG_BINARY_CLI="$DIR_BIN/main"
   :
   :# Start application
-  :cd "$DIR_CALL" && "$DIR_BIN"/main "$@"
+  :cd "$DIR_CALL" && "$DIR_BIN"/makeself-wizard/wizard.sh "$@"
 END
 chmod +x "$BUILD_DIR"/app/start.sh
 

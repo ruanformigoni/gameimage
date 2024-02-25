@@ -18,6 +18,7 @@ use fltk::{
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::svg;
 use crate::common::PathBufExt;
 
 // pub fn welcome() {{{
@@ -46,13 +47,14 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   frame_image.clone().center_of(&frame_content);
   frame_image.set_pos(frame_image.x(), frame_image.y() - dimm::height_button_wide() - dimm::height_text());
   let mut clone_frame_image = frame_image.clone();
-  let _ = SharedImage::load("/tmp/gameimage/gameimage.png")
-    .and_then(move |mut img|
-    {
-      img.scale(clone_frame_image.w(), clone_frame_image.h(), true, true);
-      clone_frame_image.set_image(Some(img.clone()));
-      Ok(img)
-    });
+  if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
+  {
+    clone_frame_image.set_image_scaled(Some(image));
+  } // if
+  else
+  {
+    println!("Failed to load icon image");
+  } // else
 
   let mut input_dir = FileInput::default()
     .with_size(dimm::WIDTH - dimm::BORDER*2, dimm::HEIGHT_BUTTON_WIDE + dimm::HEIGHT_TEXT)

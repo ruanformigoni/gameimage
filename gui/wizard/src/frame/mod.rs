@@ -5,3 +5,5 @@ pub mod platform;
 pub mod fetch;
 pub mod creator;
 pub mod wizard;
+pub mod desktop;
+pub mod name;

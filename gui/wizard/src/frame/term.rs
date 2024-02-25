@@ -102,7 +102,9 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
 pub fn dispatch<F>(&self, args : Vec<&str>, callback : F)
   where F : Fn() + Send + 'static
 {
-  let reader_cmd = Command::new("bash")
+  let reader_cmd = Command::new("sh")
+    .env_remove("LD_PRELOAD")
+    .env("FIM_FIFO", "0")
     .args(vec!["-c"].into_iter().chain(args).collect::<Vec<&str>>())
     .stdin(Stdio::piped())
     .stderr(Stdio::inherit())

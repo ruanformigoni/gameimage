@@ -14,6 +14,8 @@ pub enum Msg
   DrawPlatform,
   DrawFetch,
   DrawCreator,
+  DrawDesktop,
+  DrawName,
 
   DrawRetroarchName,
   DrawRetroarchIcon,
@@ -57,6 +59,8 @@ pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
   let path_binary_gameimage = path::PathBuf::from(env::var("GIMG_BINARY_CLI")?);
 
   let some_handle = std::process::Command::new(path_binary_gameimage)
+    .env_remove("LD_PRELOAD")
+    .env("FIM_FIFO", "0")
     .stderr(std::process::Stdio::inherit())
     .stdout(std::process::Stdio::inherit())
     .args(args)
@@ -97,18 +101,6 @@ pub fn image_resize(path_out : PathBuf, path_in : PathBuf, width : u32, height :
   Ok(img.save(path_out)?)
 } // }}}
 
-// pub fn osstr_to_str() {{{
-pub fn osstr_to_str(osstr : Option<&OsStr>) -> String
-{
-  if osstr.is_none()
-  {
-    return String::new();
-
-  } // if
-   
-  osstr.unwrap().to_os_string().into_string().unwrap_or(String::new())
-} // fn: path_to_str }}}
-
 // pub trait WidgetExtExtra {{{
 pub trait WidgetExtExtra
 {
@@ -135,6 +127,21 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
     );
     self.clone()
   }
+}
+// }}}
+
+// pub trait OsStrExt {{{
+pub trait OsStrExt
+{
+  fn string(&self) -> String;
+}
+
+impl OsStrExt for OsStr
+{
+  fn string(&self) -> String
+  {
+    self.to_string_lossy().into_owned()
+  } // fn: string
 }
 // }}}
 
@@ -210,7 +217,6 @@ pub fn common() -> anyhow::Result<()>
 // // Error
 // use anyhow::anyhow as ah;
 // // }}}
-//
 //
 //
 // // pub struct DataFrameDefault {{{

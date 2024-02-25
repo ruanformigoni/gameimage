@@ -101,6 +101,14 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::creator::creator(self.tx, "Create Packages to Include in the Image");
     }
+    Msg::DrawDesktop =>
+    {
+      frame::desktop::desktop(self.tx, "Select the Image Desktop Icon");
+    }
+    Msg::DrawName =>
+    {
+      frame::name::name(self.tx, "Select the File Name");
+    }
     Msg::DrawRetroarchName =>
     {
       frame::wizard::retroarch::name(self.tx, "Select the Application Name");
@@ -151,8 +159,8 @@ impl Drop for Gui
   fn drop(&mut self)
   {
     self.wind.show();
-    // self.tx.send(Msg::DrawWelcome);
-    self.tx.send(Msg::DrawCreator);
+    self.tx.send(Msg::DrawWelcome);
+    // self.tx.send(Msg::DrawCreator);
     while self.app.wait()
     {
       match self.rx.recv()

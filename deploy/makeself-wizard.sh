@@ -66,8 +66,6 @@ mkdir -p /tmp/gameimage/preloader
 
 cp  "$PATH_SCRIPT"/ld-musl-x86_64.so.1 /tmp/gameimage/preloader
 
-cd "$USER_PWD"
-
 LD_PRELOAD="$PATH_SCRIPT/preload-sandbox.so" "$PATH_SCRIPT/wizard"
 END
 
