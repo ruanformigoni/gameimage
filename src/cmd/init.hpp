@@ -68,7 +68,7 @@ inline void init(std::string const& str_platform
 
   // Copy boot file for platform
   fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
-    ns_env::dir("GIMG_SCRIPT_DIR") / "boot"
+    ns_env::dir("GIMG_SCRIPT_DIR") / "gameimage-boot"
   )._ret;
   fs::copy_file(path_file_boot, path_app / "boot", fs::copy_options::overwrite_existing);
   ns_log::write('i', "Copy ", path_file_boot, " -> ", path_app / "boot");

@@ -166,12 +166,31 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
       std::string str_op = ns_enum::to_string_lower(op);
       // Enter directory
       path_project = path_project / str_op;
+      // Save to vec for json
+      std::vector<fs::path> vec_paths;
       // Search for targets
       for(auto i : ns_impl::search(path_project, R"(.*)", ""))
       {
         i = fs::relative(i, path_project);
         ns_log::write('i', "Found :: ", str_op / i);
+        vec_paths.push_back(i);
       } // for
+
+      // Write to json
+      if ( to_json.has_value() )
+      {
+        // Erase file if exists
+        fs::remove(*to_json);
+
+        // Open file list
+        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
+        {
+          for(fs::path const& path_file : vec_paths)
+          {
+            db(str_op) |= path_file;
+          }
+        }, std::ios::out);
+      } // if
     } // case
     break;
     case ns_enum::Platform::RPCS3:

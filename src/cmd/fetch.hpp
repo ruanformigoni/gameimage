@@ -103,8 +103,11 @@ inline void check_sha_from_url(fs::path const& path_file, cpr::Url const& url)
   // SHA file name is file name + sha256sum
   fs::path path_sha256sum = path_file.string() + ".sha256sum";
 
-  // Fetch SHA file
-  fetch_file_from_url(path_sha256sum, url_checksum);
+  // Fetch SHA file if not exists
+  if ( ! ns_fs::ns_path::file_exists<false>(path_sha256sum)._bool )
+  {
+    fetch_file_from_url(path_sha256sum, url_checksum);
+  } // if
 
   // Check SHA
   if (auto ret_proc = ns_subprocess::sync(path_bin_sha256sum, "-c", path_sha256sum);
@@ -179,7 +182,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/75b98364d6dfb95fc1e263bb5055f027ada3c63e/fetch.json"});
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/08607cba3f446d1426459ffd57bb2cee41d5d44c/fetch.json"});
 
   // Set temporary directory
   fs::path dir_dest = path_dest.parent_path();
