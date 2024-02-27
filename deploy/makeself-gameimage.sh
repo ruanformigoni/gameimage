@@ -19,7 +19,7 @@ cd "$SRC_DIR"
 
 # Create build dir and appdir
 BUILD_DIR="$SRC_DIR/build"
-mkdir -p "$BUILD_DIR"
+rm -rf "$BUILD_DIR" && mkdir "$BUILD_DIR"
 
 # Binaries location on package
 BIN_DIR="$BUILD_DIR/app/bin"
@@ -37,14 +37,14 @@ cp -fr ./makeself-wizard/. "$BIN_DIR"
 # Launcher does not need to be static since it runs inside the arch container
 docker build . -t gameimage-launcher:arch -f deploy/Dockerfile.arch.launcher
 docker run --rm -v "$(pwd)":/workdir gameimage-launcher:arch cp /dist/launcher /workdir
-cp -fv ./launcher "$BIN_DIR"
+cp -fv ./launcher "$BIN_DIR"/gameimage-launcher
 rm -f ./launcher
 
 # Create backend
 docker build . -t gameimage-backend:alpine -f deploy/Dockerfile.alpine.backend
 docker run --rm -v "$(pwd)":/workdir gameimage-backend:alpine cp /dist/main /dist/boot /workdir
-cp -fv ./main "$BIN_DIR"/cli
-cp -fv ./boot "$BIN_DIR"/boot
+cp -fv ./main "$BIN_DIR"/gameimage-cli
+cp -fv ./boot "$BIN_DIR"/gameimage-boot
 rm -f ./main ./boot
 
 #
@@ -120,11 +120,6 @@ for i in "$BUILD_DIR"/app/bin/*; do
   chmod +x "$i"
 done
 
-# Resize image
-wget -O magick https://github.com/ruanformigoni/imagemagick-static-musl/releases/download/cc3f21c/magick-x86_64
-chmod +x magick
-./magick "$BUILD_DIR"/app/gameimage.png -resize 200x200 "$BUILD_DIR"/app/gameimage.png
-
 #
 # Build
 #
@@ -155,10 +150,10 @@ cd "$BUILD_DIR"
   :cp -r "$DIR_SCRIPT/usr" /tmp/gameimage
   :cp -r "$DIR_SCRIPT/etc" /tmp/gameimage
   :
-  :export GIMG_BINARY_CLI="$DIR_BIN/main"
+  :export GIMG_BACKEND="$DIR_BIN/gameimage-cli"
   :
   :# Start application
-  :cd "$DIR_CALL" && "$DIR_BIN"/makeself-wizard/wizard.sh "$@"
+  :cd "$DIR_CALL" && "$DIR_BIN"/wizard.sh "$@"
 END
 chmod +x "$BUILD_DIR"/app/start.sh
 
