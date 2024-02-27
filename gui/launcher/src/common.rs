@@ -5,6 +5,8 @@ pub enum Msg
   DrawSelector,
   DrawEnv,
   DrawMenu,
+  WindActivate,
+  WindDeactivate,
   Launch,
   Quit,
 } // enum

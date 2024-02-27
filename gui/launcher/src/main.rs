@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, stmt_expr_attributes)]
 
 use std::env;
+use std::thread;
 
 // Gui
 use fltk::{
@@ -120,6 +121,35 @@ fn frame_switcher(&self)
   );
 } // fn: frame_switcher }}}
 
+// fn redraw() {{{
+fn redraw(&mut self, msg: Msg)
+{
+  self.wind.clear();
+  self.wind.begin();
+
+  match Some(msg)
+  {
+    Some(Msg::DrawCover) =>
+    {
+      frame::cover::new(self.tx, self.border, self.width, self.height, 0, 0);
+    }
+    Some(Msg::DrawSelector) =>
+    {
+      frame::selector::new(self.tx, self.border, self.width, self.height, 0, 0);
+    }
+    Some(Msg::DrawEnv) =>
+    {
+      frame::env::new(self.tx, self.border, self.width, self.height, 0, 0);
+    }
+    Some(Msg::DrawMenu) =>
+    {
+      frame::menu::new(self.tx, self.border, self.width, self.height, 0, 0);
+    }
+    _ => (),
+  }
+  self.wind.end();
+} // fn: redraw }}}
+
 } // impl: Gui }}}
 
 // impl: Drop for Gui {{{
@@ -131,61 +161,52 @@ impl Drop for Gui
     self.wind.end();
     self.wind.show();
 
-    let mut some_child : std::option::Option<std::process::Child> = None;
     while self.app.wait()
     {
       match self.rx.recv()
       {
-        Some(Msg::DrawCover) =>
+        Some(common::Msg::WindActivate) =>
         {
-          self.wind.clear();
-          self.wind.begin();
-          frame::cover::new(self.tx, self.border, self.width, self.height, 0, 0);
-          self.wind.end();
+          let children = self.wind.children();
+          for i in 0..children {
+            let mut widget = self.wind.child(i).unwrap();
+            widget.activate();
+          }
+          app::flush();
+          app::awake();
         }
-        Some(Msg::DrawSelector) =>
+        Some(common::Msg::WindDeactivate) =>
         {
-          self.wind.clear();
-          self.wind.begin();
-          frame::selector::new(self.tx, self.border, self.width, self.height, 0, 0);
-          self.wind.end();
-        }
-        Some(Msg::DrawEnv) =>
-        {
-          self.wind.clear();
-          self.wind.begin();
-          frame::env::new(self.tx, self.border, self.width, self.height, 0, 0);
-          self.wind.end();
-        }
-        Some(Msg::DrawMenu) =>
-        {
-          self.wind.clear();
-          self.wind.begin();
-          frame::menu::new(self.tx, self.border, self.width, self.height, 0, 0);
-          self.wind.end();
+          let children = self.wind.children();
+          for i in 0..children
+          {
+            let mut widget = self.wind.child(i).unwrap();
+            widget.deactivate();
+          }
+          app::flush();
+          app::awake();
         }
         Some(Msg::Launch) =>
         {
-          if let Ok(process) =  std::process::Command::new("sh")
-            .args(["-c", "$GIMG_LAUNCHER_BOOT"])
-            .spawn()
+          let clone_tx = self.tx.clone();
+          clone_tx.send(Msg::WindDeactivate);
+          std::thread::spawn(move ||
           {
-            some_child = Some(process);
-          } // if
+            let _ =  std::process::Command::new("sh")
+              .args(["-c", "$GIMG_LAUNCHER_BOOT"])
+              .output();
+            clone_tx.send(Msg::DrawCover);
+          });
         }
         Some(Msg::Quit) =>
         {
           app::quit();
           app::flush();
         }
+        Some(value) => self.redraw(value),
         None => (),
       } // match
     } // while
-
-    if let Some(ref mut child) = some_child
-    {
-      let _ = child.wait();
-    } // if
   }
 } // }}}
 
