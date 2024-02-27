@@ -26,10 +26,11 @@ use common::Msg;
 #[derive(Debug)]
 struct Gui
 {
-  app: App,
-  wind: Window,
-  rx : Receiver<Msg>,
-  tx : Sender<Msg>,
+  app       : App,
+  wind_main : Window,
+  wind_log  : Window,
+  tx        : Sender<Msg>,
+  rx        : Receiver<Msg>,
 } // struct: Gui }}}
 
 // impl: Gui {{{
@@ -40,10 +41,19 @@ impl Gui
   pub fn new() -> Self
   {
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
-    let mut wind = Window::default()
+    let mut wind_main = Window::default()
       .with_label("GameImage")
       .with_size(dimm::width(), dimm::height())
       .center_screen();
+    wind_main.begin();
+    wind_main.end();
+
+    let mut wind_log = Window::default()
+      .with_label("Logger")
+      .with_size(dimm::width(), dimm::height())
+      .left_of(&wind_main, 0);
+    wind_log.begin();
+    wind_log.end();
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
     theme.apply();
@@ -59,11 +69,12 @@ impl Gui
     // Window icon
     if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
     {
-      wind.set_icon(Some(image));
+      wind_main.set_icon(Some(image.clone()));
+      wind_log.set_icon(Some(image));
     } // if
     else
     {
-      println!("Failed to load icon image");
+      log!("Failed to load icon image");
     } // else
 
     let (tx, rx) = fltk::app::channel();
@@ -71,20 +82,24 @@ impl Gui
     Gui
     {
       app,
-      wind,
+      wind_main,
+      wind_log,
+      tx,
       rx,
-      tx
     }
   } // fn: new }}}
 
 // fn redraw() {{{
 fn redraw(&mut self, msg : Msg)
 {
-  self.wind.clear();
-  self.wind.begin();
+  self.wind_main.clear();
+  self.wind_main.begin();
 
   match msg
   {
+    //
+    // Common
+    //
     Msg::DrawWelcome =>
     {
       frame::welcome::welcome(self.tx, "Welcome to GameImage");
@@ -109,6 +124,38 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::name::name(self.tx, "Select the File Name");
     }
+
+    //
+    // Wine
+    //
+    Msg::DrawWineName =>
+    {
+      frame::wizard::wine::name(self.tx, "Select the Application Name");
+    }
+    Msg::DrawWineIcon =>
+    {
+      frame::wizard::wine::icon(self.tx, "Select the Application Icon");
+    }
+    Msg::DrawWineConfigure =>
+    {
+      frame::wizard::wine::configure(self.tx, "Configure Wine");
+    }
+    // Msg::DrawWineRom =>
+    // {
+    //   frame::wizard::wine::rom(self.tx, "Install the Rom File(s)");
+    // }
+    // Msg::DrawWineTest =>
+    // {
+    //   frame::wizard::wine::test(self.tx, "Test the Created Package");
+    // }
+    // Msg::DrawWineCompress =>
+    // {
+    //   frame::wizard::wine::compress(self.tx, "Compress the Created Package");
+    // }
+
+    //
+    // Retroarch
+    //
     Msg::DrawRetroarchName =>
     {
       frame::wizard::retroarch::name(self.tx, "Select the Application Name");
@@ -131,12 +178,44 @@ fn redraw(&mut self, msg : Msg)
     }
     Msg::DrawRetroarchTest =>
     {
-      frame::wizard::retroarch::test(self.tx, "Test the created package");
+      frame::wizard::retroarch::test(self.tx, "Test the Created Package");
     }
     Msg::DrawRetroarchCompress =>
     {
-      frame::wizard::retroarch::compress(self.tx, "Compress the created package");
+      frame::wizard::retroarch::compress(self.tx, "Compress the Created Package");
     }
+
+    //
+    // Pcsx2
+    //
+    Msg::DrawPcsx2Name =>
+    {
+      frame::wizard::pcsx2::name(self.tx, "Select the Application Name");
+    }
+    Msg::DrawPcsx2Icon =>
+    {
+      frame::wizard::pcsx2::icon(self.tx, "Select the Application Icon");
+    }
+    Msg::DrawPcsx2Rom =>
+    {
+      frame::wizard::pcsx2::rom(self.tx, "Install the Rom File(s)");
+    }
+    Msg::DrawPcsx2Bios =>
+    {
+      frame::wizard::pcsx2::bios(self.tx, "Install the Bios File(s)");
+    }
+    Msg::DrawPcsx2Test =>
+    {
+      frame::wizard::pcsx2::test(self.tx, "Test the Created Package");
+    }
+    Msg::DrawPcsx2Compress =>
+    {
+      frame::wizard::pcsx2::compress(self.tx, "Compress the Created Package");
+    }
+
+    //
+    // Quit
+    //
     Msg::Quit =>
     {
       app::quit();
@@ -145,7 +224,7 @@ fn redraw(&mut self, msg : Msg)
     _ => (),
   } // match
 
-  self.wind.end();
+  self.wind_main.end();
   app::redraw();
   app::flush();
   app::awake();
@@ -158,8 +237,20 @@ impl Drop for Gui
 {
   fn drop(&mut self)
   {
-    self.wind.show();
+    // Create & show logging window
+    self.wind_log.begin();
+    log!("Initialized logging!");
+    self.wind_log.end();
+    self.wind_log.show();
+
+    // Show main window
+    self.wind_main.show();
+
+    // Set log window to the left of the main window
+    self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
+
     self.tx.send(Msg::DrawWelcome);
+    // self.tx.send(Msg::DrawWineConfigure);
     // self.tx.send(Msg::DrawCreator);
     while self.app.wait()
     {
@@ -167,9 +258,9 @@ impl Drop for Gui
       {
         Some(common::Msg::WindActivate) =>
         {
-          let children = self.wind.children();
+          let children = self.wind_main.children();
           for i in 0..children {
-            let mut widget = self.wind.child(i).unwrap();
+            let mut widget = self.wind_main.child(i).unwrap();
             widget.activate();
           }
           app::flush();
@@ -177,10 +268,10 @@ impl Drop for Gui
         }
         Some(common::Msg::WindDeactivate) =>
         {
-          let children = self.wind.children();
+          let children = self.wind_main.children();
           for i in 0..children
           {
-            let mut widget = self.wind.child(i).unwrap();
+            let mut widget = self.wind_main.child(i).unwrap();
             widget.deactivate();
           }
           app::flush();

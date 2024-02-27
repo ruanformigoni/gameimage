@@ -72,6 +72,18 @@ const ICON_BOX_HEART: &str = r#"
 </svg>
 "#;
 
+const ICON_INSTALL: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-arrow-down-square" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M15 2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm8.5 2.5a.5.5 0 0 0-1 0v5.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293z"/>
+</svg>
+"#;
+
+const ICON_GEAR: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-gear-fill" viewBox="0 0 16 16">
+  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+</svg>
+"#;
+
 pub const ICON_GAMEIMAGE: &str = r##"
 <svg
    width="127.1859mm"
@@ -248,6 +260,8 @@ icon!(icon_add, ICON_ADD, 24, 24);
 icon!(icon_del, ICON_DEL, 16, 16);
 icon!(icon_joystick, ICON_JOYSTICK, 16, 16);
 icon!(icon_save, ICON_SAVE, 16, 16);
+icon!(icon_install, ICON_INSTALL, 16, 16);
+icon!(icon_gear, ICON_GEAR, 16, 16);
 icon!(icon_box_heart, ICON_BOX_HEART, 16, 16);
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

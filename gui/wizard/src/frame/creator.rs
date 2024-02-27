@@ -37,6 +37,7 @@ use crate::common;
 use crate::common::PathBufExt;
 use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -164,7 +165,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
   if let Err(e) = common::common()
   {
-    println!("Err: {}", e.to_string());
+    log!("Err: {}", e.to_string());
   } // if
 
   // Configure bottom buttons
@@ -231,7 +232,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_add.visible_focus(false);
   btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
   btn_add.set_color(Color::Green);
-  btn_add.emit(tx, common::Msg::DrawRetroarchName);
+  btn_add.emit(tx, common::wizard_by_platform().unwrap_or(common::Msg::DrawCreator));
 
   // Erase package
   let mut btn_del = Button::default()
@@ -321,7 +322,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         } // if
 
         let path_dir_dwarfs = path_dir_project.with_extension("dwarfs");
-        println!("File: {}", path_dir_dwarfs.string());
+        log!("File: {}", path_dir_dwarfs.string());
         common::gameimage_cmd(vec!["package".to_string()
           , path_dir_dwarfs.string()]
         );

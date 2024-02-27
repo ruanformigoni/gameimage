@@ -29,6 +29,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -37,7 +38,10 @@ use crate::frame::wizard;
 
 
 // pub fn name() {{{
-pub fn name(tx: Sender<common::Msg>, title: &str)
+pub fn name(tx: Sender<common::Msg>
+  , title: &str
+  , msg_prev: common::Msg
+  , msg_next: common::Msg)
 {
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
@@ -95,11 +99,12 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
   });
 
   // Callback to previous
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawCreator);
+  ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
 
   // Callback to Next
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
+  let clone_msg_next = msg_next.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     // Check for name
@@ -110,7 +115,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     else
     {
       clone_output_status.set_value("Name field is empty");
-      println!("Could not fetch GIMG_NAME");
+      log!("Could not fetch GIMG_NAME");
       return;
     }; // else
 
@@ -122,7 +127,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     else
     {
       clone_output_status.set_value("Could not fetch GIMG_PLATFORM");
-      println!("Could not fetch GIMG_PLATFORM");
+      log!("Could not fetch GIMG_PLATFORM");
       return;
     }; // else
 
@@ -134,7 +139,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     else
     {
       clone_output_status.set_value("Could not fetch GIMG_IMAGE");
-      println!("Could not fetch GIMG_IMAGE");
+      log!("Could not fetch GIMG_IMAGE");
       return;
     }; // else
 
@@ -150,7 +155,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     {
       let msg = format!("Could not execute backend: {}", e.to_string());
       clone_output_status.set_value(&msg);
-      println!("{}", &msg);
+      log!("{}", &msg);
       return;
     }
 
@@ -161,7 +166,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     } // if
 
     // Go to next frame
-    clone_tx.send(common::Msg::DrawRetroarchIcon);
+    clone_tx.send(clone_msg_next);
   });
 } // }}}
 

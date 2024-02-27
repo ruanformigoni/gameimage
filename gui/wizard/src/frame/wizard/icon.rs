@@ -32,6 +32,8 @@ use crate::common;
 use crate::db;
 use crate::download;
 use crate::svg;
+use crate::log;
+use crate::scaling;
 
 
 // get_icon() {{{
@@ -63,7 +65,7 @@ fn set_image(mut frame : Frame) -> anyhow::Result<()>
     },
     Err(e) =>
     {
-      println!("Could not load png icon: {}", e);
+      log!("Could not load png icon: {}", e);
     },
   } // if
 
@@ -71,7 +73,10 @@ fn set_image(mut frame : Frame) -> anyhow::Result<()>
 } // set_image() }}}
 
 // pub fn icon() {{{
-pub fn icon(tx: Sender<common::Msg>, title: &str)
+pub fn icon(tx: Sender<common::Msg>
+  , title: &str
+  , msg_prev : common::Msg
+  , msg_next : common::Msg)
 {
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
@@ -80,15 +85,21 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
+  // Scale icon image size
+  let f_scale = |val: i32| -> i32
+  {
+    (val as f32 * scaling::factor().unwrap_or(1.0)) as i32
+  };
+
   // Create icon box
   let mut frame_icon = Frame::default()
-    .with_size(150, 225)
+    .with_size(f_scale(150), f_scale(225))
     .center_of(&frame_content);
   frame_icon.set_pos(frame_icon.x(), frame_icon.y() - dimm::height_button_wide());
   frame_icon.set_frame(FrameType::BorderBox);
 
   // Footer callbacks
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawRetroarchName);
+  ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
 
   let clone_tx = tx.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
@@ -98,19 +109,19 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
     {
       if ! PathBuf::from(path_file_icon).is_file()
       {
-        println!("Icon file is invalid");
+        log!("Icon file is invalid");
         clone_output_status.set_value("Icon file is invalid");
         return;
       } // if
     } // if
     else
     {
-      println!("Icon is not set");
+      log!("Icon is not set");
       clone_output_status.set_value("Icon is not set");
       return;
     } // else
 
-    clone_tx.send(common::Msg::DrawRetroarchRom);
+    clone_tx.send(msg_next);
   });
 
   // Icon
@@ -171,7 +182,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
       Ok(path_icon) => env::set_var("GIMG_ICON", path_icon),
       Err(e) =>
       {
-        println!("Could not get icon path: {}", e);
+        log!("Could not get icon path: {}", e);
         clone_output_status.set_value(format!("Could not get icon path: {}", e).as_str());
       }
     } // if

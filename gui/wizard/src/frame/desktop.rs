@@ -29,6 +29,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -56,7 +57,7 @@ fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
     },
     Err(e) =>
     {
-      println!("Could not load png icon: {}", e);
+      log!("Could not load png icon: {}", e);
     },
   } // if
 

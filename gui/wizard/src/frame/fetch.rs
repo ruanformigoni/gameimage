@@ -29,6 +29,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
 use crate::db;
 use crate::download;
 
@@ -120,7 +121,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
   if let Err(e) = common::common()
   {
-    println!("Err: {}", e.to_string());
+    log!("Err: {}", e.to_string());
   } // if
 
   // Set callback to btn prev
@@ -154,7 +155,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
   if result_pairs_values.is_err()
   {
-    println!("Could not fetch file list, '{}'", result_pairs_values.unwrap_err().to_string());
+    log!("Could not fetch file list, '{}'", result_pairs_values.unwrap_err().to_string());
     return;
   } // if
 
@@ -170,7 +171,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     }
     else
     {
-      println!("Could not create url '{}'", entry_url);
+      log!("Could not create url '{}'", entry_url);
       return;
     }; // if
 
@@ -181,7 +182,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     }
     else
     {
-      println!("Could not get url basename");
+      log!("Could not get url basename");
       return;
     }; // if
 
@@ -253,7 +254,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
           clone_e_ok.set_color(Color::DarkGreen);
         }
       );
-      println!("Download result: {:?}", result);
+      log!("Download result: {:?}", result);
       if result.is_err()
       {
         clone_e.set_label("Retry");

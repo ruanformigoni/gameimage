@@ -11,6 +11,10 @@ use url as Url;
 
 use anyhow::anyhow as ah;
 
+use crate::log;
+use crate::common;
+use crate::common::PathBufExt;
+
 // Define a custom progress reporter:
 struct SimpleReporterPrivate
 {
@@ -72,10 +76,10 @@ impl downloader::progress::Reporter for SimpleReporter
 
       if p.last_update.elapsed().as_millis() >= 1000
       {
-        println!("Fetch {} of {} bytes. [{}]", current, max_bytes, p.message);
+        log!("Fetch {} of {} bytes. [{}]", current, max_bytes, p.message);
         p.last_update = std::time::Instant::now();
         let f64_progress = (current as f64 / max_bytes as f64) * 100.0 as f64;
-        println!("Progress: {}%", f64_progress);
+        log!("Progress: {}%", f64_progress);
         self.f_update.lock().unwrap()(f64_progress);
       }
 
@@ -84,14 +88,14 @@ impl downloader::progress::Reporter for SimpleReporter
 
   fn set_message(&self, message: &str)
   {
-    println!("test file: Message changed to: {}", message);
+    log!("test file: Message changed to: {}", message);
   }
 
   fn done(&self)
   {
     let mut guard = self.private.lock().unwrap();
     *guard = None;
-    println!("test file: [DONE]");
+    log!("test file: [DONE]");
   }
 }
 
@@ -140,7 +144,7 @@ where
   // If sha exists verify
   if sha(path_file_dest_sha.clone(), path_file_dest.clone()).is_ok()
   {
-    println!("File exists, SHA check successful for '{:?}'", path_file_dest);
+    log!("File exists, SHA check successful for '{:?}'", path_file_dest);
     f_finish();
     return Ok(());
   } // if
@@ -169,17 +173,17 @@ where
   let dl_sha = dl_sha.progress(SimpleReporter::create(f_begin, f_update));
 
   // Fetch sha
-  println!("Start download sha");
+  log!("Start download sha");
   let summary_sha = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
   let summary_sha_file_name = summary_sha.file_name;
 
   // Fetch file
-  println!("Start download file");
+  log!("Start download file");
   let summary_url = downloader.download(&[dl_url])?.pop().ok_or(ah!("Download failure"))??;
   let summary_url_file_name = summary_url.file_name;
   let summary_url_status = summary_url.status;
 
-  println!("Finish inside");
+  log!("Finish inside");
 
   // Check sha
   sha(summary_sha_file_name.clone(), summary_url_file_name.clone())?;
@@ -195,8 +199,16 @@ where
 
   // Move the downloaded file to the correct file name
   std::fs::rename(summary_url_file_name, path_file_dest.clone())?;
-  // Move the sha256sum file to the same file name as the target file
-  std::fs::rename(summary_sha_file_name, path_file_dest_sha)?;
+  // Re-create the SHA file with the same SHA & new file name
+  let mut sha256_content = std::fs::read_to_string(summary_sha_file_name)?
+    .split(' ')
+    .next()
+    .ok_or(ah!("Could not get SHA value from SHA file"))?
+    .to_owned();
+  sha256_content.push(' ');
+  sha256_content.push_str(path_file_dest.string().as_str());
+  std::fs::write(path_file_dest_sha, sha256_content)?;
+
   // Set downloaded file as executable
   std::fs::set_permissions(path_file_dest.clone(), std::fs::Permissions::from_mode(0o766))?;
 

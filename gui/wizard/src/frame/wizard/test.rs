@@ -75,8 +75,8 @@ pub fn test(tx: Sender<common::Msg>
   btn_test.set_callback(move |_|
   {
     clone_tx.send(common::Msg::WindDeactivate);
-    term.dispatch(vec!["$GIMG_BINARY_CLI test"]
-      , move ||
+    term.dispatch(vec!["$GIMG_BACKEND test"]
+      , move |_|
       {
         clone_tx.send(common::Msg::WindActivate);
       }

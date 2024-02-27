@@ -68,11 +68,15 @@ pub fn compress(tx: Sender<common::Msg>
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send(common::Msg::WindDeactivate);
-    term.dispatch(vec!["$GIMG_BINARY_CLI compress"]
-      , move ||
+    term.dispatch(vec!["$GIMG_BACKEND compress"]
+      , move |code : i32|
       {
         clone_tx.send(common::Msg::WindActivate);
-        clone_tx.send(common::Msg::DrawCreator);
+
+        if code == 0
+        {
+          clone_tx.send(common::Msg::DrawCreator);
+        } // if
       }
     );
   });

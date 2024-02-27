@@ -31,6 +31,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -141,7 +142,7 @@ pub fn install(tx: Sender<common::Msg>
     // Check if choice is valid
     if chooser.value(1).is_none()
     {
-      println!("No file selected");
+      log!("No file selected");
       return;
     } // if
 
@@ -157,7 +158,7 @@ pub fn install(tx: Sender<common::Msg>
         , str_choice
       ])
       {
-        println!("Failed to execute backend with {}", e.to_string());
+        log!("Failed to execute backend with {}", e.to_string());
       } // if
     } // for
 

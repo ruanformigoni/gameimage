@@ -1,11 +1,25 @@
-use fltk::widget::Widget;
-use fltk::prelude::WidgetExt;
-use std::path::PathBuf;
-use std::ffi::OsStr;
-use std::env;
-use std::path;
+use std::
+{
+  io::Read,
+  sync::{Arc,Mutex,mpsc,OnceLock},
+  path::PathBuf,
+  ffi::OsStr,
+  env,
+  path,
+};
+
+use fltk::
+{
+  app,
+  widget::Widget,
+  prelude::WidgetExt,
+};
+
 use image;
 use anyhow::anyhow as ah;
+
+use crate::frame;
+use crate::dimm;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Msg
@@ -17,6 +31,13 @@ pub enum Msg
   DrawDesktop,
   DrawName,
 
+  DrawWineName,
+  DrawWineIcon,
+  DrawWineConfigure,
+  DrawWineRom,
+  DrawWineTest,
+  DrawWineCompress,
+
   DrawRetroarchName,
   DrawRetroarchIcon,
   DrawRetroarchRom,
@@ -25,11 +46,60 @@ pub enum Msg
   DrawRetroarchTest,
   DrawRetroarchCompress,
 
+  DrawPcsx2Name,
+  DrawPcsx2Icon,
+  DrawPcsx2Rom,
+  DrawPcsx2Bios,
+  DrawPcsx2Test,
+  DrawPcsx2Compress,
+
   WindActivate,
   WindDeactivate,
 
   Quit,
 }
+
+pub fn impl_log(value : &str)
+{
+  static TX : OnceLock<Mutex<frame::term::Term>> = OnceLock::new();
+
+  match TX.get_or_init(|| Mutex::new(frame::term::Term::new(dimm::border()
+    , dimm::width() - dimm::border()*2
+    , dimm::height() - dimm::border()*2
+    , dimm::border()
+    , dimm::border()
+  ))).lock()
+  {
+    Ok(term) => term.append(value),
+    Err(_) => (),
+  } // match
+}
+
+#[macro_export]
+macro_rules! log
+{
+  ($($arg:tt)*) =>
+  {
+    let mut output = format!($($arg)*);
+    output.push('\n');
+    common::impl_log(output.as_str());
+  }
+}
+
+
+// pub fn wizard_by_platform {{{
+pub fn wizard_by_platform() -> anyhow::Result<Msg>
+{
+
+  match env::var("GIMG_PLATFORM")?.to_lowercase().as_str()
+  {
+    "wine"      => Ok(Msg::DrawWineName),
+    "retroarch" => Ok(Msg::DrawRetroarchName),
+    "pcsx2"     => Ok(Msg::DrawPcsx2Name),
+    _           => Err(ah!("Unrecognized platform")),
+  } // match
+
+} // fn: wizard_by_platform }}}
 
 // Constants {{{
 pub const STR_DESC_WINE : &str = "Wine is a program which allows running Microsoft Windows programs (including DOS, Windows 3.x, Win32, and Win64 executables) on Unix. It consists of a program loader which loads and executes a Microsoft Windows binary, and a library (called Winelib) that implements Windows API calls using their Unix, X11 or Mac equivalents.  The library may also be used for porting Windows code into native Unix executables. Wine is free software, released under the GNU LGPL.";
@@ -56,27 +126,68 @@ pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<i32>
 {
   dir_build()?;
 
-  let path_binary_gameimage = path::PathBuf::from(env::var("GIMG_BINARY_CLI")?);
+  let path_binary_gameimage = path::PathBuf::from(env::var("GIMG_BACKEND")?);
 
-  let some_handle = std::process::Command::new(path_binary_gameimage)
+  let handle = std::process::Command::new(path_binary_gameimage)
     .env_remove("LD_PRELOAD")
     .env("FIM_FIFO", "0")
-    .stderr(std::process::Stdio::inherit())
-    .stdout(std::process::Stdio::inherit())
+    .stderr(std::process::Stdio::piped())
+    .stdout(std::process::Stdio::piped())
     .args(args)
-    .spawn();
+    .spawn()?;
+
+  // Create arc reader for stdout
+  let arc_handle = Arc::new(Mutex::new(handle));
+
+  let clone_arc_handle = arc_handle.clone();
+  std::thread::spawn(move ||
+  {
+    // Acquire stdout
+    let mut lock =
+      if let Ok(lock) = clone_arc_handle.lock() && lock.stdout.is_some()
+      {
+        lock
+      }
+      else
+      {
+        return; 
+      }; // else
+
+    // Create buf
+    let mut buf = vec![0; 4096];
+
+    // Write buf to stdout
+    loop
+    {
+      std::thread::sleep(std::time::Duration::from_millis(50));
+
+      let bytes_read = match lock.stdout.as_mut().unwrap().read(&mut buf)
+      {
+        Ok(bytes_read) => bytes_read,
+        Err(_) => break,
+      };
+
+      if bytes_read == 0 { break; }
+      let output = String::from_utf8_lossy(&buf[..bytes_read]);
+      impl_log(&output);
+
+      let bytes_read = match lock.stderr.as_mut().unwrap().read(&mut buf)
+      {
+        Ok(bytes_read) => bytes_read,
+        Err(_) => break,
+      };
+
+      if bytes_read == 0 { break; }
+      let output = String::from_utf8_lossy(&buf[..bytes_read]);
+      impl_log(&output);
+
+      app::awake();
+    }
+  });
+
 
   // Wait for back-end to execute
-  let some_status : Option<std::process::ExitStatus>;
-
-  if let Some(mut handle) = some_handle.ok()
-  {
-    some_status = handle.wait().ok();
-  } // if
-  else
-  {
-    return Err(ah!("Failed to dispatch gameimage command"));
-  } // else
+  let some_status : Option<std::process::ExitStatus> = arc_handle.lock().unwrap().wait().ok();
 
   // Get return status
   let status = some_status
@@ -216,539 +327,6 @@ pub fn common() -> anyhow::Result<()>
 //
 // // Error
 // use anyhow::anyhow as ah;
-// // }}}
-//
-//
-// // pub struct DataFrameDefault {{{
-// #[derive(Clone)]
-// pub struct DataFrameDefault
-// {
-//   pub app            : App,
-//   pub wind           : Window,
-//   pub group          : Group,
-//   pub sep_top        : Frame,
-//   pub frame          : Frame,
-//   pub header         : Frame,
-//   pub group_content  : Group,
-//   pub text_status    : Output,
-//   pub sep_bottom     : Frame,
-//   pub btn_prev       : Button,
-//   pub btn_next       : Button,
-// }
-// // }}}
-//
-//
-// // fn frame_content_reset() {{{
-// fn frame_default_reset<F>(data_frame_default : DataFrameDefault, callback : F)
-// where
-//   F: FnMut(DataFrameDefault) + Send + Sync + 'static + Clone
-// {
-//   // Reset status
-//   let mut text_status = data_frame_default.text_status.clone();
-//   text_status.set_value("");
-//
-//   // Reset content
-//   let mut group_content = data_frame_default.group_content.clone();
-//   group_content.clear();
-//
-//   // Redraw window
-//   let mut wind = data_frame_default.wind.clone();
-//   wind.begin();
-//   callback.clone()(data_frame_default.clone());
-//   wind.end();
-//   wind.redraw();
-//
-//   // Update app
-//   fltk::app::flush();
-// } // fn: frame_default_reset }}}
-//
-// // pub fn frame_default() {{{
-// pub fn frame_default(app : App, wind : Window, title : &str) -> DataFrameDefault
-// {
-//   let mut group = Group::default().with_size(dimm::WIDTH, dimm::HEIGHT);
-//   group.set_frame(FrameType::FlatBox);
-//
-//   let mut frame = Frame::default().with_size(dimm::WIDTH, dimm::HEIGHT);
-//   frame.set_frame(FrameType::NoBox);
-//   frame.set_type(PackType::Vertical);
-//
-//   // Header
-//   let mut header = Frame::new(dimm::BORDER
-//     , dimm::BORDER
-//     , dimm::WIDTH-dimm::BORDER*2
-//     , dimm::HEIGHT_BUTTON_REC
-//     , title);
-//   header.set_frame(FrameType::NoBox);
-//   header.set_label_size((dimm::HEIGHT_TEXT as f32 * 1.5) as i32);
-//
-//   // Separator
-//   let mut sep_top = Frame::default()
-//     .below_of(&header, dimm::BORDER)
-//     .with_size(dimm::WIDTH - dimm::BORDER*2, 2);
-//   sep_top.set_frame(FrameType::BorderBox);
-//
-//   // Main content
-//   let mut group_content = Group::new(dimm::BORDER
-//     , dimm::BORDER
-//     , dimm::WIDTH - dimm::BORDER*2
-//     , dimm::HEIGHT_BUTTON_WIDE*12 - dimm::BORDER
-//     , "")
-//   .below_of(&sep_top, dimm::BORDER);
-//   group_content.set_frame(FrameType::NoBox);
-//   group_content.begin();
-//   group_content.end();
-//
-//   // Status bar
-//   let mut text_status = Output::default()
-//     .with_size(dimm::WIDTH_STATUS, dimm::HEIGHT_STATUS)
-//     .with_align(Align::Left)
-//     .below_of(&frame, -dimm::HEIGHT_STATUS);
-//   text_status.deactivate();
-//
-//   // Continue
-//   let mut btn_next = Button::default()
-//     .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
-//     .with_label("Next")
-//     .above_of(&text_status, dimm::BORDER);
-//   btn_next.set_pos(frame.w() - dimm::WIDTH_BUTTON_WIDE - dimm::BORDER, btn_next.y());
-//   btn_next.set_color(Color::Blue);
-//
-//   // Prev
-//   let mut btn_prev = Button::default()
-//     .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
-//     .with_label("Prev")
-//     .above_of(&text_status, dimm::BORDER);
-//   btn_prev.set_pos(frame.x() + dimm::BORDER, btn_prev.y());
-//   btn_prev.set_color(Color::Background);
-//
-//   // Separator
-//   let mut sep_bottom = Frame::default()
-//     .above_of(&btn_next, dimm::BORDER)
-//     .with_size(dimm::WIDTH - dimm::BORDER*2, 2);
-//   sep_bottom.set_frame(FrameType::BorderBox);
-//   sep_bottom.set_pos(dimm::BORDER, sep_bottom.y());
-//
-//   group.end();
-//
-//   DataFrameDefault { app, wind, group, frame, sep_top, header, group_content, text_status, sep_bottom, btn_prev, btn_next }
-// }
-// // }}}
-//
-// // pub fn frame_welcome() {{{
-// pub fn frame_welcome(data_frame_default : DataFrameDefault)
-// {
-//   let group_content = data_frame_default.group_content.clone();
-//
-//   let header = data_frame_default.header.clone().with_label("Welcome to GameImage!");
-//
-//   // Start content
-//   group_content.begin();
-//
-//   // Project Logo
-//   let mut frame_image = Frame::default()
-//     .with_size(group_content.w(), dimm::HEIGHT_BUTTON_WIDE*4)
-//     .below_of(&group_content, 0);
-//   frame_image.set_align(Align::Inside | Align::Bottom);
-//   frame_image.set_pos(frame_image.x(), frame_image.y() - frame_image.h());
-//   frame_image.set_pos(frame_image.x(), frame_image.y()
-//     - group_content.h()/2 + frame_image.h()/2 - dimm::HEIGHT_BUTTON_WIDE);
-//   let mut clone_frame_image = frame_image.clone();
-//   let image = SharedImage::load("/tmp/gameimage/gameimage.svg")
-//     .and_then(move |mut img|
-//     {
-//       img.scale(clone_frame_image.w(), clone_frame_image.h(), true, true);
-//       clone_frame_image.set_image(Some(img.clone()));
-//       Ok(img)
-//     });
-//   frame_image.redraw();
-//
-//   // Determine temporary build directory
-//   let sep_bottom = data_frame_default.sep_bottom.clone();
-//   let mut input_dir = FileInput::new(dimm::BORDER
-//     , dimm::BORDER
-//     , dimm::WIDTH - dimm::BORDER*2
-//     , dimm::HEIGHT_BUTTON_WIDE + dimm::HEIGHT_TEXT
-//     , "Select The Directory for GameImage's Temporary Files")
-//     .above_of(&sep_bottom, dimm::BORDER)
-//     .with_align(Align::Top | Align::Left);
-//   input_dir.set_readonly(true);
-//
-//   // // Check if GIMG_DIR exists
-//   if let Some(env_dir_build) = env::var("GIMG_DIR").ok()
-//   {
-//     input_dir.set_value(&env_dir_build);
-//   } // if
-//
-//   // // Set input_dir callback
-//   input_dir.set_callback(|e|
-//   {
-//     let choice = dir_chooser("Select the build directory", "", false);
-//     let str_choice = choice.unwrap_or(String::from(""));
-//     e.set_value(str_choice.as_str());
-//     env::set_var("GIMG_DIR", str_choice.as_str());
-//   });
-//
-//   // Set callback for next
-//   let clone_data_frame_default = data_frame_default.clone();
-//   let mut clone_wind = data_frame_default.wind.clone();
-//   let mut clone_group_content = data_frame_default.group_content.clone();
-//   let mut clone_btn_next = data_frame_default.btn_next.clone();
-//   let mut clone_text_status = data_frame_default.text_status;
-//   clone_btn_next.set_callback(move |_|
-//   {
-//     if let Some(var) = env::var("GIMG_DIR").ok()
-//     {
-//       if Path::new(&var).exists()
-//       {
-//         frame_default_reset(clone_data_frame_default.clone()
-//           , move |e| { frame_select_platform(e.clone()); });
-//         return;
-//       } // if
-//     } // if
-//
-//     clone_text_status.set_value("Invalid temporary files directory");
-//   });
-//   
-//   // Finish content
-//   group_content.end();
-// } // fn: frame_welcome }}}
-//
-// // pub fn frame_select_platform() {{{
-// pub fn frame_select_platform(data_frame_default : DataFrameDefault)
-// {
-//   let group_content = data_frame_default.group_content.clone();
-//
-//   let header = data_frame_default.header.clone().with_label("Select the Target Platform");
-//
-//   group_content.begin();
-//
-//   // Menu options to select platform
-//   let mut btn_menu = MenuButton::new(dimm::BORDER
-//     , dimm::BORDER
-//     , dimm::WIDTH - dimm::BORDER*2
-//     , dimm::HEIGHT_BUTTON_WIDE
-//     , "")
-//     .below_of(&group_content, -group_content.h());
-//
-//   // Create entries
-//   let mut clone_btn = btn_menu.clone();
-//   let mut f_add_entry = |platform : &str|
-//   {
-//     clone_btn.add_choice(platform);
-//   };
-//   f_add_entry("wine");
-//   f_add_entry("retroarch");
-//   f_add_entry("pcsx2");
-//   f_add_entry("rpcs3");
-//   f_add_entry("yuzu");
-//
-//   // Let description empty
-//   let mut group_text = Group::new(dimm::BORDER
-//     , dimm::BORDER
-//     , dimm::WIDTH - dimm::BORDER*2
-//     , dimm::HEIGHT_BUTTON_WIDE*9 - dimm::BORDER
-//     , "")
-//   .below_of(&btn_menu, dimm::BORDER);
-//   group_text.set_frame(FrameType::BorderBox);
-//
-//   // Create callback with descriptions
-//   let buffer = TextBuffer::default();
-//   group_text.clear();
-//   group_text.begin();
-//   let mut frame = TextDisplay::default()
-//     .with_align(Align::Top)
-//     .below_of(&btn_menu, dimm::BORDER)
-//     .with_size(dimm::WIDTH - dimm::BORDER*2, group_text.h());
-//   frame.set_buffer(buffer.clone());
-//   frame.set_frame(FrameType::BorderBox);
-//   frame.set_color(group_text.color());
-//   frame.wrap_mode(fltk::text::WrapMode::AtBounds, 0);
-//   group_text.end();
-//
-//   // Update buffer function
-//   let mut clone_buffer = buffer.clone();
-//   let mut f_update_buffer = move |str_platform : String|
-//   {
-//     clone_buffer.remove(0, clone_buffer.length());
-//     match str_platform.as_str()
-//     {
-//       "wine" => clone_buffer.insert(0, STR_DESC_WINE),
-//       "retroarch" => clone_buffer.insert(0, STR_DESC_RETR),
-//       "pcsx2" => clone_buffer.insert(0, STR_DESC_PCSX2),
-//       "rpcs3" => clone_buffer.insert(0, STR_DESC_RPCS3),
-//       "yuzu" => clone_buffer.insert(0, STR_DESC_YUZU),
-//       _ => ()
-//     }
-//   };
-//
-//   // Set callback to dropdown menu selection
-//   let mut clone_update_buffer = f_update_buffer.clone();
-//   btn_menu.set_callback(move |e|
-//   {
-//     // Fetch choice
-//     let choice = e.choice().unwrap_or(String::from("None"));
-//     // Set as label
-//     e.set_label(choice.as_str());
-//     // Set as env var for later use
-//     env::set_var("GIMG_PLATFORM", choice.as_str());
-//     // Draw description of selection
-//     clone_update_buffer(choice);
-//   });
-//
-//   // Check if variable is already set
-//   if let Some(env_platform) = env::var("GIMG_PLATFORM").ok()
-//   {
-//     match env_platform.as_str()
-//     {
-//       "wine" | "retroarch" | "pcsx2" | "rpcs3" | "yuzu" =>
-//       {
-//         btn_menu.set_label(env_platform.as_str());
-//         f_update_buffer(env_platform);
-//       },
-//       _ => (),
-//     } // match
-//   } // if
-//
-//   // Set callback for prev
-//   let clone_data_frame_default = data_frame_default.clone();
-//   let mut clone_btn_prev = data_frame_default.btn_prev.clone();
-//   let mut clone_group_content = data_frame_default.group_content.clone();
-//   let mut clone_wind = data_frame_default.wind.clone();
-//   let mut clone_text_status = data_frame_default.text_status.clone();
-//   clone_btn_prev.set_callback(move |_|
-//   {
-//     frame_default_reset(clone_data_frame_default.clone()
-//       ,|e| { frame_welcome(e.clone()); } );
-//   });
-//
-//   // Set callback for next
-//   let clone_data_frame_default = data_frame_default.clone();
-//   let mut clone_btn_next = data_frame_default.btn_next.clone();
-//   let mut clone_group_content = data_frame_default.group_content.clone();
-//   let mut clone_wind = data_frame_default.wind.clone();
-//   let mut clone_text_status = data_frame_default.text_status.clone();
-//   clone_btn_next.set_callback(move |_|
-//   {
-//     let env_platform = env::var("GIMG_PLATFORM");
-//
-//     // Allow next if dropdown has valid value
-//     if let Some(platform) = env_platform.ok()
-//     {
-//       if platform != btn_menu.label()
-//       {
-//         clone_text_status.set_value("Please select a platform to proceed");
-//         return;
-//       } // if
-//     } // if
-//     else
-//     {
-//       clone_text_status.set_value("Please select a platform to proceed");
-//       return;
-//     } // else
-//
-//     clone_text_status.set_value("Fetching list of files to download");
-//
-//     // For update status
-//     fltk::app::flush();
-//
-//     // Ask back-end for the files to download for the selected platform
-//     let cmd_result = dispatch_gameimage_cmd("fetch", vec![]);
-//
-//     if cmd_result.is_err()
-//     {
-//       clone_text_status.set_value(&cmd_result.unwrap_err().to_string());
-//       return;
-//     } // if
-//
-//     // Go to next frame
-//     frame_default_reset(clone_data_frame_default.clone()
-//       ,|e| { frame_fetch_tools(e.clone()); } );
-//   });
-//
-//   // Finish group
-//   group_content.end();
-// }
-// // }}}
-//
-// // pub fn frame_fetch_tools() {{{
-// pub fn frame_fetch_tools(data_frame_default : DataFrameDefault) -> DataFrameDefault
-// {
-//   let group_content = data_frame_default.group_content.clone();
-//
-//   let header = data_frame_default.header.clone().with_label("Fetch the Required Tools");
-//
-//   group_content.begin();
-//
-//   // Callback Data
-//   #[derive(Clone)]
-//   struct Data
-//   {
-//     some_url  : Option<Url::Url>,
-//     file_dest : PathBuf,
-//     prog      : Progress,
-//     btn_fetch : Button,
-//   } // struct
-//
-//   // Save the data here to configure the callback between the button press
-//   // , download and progress bar
-//   let mut vec_fetch : Vec<Data> = vec![];
-//
-//   // Populate 'vec_fetch' with links and download paths
-//   if let (Some(keys), Some(vals)) =
-//     (std::fs::read_to_string("/tmp/gameimage/logs/_fetch_keys.log").ok()
-//     , std::fs::read_to_string("/tmp/gameimage/logs/_fetch_vals.log").ok())
-//   {
-//     let mut base = group_content.as_base_widget();
-//     for line in std::iter::zip(keys.lines(), vals.lines())
-//     {
-//       // Get full path to save the file into
-//       let file_dest = std::path::Path::new(line.0).to_path_buf();
-//
-//       // Parse url
-//       let some_url = Url::Url::parse(line.1).ok();
-//
-//       // Get basename
-//       let mut url_basename = String::new();
-//       if let Some(url) = some_url.clone()
-//       {
-//         if let Some(url_segments) = url.path_segments()
-//         {
-//           if let Some(url_segment) = url_segments.last()
-//           {
-//             url_basename = url_segment.to_string();
-//           } // if
-//         } // if
-//       } // if
-//         
-//       // Create progress bar
-//       let mut prog = Progress::default()
-//         .above_of(&base, - dimm::BORDER)
-//         .with_size(group_content.w() - dimm::WIDTH_BUTTON_WIDE - dimm::BORDER, dimm::HEIGHT_BUTTON_WIDE)
-//         .with_label(url_basename.as_str());
-//       prog.set_pos(dimm::BORDER, base.y() + dimm::BORDER);
-//       prog.set_frame(FrameType::FlatBox);
-//       prog.set_color(Color::Background2);
-//       prog.set_selection_color(Color::Blue);
-//       if base != group_content.as_base_widget()
-//       {
-//         prog.set_pos(prog.x(), prog.y() + dimm::HEIGHT_BUTTON_WIDE);
-//       } // if
-//
-//       // Create start button
-//       let btn_fetch = Button::default()
-//         .right_of(&prog, dimm::BORDER)
-//         .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
-//         .with_label("Fetch");
-//
-//       // Update base widget for positioning
-//       base = btn_fetch.as_base_widget();
-//
-//       // Save in data to create callback afterwards
-//       vec_fetch.push(Data{some_url, file_dest, prog, btn_fetch});
-//     } // for
-//   } // if
-//
-//   // Function to fetch a file
-//   let f_fetch = move |data_frame_default : DataFrameDefault, data : Data|
-//   {
-//     // Disable button while download is active
-//     let mut btn = data.btn_fetch.clone();
-//     btn.deactivate();
-//     // Clone data into new thread, that keeps downloading after callback ends
-//     let clone_data = data.clone();
-//     let mut clone_e_beg = btn.clone();
-//     let mut clone_e_prog = btn.clone();
-//     let mut clone_e_ok = btn.clone();
-//     let mut clone_e = btn.clone();
-//     let mut clone_prog_prog = clone_data.prog.clone();
-//     let mut clone_prog_finish = clone_data.prog.clone();
-//     std::thread::spawn(move ||
-//     {
-//       let vec_animation_chars = vec!["=", "==", "===", "===="];
-//       let result = download::download(clone_data.some_url
-//         , clone_data.file_dest
-//         // on_start
-//         , move ||
-//         {
-//           clone_e_beg.deactivate();
-//           clone_e_beg.set_color(Color::DarkGreen);
-//           clone_e_beg.set_label("=");
-//         }
-//         // on_progress
-//         , move |f64_progress|
-//         {
-//           let len = clone_e_prog.label().chars().count()%vec_animation_chars.len();
-//           clone_e_prog.set_label( vec_animation_chars[len] );
-//           clone_prog_prog.set_value(f64_progress);
-//           fltk::app::awake();
-//         }
-//         // on_finish
-//         , move ||
-//         {
-//           clone_e_ok.set_label("Done");
-//           clone_e_ok.set_color(Color::DarkGreen);
-//         }
-//         // on_error
-//         , move || {}
-//       );
-//       println!("Download result: {:?}", result);
-//       if result.is_err()
-//       {
-//         clone_e.set_label("Retry");
-//         clone_e.set_color(Color::DarkRed);
-//         clone_e.activate();
-//       } // if
-//       else
-//       {
-//         clone_e.deactivate();
-//         clone_prog_finish.set_value(100.0);
-//       } // else
-//       fltk::app::awake();
-//     });    
-//
-//   };
-//
-//   for data in vec_fetch.clone()
-//   {
-//     let clone_data = data.clone();
-//     let clone_data_frame_default = data_frame_default.clone();
-//     let mut clone_btn_fetch = clone_data.btn_fetch.clone();
-//     clone_btn_fetch.set_callback(move |e|
-//     {
-//       f_fetch(clone_data_frame_default.clone(), clone_data.clone());
-//     });
-//   } // for
-//
-//   // Set callback to btn prev
-//   let clone_data_frame_default = data_frame_default.clone();
-//   data_frame_default.btn_prev.clone().set_callback(move |_|
-//   {
-//     frame_default_reset(clone_data_frame_default.clone(), |e|{ frame_select_platform(e); });
-//   });
-//
-//   // Set callback to btn next
-//   let clone_data_frame_default = data_frame_default.clone();
-//   let clone_vec_fetch = vec_fetch.clone();
-//   clone_data_frame_default.btn_next.clone().set_callback(move |_|
-//   {
-//     let mut text_status = clone_data_frame_default.text_status.clone();
-//     for data in clone_vec_fetch.clone()
-//     {
-//       let mut str_file_sha = data.file_dest.to_str().unwrap_or("").to_owned();
-//       str_file_sha.push_str(".sha256sum");
-//       if download::sha(PathBuf::from(str_file_sha), data.file_dest).is_err()
-//       {
-//         text_status.set_value("SHA verify failed, download the files before proceeding");
-//         return;
-//       } // if
-//     } // for
-//     frame_default_reset(clone_data_frame_default.clone(), |e|{ frame_info(e); });
-//   });
-//
-//   group_content.end();
-//
-//   data_frame_default
-// }
 // // }}}
 //
 // // pub fn frame_info() {{{
@@ -1192,7 +770,7 @@ pub fn common() -> anyhow::Result<()>
 //     let mut parent = data_frame_default.sep_top.clone().as_base_widget();
 //     for entry in search
 //     {
-//       // println!("Result: {}", entry);
+//       // log!("Result: {}", entry);
 //       let (mut btn, label) = f_test_binary(parent
 //         , "test"
 //         , "Run"

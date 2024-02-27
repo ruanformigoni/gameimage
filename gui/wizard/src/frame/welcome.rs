@@ -19,6 +19,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::svg;
+use crate::log;
 use crate::common::PathBufExt;
 
 // pub fn welcome() {{{
@@ -37,7 +38,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
 
   if let Err(e) = common::common()
   {
-    println!("Err: {}", e.to_string());
+    log!("Err: {}", e.to_string());
   } // if
   
   // Project Logo
@@ -53,7 +54,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   } // if
   else
   {
-    println!("Failed to load icon image");
+    log!("Failed to load icon image");
   } // else
 
   let mut input_dir = FileInput::default()

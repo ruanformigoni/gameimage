@@ -29,6 +29,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -87,8 +88,8 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
   // Rename "Next" button to "Finish"
   ret_frame_footer.btn_next.clone().set_label("Finish");
 
-  // Hide prev
-  ret_frame_footer.btn_prev.clone().hide();
+  // Set prev to desktop
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawDesktop);
 
   // Callback to Next
   let mut clone_output_status = ret_frame_footer.output_status.clone();
@@ -108,13 +109,15 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     }; // else
 
     // Get src image path
-    let path_file_image_src = if let Ok(env_image) = env::var("GIMG_IMAGE")
+    let path_file_image_src =
+      if let Ok(env_image) = env::var("GIMG_IMAGE")
+      && let Ok(env_dir) = env::var("GIMG_DIR")
     {
-      PathBuf::from(env_image)
+      PathBuf::from(env_dir).join(env_image)
     }
     else
     {
-      clone_output_status.set_value("Could not fetch GIMG_IMAGE");
+      clone_output_status.set_value("Could not fetch GIMG_IMAGE or GIMG_DIR");
       return;
     }; // else
 
@@ -142,7 +145,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     {
       let msg = format!("Could not move image: {}", e.to_string());
       clone_output_status.set_value(&msg);
-      println!("{}", &msg);
+      log!("{}", &msg);
       return;
     } // if
 

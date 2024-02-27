@@ -21,6 +21,7 @@ use fltk::{
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
 
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
@@ -39,7 +40,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
   if let Err(e) = common::common()
   {
-    println!("Err: {}", e.to_string());
+    log!("Err: {}", e.to_string());
   } // if
 
   // Menu options to select platform
