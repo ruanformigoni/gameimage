@@ -119,12 +119,31 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
       path_project = (path_project / "wine") / "drive_c";
+      // Save to vec for json
+      std::vector<fs::path> vec_paths;
       // Search executables
       for(auto i : ns_impl::search(path_project, R"(.*\.exe$)", R"(windows)"))
       {
         i = fs::relative(i, path_project);
         ns_log::write('i', "Found :: ", i);
+        vec_paths.push_back(i);
       } // for
+
+      // Write to json
+      if ( to_json.has_value() )
+      {
+        // Erase file if exists
+        fs::remove(*to_json);
+
+        // Open file list
+        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
+        {
+          for(fs::path const& path_file : vec_paths)
+          {
+            db(str_op) |= path_file;
+          }
+        }, std::ios::out);
+      } // if
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
