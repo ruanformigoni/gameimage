@@ -86,7 +86,8 @@ void db_files_copy(std::string db_entry
   } , std::ios_base::in); // ns_db::from_file
 } // db_files_copy() }}}
 
-int main(int argc, char** argv)
+// boot() {{{
+void boot(int argc, char** argv)
 {
   // Path to self directory
   fs::path path_dir_self = ns_fs::ns_path::dir_self<true>()._ret;
@@ -209,8 +210,19 @@ int main(int argc, char** argv)
       ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
     } // case
   } // switch
+} // function: boot }}}
 
-  return EXIT_SUCCESS;
-} // main
+// main() {{{
+int main(int argc, char** argv)
+{
+  try
+  {
+    boot(argc, argv);
+  } // try
+  catch(std::exception const& e)
+  {
+    fmt::println("Could not boot program with error: {}", e.what());
+  } // catch
+} // main() }}}
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/
