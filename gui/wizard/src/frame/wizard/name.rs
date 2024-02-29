@@ -144,7 +144,7 @@ pub fn name(tx: Sender<common::Msg>
     }; // else
 
     // Init project
-    if let Err(e) = common::gameimage_cmd(vec!["init".to_string()
+    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["init".to_string()
       , "--dir".to_string()
       , name.clone()
       , "--platform".to_string()
@@ -153,11 +153,17 @@ pub fn name(tx: Sender<common::Msg>
       , image
     ])
     {
-      let msg = format!("Could not execute backend: {}", e.to_string());
+      clone_tx.send(common::Msg::WindDeactivate);
+      let _ = rx_gameimage.recv();
+      clone_tx.send(common::Msg::WindActivate);
+    } // if
+    else
+    {
+      let msg = format!("Could not execute backend");
       clone_output_status.set_value(&msg);
       log!("{}", &msg);
       return;
-    }
+    } // else
 
     // Export project dir
     if let Ok(env_dir) = env::var("GIMG_DIR")

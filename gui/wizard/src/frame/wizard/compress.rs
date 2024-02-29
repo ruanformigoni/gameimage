@@ -29,6 +29,8 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
+use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -68,7 +70,18 @@ pub fn compress(tx: Sender<common::Msg>
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send(common::Msg::WindDeactivate);
-    term.dispatch(vec!["$GIMG_BACKEND compress"]
+
+    let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
+    {
+      PathBuf::from(var)
+    } // if
+    else
+    {
+      log!("Could not fetch GIMG_BACKEND var");
+      return;
+    }; // else
+
+    term.dispatch(vec![path_gimg_backend.string().as_str(), "compress"]
       , move |code : i32|
       {
         clone_tx.send(common::Msg::WindActivate);

@@ -29,6 +29,8 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::log;
+use crate::common::PathBufExt;
 use crate::db;
 use crate::download;
 use crate::svg;
@@ -75,7 +77,18 @@ pub fn test(tx: Sender<common::Msg>
   btn_test.set_callback(move |_|
   {
     clone_tx.send(common::Msg::WindDeactivate);
-    term.dispatch(vec!["$GIMG_BACKEND test"]
+
+    let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
+    {
+      PathBuf::from(var)
+    } // if
+    else
+    {
+      log!("Could not fetch GIMG_BACKEND var");
+      return;
+    }; // else
+
+    term.dispatch(vec![path_gimg_backend.string().as_str(), "test"]
       , move |_|
       {
         clone_tx.send(common::Msg::WindActivate);

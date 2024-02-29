@@ -87,18 +87,27 @@ fn fetch_files(vec_data : Vec<Data>
   // Run backend to merge files
   output.set_value("Validating and extracting...");
 
-  if let Err(e) = common::gameimage_cmd(vec!["fetch".to_string()
+  let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["fetch".to_string()
     , "--platform".to_string()
     , str_platform.clone()
     , "--output-file".to_string()
     , format!("{}.flatimage", str_platform)
   ])
   {
-    output.set_value(&format!("Failed to run backend: {}", e.to_string()));
-    return Err(anyhow::anyhow!(e.to_string()));
-  };
+    rx_gameimage
+  }
+  else
+  {
+    log!("Could not recover return code");
+    return Err(ah!("Could not recover return code"));
+  }; // else
 
-  // Export variable
+  if let Ok(code) = rx_gameimage.recv() && code != 0
+  {
+    log!("Failed to fetch file list");
+    log!("Failed with code {}", code);
+    return Err(ah!("Failed to fetch file list"));
+  } // if
 
   Ok(())
 }

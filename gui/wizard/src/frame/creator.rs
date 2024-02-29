@@ -45,7 +45,7 @@ use crate::svg;
 // fn create_entry() {{{
 fn create_entry(entry : db::project::Entry
   , parent_base : Widget
-  , parent_curr : Widget) -> (Widget, CheckButton, PathBuf)
+  , parent_curr : Widget) -> anyhow::Result<(Widget, CheckButton, PathBuf)>
 {
   let mut frame_icon = Frame::default()
     .with_size(dimm::height_button_rec()*2, dimm::height_button_rec()*3)
@@ -131,21 +131,14 @@ fn create_entry(entry : db::project::Entry
     .right_bottom_of(&frame_info, - dimm::border() / 2);
   btn_checkbox.visible_focus(false);
 
-  let path_dir_project = entry
-    .path_file_rom
-    .unwrap_or(PathBuf::new())
-    .parent()
-    .map(|e|{ e.to_path_buf() })
-    .unwrap_or(PathBuf::new())
-    .parent()
-    .map(|e|{ e.to_path_buf() })
-    .unwrap_or(PathBuf::new());
+  // Try to get project dir
+  let path_dir_project = db::project::dir()?;
 
-  (
+  Ok((
       frame_icon.as_base_widget()
     , btn_checkbox
     , path_dir_project
-  )
+  ))
 } // }}}
 
 // pub fn creator() {{{
@@ -210,15 +203,13 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
     for project in projects
     {
-      let ( parent_new,  checkbutton , path_dir_project ) =
-        create_entry(project.clone(), scroll.clone().as_base_widget(), parent.clone());
-
-      if let Ok(mut lock) = vec_btn_checkbox.lock()
+      if   let Ok(( parent_new,  checkbutton , path_dir_project )) =
+              create_entry(project.clone(), scroll.clone().as_base_widget(), parent.clone())
+        && let Ok(mut lock) = vec_btn_checkbox.lock()
       {
         lock.push((checkbutton, path_dir_project));
-      } // if
-      
-      parent = parent_new;
+        parent = parent_new;
+      }
     } // for
   } // if
 
@@ -321,11 +312,24 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
           continue;
         } // if
 
-        let path_dir_dwarfs = path_dir_project.with_extension("dwarfs");
-        log!("File: {}", path_dir_dwarfs.string());
-        common::gameimage_cmd(vec!["package".to_string()
-          , path_dir_dwarfs.string()]
-        );
+        let path_file_dwarfs = path_dir_project.with_extension("dwarfs");
+        log!("File: {}", path_file_dwarfs.string());
+
+        let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["package".to_string() , path_file_dwarfs.string()])
+        {
+          rx_gameimage
+        }
+        else
+        {
+          log!("Could not include {} into the image", path_file_dwarfs.string());
+          continue;
+        }; // else
+
+        // Wait for message & check return value
+        if let Ok(code) = rx_gameimage.recv() && code != 0
+        {
+          log!("Failed to package with code {}", code);
+        } // if
       } // for
 
       // Refresh

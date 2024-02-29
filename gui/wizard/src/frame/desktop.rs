@@ -99,7 +99,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   input_icon.set_callback(move |e|
   {
-    let str_choice = if let Some(choice) = file_chooser("Select the icon", "*.jpg|*.png|*.svg", ".", false)
+    let str_choice = if let Some(choice) = file_chooser("Select the icon", "*.{jpg,png}", ".", false)
     {
       choice
     } // if
@@ -115,12 +115,30 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     // Try to install icon
     clone_output_status.set_value("Installing icon...");
 
+    // Disable window
+    clone_tx.send(common::Msg::WindDeactivate);
+
     // Set as desktop entry icon for image
-    if let Err(e) = common::gameimage_cmd(vec!["desktop".to_string(), str_choice.clone()])
+    let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["desktop".to_string(), str_choice.clone()])
     {
-      clone_output_status.set_value("Could not install icon, use .jpg or .png");
+      rx_gameimage
+    } // if
+    else
+    {
+      log!("Could not recover return code");
+      return;
+    }; // else
+
+    // Wait for message & check return value
+    if let Ok(code) = rx_gameimage.recv() && code != 0
+    {
+      log!("Failed with code {}", code);
+      clone_tx.send(common::Msg::WindActivate);
       return;
     } // if
+
+    // Re-activate window
+    clone_tx.send(common::Msg::WindActivate);
 
     // Set preview image
     if let Err(e) = set_image_preview(frame_icon.clone(), str_choice.into())

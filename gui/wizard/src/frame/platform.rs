@@ -153,22 +153,35 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
     clone_output_status.set_value("Fetching list of files to download");
 
+    // Disable window
+    clone_tx.send(common::Msg::WindDeactivate);
+
     // Ask back-end for the files to download for the selected platform
-    let cmd_result = common::gameimage_cmd(vec![
-        "fetch".to_string()
-      , format!("--output-file={}.flatimage", str_platform)
-      , format!("--platform={}", str_platform)
-      , "--json=gameimage.fetch.json".to_string()
-    ]);
-
-    if cmd_result.is_err()
+    let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
+          "fetch".to_string()
+        , format!("--output-file={}.flatimage", str_platform)
+        , format!("--platform={}", str_platform)
+        , "--json=gameimage.fetch.json".to_string()
+    ])
     {
-      clone_output_status.set_value(&cmd_result.unwrap_err().to_string());
+      rx_gameimage
+    }
+    else
+    {
+      log!("Could not recover return code");
       return;
-    } // if
+    }; // else
 
-    // Validated
-    clone_tx.send(common::Msg::DrawFetch);
+    std::thread::spawn(move ||
+    {
+      if let Ok(code) = rx_gameimage.recv() && code != 0
+      {
+        log!("Failed with code {}", code);
+        return;
+      } // if
+
+      clone_tx.send(common::Msg::DrawFetch);
+    });
   });
 }
 // }}}

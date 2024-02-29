@@ -152,7 +152,7 @@ pub fn icon(tx: Sender<common::Msg>
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   input_icon.set_callback(move |e|
   {
-    let choice = file_chooser("Select the icon", "*.jpg|*.png|*.svg", ".", false);
+    let choice = file_chooser("Select the icon", "*.{jpg,png}", ".", false);
 
     if choice.is_none()
     {
@@ -166,15 +166,21 @@ pub fn icon(tx: Sender<common::Msg>
 
     // Try to install icon
     clone_output_status.set_value("Installing icon...");
-    if let Err(e) = common::gameimage_cmd(vec![
+    if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
         "install".to_string()
       , "icon".to_string()
       , str_choice.clone()
     ])
     {
+      clone_tx.send(common::Msg::WindDeactivate);
+      let _ = rx_gameimage.recv();
+      clone_tx.send(common::Msg::WindActivate);
+    } // if
+    else
+    {
       clone_output_status.set_value("Could not install icon, use .jpg or .png");
       return;
-    } // if
+    } // else
 
     // Set environment variable
     match get_icon()

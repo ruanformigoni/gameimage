@@ -148,14 +148,10 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::wizard::wine::default(self.tx, "Select the Default Executable");
     }
-    // Msg::DrawWineTest =>
-    // {
-    //   frame::wizard::wine::test(self.tx, "Test the Created Package");
-    // }
-    // Msg::DrawWineCompress =>
-    // {
-    //   frame::wizard::wine::compress(self.tx, "Compress the Created Package");
-    // }
+    Msg::DrawWineCompress =>
+    {
+      frame::wizard::wine::compress(self.tx, "Compress the Created Package");
+    }
 
     //
     // Retroarch
@@ -254,10 +250,6 @@ impl Drop for Gui
     self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
     self.tx.send(Msg::DrawWelcome);
-    // self.tx.send(Msg::DrawWineDefault);
-    // self.tx.send(Msg::DrawWineRom);
-    // self.tx.send(Msg::DrawWineConfigure);
-    // self.tx.send(Msg::DrawCreator);
     while self.app.wait()
     {
       match self.rx.recv()

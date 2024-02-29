@@ -36,8 +36,13 @@ use fltk::{
 
 use fltk_theme::{ColorTheme, color_themes};
 
+use anyhow;
+use anyhow::anyhow as ah;
+
 use crate::dimm;
 use crate::svg;
+use crate::common;
+use crate::log;
 
 pub struct Term
 {
@@ -103,18 +108,18 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
 } // new() }}}
 
 // pub fn dispatch() {{{
-pub fn dispatch<F>(&self, args : Vec<&str>, callback : F) -> Arc<Mutex<Child>>
+pub fn dispatch<F>(&self, mut args : Vec<&str>, callback : F) -> anyhow::Result<Arc<Mutex<Child>>>
   where F : Fn(i32) + Send + 'static
 {
-  let reader_cmd = Command::new("sh")
+  let (cmd_base, cmd_args) = args.split_first().ok_or(ah!("No command to execute"))?;
+
+  let reader_cmd = Command::new(cmd_base)
     .env_remove("LD_PRELOAD")
     .env("FIM_FIFO", "0")
-    .args(vec!["-c"].into_iter().chain(args).collect::<Vec<&str>>())
-    .stdin(Stdio::piped())
+    .args(cmd_args)
     .stderr(Stdio::inherit())
     .stdout(Stdio::piped())
-    .spawn()
-    .expect("Could not dispatch command");
+    .spawn()?;
 
   // Create arc reader for stdout
   let arc_reader = Arc::new(Mutex::new(reader_cmd));
@@ -144,22 +149,17 @@ pub fn dispatch<F>(&self, args : Vec<&str>, callback : F) -> Arc<Mutex<Child>>
     {
       std::thread::sleep(std::time::Duration::from_millis(50));
 
-      let bytes_read = match lock.stdout.as_mut().unwrap().read(&mut buf)
-      {
-        Ok(bytes_read) => bytes_read,
-        Err(_) => break,
-      };
-
-      if bytes_read == 0 { break; }
-      let output = String::from_utf8_lossy(&buf[..bytes_read]);
-      clone_term.insert(&output);
-      clone_term.show_insert_position();
-
-      let bytes_read = match lock.stderr.as_mut().unwrap().read(&mut buf)
-      {
-        Ok(bytes_read) => bytes_read,
-        Err(_) => break,
-      };
+      let bytes_read =
+        if   let Some(stdout) = lock.stdout.as_mut()
+          && let Ok(bytes_read) = stdout.read(&mut buf)
+        {
+          bytes_read
+        }
+        else
+        {
+          log!("Could not get stdout");
+          break;
+        };
 
       if bytes_read == 0 { break; }
       let output = String::from_utf8_lossy(&buf[..bytes_read]);
@@ -184,7 +184,7 @@ pub fn dispatch<F>(&self, args : Vec<&str>, callback : F) -> Arc<Mutex<Child>>
   });
 
 
-  arc_reader.clone()
+  Ok(arc_reader.clone())
 } // dispatch() }}}
 
 // pub fn append() {{{
