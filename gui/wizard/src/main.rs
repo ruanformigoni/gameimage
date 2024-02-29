@@ -140,10 +140,14 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::wizard::wine::configure(self.tx, "Configure Wine");
     }
-    // Msg::DrawWineRom =>
-    // {
-    //   frame::wizard::wine::rom(self.tx, "Install the Rom File(s)");
-    // }
+    Msg::DrawWineRom =>
+    {
+      frame::wizard::wine::rom(self.tx, "Install the Application(s)");
+    }
+    Msg::DrawWineDefault =>
+    {
+      frame::wizard::wine::default(self.tx, "Select the Default Executable");
+    }
     // Msg::DrawWineTest =>
     // {
     //   frame::wizard::wine::test(self.tx, "Test the Created Package");
@@ -250,6 +254,8 @@ impl Drop for Gui
     self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
     self.tx.send(Msg::DrawWelcome);
+    // self.tx.send(Msg::DrawWineDefault);
+    // self.tx.send(Msg::DrawWineRom);
     // self.tx.send(Msg::DrawWineConfigure);
     // self.tx.send(Msg::DrawCreator);
     while self.app.wait()
