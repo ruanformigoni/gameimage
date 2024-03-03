@@ -94,18 +94,29 @@ inline void validate()
     case ns_enum::Platform::PCSX2:
       // default rom
       f_file_default("rom");
-      // default core
+      // default bios
       f_file_default("bios");
       // all roms
       f_files_validate("rom");
-      // all cores
+      // all bios
       f_files_validate("bios");
     break;
     case ns_enum::Platform::RPCS3:
       "Not implemented"_throw();
     break;
     case ns_enum::Platform::YUZU:
-      "Not implemented"_throw();
+      // default rom
+      f_file_default("rom");
+      // default bios
+      f_file_default("bios");
+      // default key
+      f_file_default("keys");
+      // all roms
+      f_files_validate("rom");
+      // all bios
+      f_files_validate("bios");
+      // all keys
+      f_files_validate("keys");
     break;
   } // switch
 

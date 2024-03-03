@@ -49,6 +49,32 @@ fs::path get_xdg_config_home()
   return xdg_config_home;
 } // get_xdg_config_home() }}}
 
+// get_xdg_data_home() {{{
+fs::path get_xdg_data_home()
+{
+  fs::path xdg_data_home;
+
+  // Override if XDG_DATA_HOME
+  if ( const char* str_data_home = ns_env::get("XDG_DATA_HOME"); str_data_home )
+  {
+    xdg_data_home = fs::path{str_data_home};
+  } // if
+  // Default to $HOME/.local/share
+  else if ( const char* str_dir_home = ns_env::get("HOME"); str_dir_home )
+  {
+    xdg_data_home = fs::path{str_dir_home} / ".local/share";
+  } // if
+  else
+  {
+    "Could not determine XDG_DATA_HOME, is HOME set?"_throw();
+  } // else
+  // Log XDG_DATA_HOME
+
+  ns_log::write('i', "XDG_DATA_HOME: '", xdg_data_home, "'");
+
+  return xdg_data_home;
+} // get_xdg_data_home() }}}
+
 // db_files_copy() {{{
 void db_files_copy(std::string db_entry
   , fs::path const& path_file_database
@@ -86,6 +112,142 @@ void db_files_copy(std::string db_entry
   } , std::ios_base::in); // ns_db::from_file
 } // db_files_copy() }}}
 
+// boot_wine() {{{
+void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Set wine prefix
+  ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
+
+  // Binary to execute
+  fs::path path_file_rom;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+  }
+  , std::ios_base::in);
+
+  // Enter directory of rom file
+  fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
+
+  // Get boot command
+  std::string str_cmd = ns_env::get("FIM_BINARY_WINE");
+
+  // Start application
+  ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
+} // boot_wine() }}}
+
+// boot_retroarch() {{{
+void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Rom
+  fs::path path_file_rom;
+
+  // Core
+  fs::path path_file_core;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    // Rom
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+    // Core
+    path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+  }
+  , std::ios_base::in);
+
+  // Check if has bios
+  db_files_copy("paths-file-bios"
+    , path_file_database
+    , path_dir_self
+    , ( get_xdg_config_home() / "retroarch/system")
+  );
+
+  // Get boot command
+  std::string str_cmd = ns_env::get("FIM_BINARY_RETROARCH");
+
+  // Start application
+  ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
+
+} // boot_retroarch() }}}
+
+// boot_pcsx2() {{{
+void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Rom
+  fs::path path_file_rom;
+
+  // Bios
+  fs::path path_file_bios;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    // Rom
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+    // Bios
+    path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-bios"])._ret;
+  }
+  , std::ios_base::in);
+
+  // Check if has bios
+  db_files_copy("paths-file-bios"
+    , path_file_database
+    , path_dir_self
+    , ( get_xdg_config_home() / "PCSX2/bios")
+  );
+
+  // Get boot command
+  std::string str_cmd = ns_env::get("FIM_BINARY_PCSX2");
+
+  // Start application
+  ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
+} // boot_pcsx2() }}}
+
+// boot_yuzu() {{{
+void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Rom
+  fs::path path_file_rom;
+
+  // Config dir
+  fs::path path_dir_config;
+
+  // Data dir
+  fs::path path_dir_data;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    // Rom
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+
+    // Config
+    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-config"])._ret;
+
+    // Data
+    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
+  }
+  , std::ios_base::in);
+
+  // Set XDG vars
+  ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
+  ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
+
+  // Get boot command
+  std::string str_cmd = ns_env::get("FIM_BINARY_YUZU");
+
+  // Start application
+  ns_subprocess::sync(str_cmd.c_str(), "-f", "-g", path_file_rom);
+} // boot_yuzu() }}}
+
 // boot() {{{
 void boot(int argc, char** argv)
 {
@@ -116,99 +278,10 @@ void boot(int argc, char** argv)
 
   switch(platform)
   {
-    case ns_enum::Platform::WINE:
-    {
-      // Set wine prefix
-      ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
-
-      // Binary to execute
-      fs::path path_file_rom;
-
-      // Database
-      ns_db::from_file(path_file_database
-      , [&](auto&& db)
-      {
-        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
-      }
-      , std::ios_base::in);
-
-      // Enter directory of rom file
-      fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
-
-      // Get boot command
-      std::string str_cmd = ns_env::get("FIM_BINARY_WINE");
-
-      // Start application
-      ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
-    } // case
-    break;
-    case ns_enum::Platform::RETROARCH:
-    {
-      // Rom
-      fs::path path_file_rom;
-
-      // Core
-      fs::path path_file_core;
-
-      // Database
-      ns_db::from_file(path_file_database
-      , [&](auto&& db)
-      {
-        // Rom
-        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
-
-        // Core
-        path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
-      }
-      , std::ios_base::in);
-
-      // Check if has bios
-      db_files_copy("paths-file-bios"
-        , path_file_database
-        , path_dir_self
-        , ( get_xdg_config_home() / "retroarch/system")
-      );
-
-      // Get boot command
-      std::string str_cmd = ns_env::get("FIM_BINARY_RETROARCH");
-
-      // Start application
-      ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
-    } // case
-    break;
-    case ns_enum::Platform::PCSX2:
-    {
-      // Rom
-      fs::path path_file_rom;
-
-      // Bios
-      fs::path path_file_bios;
-
-      // Database
-      ns_db::from_file(path_file_database
-      , [&](auto&& db)
-      {
-        // Rom
-        path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
-
-        // Bios
-        path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-bios"])._ret;
-      }
-      , std::ios_base::in);
-
-      // Check if has bios
-      db_files_copy("paths-file-bios"
-        , path_file_database
-        , path_dir_self
-        , ( get_xdg_config_home() / "PCSX2/bios")
-      );
-
-      // Get boot command
-      std::string str_cmd = ns_env::get("FIM_BINARY_PCSX2");
-
-      // Start application
-      ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
-    } // case
+    case ns_enum::Platform::WINE     : boot_wine(path_dir_self, path_file_database)      ; break;
+    case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
+    case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
+    case ns_enum::Platform::YUZU     : boot_yuzu(path_dir_self, path_file_database)      ; break;
   } // switch
 } // function: boot }}}
 

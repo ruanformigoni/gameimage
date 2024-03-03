@@ -102,7 +102,7 @@ class Db
     Db operator=(Db const&) = delete;
     Db operator=(Db&&) = delete;
     template<IsString T>
-    Db operator[](T&& t) const;
+    Db const& operator[](T&& t) const;
     template<IsString T>
     Db operator()(T&& t);
     template<IsString T>
@@ -217,8 +217,10 @@ inline Db::operator json_t() const
 // operator[] {{{
 // Key exists and is accessed
 template<IsString T>
-Db Db::operator[](T&& t) const
+Db const& Db::operator[](T&& t) const
 {
+  static std::unique_ptr<Db> db;
+
   json_t& json = data();
 
   // Check if key is present
@@ -230,7 +232,7 @@ Db Db::operator[](T&& t) const
   // Access key
   try
   {
-    return Db{std::reference_wrapper<json_t>(json[t])};
+    db = std::unique_ptr<Db>(new Db{std::reference_wrapper<json_t>(json[t])});
   } // try
   catch(std::exception const& e)
   {
@@ -238,7 +240,7 @@ Db Db::operator[](T&& t) const
   } // catch
 
   // Unreachable, used to suppress no return warning
-  return Db{std::reference_wrapper<json_t>(json[t])};
+  return *db;
 } // operator[] }}}
 
 // operator() {{{
@@ -294,9 +296,12 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
 
 // from_file() {{{
 template<IsString T, typename F>
-void from_file(T&& t, F&& f, std::ios_base::openmode mode)
+void from_file(T&& t, F&& f, std::ios_base::openmode mode = std::ios_base::in)
 {
-  f(Db(std::forward<T>(t), mode));
+  // Create DB
+  Db db = Db(std::forward<T>(t), mode);
+  // Access
+  f(db);
 } // function: from_file }}}
 
 // to_file() {{{
@@ -340,6 +345,37 @@ inline void from_file_project(F&& f, std::ios_base::openmode mode)
 {
   from_file(file_project(), f, mode);
 } // function: from_file_project }}}
+
+// query() {{{
+template<typename F, typename... Args>
+inline std::string query(F&& f, Args... args)
+{
+  std::string ret;
+
+  auto f_access_impl = [&]<typename T, typename U>(T& ref_db, U&& u)
+  {
+    ref_db = std::reference_wrapper(ref_db.get()[u]);
+  }; // f_access
+
+  auto f_access = [&]<typename T, typename... U>(T& ref_db, U&&... u)
+  {
+    ( f_access_impl(ref_db, std::forward<U>(u)), ... );
+  }; // f_access
+
+  from_file(f, [&]<typename T>(T&& db)
+  {
+    // Get a ref to db
+    auto ref_db = std::reference_wrapper<Db const>(db);
+
+    // Update the ref to the selected query object
+    f_access(ref_db, std::forward<Args>(args)...);
+
+    // Assign result
+    ret = ref_db.get();
+  });
+
+  return ret;
+} // query() }}}
 
 } // namespace ns_db
 

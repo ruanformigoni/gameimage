@@ -31,6 +31,9 @@ enum class Op
   ROM,
   CORE,
   BIOS,
+  KEYS,
+  CONFIG,
+  DATA,
 };
 // }}}
 
@@ -71,7 +74,10 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
     case ns_enum::Platform::YUZU:
     {
-      "Not implemented"_throw();
+      "Only keys and bios selection are available for yuzu"_throw_if([&]
+      {
+        return op != Op::ROM && op != Op::BIOS && op != Op::KEYS;
+      });
     } // case
     break;
   } // switch

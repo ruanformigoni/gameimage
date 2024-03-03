@@ -32,6 +32,7 @@ enum class Op
   ROM,
   CORE,
   BIOS,
+  KEYS,
 };
 // }}}
 
@@ -109,115 +110,62 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
     op = ns_enum::from_string<Op>(*query);
   });
 
+  // Writes paths to json database
+  auto f_paths_to_json = [&](Op op, std::vector<fs::path> const& vec_paths)
+  {
+    // Write to json
+    if ( to_json.has_value() )
+    {
+      // Erase file if exists
+      fs::remove(*to_json);
+
+      // Open file list
+      ns_db::from_file(*to_json, [&]<typename T>(T&& db)
+      {
+        for(fs::path const& path_file : vec_paths)
+        {
+          db(ns_enum::to_string_lower(op)) |= path_file;
+        }
+      }, std::ios::out);
+    } // if
+  };
+
+  // Searches for existing files matching search inside the path_search path
+  auto f_search_files = [](fs::path const& path_search
+    , std::string str_search
+    , std::string str_exclude)
+  {
+    // Save to vec for json
+    std::vector<fs::path> vec_paths;
+    // Search executables
+    for(auto i : ns_impl::search(path_search, str_search.c_str(), str_exclude.c_str()))
+    {
+      i = fs::relative(i, path_search);
+      ns_log::write('i', "Found :: ", i);
+      vec_paths.push_back(i);
+    } // for
+    // Return written paths
+    return vec_paths;
+  };
+
+  // Get op as str
+  fs::path path_search = path_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
   switch(enum_platform)
   {
     case ns_enum::Platform::WINE:
     {
-      // Get op as str
-      std::string str_op = ns_string::to_lower(ns_enum::to_string(op));
       // Check if is rom
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
-      path_project = (path_project / "wine") / "drive_c";
-      // Save to vec for json
-      std::vector<fs::path> vec_paths;
-      // Search executables
-      for(auto i : ns_impl::search(path_project, R"(.*\.exe$)", R"(windows)"))
-      {
-        i = fs::relative(i, path_project);
-        ns_log::write('i', "Found :: ", i);
-        vec_paths.push_back(i);
-      } // for
-
-      // Write to json
-      if ( to_json.has_value() )
-      {
-        // Erase file if exists
-        fs::remove(*to_json);
-
-        // Open file list
-        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
-        {
-          for(fs::path const& path_file : vec_paths)
-          {
-            db(str_op) |= path_file;
-          }
-        }, std::ios::out);
-      } // if
+      path_search = (path_project / "wine") / "drive_c";
+      // Save files to json
+      f_paths_to_json(op, f_search_files(path_search, R"(.*\.exe$)", R"(windows)"));
     } // case
     break;
-    case ns_enum::Platform::RETROARCH:
-    {
-      // Get op as str
-      std::string str_op = ns_enum::to_string_lower(op);
-      // Enter directory
-      path_project = path_project / str_op;
-      // Save to vec for json
-      std::vector<fs::path> vec_paths;
-      // Search for targets
-      for(auto i : ns_impl::search(path_project, R"(.*)", ""))
-      {
-        i = fs::relative(i, path_project);
-        ns_log::write('i', "Found :: ", str_op / i);
-        vec_paths.push_back(i);
-      } // for
-
-      // Write to json
-      if ( to_json.has_value() )
-      {
-        // Erase file if exists
-        fs::remove(*to_json);
-
-        // Open file list
-        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
-        {
-          for(fs::path const& path_file : vec_paths)
-          {
-            db(str_op) |= path_file;
-          }
-        }, std::ios::out);
-      } // if
-    } // case
-    break;
-    case ns_enum::Platform::PCSX2:
-    {
-      // Get op as str
-      std::string str_op = ns_enum::to_string_lower(op);
-      // Enter directory
-      path_project = path_project / str_op;
-      // Save to vec for json
-      std::vector<fs::path> vec_paths;
-      // Search for targets
-      for(auto i : ns_impl::search(path_project, R"(.*)", ""))
-      {
-        i = fs::relative(i, path_project);
-        ns_log::write('i', "Found :: ", str_op / i);
-        vec_paths.push_back(i);
-      } // for
-
-      // Write to json
-      if ( to_json.has_value() )
-      {
-        // Erase file if exists
-        fs::remove(*to_json);
-
-        // Open file list
-        ns_db::from_file(*to_json, [&]<typename T>(T&& db)
-        {
-          for(fs::path const& path_file : vec_paths)
-          {
-            db(str_op) |= path_file;
-          }
-        }, std::ios::out);
-      } // if
-    } // case
-    break;
-    case ns_enum::Platform::RPCS3:
-      "Not implemented"_throw();
-    break;
-    case ns_enum::Platform::YUZU:
-      "Not implemented"_throw();
-    break;
+    case ns_enum::Platform::RETROARCH : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
+    case ns_enum::Platform::PCSX2     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RPCS3     : "Not implemented"_throw(); break;
+    case ns_enum::Platform::YUZU      : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
   } // switch
 
 } // search() }}}

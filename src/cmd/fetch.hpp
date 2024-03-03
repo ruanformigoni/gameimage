@@ -143,7 +143,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
     if ( to_json )
     {
       ns_db::from_file(*opt_path_json,
-      [&](ns_db::Db&& db)
+      [&](auto& db)
       {
         db("paths") |= path_file.c_str();
         db("urls") |= url.c_str();
@@ -182,7 +182,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/08607cba3f446d1426459ffd57bb2cee41d5d44c/fetch.json"});
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/abdbb17251312185cfc017541d87805577d15053/fetch.json"});
 
   // Set temporary directory
   fs::path dir_dest = path_dest.parent_path();
@@ -191,7 +191,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   fs::create_directories(dir_dest);
 
   // Helper to downloads/merge files
-  auto f_fetch_by_platform = [&](auto&& db_fetch, ns_enum::Platform platform)
+  auto f_fetch_by_platform = [&](auto& db_fetch, ns_enum::Platform platform)
   {
     // Create platform string
     auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
@@ -242,9 +242,9 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   };
 
   // Open file list
-  ns_db::from_file(path_json, [&]<typename T>(T&& db_fetch)
+  ns_db::from_file(path_json, [&](auto&& db_fetch)
   {
-    f_fetch_by_platform(std::forward<T>(db_fetch), platform);
+    f_fetch_by_platform(db_fetch, platform);
   }, std::ios::in);
 
 } // fetch_to_file() }}}

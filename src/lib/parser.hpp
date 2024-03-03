@@ -136,8 +136,8 @@ inline const char* HELP_ALL
   "    :: install  - Install a file/rom to the current project\n"
   "    :: test     - Test the current project\n"
   "    :: compress - Validate and compress the current project\n"
-  "    :: search   - Search for installed [rom,core,bios,key]\n"
-  "    :: select   - Select the default [rom,core,bios,key]\n"
+  "    :: search   - Search for installed [rom,core,bios,keys]\n"
+  "    :: select   - Select the default [rom,core,bios,keys]\n"
   "    :: package  - Package the a compressed project into the current image\n"
   "    :: desktop  - Enable desktop integration for gameimage\n"
 };
@@ -355,6 +355,7 @@ class Search : public Parser
       arg_query.add_choice("rom");
       arg_query.add_choice("bios");
       arg_query.add_choice("core");
+      arg_query.add_choice("keys");
       arg_query.action([&](std::string const& s){ m_map_option_value["query"]=s; });
     } // Search
 

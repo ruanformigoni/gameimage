@@ -204,41 +204,32 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> args)
+inline void emulator(std::vector<std::string> args)
 {
-  // Current application
-  std::string str_app;
+  // Current project name
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
   // Path to project
-  fs::path path_project;
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
-  // Get default path
-  ns_db::from_file_default([&](auto&& db)
-  {
-    str_app = db["project"];
-    path_project = ns_fs::ns_path::dir_exists<true>(db[str_app]["path-project"])._ret;
-  }
-  , std::ios_base::in);
+  // Path to flatimage
+  fs::path path_flatimage = ns_db::query(ns_db::file_default(), str_project, "path-image");
 
-  // Default working directory
-  fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
-
-  // Path to rom / core
-  fs::path path_dir_rom = fs::path{path_dir_project} / "rom";
-  ns_fs::ns_path::dir_create<true>(path_dir_rom);
-
-  fs::path path_dir_core = fs::path{path_dir_project} / "core";
-  ns_fs::ns_path::dir_create<true>(path_dir_core);
-
-  fs::path path_dir_bios = fs::path{path_dir_project} / "bios";
-  ns_fs::ns_path::dir_create<true>(path_dir_bios);
+  // Install paths
+  fs::path path_dir_config = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-config");
+  fs::path path_dir_data   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-data");
+  fs::path path_dir_rom    = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-rom");
+  fs::path path_dir_core   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-core");
+  fs::path path_dir_bios   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-bios");
+  fs::path path_dir_keys   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-keys");
 
   // Log
-  ns_log::write('i', "application: ", str_app);
-  ns_log::write('i', "project: ", path_project);
-  ns_log::write('i', "path core: ", path_dir_core);
-  ns_log::write('i', "path rom: ", path_dir_rom);
-  ns_log::write('i', "path bios: ", path_dir_bios);
+  ns_log::write('i', "application   : ", str_project);
+  ns_log::write('i', "path config   : ", path_dir_config);
+  ns_log::write('i', "path core     : ", path_dir_core);
+  ns_log::write('i', "path rom      : ", path_dir_rom);
+  ns_log::write('i', "path bios     : ", path_dir_bios);
+  ns_log::write('i', "path keys     : ", path_dir_keys);
 
   // No command
   if ( args.empty() )
@@ -251,7 +242,7 @@ inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> a
   auto f_install = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
     // Verify if source file exists
-    ns_fs::ns_path::file_exists<true>(path_file_src);
+    path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
     // Copy to target file
     ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
       , [&](double percentage, auto&& path_src, auto&& path_dst)
@@ -287,19 +278,19 @@ inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> a
 
   match::match(str_cmd)
   (
-    match::pattern | "bios"   = [&]{ f_install_files("bios", path_dir_bios, args); },
-    match::pattern | "rom"    = [&]{ f_install_files("rom", path_dir_rom, args); },
-    match::pattern | "core"   = [&]
+    match::pattern | "gui"      = [&]
     {
-      if ( enum_platform != ns_enum::Platform::RETROARCH )
-      {
-        "Core install not implemented for platform '{}'"_throw(ns_enum::to_string(enum_platform));
-      } // if
-      f_install_files("core", path_dir_core, args);
+      ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
+      ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
+      ns_subprocess::sync(path_flatimage);
     },
-    match::pattern | match::_ = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
+    match::pattern | "bios"     = [&]{ f_install_files("bios", path_dir_bios, args); },
+    match::pattern | "rom"      = [&]{ f_install_files("rom", path_dir_rom, args); },
+    match::pattern | "core"     = [&]{ f_install_files("core", path_dir_core, args); },
+    match::pattern | "keys"     = [&]{ f_install_files("keys", path_dir_keys, args); },
+    match::pattern | match::_   = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
   );
-} // wine() }}}
+} // emulator() }}}
 
 // install() {{{
 inline void install(std::vector<std::string> args)
@@ -330,19 +321,14 @@ inline void install(std::vector<std::string> args)
   // Install based on platform
   switch(enum_platform)
   {
-    case ns_enum::Platform::WINE:
-      ns_install::wine(args);
-      break;
+    case ns_enum::Platform::WINE: ns_install::wine(args);
+    break;
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
-      ns_install::emulator(enum_platform, args);
-      break;
+    case ns_enum::Platform::YUZU: ns_install::emulator(args);
+    break;
     case ns_enum::Platform::RPCS3:
       "Not implemented"_throw();
-      break;
-    case ns_enum::Platform::YUZU:
-      "Not implemented"_throw();
-      break;
   } // switch
   
 } // install() }}}
