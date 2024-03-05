@@ -210,6 +210,52 @@ void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_databas
   ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
 } // boot_pcsx2() }}}
 
+// boot_rpcs3() {{{
+void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Rom
+  fs::path path_file_rom;
+
+  // Config dir
+  fs::path path_dir_config;
+
+  // Data dir
+  fs::path path_dir_data;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    // Rom
+    try
+    {
+      path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    } // try
+    catch(std::exception const& e)
+    {
+      ns_log::write('i', e.what());
+      path_file_rom = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    } // catch
+
+    // Config
+    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-config"])._ret;
+
+    // Data
+    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
+  }
+  , std::ios_base::in);
+
+  // Set XDG vars
+  ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
+  ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
+
+  // Get boot command
+  std::string str_cmd = ns_env::get("FIM_BINARY_RPCS3");
+
+  // Start application
+  ns_subprocess::sync(str_cmd.c_str(), "--allow-any-location", "--no-gui", "--", path_file_rom);
+} // boot_rpcs3() }}}
+
 // boot_yuzu() {{{
 void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database)
 {
@@ -281,6 +327,7 @@ void boot(int argc, char** argv)
     case ns_enum::Platform::WINE     : boot_wine(path_dir_self, path_file_database)      ; break;
     case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
     case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
+    case ns_enum::Platform::RPCS3    : boot_rpcs3(path_dir_self, path_file_database)     ; break;
     case ns_enum::Platform::YUZU     : boot_yuzu(path_dir_self, path_file_database)      ; break;
   } // switch
 } // function: boot }}}
