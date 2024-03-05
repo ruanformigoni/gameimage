@@ -11,6 +11,7 @@ pub struct Entries
   pub rom: Option<Vec<String>>,
   pub core: Option<Vec<String>>,
   pub bios: Option<Vec<String>>,
+  pub keys: Option<Vec<String>>,
 } // Entries }}}
 
 // from_file() {{{

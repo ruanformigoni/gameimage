@@ -214,6 +214,38 @@ fn redraw(&mut self, msg : Msg)
     }
 
     //
+    // Yuzu
+    //
+    Msg::DrawYuzuName =>
+    {
+      frame::wizard::yuzu::name(self.tx, "Select the Application Name");
+    }
+    Msg::DrawYuzuIcon =>
+    {
+      frame::wizard::yuzu::icon(self.tx, "Select the Application Icon");
+    }
+    Msg::DrawYuzuRom =>
+    {
+      frame::wizard::yuzu::rom(self.tx, "Install the Rom File(s)");
+    }
+    Msg::DrawYuzuBios =>
+    {
+      frame::wizard::yuzu::bios(self.tx, "Install the firmware Files");
+    }
+    Msg::DrawYuzuKeys =>
+    {
+      frame::wizard::yuzu::keys(self.tx, "Install the Decryption Keys");
+    }
+    Msg::DrawYuzuTest =>
+    {
+      frame::wizard::yuzu::test(self.tx, "Test the Created Package");
+    }
+    Msg::DrawYuzuCompress =>
+    {
+      frame::wizard::yuzu::compress(self.tx, "Compress the Created Package");
+    }
+
+    //
     // Quit
     //
     Msg::Quit =>

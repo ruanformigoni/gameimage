@@ -53,6 +53,14 @@ pub enum Msg
   DrawPcsx2Test,
   DrawPcsx2Compress,
 
+  DrawYuzuName,
+  DrawYuzuIcon,
+  DrawYuzuRom,
+  DrawYuzuBios,
+  DrawYuzuKeys,
+  DrawYuzuTest,
+  DrawYuzuCompress,
+
   WindActivate,
   WindDeactivate,
 
@@ -125,6 +133,7 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
     "wine"      => Ok(Msg::DrawWineName),
     "retroarch" => Ok(Msg::DrawRetroarchName),
     "pcsx2"     => Ok(Msg::DrawPcsx2Name),
+    "yuzu"      => Ok(Msg::DrawYuzuName),
     _           => Err(ah!("Unrecognized platform")),
   } // match
 

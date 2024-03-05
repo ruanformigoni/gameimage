@@ -66,6 +66,7 @@ pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Ve
       "rom" => entry.rom,
       "bios" => entry.bios,
       "core" => entry.core,
+      "keys" => entry.keys,
       _ => None
     }; // match
 
