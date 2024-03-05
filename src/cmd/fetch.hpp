@@ -182,7 +182,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
   // Fetch file list
   auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
   f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/abdbb17251312185cfc017541d87805577d15053/fetch.json"});
+    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/9102a93df9a36a505b4941aa51fbfbd4b2e53336/fetch.json"});
 
   // Set temporary directory
   fs::path dir_dest = path_dest.parent_path();

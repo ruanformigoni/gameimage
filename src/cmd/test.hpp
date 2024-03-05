@@ -46,9 +46,7 @@ inline decltype(auto) test()
   , std::ios_base::in);
 
   // Start application
-  ns_subprocess::sync(path_file_flatimage
-    , "fim-exec"
-    , path_file_boot);
+  ns_subprocess::sync(path_file_flatimage, "fim-exec", path_file_boot);
 } // test() }}}
  
 } // namespace ns_test

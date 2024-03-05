@@ -164,7 +164,7 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
     break;
     case ns_enum::Platform::RETROARCH : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
     case ns_enum::Platform::PCSX2     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
-    case ns_enum::Platform::RPCS3     : "Not implemented"_throw(); break;
+    case ns_enum::Platform::RPCS3     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
     case ns_enum::Platform::YUZU      : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
   } // switch
 

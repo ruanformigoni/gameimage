@@ -51,27 +51,44 @@ inline void validate()
       std::string str_tag_db = "path-file-{}"_fmt(type);
       fs::path path_file;
       ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, std::ios_base::in);
-      ns_fs::ns_path::file_exists<true>(path_file);
+      try
+      {
+        ns_fs::ns_path::file_exists<true>(path_file);
+      } // try
+      catch(std::exception const& e)
+      {
+        ns_fs::ns_path::dir_exists<true>(path_project / path_file);
+      } // catch
       ns_log::write('i', "Found ", type, " '", path_file, "'");
     }, type);
   };
 
   auto f_files_validate = [&](auto&& type)
   {
-    "Failed to validate {} paths"_try([&]
+    std::vector<fs::path> paths_file;
+
+    ns_db::from_file_project([&](auto&& db)
     {
-      ns_db::from_file_project([&](auto&& db)
+      for(auto&& path_file : db["paths-file-{}"_fmt(type)])
       {
-        for(auto&& path_file : db["paths-file-{}"_fmt(type)])
+        paths_file.push_back(path_file);
+      } // for
+    }, std::ios_base::in);
+    
+    for(auto&& path_file : paths_file)
+    {
+      "Missing file {} in json for '{}'"_try([&]
+      {
+        try
         {
-          "Invalid {} path in json for '{}'"_try([&]
-          {
-            ns_fs::ns_path::file_exists<true>(path_project / path_file);
-          }, type, path_file);
-        }
-      }
-      , std::ios_base::in);
-    }, type);
+          ns_fs::ns_path::file_exists<true>(path_project / path_file);
+        } // try
+        catch(std::exception const& e)
+        {
+          ns_fs::ns_path::dir_exists<true>(path_project / path_file);
+        } // catch
+      }, type, path_file);
+    } // for
   };
 
   switch(enum_platform)
@@ -82,6 +99,7 @@ inline void validate()
     }
     break;
     case ns_enum::Platform::RETROARCH:
+    {
       // default rom
       f_file_default("rom");
       // default core
@@ -90,8 +108,10 @@ inline void validate()
       f_files_validate("rom");
       // all cores
       f_files_validate("core");
+    } // case
     break;
     case ns_enum::Platform::PCSX2:
+    {
       // default rom
       f_file_default("rom");
       // default bios
@@ -100,11 +120,16 @@ inline void validate()
       f_files_validate("rom");
       // all bios
       f_files_validate("bios");
+    } // case
     break;
     case ns_enum::Platform::RPCS3:
-      "Not implemented"_throw();
+    {
+      // default rom
+      f_file_default("rom");
+    } // case
     break;
     case ns_enum::Platform::YUZU:
+    {
       // default rom
       f_file_default("rom");
       // default bios
@@ -117,6 +142,7 @@ inline void validate()
       f_files_validate("bios");
       // all keys
       f_files_validate("keys");
+    } // case
     break;
   } // switch
 

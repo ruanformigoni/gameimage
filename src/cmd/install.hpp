@@ -204,7 +204,7 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(std::vector<std::string> args)
+inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> args)
 {
   // Current project name
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -241,15 +241,31 @@ inline void emulator(std::vector<std::string> args)
   // Install helpers
   auto f_install = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
-    // Verify if source file exists
-    path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
-    // Copy to target file
-    ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
-      , [&](double percentage, auto&& path_src, auto&& path_dst)
+    // Try to copy file
+    try
+    {
+      // Verify if source file exists
+      path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
+      // Copy to target file
+      ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
+        , [&](double percentage, auto&& path_src, auto&& path_dst)
+        {
+          ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
+        })
+      );
+    } // try
+    // Try to copy dir
+    catch(std::exception const& e)
+    {
+      ns_log::write('i', e.what());
+      // Verify if source directory exists
+      path_file_src = ns_fs::ns_path::dir_exists<true>(path_file_src)._ret;
+      // Copy recursive
+      for(auto path_dir_src : args)
       {
-        ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
-      })
-    );
+        fs::copy(path_dir_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+      } // for
+    } // catch
 
     // Relative path
     fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
@@ -284,7 +300,22 @@ inline void emulator(std::vector<std::string> args)
       ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
       ns_subprocess::sync(path_flatimage);
     },
-    match::pattern | "bios"     = [&]{ f_install_files("bios", path_dir_bios, args); },
+    match::pattern | "bios"     = [&]
+    {
+      if ( enum_platform == ns_enum::Platform::RPCS3 )
+      {
+        ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
+        ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
+        if ( args.empty() ) { "No firmware file was passed for installation"_throw(); }
+        for( auto const& file : args )
+        {
+          ns_subprocess::sync(path_flatimage, "--installfw", file);
+        } // for
+        return;
+      } // if
+
+      f_install_files("bios", path_dir_bios, args);
+    },
     match::pattern | "rom"      = [&]{ f_install_files("rom", path_dir_rom, args); },
     match::pattern | "core"     = [&]{ f_install_files("core", path_dir_core, args); },
     match::pattern | "keys"     = [&]{ f_install_files("keys", path_dir_keys, args); },
@@ -325,10 +356,9 @@ inline void install(std::vector<std::string> args)
     break;
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
-    case ns_enum::Platform::YUZU: ns_install::emulator(args);
-    break;
     case ns_enum::Platform::RPCS3:
-      "Not implemented"_throw();
+    case ns_enum::Platform::YUZU: ns_install::emulator(enum_platform, args);
+    break;
   } // switch
   
 } // install() }}}

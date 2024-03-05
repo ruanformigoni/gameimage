@@ -47,13 +47,13 @@ inline void by_op(ns_enum::Platform enum_platform
   {
     case ns_enum::Platform::WINE:
     {
-      "Only rom selection is available for wine"_throw_if([&]{ return op != Op::ROM; });
+      "Only the rom option is available for wine"_throw_if([&]{ return op != Op::ROM; });
       path_file_op = (fs::path("wine") / "drive_c") / path_file_op;
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
     {
-      "Only rom, core and bios selection are available for retroarch"_throw_if([&]
+      "Only rom, core and bios options are available for retroarch"_throw_if([&]
       {
         return op != Op::ROM && op != Op::CORE && op != Op::BIOS;
       });
@@ -61,7 +61,7 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
     case ns_enum::Platform::PCSX2:
     {
-      "Only rom and bios selection are available for pcsx2"_throw_if([&]
+      "Only rom and bios options are available for pcsx2"_throw_if([&]
       {
         return op != Op::ROM && op != Op::BIOS;
       });
@@ -69,7 +69,10 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
     case ns_enum::Platform::RPCS3:
     {
-      "Not implemented"_throw();
+      "Only rom and bios options are available for rpcs3"_throw_if([&]
+      {
+        return op != Op::ROM && op != Op::BIOS;
+      });
     } // case
     break;
     case ns_enum::Platform::YUZU:
@@ -82,8 +85,15 @@ inline void by_op(ns_enum::Platform enum_platform
     break;
   } // switch
 
-  // Check if is regular file
-  ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_op);
+  // Check if is regular file or directory
+  try
+  {
+    ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_op);
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_fs::ns_path::dir_exists<true>(path_dir_project / path_file_op);
+  } // catch
 
   ns_db::from_file_project([&](auto&& db)
   {
