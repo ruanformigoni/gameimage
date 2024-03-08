@@ -239,7 +239,7 @@ inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> a
   }
 
   // Install helpers
-  auto f_install = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
+  auto f_install_file = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
     // Try to copy file
     try
@@ -279,13 +279,13 @@ inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> a
 
     // Set as default
     ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
-  }; // f_install
+  }; // f_install_file
 
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
     // Check for arguments of command
     "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
-    std::ranges::for_each(args, [&](fs::path e){ f_install(cmd, e, path_dir_dst / e.filename()); });
+    std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
   }; // f_install_roms
 
   // Get command

@@ -148,6 +148,22 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
     return vec_paths;
   };
 
+  // Searches for existing files matching search inside the path_search path
+  auto f_search_dirs = [](fs::path const& path_search)
+  {
+    // Save to vec for json
+    std::vector<fs::path> vec_paths;
+    // Search directories
+    for(fs::path i : fs::directory_iterator(path_search))
+    {
+      i = fs::relative(i, path_search);
+      ns_log::write('i', "Found :: ", i);
+      vec_paths.push_back(i);
+    } // for
+    // Return written paths
+    return vec_paths;
+  };
+
   // Get op as str
   fs::path path_search = path_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
   switch(enum_platform)
@@ -164,7 +180,7 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
     break;
     case ns_enum::Platform::RETROARCH : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
     case ns_enum::Platform::PCSX2     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
-    case ns_enum::Platform::RPCS3     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RPCS3     : f_paths_to_json(op, f_search_dirs(path_search)); break;
     case ns_enum::Platform::YUZU      : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
   } // switch
 
