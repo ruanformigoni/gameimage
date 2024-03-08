@@ -315,7 +315,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         let path_file_dwarfs = path_dir_project.with_extension("dwarfs");
         log!("File: {}", path_file_dwarfs.string());
 
-        let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["package".to_string() , path_file_dwarfs.string()])
+        let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["package", &path_file_dwarfs.string()])
         {
           rx_gameimage
         }

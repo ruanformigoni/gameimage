@@ -87,11 +87,12 @@ fn fetch_files(vec_data : Vec<Data>
   // Run backend to merge files
   output.set_value("Validating and extracting...");
 
-  let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["fetch".to_string()
-    , "--platform".to_string()
-    , str_platform.clone()
-    , "--output-file".to_string()
-    , format!("{}.flatimage", str_platform)
+  let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["
+      fetch"
+    , "--platform"
+    , &str_platform
+    , "--output-file"
+    , &format!("{}.flatimage", str_platform)
   ])
   {
     rx_gameimage

@@ -166,11 +166,7 @@ pub fn icon(tx: Sender<common::Msg>
 
     // Try to install icon
     clone_output_status.set_value("Installing icon...");
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-        "install".to_string()
-      , "icon".to_string()
-      , str_choice.clone()
-    ])
+    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", "icon", &str_choice])
     {
       clone_tx.send(common::Msg::WindDeactivate);
       let _ = rx_gameimage.recv();

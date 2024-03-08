@@ -54,12 +54,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Vec<String>>
 {
   // Ask back-end for the item files
-  if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-      "search".to_string()
-    , "--json".to_string()
-    , "gameimage.search.json".to_string()
-    , label.clone()
-  ])
+  if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["search", "--json", "gameimage.search.json", &label])
   {
     tx.send(common::Msg::WindDeactivate);
     let _ = rx_gameimage.recv();
@@ -161,11 +156,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     let str_choice = chooser.value(1).unwrap();
 
     // Install directory with backend
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-      "install".to_string()
-      , clone_label.clone()
-      , str_choice
-    ])
+    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", &clone_label, &str_choice])
     {
       // Wait for command to finish
       let _ = rx_gameimage.recv();
@@ -280,7 +271,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
       tx.send(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        let result = if let Ok(result) = common::gameimage_cmd(vec!["install".to_string(), "gui".to_string()])
+        let result = if let Ok(result) = common::gameimage_cmd(vec!["install", "gui"])
         {
           result
         } // if

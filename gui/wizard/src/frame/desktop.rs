@@ -53,6 +53,7 @@ fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
     {
       frame.set_image_scaled(Some(png_image));
       frame.redraw();
+      fltk::app::awake();
       return Ok(())
     },
     Err(e) =>
@@ -118,38 +119,44 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     // Disable window
     clone_tx.send(common::Msg::WindDeactivate);
 
-    // Set as desktop entry icon for image
-    let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["desktop".to_string(), str_choice.clone()])
+    let clone_frame_icon = frame_icon.clone();
+    let mut clone_output_status = clone_output_status.clone();
+    std::thread::spawn(move ||
     {
-      rx_gameimage
-    } // if
-    else
-    {
-      log!("Could not recover return code");
-      return;
-    }; // else
+      // Set as desktop entry icon for image
+      let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["desktop", &str_choice])
+      {
+        rx_gameimage
+      } // if
+      else
+      {
+        log!("Could not recover return code");
+        clone_tx.send(common::Msg::WindActivate);
+        return;
+      }; // else
 
-    // Wait for message & check return value
-    if let Ok(code) = rx_gameimage.recv() && code != 0
-    {
-      log!("Failed with code {}", code);
+      // Wait for message & check return value
+      if let Ok(code) = rx_gameimage.recv() && code != 0
+      {
+        log!("Failed with code {}", code);
+        clone_tx.send(common::Msg::WindActivate);
+        return;
+      } // if
+
+      // Re-activate window
       clone_tx.send(common::Msg::WindActivate);
-      return;
-    } // if
 
-    // Re-activate window
-    clone_tx.send(common::Msg::WindActivate);
-
-    // Set preview image
-    if let Err(e) = set_image_preview(frame_icon.clone(), str_choice.into())
-    {
-      clone_output_status.set_value("Failed to load icon image into preview");
-    } // if
-    else
-    {
-      clone_output_status.set_value("Set preview image");
-    } // else
-  });
+      // Set preview image
+      if let Err(e) = set_image_preview(clone_frame_icon.clone(), str_choice.into())
+      {
+        clone_output_status.set_value("Failed to load icon image into preview");
+      } // if
+      else
+      {
+        clone_output_status.set_value("Set preview image");
+      } // else
+    }); // std::thread
+  }); // callback
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

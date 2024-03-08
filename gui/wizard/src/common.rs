@@ -156,7 +156,7 @@ pub fn dir_build() -> anyhow::Result<()>
 } // fn: dir_build }}}
 
 // pub fn gameimage_cmd() {{{
-pub fn gameimage_cmd(args : Vec<String>) -> anyhow::Result<mpsc::Receiver<i32>>
+pub fn gameimage_cmd(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
 {
   dir_build()?;
 
@@ -242,7 +242,10 @@ pub trait WidgetExtExtra
   fn with_callback<F>(&mut self, callback : F) -> Self
     where F: FnMut(&mut Self) + 'static;
   fn with_frame(&mut self, frame : fltk::enums::FrameType) -> Self;
+  fn with_svg(&mut self, data : &str) -> Self;
+  fn with_focus(&mut self, use_focus : bool) -> Self;
   fn with_color(&mut self, color : fltk::enums::Color) -> Self;
+  fn with_color_selected(&mut self, color : fltk::enums::Color) -> Self;
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
@@ -266,9 +269,27 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
     self.clone()
   }
 
+  fn with_svg(&mut self, data : &str) -> Self
+  {
+    self.set_image(Some(fltk::image::SvgImage::from_data(data).unwrap()));
+    self.clone()
+  }
+
+  fn with_focus(&mut self, use_focus : bool) -> Self
+  {
+    self.visible_focus(use_focus);
+    self.clone()
+  }
+
   fn with_color(&mut self, color : fltk::enums::Color) -> Self
   {
     self.set_color(color);
+    self.clone()
+  }
+
+  fn with_color_selected(&mut self, color : fltk::enums::Color) -> Self
+  {
+    self.set_selection_color(color);
     self.clone()
   }
 

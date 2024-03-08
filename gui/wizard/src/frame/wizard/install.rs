@@ -41,10 +41,10 @@ pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Ve
 {
   // Ask back-end for the item files
   if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-      "search".to_string()
-    , "--json".to_string()
-    , "gameimage.search.json".to_string()
-    , label.clone()
+      "search"
+    , "--json"
+    , "gameimage.search.json"
+    , &label
   ])
   {
     tx.send(common::Msg::WindDeactivate);
@@ -152,11 +152,7 @@ pub fn install(tx: Sender<common::Msg>
       // Fetch choice
       let str_choice = chooser.value(idx_choice).unwrap();
       // Install with backend
-      if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-          "install".to_string()
-        , clone_label.clone()
-        , str_choice
-      ])
+      if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", &clone_label, &str_choice])
       {
         // Wait for command to finish
         let _ = rx_gameimage.recv();

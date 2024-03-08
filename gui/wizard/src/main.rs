@@ -142,7 +142,7 @@ fn redraw(&mut self, msg : Msg)
     }
     Msg::DrawWineRom =>
     {
-      frame::wizard::wine::rom(self.tx, "Install the Application(s)");
+      frame::wizard::wine::rom(self.tx, "Install/Test the Application(s)");
     }
     Msg::DrawWineDefault =>
     {
@@ -309,7 +309,7 @@ impl Drop for Gui
     // Set log window to the left of the main window
     self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
-    // self.tx.send(Msg::DrawRpcs3Bios);
+    // self.tx.send(Msg::DrawWineRom);
     self.tx.send(Msg::DrawWelcome);
     while self.app.wait()
     {

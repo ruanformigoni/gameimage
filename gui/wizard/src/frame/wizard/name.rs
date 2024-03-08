@@ -144,13 +144,14 @@ pub fn name(tx: Sender<common::Msg>
     }; // else
 
     // Init project
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["init".to_string()
-      , "--dir".to_string()
-      , name.clone()
-      , "--platform".to_string()
-      , platform
-      , "--image".to_string()
-      , image
+    if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
+        "init"
+      , "--dir"
+      , &name
+      , "--platform"
+      , &platform
+      , "--image"
+      , &image
     ])
     {
       clone_tx.send(common::Msg::WindDeactivate);

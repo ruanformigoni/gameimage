@@ -158,10 +158,10 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
     // Ask back-end for the files to download for the selected platform
     let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-          "fetch".to_string()
-        , format!("--output-file={}.flatimage", str_platform)
-        , format!("--platform={}", str_platform)
-        , "--json=gameimage.fetch.json".to_string()
+          "fetch"
+        , format!("--output-file={}.flatimage", str_platform).as_str()
+        , format!("--platform={}", str_platform).as_str()
+        , "--json=gameimage.fetch.json"
     ])
     {
       rx_gameimage
