@@ -204,7 +204,7 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> args)
+inline void emulator(ns_enum::Platform enum_platform, bool is_remove, std::vector<std::string> args)
 {
   // Current project name
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -281,11 +281,55 @@ inline void emulator(ns_enum::Platform enum_platform, std::vector<std::string> a
     ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
   }; // f_install_file
 
+  // Remove helper
+  auto f_remove_file = [&](std::string const& type, fs::path path_file_dst)
+  {
+    // Try to remove file
+    if ( fs::is_regular_file(path_file_dst) )
+    {
+      // Verify if source file exists
+      path_file_dst = ns_fs::ns_path::file_exists<true>(path_file_dst)._ret;
+      // Remove file
+      fs::remove(path_file_dst);
+    } // try
+    // Try to remove dir
+    else if( fs::is_directory(path_file_dst) )
+    {
+      // Verify if source directory exists
+      path_file_dst = ns_fs::ns_path::dir_exists<true>(path_file_dst)._ret;
+      // Remove directory
+      fs::remove_all(path_file_dst);
+    } // catch
+
+    // Relative path
+    fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
+
+    // Remove from database
+    ns_db::from_file_project([&](auto&& db)
+    {
+      // Remove default key if is default
+      if ( db[fmt::format("path-file-{}", type)] == path_file_dst_relative )
+      {
+        db.erase(fmt::format("path-file-{}", type));
+      } // if
+      // Remove from list
+      db(fmt::format("paths-file-{}", type)).erase(path_file_dst_relative);
+    }
+    , std::ios_base::out);
+  }; // f_remove_file
+
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
     // Check for arguments of command
     "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
-    std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
+    if ( is_remove )
+    {
+      std::ranges::for_each(args, [&](fs::path e){ f_remove_file(cmd, path_dir_dst / e.filename()); });
+    }
+    else
+    {
+      std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
+    } // else
   }; // f_install_roms
 
   // Get command
@@ -349,6 +393,14 @@ inline void install(std::vector<std::string> args)
   }
   , std::ios_base::in);
 
+  // Remove instead of install
+  bool is_remove = false;
+  if ( args.front() == "remove" )
+  {
+    is_remove = true;
+    args.erase(args.begin());
+  }
+
   // Install based on platform
   switch(enum_platform)
   {
@@ -357,7 +409,7 @@ inline void install(std::vector<std::string> args)
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU: ns_install::emulator(enum_platform, args);
+    case ns_enum::Platform::YUZU: ns_install::emulator(enum_platform, is_remove, args);
     break;
   } // switch
   

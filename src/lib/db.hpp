@@ -95,6 +95,10 @@ class Db
     bool contains(T&& t) const;
     bool empty() const;
 
+    // Modifying
+    template<IsString T>
+    bool erase(T&& t);
+
     // Operators
     operator std::string() const;
     operator fs::path() const;
@@ -263,6 +267,27 @@ Db Db::operator()(T&& t)
   // Unreachable, used to suppress no return warning
   return Db{std::reference_wrapper<json_t>(json[t])};
 } // operator() }}}
+
+// erase() {{{
+template<IsString T>
+bool Db::erase(T&& t)
+{
+  json_t& json = data();
+
+  auto key = ns_common::to_string(t);
+
+  if ( json.is_array() )
+  {
+    // Search in array & erase if there is a match
+    auto it_search = std::find(json.begin(), json.end(), key);
+    if ( it_search == json.end() ) { return false; }
+    json.erase(std::distance(json.begin(), it_search));
+    return true;
+  }
+
+  // When key was found, returns 1
+  return json.erase(key) == 1;
+} // erase() }}}
 
 // operator=(IsString) {{{
 template<IsString T>

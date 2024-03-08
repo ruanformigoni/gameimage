@@ -134,17 +134,15 @@ cd "$BUILD_DIR"
   :DIR_SCRIPT="${DIR_SCRIPT:-"$(dirname -- "$(readlink -f "$0")")"}"
   :
   :DIR_CALL="${USER_PWD:-"$(pwd)"}"
-  :
   :DIR_BIN="$DIR_SCRIPT/bin"
   :
   :# Copy static bash
+  :mkdir -p /tmp/gameimage/bin
   :cp "$DIR_SCRIPT/bin/bash" /tmp/gameimage/bin
   :
   :export PATH="$DIR_SCRIPT:$PATH"
   :export PATH="$DIR_BIN:$PATH"
   :export PATH="/tmp/gameimage/bin:$PATH"
-  :
-  :mkdir -p /tmp/gameimage/bin
   :
   :# Copy fonts
   :cp -r "$DIR_SCRIPT/usr" /tmp/gameimage
