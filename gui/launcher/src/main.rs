@@ -30,7 +30,6 @@ struct Gui
 {
   app: App,
   wind: Window,
-  width: i32,
   height: i32,
   border: i32,
   rx : fltk::app::Receiver<Msg>,
@@ -44,7 +43,6 @@ impl Gui
 // fn: new {{{
 pub fn new() -> Self
 {
-  let mut width : i32 = dimm::WIDTH;
   let mut height : i32 = dimm::HEIGHT;
   let mut border = dimm::BORDER;
 
@@ -58,16 +56,16 @@ pub fn new() -> Self
     1.0
   };
 
-  width = ( width as f32 * factor ) as i32;
   height = ( height as f32 * factor ) as i32;
   border = ( border as f32 * factor ) as i32;
 
   let app =  app::App::default().with_scheme(app::Scheme::Gtk);
+  app::set_frame_type(FrameType::BorderBox);
+  app::set_font_size(dimm::height_text());
   let mut wind = Window::default()
     .with_label("GameImage")
-    .with_size(width, height)
+    .with_size(dimm::width(), dimm::height())
     .center_screen();
-  app::set_frame_type(FrameType::BorderBox);
 
   // Window icon
   if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
@@ -85,7 +83,6 @@ pub fn new() -> Self
   {
     app,
     wind,
-    width,
     height,
     border,
     rx,
@@ -100,7 +97,7 @@ fn frame_switcher(&self)
   let vec_entry = mounts::mounts().unwrap_or(vec![]);
   if vec_entry.is_empty()
   {
-    frame::fail::new(self.width, self.height, self.border);
+    frame::fail::new(dimm::width(), dimm::height(), dimm::border());
     return;
   } // if
 
@@ -111,14 +108,7 @@ fn frame_switcher(&self)
   env::set_var("GIMG_LAUNCHER_BOOT", path_boot.to_str().unwrap_or(""));
 
   // Create initial cover frame
-  frame::cover::new(
-      self.tx.clone()
-    , self.border
-    , self.width
-    , self.height
-    , 0
-    , 0
-  );
+  frame::cover::new(self.tx.clone(), 0, 0);
 } // fn: frame_switcher }}}
 
 // fn redraw() {{{
@@ -131,19 +121,19 @@ fn redraw(&mut self, msg: Msg)
   {
     Some(Msg::DrawCover) =>
     {
-      frame::cover::new(self.tx, self.border, self.width, self.height, 0, 0);
+      frame::cover::new(self.tx, 0, 0);
     }
     Some(Msg::DrawSelector) =>
     {
-      frame::selector::new(self.tx, self.border, self.width, self.height, 0, 0);
+      frame::selector::new(self.tx, 0, 0);
     }
     Some(Msg::DrawEnv) =>
     {
-      frame::env::new(self.tx, self.border, self.width, self.height, 0, 0);
+      frame::env::new(self.tx, 0, 0);
     }
     Some(Msg::DrawMenu) =>
     {
-      frame::menu::new(self.tx, self.border, self.width, self.height, 0, 0);
+      frame::menu::new(self.tx, 0, 0);
     }
     _ => (),
   }

@@ -19,30 +19,29 @@ pub struct RetFrameSelector
   pub frame : Frame,
 } // Ret
 
-
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y : i32) -> RetFrameSelector
+pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
 {
   //
   // Main
   //
   let mut frame = Frame::default()
-    .with_size(width, height)
+    .with_size(dimm::width(), dimm::height())
     .with_pos(x, y);
   frame.set_type(PackType::Vertical);
   frame.set_frame(FrameType::FlatBox);
 
   let mut frame_title = Frame::default()
     .with_label("Menu")
-    .with_size(frame.width() - border*2, dimm::height_button_rec() / 2)
-    .with_pos(border, border);
+    .with_size(frame.width() - dimm::border()*2, dimm::height_button_rec() / 2)
+    .with_pos(dimm::border(), dimm::border());
   frame_title.set_frame(FrameType::FlatBox);
   frame_title.set_label_size(dimm::height_text());
 
   // Create scrollbar
   let mut scroll = Scroll::default()
-    .below_of(&frame_title, border)
-    .with_size(frame.w() - border*2, frame.h() - dimm::bar() - frame_title.h() - border*3);
+    .below_of(&frame_title, dimm::border())
+    .with_size(frame.w() - dimm::border()*2, frame.h() - dimm::bar() - frame_title.h() - dimm::border()*3);
   scroll.set_scrollbar_size(dimm::width_button_rec() / 4);
   scroll.set_frame(FrameType::BorderBox);
 
@@ -62,13 +61,13 @@ pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y
     entry.set_label(label);
     if parent.is_same(&clone_scroll.as_base_widget())
     {
-      entry.clone().above_of(&parent, -entry.h() - border);
-      entry.set_pos(entry.x() + border, entry.y());
-      entry.set_size(entry.w() - border*2, entry.h());
+      entry.clone().above_of(&parent, -entry.h() - dimm::border());
+      entry.set_pos(entry.x() + dimm::border(), entry.y());
+      entry.set_size(entry.w() - dimm::border()*2, entry.h());
     } // if
     else
     {
-      entry.clone().above_of(&parent, -entry.h() * 2 - border);
+      entry.clone().above_of(&parent, -entry.h() * 2 - dimm::border());
     } // else
     parent = entry.as_base_widget().clone();
     entry
@@ -100,7 +99,7 @@ pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y
 #[allow(dead_code)]
 pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameSelector
 {
-  new(tx, dimm::border(), w.w(), w.h(), w.x(), w.y())
+  new(tx, w.x(), w.y())
 } // fn: from }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

@@ -26,21 +26,21 @@ pub struct RetFrameCover
 } // Ret
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y : i32) -> RetFrameCover
+pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
 {
-  let mut frame_base = Frame::default().with_size(width, height);
+  let mut frame_base = Frame::default().with_size(dimm::width(), dimm::height());
   frame_base.set_type(PackType::Vertical);
   frame_base.set_frame(FrameType::FlatBox);
 
   let mut group_content = Group::default()
-    .with_size(width - border*2, height - (dimm::height_button_wide() + border * 2) - border*2)
-    .with_pos(border, border);
+    .with_size(dimm::width() - dimm::border()*2, dimm::height() - (dimm::height_button_wide() + dimm::border() * 2) - dimm::border()*2)
+    .with_pos(dimm::border(), dimm::border());
   group_content.set_type(PackType::Vertical);
   group_content.set_frame(FrameType::FlatBox);
   group_content.begin();
 
   let mut frame = Frame::default()
-    .with_size(width, height)
+    .with_size(dimm::width(), dimm::height())
     .with_pos(x,y);
   frame.set_type(PackType::Vertical);
   frame.set_frame(FrameType::FlatBox);
@@ -86,7 +86,7 @@ pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y
   let mut btn_left = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .below_of(&frame_base, -dimm::height_button_rec());
-  btn_left.set_pos(btn_left.x() + border, btn_left.y() - border);
+  btn_left.set_pos(btn_left.x() + dimm::border(), btn_left.y() - dimm::border());
   btn_left.set_frame(FrameType::BorderBox);
   btn_left.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_list().as_str()).unwrap()));
   btn_left.emit(tx, Msg::DrawMenu);
@@ -95,7 +95,7 @@ pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y
   let mut btn_right = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .below_of(&frame_base, -dimm::height_button_rec());
-  btn_right.set_pos(frame_base.w() - border - btn_right.w(), btn_right.y() - border);
+  btn_right.set_pos(frame_base.w() - dimm::border() - btn_right.w(), btn_right.y() - dimm::border());
   btn_right.set_frame(FrameType::BorderBox);
   btn_right.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_play().as_str()).unwrap()));
   btn_right.emit(tx, Msg::Launch);
@@ -107,7 +107,7 @@ pub fn new(tx : Sender<Msg>, border : i32, width : i32, height : i32, x : i32, y
 #[allow(dead_code)]
 pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameCover
 {
-  new(tx, dimm::border(), w.w(), w.h(), w.x(), w.y())
+  new(tx, w.x(), w.y())
 } // fn: from }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
