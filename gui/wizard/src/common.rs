@@ -53,6 +53,13 @@ pub enum Msg
   DrawPcsx2Test,
   DrawPcsx2Compress,
 
+  DrawRpcs3Name,
+  DrawRpcs3Icon,
+  DrawRpcs3Rom,
+  DrawRpcs3Bios,
+  DrawRpcs3Test,
+  DrawRpcs3Compress,
+
   DrawYuzuName,
   DrawYuzuIcon,
   DrawYuzuRom,
@@ -133,6 +140,7 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
     "wine"      => Ok(Msg::DrawWineName),
     "retroarch" => Ok(Msg::DrawRetroarchName),
     "pcsx2"     => Ok(Msg::DrawPcsx2Name),
+    "rpcs3"     => Ok(Msg::DrawRpcs3Name),
     "yuzu"      => Ok(Msg::DrawYuzuName),
     _           => Err(ah!("Unrecognized platform")),
   } // match
@@ -231,12 +239,39 @@ pub fn image_resize(path_out : PathBuf, path_in : PathBuf, width : u32, height :
 // pub trait WidgetExtExtra {{{
 pub trait WidgetExtExtra
 {
+  fn with_callback<F>(&mut self, callback : F) -> Self
+    where F: FnMut(&mut Self) + 'static;
+  fn with_frame(&mut self, frame : fltk::enums::FrameType) -> Self;
+  fn with_color(&mut self, color : fltk::enums::Color) -> Self;
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
+  fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
 }
 
 impl<T: WidgetExt + Clone> WidgetExtExtra for T
 {
+  fn with_callback<F>(&mut self, mut callback : F) -> Self
+    where F: FnMut(&mut Self) + 'static
+  {
+    self.set_callback(move |e| callback(e));
+    self.clone()
+  }
+
+  fn with_frame(&mut self, frame : fltk::enums::FrameType) -> Self
+  {
+    self.set_frame(frame);
+    self.clone()
+  }
+
+  fn with_color(&mut self, color : fltk::enums::Color) -> Self
+  {
+    self.set_color(color);
+    self.clone()
+  }
+
   fn right_bottom_of<W: WidgetExt>(&mut self, other: &W, offset : i32) -> Self
   {
     self.set_pos(
@@ -249,9 +284,42 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
   {
     self.set_pos(
-        other.x() + offset
+        other.x()
       , other.y() + offset
     );
+    self.clone()
+  }
+
+  fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + (other.w() / 2) - (self.w() / 2)
+      , other.y() + offset
+    );
+    self.clone()
+  }
+
+  fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + (other.w() / 2) - (self.w() / 2)
+      , other.y() + other.h() - self.h() + offset
+    );
+    self.clone()
+  }
+
+  fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + (other.w() / 2) - (self.w() / 2)
+      , other.y() + other.h() + offset
+    );
+    self.clone()
+  }
+
+  fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_size(other.w(), other.h());
     self.clone()
   }
 }

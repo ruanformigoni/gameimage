@@ -214,6 +214,34 @@ fn redraw(&mut self, msg : Msg)
     }
 
     //
+    // Rpcs3
+    //
+    Msg::DrawRpcs3Name =>
+    {
+      frame::wizard::rpcs3::name(self.tx, "Select the Application Name");
+    }
+    Msg::DrawRpcs3Icon =>
+    {
+      frame::wizard::rpcs3::icon(self.tx, "Select the Application Icon");
+    }
+    Msg::DrawRpcs3Rom =>
+    {
+      frame::wizard::rpcs3::rom(self.tx, "Install the Rom Directory(ies)");
+    }
+    Msg::DrawRpcs3Bios =>
+    {
+      frame::wizard::rpcs3::bios(self.tx, "Install the Bios and DLC Files");
+    }
+    Msg::DrawRpcs3Test =>
+    {
+      frame::wizard::rpcs3::test(self.tx, "Test the Created Package");
+    }
+    Msg::DrawRpcs3Compress =>
+    {
+      frame::wizard::rpcs3::compress(self.tx, "Compress the Created Package");
+    }
+
+    //
     // Yuzu
     //
     Msg::DrawYuzuName =>
@@ -281,6 +309,7 @@ impl Drop for Gui
     // Set log window to the left of the main window
     self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
+    // self.tx.send(Msg::DrawRpcs3Bios);
     self.tx.send(Msg::DrawWelcome);
     while self.app.wait()
     {

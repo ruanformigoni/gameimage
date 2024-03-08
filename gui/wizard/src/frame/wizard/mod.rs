@@ -6,4 +6,5 @@ mod test;
 pub mod wine;
 pub mod retroarch;
 pub mod pcsx2;
+pub mod rpcs3;
 pub mod yuzu;
