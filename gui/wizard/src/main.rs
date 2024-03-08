@@ -57,7 +57,7 @@ impl Gui
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
     theme.apply();
-    app::set_font_size(dimm::HEIGHT_TEXT);
+    app::set_font_size(dimm::height_text());
     app::set_color(Color::White, 230, 230, 230);
     app::set_color(Color::Blue, 55, 113, 200);
     app::set_frame_color(Color::White);

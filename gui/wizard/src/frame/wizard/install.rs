@@ -184,32 +184,24 @@ pub fn install(tx: Sender<common::Msg>
     if vec_indices.len() == 0
     {
       clone_output_status.set_value("No item selected for deletion");
-      return;
-    } // if
-
-    // Get project dir
-    let some_path_dir_project = db::project::dir();
-    if some_path_dir_project.is_err()
-    {
-      clone_output_status.set_value("Failure to get project dir");
+      clone_tx.send(msg_curr);
       return;
     } // if
 
     // Get items
     let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ frame_list.text(e).unwrap() }).collect();
 
-    // Remove files
     for item in vec_items
     {
-      let path_file_target = some_path_dir_project.as_ref().unwrap()
-        .join(clone_label.as_str())
-        .join(item);
-
-      if std::fs::remove_file(path_file_target.clone()).is_err()
+      if let Ok(rx) = common::gameimage_cmd(vec!["install", "remove", &clone_label, &item])
       {
-        clone_output_status.set_value(format!("Could not delete file {}", path_file_target.string()).as_str());
+        let _ = rx.recv();
       } // if
-    }
+      else
+      {
+        log!("Could not wait for deletion of {}", item);
+      }; // else
+    } // for
     
     clone_tx.send(msg_curr);
   });

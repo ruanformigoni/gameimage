@@ -190,34 +190,19 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    // Get project dir
-    let some_path_dir_project = db::project::dir();
-    if some_path_dir_project.is_err()
-    {
-      clone_output_status.set_value("Failure to get project dir");
-      return;
-    } // if
-
     // Get items
     let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ frame_list.text(e).unwrap() }).collect();
 
-    // Remove files
     for item in vec_items
     {
-      let path_dir_target = some_path_dir_project.as_ref().unwrap()
-        .join(clone_label.as_str())
-        .join(item);
-
-      if dialog::choice_default(format!("Remove directory {}", path_dir_target.string()).as_str()
-        , "No"
-        , "Yes"
-        , "") == 1 // 1 == yes
+      if let Ok(rx) = common::gameimage_cmd(vec!["install", "remove", &clone_label, &item])
       {
-        if std::fs::remove_dir_all(path_dir_target.clone()).is_err()
-        {
-          clone_output_status.set_value(format!("Could not delete file {}", path_dir_target.string()).as_str());
-        } // if
+        let _ = rx.recv();
       } // if
+      else
+      {
+        log!("Could not wait for deletion of {}", item);
+      }; // else
     } // for
     
     clone_tx.send(common::Msg::DrawRpcs3Rom);
