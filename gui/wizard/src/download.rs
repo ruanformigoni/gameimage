@@ -5,7 +5,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use downloader::Downloader;
-use sha256::try_digest;
+use sha256;
 
 use url as Url;
 
@@ -14,22 +14,25 @@ use anyhow::anyhow as ah;
 use crate::log;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::OsStringExt;
 
-// Define a custom progress reporter:
+// struct SimpleReporterPrivate {{{
 struct SimpleReporterPrivate
 {
   last_update: std::time::Instant,
   max_progress: Option<u64>,
   message: String,
-}
+} // }}}
 
+// struct SimpleReporter {{{
 struct SimpleReporter
 {
   private: std::sync::Mutex<Option<SimpleReporterPrivate>>,
   f_begin: std::sync::Mutex<Box<dyn FnMut() + Send + Sync + 'static>>,
   f_update: std::sync::Mutex<Box<dyn FnMut(f64) + Send + Sync + 'static>>,
-}
+} // }}}
 
+// impl SimpleReporter {{{
 impl SimpleReporter
 {
   #[cfg(not(feature = "tui"))]
@@ -45,8 +48,9 @@ impl SimpleReporter
       f_update: std::sync::Mutex::new(Box::new(f_update)),
     })
   }
-}
+} // }}}
 
+// impl downloader::progress::Reporter for SimpleReporter {{{
 impl downloader::progress::Reporter for SimpleReporter
 {
   fn setup(&self, max_progress: Option<u64>, message: &str)
@@ -97,9 +101,9 @@ impl downloader::progress::Reporter for SimpleReporter
     *guard = None;
     log!("test file: [DONE]");
   }
-}
+} // }}}
 
-// Verify SHA
+// sha() {{{
 pub fn sha(file_sha : PathBuf, file_target: PathBuf) -> anyhow::Result<()>
 {
   // Read sha
@@ -108,15 +112,18 @@ pub fn sha(file_sha : PathBuf, file_target: PathBuf) -> anyhow::Result<()>
   let str_ref_sha = String::from_utf8(vec_sha)?;
 
   // Verify sha
-  let str_target_sha = try_digest(file_target)?;
+  let str_target_sha = sha256::try_digest(&file_target)?;
   if str_target_sha != str_ref_sha
   {
     return Err(ah!("SHA verify failed, expected '{}', got '{}", str_ref_sha, str_target_sha));
   } // if
 
-  Ok(())
-}
+  log!("SHA verify successful for {}", file_target.string());
 
+  Ok(())
+} // }}}
+
+// download {{{
 pub fn download<F,G,H>(some_url : Option<Url::Url>
   , path_file_dest : PathBuf
   , f_begin : F
@@ -128,18 +135,7 @@ where
   H: FnMut() + Send + Sync + 'static + Clone,
 {
   // Get sha file name
-  let mut path_file_dest_sha = path_file_dest.clone();
-  let mut ext_path_file_dest_sha = path_file_dest_sha
-    .extension()
-    .and_then(|x| x.to_str())
-    .unwrap_or("")
-    .to_owned();
-  if ! ext_path_file_dest_sha.is_empty()
-  {
-    ext_path_file_dest_sha.push_str(".");
-  } // if
-  ext_path_file_dest_sha.push_str("sha256sum");
-  path_file_dest_sha.set_extension(ext_path_file_dest_sha);
+  let path_file_dest_sha = path_file_dest.append_extension(".sha256sum");
 
   // If sha exists verify
   if sha(path_file_dest_sha.clone(), path_file_dest.clone()).is_ok()
@@ -148,12 +144,11 @@ where
     f_finish();
     return Ok(());
   } // if
+
   // Try to remove files if failed
-  else
-  {
-    let _ = std::fs::remove_file(path_file_dest.clone());
-    let _ = std::fs::remove_file(path_file_dest_sha.clone());
-  } // else
+  log!("SHA check failed for '{:?}'", path_file_dest);
+  let _ = std::fs::remove_file(path_file_dest.clone());
+  let _ = std::fs::remove_file(path_file_dest_sha.clone());
 
   // Get parent directory of file
   let dir_download = path_file_dest.parent().ok_or(ah!("Failed to acquire parent dir"))?;
@@ -164,32 +159,25 @@ where
     .parallel_requests(1)
     .build()?;
 
-  // Start download
+  // Configure download
   let url = some_url.ok_or(ah!("Invalid url"))?.clone();
-  let dl_url = downloader::Download::new(url.as_str());
-  let dl_sha = downloader::Download::new(format!("{}.sha256sum", url.as_str()).as_str());
-  #[cfg(not(feature = "tui"))]
-  let dl_url = dl_url.progress(SimpleReporter::create(f_begin.clone(), f_update.clone()));
-  let dl_sha = dl_sha.progress(SimpleReporter::create(f_begin, f_update));
+  let url_sha = Url::Url::parse(&format!("{}.sha256sum", &url))?;
+  #[cfg(not(feature = "tui"))] // Disable progress bar in terminal
+  let dl_url = downloader::Download::new(url.as_str())
+    .progress(SimpleReporter::create(f_begin.clone(), f_update.clone()))
+    .file_name(&path_file_dest);
+  #[cfg(not(feature = "tui"))] // Disable progress bar in terminal
+  let dl_sha = downloader::Download::new(url_sha.as_str())
+    .progress(SimpleReporter::create(f_begin, f_update))
+    .file_name(&(path_file_dest_sha));
 
   // Fetch sha
   log!("Start download sha");
   let summary_sha = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
-  let summary_sha_file_name = summary_sha.file_name;
 
   // Fetch file
   log!("Start download file");
-  let summary_url = downloader.download(&[dl_url])?.pop().ok_or(ah!("Download failure"))??;
-  let summary_url_file_name = summary_url.file_name;
-  let summary_url_status = summary_url.status;
-
-  log!("Finish inside");
-
-  // Check sha
-  sha(summary_sha_file_name.clone(), summary_url_file_name.clone())?;
-
-  // Check if all parts were correctly fetched
-  for i in summary_url_status
+  for i in downloader.download(&[dl_url])?.pop().ok_or(ah!("Download failure"))??.status
   {
     if i.1 != 200
     {
@@ -197,25 +185,26 @@ where
     }
   } // if
 
-  // Move the downloaded file to the correct file name
-  std::fs::rename(summary_url_file_name, path_file_dest.clone())?;
-  // Re-create the SHA file with the same SHA & new file name
-  let mut sha256_content = std::fs::read_to_string(summary_sha_file_name)?
+  // Re-create the SHA file with the same SHA & correct file name
+  let mut sha256_content = std::fs::read_to_string(&path_file_dest_sha)?
     .split(' ')
     .next()
     .ok_or(ah!("Could not get SHA value from SHA file"))?
     .to_owned();
   sha256_content.push(' ');
   sha256_content.push_str(path_file_dest.string().as_str());
-  std::fs::write(path_file_dest_sha, sha256_content)?;
+  std::fs::write(&path_file_dest_sha, sha256_content)?;
 
   // Set downloaded file as executable
   std::fs::set_permissions(path_file_dest.clone(), std::fs::Permissions::from_mode(0o766))?;
+
+  // Check sha
+  sha(path_file_dest_sha.clone(), path_file_dest.clone())?;
 
   // Finishing callback
   f_finish();
 
   Ok(())
-}
+} // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

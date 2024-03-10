@@ -3,7 +3,7 @@ use std::
   io::Read,
   sync::{Arc,Mutex,mpsc,OnceLock},
   path::PathBuf,
-  ffi::OsStr,
+  ffi::{OsStr, OsString},
   env,
   path,
 };
@@ -361,18 +361,45 @@ impl OsStrExt for OsStr
 }
 // }}}
 
+// pub trait OsStringExt {{{
+pub trait OsStringExt
+{
+  fn append(&mut self, val: &str) -> &mut Self;
+  fn string(&self) -> String;
+}
+
+impl OsStringExt for OsString
+{
+  fn append(&mut self, val: &str) -> &mut Self
+  {
+    self.push(val);
+    self
+  }
+  fn string(&self) -> String
+  {
+    self.to_string_lossy().into_owned()
+  } // fn: string
+}
+// }}}
+
 // pub trait PathBufExt {{{
 pub trait PathBufExt
 {
   fn string(&self) -> String;
+  fn append_extension(&self, val: &str) -> Self;
 }
 
 impl PathBufExt for PathBuf
 {
   fn string(&self) -> String
   {
-    self.clone().into_os_string().into_string().unwrap_or(String::new())
+    self.clone().to_string_lossy().into_owned()
   } // fn: string
+
+  fn append_extension(&self, val: &str) -> Self
+  {
+    PathBuf::from(self.clone().into_os_string().append(val).string())
+  } // fn: extend_extension
 }
 // }}}
 
