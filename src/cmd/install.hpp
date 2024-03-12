@@ -49,6 +49,74 @@ enum class Op
 namespace
 {
 
+// remove_files() {{{
+void remove_files(Op const& op
+  , fs::path const& path_dir_project
+  , fs::path const& rpath_file_target)
+{
+  ns_log::write('i', "Removing '", rpath_file_target, "'");
+
+  fs::path path_file_target = path_dir_project / rpath_file_target;
+
+  // Try to remove file
+  if ( fs::is_regular_file(path_file_target) )
+  {
+    // Verify if source file exists
+    path_file_target = ns_fs::ns_path::file_exists<true>(path_file_target)._ret;
+    // Remove file
+    fs::remove(path_file_target);
+  } // if
+  // Try to remove dir
+  else if( fs::is_directory(path_file_target) )
+  {
+    // Verify if source directory exists
+    path_file_target = ns_fs::ns_path::dir_exists<true>(path_file_target)._ret;
+    // Remove directory
+    fs::remove_all(path_file_target);
+  } // else if
+  else
+  {
+    ns_log::write('i', "File '", path_file_target, "' not found for removal");
+  } // else
+
+  // Relative path
+  fs::path path_file_dst_relative = fs::relative(path_file_target, path_dir_project);
+
+  // Remove from database
+  ns_db::from_file_project([&](auto&& db)
+  {
+    std::string entry_db = fmt::format("path-file-{}", ns_enum::to_string_lower(op));
+    try
+    {
+      // Remove default key if is default
+      if ( db.template contains<false>(entry_db) && db[entry_db] == path_file_dst_relative )
+      {
+        db.erase(entry_db);
+      } // if
+    } // try
+    catch(std::exception const& e)
+    {
+      ns_log::write('i', e.what());
+    } // catch
+
+    std::string entries_db = fmt::format("paths-file-{}", ns_enum::to_string_lower(op));
+    try
+    {
+      // Remove from list
+      if ( db.template contains<false>(entries_db) )
+      {
+        // Files are kept as relative in db
+        db(entries_db).erase(rpath_file_target);
+      } // if
+    } // try
+    catch(std::exception const& e)
+    {
+      ns_log::write('i', e.what());
+    } // catch
+  }
+  , std::ios_base::out);
+} // remove_files() }}}
+
 // wine() {{{
 inline void wine(std::vector<std::string> args)
 {
@@ -119,7 +187,7 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(Op op, ns_enum::Platform enum_platform, bool is_remove, std::vector<std::string> args)
+inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::string> args)
 {
   // Current project name
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -156,31 +224,39 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, bool is_remove, std
   // Install helpers
   auto f_install_file = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
-    // Try to copy file
-    try
+    // Check if src and dst are the same
+    if ( path_file_src == path_file_dst )
     {
-      // Verify if source file exists
-      path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
-      // Copy to target file
-      ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
-        , [&](double percentage, auto&& path_src, auto&& path_dst)
-        {
-          ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
-        })
-      );
-    } // try
-    // Try to copy dir
-    catch(std::exception const& e)
+      ns_log::write('i', "Src and dst are the same for '", path_file_src, "'");
+    } // if
+    else
     {
-      ns_log::write('i', e.what());
-      // Verify if source directory exists
-      path_file_src = ns_fs::ns_path::dir_exists<true>(path_file_src)._ret;
-      // Copy recursive
-      for(auto path_dir_src : args)
+      // Try to copy file
+      try
       {
-        fs::copy(path_dir_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
-      } // for
-    } // catch
+        // Verify if source file exists
+        path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
+        // Copy to target file
+        ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
+          , [&](double percentage, auto&& path_src, auto&& path_dst)
+          {
+            ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
+          })
+        );
+      } // try
+      // Try to copy dir
+      catch(std::exception const& e)
+      {
+        ns_log::write('i', e.what());
+        // Verify if source directory exists
+        path_file_src = ns_fs::ns_path::dir_exists<true>(path_file_src)._ret;
+        // Copy recursive
+        for(auto path_dir_src : args)
+        {
+          fs::copy(path_dir_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+        } // for
+      } // catch
+    } // else
 
     // Relative path
     fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
@@ -196,55 +272,11 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, bool is_remove, std
     ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
   }; // f_install_file
 
-  // Remove helper
-  auto f_remove_file = [&](std::string const& type, fs::path path_file_dst)
-  {
-    // Try to remove file
-    if ( fs::is_regular_file(path_file_dst) )
-    {
-      // Verify if source file exists
-      path_file_dst = ns_fs::ns_path::file_exists<true>(path_file_dst)._ret;
-      // Remove file
-      fs::remove(path_file_dst);
-    } // try
-    // Try to remove dir
-    else if( fs::is_directory(path_file_dst) )
-    {
-      // Verify if source directory exists
-      path_file_dst = ns_fs::ns_path::dir_exists<true>(path_file_dst)._ret;
-      // Remove directory
-      fs::remove_all(path_file_dst);
-    } // catch
-
-    // Relative path
-    fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
-
-    // Remove from database
-    ns_db::from_file_project([&](auto&& db)
-    {
-      // Remove default key if is default
-      if ( db[fmt::format("path-file-{}", type)] == path_file_dst_relative )
-      {
-        db.erase(fmt::format("path-file-{}", type));
-      } // if
-      // Remove from list
-      db(fmt::format("paths-file-{}", type)).erase(path_file_dst_relative);
-    }
-    , std::ios_base::out);
-  }; // f_remove_file
-
   auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
     // Check for arguments of command
     "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
-    if ( is_remove )
-    {
-      std::ranges::for_each(args, [&](fs::path e){ f_remove_file(cmd, path_dir_dst / e.filename()); });
-    }
-    else
-    {
-      std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
-    } // else
+    std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
   }; // f_install_roms
 
   // Get command
@@ -384,6 +416,16 @@ inline void icon(std::string str_file_icon)
   , std::ios_base::out);
 } // icon() }}}
 
+// remove() {{{
+template<typename R>
+void remove(Op const& op, fs::path const& path_dir_project, R&& files)
+{
+  // Remove Bios or Rom or Core...
+  fs::path path_dir_item = ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+  // Remove file by file
+  std::ranges::for_each(files, [&](fs::path e){ remove_files(op, path_dir_project, path_dir_item / e.filename()); });
+} // remove() }}}
+
 // install() {{{
 inline void install(Op op, std::vector<std::string> args)
 {
@@ -395,14 +437,6 @@ inline void install(Op op, std::vector<std::string> args)
     ns_db::query(ns_db::file_default(), str_project, "platform")
   );
 
-  // Remove instead of install
-  bool is_remove = false;
-  if ( args.front() == "remove" )
-  {
-    is_remove = true;
-    args.erase(args.begin());
-  }
-
   // Install based on platform
   switch(enum_platform)
   {
@@ -411,14 +445,14 @@ inline void install(Op op, std::vector<std::string> args)
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU: ns_install::emulator(op, enum_platform, is_remove, args);
+    case ns_enum::Platform::YUZU: ns_install::emulator(op, enum_platform, args);
     break;
   } // switch
   
 } // install() }}}
 
-// install() {{{
-inline void install_core_remote(std::vector<std::string> vec_cores)
+// remote() {{{
+inline void remote(Op const& op, std::vector<std::string> vec_cores)
 {
   // Get project
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -428,9 +462,17 @@ inline void install_core_remote(std::vector<std::string> vec_cores)
     ns_db::query(ns_db::file_default(), str_project, "platform")
   );
 
+  // Core dir
+  fs::path path_dir_core = ns_db::query(ns_db::file_project(), "path-dir-core");
+
   if ( enum_platform != ns_enum::Platform::RETROARCH )
   {
     "Core install is only available for retroarch"_throw();
+  } // if
+
+  if ( op != Op::CORE )
+  {
+    "Only download of cores is available"_throw();
   } // if
 
   // Get project directory
@@ -451,17 +493,22 @@ inline void install_core_remote(std::vector<std::string> vec_cores)
       continue;
     } // if
 
-    ns_log::write('i', "Install ", i.core);
-    fs::path path_file_out = (path_dir_project / "core" ) / i.core;
-    ns_fetch::fetch_file_from_url( path_file_out, i.url);
-    // Extract from zip
+    fs::path path_file_out = path_dir_core / i.core;
+    ns_log::write('i', "Install ", i.core, " to ", path_file_out);
+    ns_fetch::fetch_file_from_url(path_file_out, i.url);
+    // Extract & install
     if ( i.core.ends_with(".zip") )
     {
+      // Extract zip
       ns_zip::extract(path_file_out, path_file_out.parent_path());
+      // Erase zip
+      fs::remove(path_file_out);
+      // Install (file ends with .so.zip, remove the .zip to the get extracted file name)
+      install(op, std::vector<std::string>{path_file_out.replace_extension("")});
     } // if
   } // for
   
-} // install() }}}
+} // remote() }}}
 
 } // namespace ns_install
 

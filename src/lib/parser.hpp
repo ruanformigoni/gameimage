@@ -302,6 +302,13 @@ class Install final : public Parser
       m_enum_stage = ns_enum::Stage::INSTALL;
 
       // Install core from a remote
+      m_parser.add_argument("--remove")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--remove"]=s; })
+        .help("Removes an installed file/dir");
+
+      // Install core from a remote
       m_parser.add_argument("--remote")
         .default_value(false)
         .implicit_value(true)

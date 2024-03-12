@@ -79,34 +79,38 @@ void install(ns_parser::Parser const& parser)
   // Get project
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
-  // Get platform
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(
-    ns_db::query(ns_db::file_default(), str_project, "platform")
-  );
+  // Get project path
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
   ns_install::Op op = ns_enum::from_string<ns_install::Op>(args.front());
   args.erase(args.begin());
 
-  switch(op)
+  // Install icon
+  if ( op == ns_install::Op::ICON )
   {
-    case ns_install::Op::ICON:
-    {
-      // Check if has icon path
-      "No file name specified for icon"_throw_if([&]{ return args.empty(); });
-      // Create icon
-      ns_install::icon(args.front());
-    } // case
-    break;
-    default:
-    {
-      if ( parser.contains("--remote") && enum_platform == ns_enum::Platform::RETROARCH )
-      {
-        ns_install::install_core_remote(args);
-        return;
-      } // if
-      ns_install::install(op, args);
-    } // default
-  } // switch
+    // Check if has icon path
+    "No file name specified for icon"_throw_if([&]{ return args.empty(); });
+    // Create icon
+    ns_install::icon(args.front());
+    return;
+  } // if
+
+  // Install item from the remote
+  if ( parser.contains("--remote") )
+  {
+    ns_install::remote(op, args);
+    return;
+  } // if
+
+  // Remove item
+  if ( parser.contains("--remove") )
+  {
+    ns_install::remove(op, path_dir_project, args);
+    return;
+  }
+
+  // Install item
+  ns_install::install(op, args);
 
 } // install() }}}
 
@@ -277,7 +281,6 @@ int main(int argc, char** argv)
   catch(std::exception const& e)
   {
     ns_log::write('e', e.what());
-    parser->usage();
     return EXIT_FAILURE;
   } // catch
 

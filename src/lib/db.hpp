@@ -128,7 +128,7 @@ inline Db::Db(std::reference_wrapper<json_t> json)
 inline Db::Db(fs::path t, std::ios_base::openmode mode)
   : m_mode(mode)
 {
-  if ( ns_fs::ns_path::file_exists<false>(t)._bool && m_mode == std::ios_base::in )
+  if ( ns_fs::ns_path::file_exists<false>(t)._bool )
   {
     // Open file
     std::ifstream ifile{t, mode};
@@ -192,15 +192,16 @@ inline decltype(auto) Db::items() const
 template<bool _throw, IsString T>
 bool Db::contains(T&& t) const
 {
-  if constexpr ( _throw )
+  auto&& json = data();
+
+  if ( json.contains(t) )
   {
-    if ( ! data().contains(t) )
-    {
-      "'{}' not found in json"_throw(t);
-    } // if
+    return true;
   } // if
 
-  return data().contains(t);
+  if constexpr ( _throw ) { "'{}' not found in json"_throw(t); } // if 
+
+  return false;
 } // contains() }}}
 
 // empty() {{{

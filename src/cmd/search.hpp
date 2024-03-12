@@ -61,20 +61,20 @@ inline cr::generator<fs::path> search_files(fs::path path_dir
     entry != fs::recursive_directory_iterator();
     ++entry)
   {
-    std::string target = ns_fs::ns_path::file_name<true>(*entry)._ret;
+    std::string name_file = ns_fs::ns_path::file_name<true>(*entry)._ret;
+    std::string path_file_entry = ns_fs::ns_path::canonical<true>(entry->path())._ret;
 
-    if (fs::is_directory(entry->path()) && std::regex_match(target, regex_exclude))
+    if (fs::is_directory(path_file_entry) && std::regex_match(name_file, regex_exclude))
     {
       ns_log::write('i', "Exclude directory '", ns_common::to_string(*entry), "'");
       entry.disable_recursion_pending();
       continue;
     } // if
 
-    if ( fs::is_regular_file(entry->path()) && std::regex_match(target, regex_pattern))
+    if ( fs::is_regular_file(path_file_entry) && std::regex_match(name_file, regex_pattern))
     {
-      ns_log::write('i', "Found :: ", fs::relative(path_dir, entry->path()));
-      fs::path curr = entry->path();
-      co_yield curr;
+      ns_log::write('i', "Found :: ", fs::relative(path_file_entry, path_dir));
+      co_yield fs::relative(path_file_entry, path_dir);
     } // if
   } // for
 
