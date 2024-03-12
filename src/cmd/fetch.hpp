@@ -17,6 +17,7 @@
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
+#include "../lib/sha.hpp"
 
 namespace ns_fetch
 {
@@ -90,37 +91,25 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 } // }}}
 
 // check_file_from_sha() {{{
-inline void check_file_from_sha(fs::path const& path_file, cpr::Url const& url)
+inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url const& url)
 {
-  // Find sha256sum binary
-  fs::path path_bin_sha256sum;
-  "Could not find sha256sum in PATH"_throw_if([&]
-  {
-    path_bin_sha256sum = boost::process::search_path("sha256sum").string();
-    return ! ns_fs::ns_path::file_exists<false>(path_bin_sha256sum)._bool;
-  });
-  ns_log::write('i', "sha256sum binary path: ", path_bin_sha256sum);
-
-  // SHA url is url + sha256sum
-  cpr::Url url_checksum = url.str() + ".sha256sum";
-
   // SHA file name is file name + sha256sum
-  fs::path path_sha256sum = path_file.string() + ".sha256sum";
+  fs::path path_file_sha256sum = path_file_to_check.string() + ".sha256sum";
 
   // Fetch SHA file if not exists
-  if ( ! ns_fs::ns_path::file_exists<false>(path_sha256sum)._bool )
+  if ( ! ns_fs::ns_path::file_exists<false>(path_file_sha256sum)._bool )
   {
-    fetch_file_from_url(path_sha256sum, url_checksum);
+    // SHA url is url + sha256sum
+    fetch_file_from_url(path_file_sha256sum, url.str() + ".sha256sum");
   } // if
 
   // Check SHA
-  if (auto ret_proc = ns_subprocess::sync(path_bin_sha256sum, "-c", path_sha256sum);
-    ret_proc.exit_code != 0)
+  if ( not ns_sha::check_256sum(path_file_to_check, path_file_sha256sum))
   {
-    "SHA failed for "_throw(path_file);
+    "SHA failed for {}"_throw(path_file_to_check);
   } // if
 
-  ns_log::write('i', "SHA passed for ", path_file);
+  ns_log::write('i', "SHA passed for ", path_file_to_check);
 } // }}}
 
 // fetch_file_from_url_on_failed_sha() {{{

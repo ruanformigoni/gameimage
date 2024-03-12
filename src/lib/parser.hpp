@@ -152,10 +152,8 @@ class Parser
     ns_enum::Stage m_enum_stage;
   public:
     // Set parent
-    Parser(std::string name)
-      : m_parser(name)
-    {
-    }
+    Parser(std::string name) : m_parser(name) {}
+    virtual ~Parser(){}
 
     // Command usage
     virtual void usage() const noexcept = 0;
@@ -205,7 +203,7 @@ class Parser
 }; // class: Parser }}}
 
 // class Fetch {{{
-class Fetch : public Parser
+class Fetch final : public Parser
 {
   public:
     Fetch(std::string name)
@@ -240,7 +238,7 @@ class Fetch : public Parser
 }; // class: Fetch }}}
 
 // class Init {{{
-class Init : public Parser
+class Init final : public Parser
 {
   public:
     Init(std::string name)
@@ -272,7 +270,7 @@ class Init : public Parser
 }; // class: Init }}}
 
 // class Project {{{
-class Project : public Parser
+class Project final : public Parser
 {
   public:
     Project(std::string name)
@@ -294,7 +292,7 @@ class Project : public Parser
 }; // class: Project }}}
 
 // class Install {{{
-class Install : public Parser
+class Install final : public Parser
 {
   public:
     Install(std::string name)
@@ -325,7 +323,7 @@ class Install : public Parser
 }; // class: Install }}}
 
 // class Compress {{{
-class Compress : public Parser
+class Compress final : public Parser
 {
   public:
     Compress(std::string name)
@@ -342,7 +340,7 @@ class Compress : public Parser
 }; // class: Compress }}}
 
 // class Search {{{
-class Search : public Parser
+class Search final : public Parser
 {
   public:
     Search(std::string name)
@@ -380,7 +378,7 @@ class Search : public Parser
 }; // class: Search }}}
 
 // class Select {{{
-class Select : public Parser
+class Select final : public Parser
 {
   public:
     Select(std::string name)
@@ -404,7 +402,7 @@ class Select : public Parser
 }; // class: Select }}}
 
 // class Test {{{
-class Test : public Parser
+class Test final : public Parser
 {
   public:
     Test(std::string name)
@@ -421,7 +419,7 @@ class Test : public Parser
 }; // class: Test }}}
 
 // class Desktop {{{
-class Desktop : public Parser
+class Desktop final : public Parser
 {
   public:
     Desktop(std::string name)
@@ -444,7 +442,7 @@ class Desktop : public Parser
 }; // class: Desktop }}}
 
 // class Package {{{
-class Package : public Parser
+class Package final : public Parser
 {
   public:
     Package(std::string name)

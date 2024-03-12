@@ -28,6 +28,7 @@
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
+#include "lib/sha.hpp"
 
 
 // Start logging

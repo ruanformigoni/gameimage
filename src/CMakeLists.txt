@@ -36,6 +36,7 @@ find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(cppcoro REQUIRED)
 find_package(libzippp REQUIRED)
+find_package(hash-library REQUIRED)
 
 # Main executable
 add_executable(main main.cpp)
@@ -53,6 +54,7 @@ target_link_libraries(main PRIVATE
   ZLIB::ZLIB
   cppcoro::cppcoro
   libzippp::libzippp
+  hash-library::hash-library
 )
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})
 
