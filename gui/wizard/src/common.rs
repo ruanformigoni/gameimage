@@ -243,6 +243,7 @@ pub trait WidgetExtExtra
     where F: FnMut(&mut Self) + 'static;
   fn with_frame(&mut self, frame : fltk::enums::FrameType) -> Self;
   fn with_svg(&mut self, data : &str) -> Self;
+  fn with_shared_image(&mut self, path : PathBuf) -> Self;
   fn with_focus(&mut self, use_focus : bool) -> Self;
   fn with_color(&mut self, color : fltk::enums::Color) -> Self;
   fn with_color_selected(&mut self, color : fltk::enums::Color) -> Self;
@@ -250,7 +251,12 @@ pub trait WidgetExtExtra
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn with_pos_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
+  fn with_width(&mut self, width : i32) -> Self;
+  fn with_height(&mut self, height : i32) -> Self;
+  fn with_width_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
+  fn with_height_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
 }
@@ -273,6 +279,12 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   fn with_svg(&mut self, data : &str) -> Self
   {
     self.set_image(Some(fltk::image::SvgImage::from_data(data).unwrap()));
+    self.clone()
+  }
+
+  fn with_shared_image(&mut self, path : PathBuf) -> Self
+  {
+    self.set_image_scaled(Some(fltk::image::SharedImage::load(path).unwrap()));
     self.clone()
   }
 
@@ -345,9 +357,39 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
     self.clone()
   }
 
+  fn with_pos_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_pos(other.x(), other.y());
+    self.clone()
+  }
+
   fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
   {
     self.set_size(other.w(), other.h());
+    self.clone()
+  }
+
+  fn with_width(&mut self, width : i32) -> Self
+  {
+    self.set_size(width, self.h());
+    self.clone()
+  }
+
+  fn with_height(&mut self, height : i32) -> Self
+  {
+    self.set_size(self.w(), height);
+    self.clone()
+  }
+
+  fn with_width_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_size(other.w(), self.h());
+    self.clone()
+  }
+
+  fn with_height_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_size(self.w(), other.h());
     self.clone()
   }
 }

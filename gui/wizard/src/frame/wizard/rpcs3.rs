@@ -46,6 +46,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   wizard::icon::icon(tx.clone()
     , title
     , common::Msg::DrawRpcs3Name
+    , common::Msg::DrawRpcs3Icon
     , common::Msg::DrawRpcs3Rom
   );
 } // }}}

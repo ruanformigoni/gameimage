@@ -20,6 +20,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   wizard::icon::icon(tx.clone()
     , title
     , common::Msg::DrawYuzuName
+    , common::Msg::DrawYuzuIcon
     , common::Msg::DrawYuzuRom
   );
 } // }}}

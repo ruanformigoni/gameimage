@@ -57,6 +57,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   wizard::icon::icon(tx.clone()
     , title
     , common::Msg::DrawWineName
+    , common::Msg::DrawWineIcon
     , common::Msg::DrawWineConfigure
   );
 } // }}}

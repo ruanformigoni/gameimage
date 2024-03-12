@@ -20,6 +20,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   wizard::icon::icon(tx.clone()
     , title
     , common::Msg::DrawPcsx2Name
+    , common::Msg::DrawPcsx2Icon
     , common::Msg::DrawPcsx2Rom
   );
 } // }}}
