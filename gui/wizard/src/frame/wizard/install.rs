@@ -31,6 +31,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
 use crate::download;
@@ -115,56 +116,56 @@ pub fn install(tx: Sender<common::Msg>
   } // if
 
   // Add new item
-  let mut btn_add = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .right_of(&frame_list, dimm::border());
-  btn_add.set_frame(FrameType::RoundedFrame);
-  btn_add.visible_focus(false);
-  btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
-  btn_add.set_color(Color::Green);
   let clone_tx = tx.clone();
   let clone_label : String = label.to_string();
-  btn_add.set_callback(move |_|
-  {
-    // Pick files to install
-    let mut chooser = dialog::FileChooser::new("."
-      , "*"
-      , dialog::FileChooserType::Multi
-      , "Pick one or multiple files");
-
-    // Start dialog
-    chooser.show();
-
-    // Wait for choice(s)
-    while chooser.shown() { fltk::app::wait(); } // while
-
-    // Check if choice is valid
-    if chooser.value(1).is_none()
+  let mut btn_add = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .right_of(&frame_list, dimm::border())
+    .with_frame(FrameType::RoundedFrame)
+    .with_focus(false)
+    .with_svg(svg::icon_add(1.0).as_str())
+    .with_color(Color::Green)
+    .with_callback(move |_|
     {
-      log!("No file selected");
-      return;
-    } // if
+      // Pick files to install
+      let mut chooser = dialog::FileChooser::new("."
+        , "*"
+        , dialog::FileChooserType::Multi
+        , "Pick one or multiple files");
 
-    // Install files
-    clone_tx.send(common::Msg::WindDeactivate);
-    for idx_choice in 1..chooser.count()+1
-    {
-      // Fetch choice
-      let str_choice = chooser.value(idx_choice).unwrap();
-      // Install with backend
-      if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", &clone_label, &str_choice])
+      // Start dialog
+      chooser.show();
+
+      // Wait for choice(s)
+      while chooser.shown() { fltk::app::wait(); } // while
+
+      // Check if choice is valid
+      if chooser.value(1).is_none()
       {
-        // Wait for command to finish
-        let _ = rx_gameimage.recv();
+        log!("No file selected");
+        return;
       } // if
-      else
+
+      // Install files
+      clone_tx.send(common::Msg::WindDeactivate);
+      for idx_choice in 1..chooser.count()+1
       {
-        log!("Failed to execute backend");
-      } // else
-    } // for
-    clone_tx.send(common::Msg::WindActivate);
-    clone_tx.send(msg_curr);
-  });
+        // Fetch choice
+        let str_choice = chooser.value(idx_choice).unwrap();
+        // Install with backend
+        if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", &clone_label, &str_choice])
+        {
+          // Wait for command to finish
+          let _ = rx_gameimage.recv();
+        } // if
+        else
+        {
+          log!("Failed to execute backend");
+        } // else
+      } // for
+      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send(msg_curr);
+    });
 
   // Erase package
   let mut btn_del = Button::default()

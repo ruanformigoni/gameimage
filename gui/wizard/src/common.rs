@@ -246,6 +246,7 @@ pub trait WidgetExtExtra
   fn with_focus(&mut self, use_focus : bool) -> Self;
   fn with_color(&mut self, color : fltk::enums::Color) -> Self;
   fn with_color_selected(&mut self, color : fltk::enums::Color) -> Self;
+  fn with_border(&mut self, x_border : i32, y_border : i32) -> Self;
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
@@ -290,6 +291,12 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   fn with_color_selected(&mut self, color : fltk::enums::Color) -> Self
   {
     self.set_selection_color(color);
+    self.clone()
+  }
+
+  fn with_border(&mut self, x_border : i32, y_border : i32) -> Self
+  {
+    self.set_pos(self.x() + x_border, self.y() + y_border);
     self.clone()
   }
 
