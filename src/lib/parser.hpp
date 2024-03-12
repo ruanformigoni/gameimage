@@ -222,7 +222,7 @@ class Fetch : public Parser
         .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
         .help("Specity the output file name for the flatimage");
       // Only check-sha, do not download
-      m_parser .add_argument("--sha")
+      m_parser.add_argument("--sha")
         .default_value(false)
         .implicit_value(true)
         .action([&](std::string const& s){ m_map_option_value["--sha"]=s; })
@@ -303,6 +303,13 @@ class Install : public Parser
       // Set stage
       m_enum_stage = ns_enum::Stage::INSTALL;
 
+      // Install core from a remote
+      m_parser.add_argument("--remote")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--remote"]=s; })
+        .help("Install core from remote");
+
       // Set args
       m_parser.add_argument("args")
         .nargs(argparse::nargs_pattern::at_least_one)
@@ -343,6 +350,13 @@ class Search : public Parser
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::SEARCH;
+
+      // Search from a remote
+      m_parser.add_argument("--remote")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--remote"]=s; })
+        .help("Search for core on remote");
 
       // Write json with search results
       m_parser.add_argument("--json")

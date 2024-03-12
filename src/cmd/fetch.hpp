@@ -23,6 +23,10 @@ namespace ns_fetch
 
 namespace fs = std::filesystem;
 
+// anonymous namespace
+namespace
+{
+
 // struct DataDownload {{{
 struct DataDownload
 {
@@ -85,8 +89,8 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
   fs::permissions(path_file, perms::owner_all | perms::group_all | perms::others_read);
 } // }}}
 
-// check_sha_from_url() {{{
-inline void check_sha_from_url(fs::path const& path_file, cpr::Url const& url)
+// check_file_from_sha() {{{
+inline void check_file_from_sha(fs::path const& path_file, cpr::Url const& url)
 {
   // Find sha256sum binary
   fs::path path_bin_sha256sum;
@@ -119,94 +123,61 @@ inline void check_sha_from_url(fs::path const& path_file, cpr::Url const& url)
   ns_log::write('i', "SHA passed for ", path_file);
 } // }}}
 
-// fetch_to_file() {{{
-inline void fetch_to_file(ns_enum::Platform const& platform
-  , fs::path path_dest
-  , bool is_check_sha
-  , std::optional<fs::path> opt_path_json)
+// fetch_file_from_url_on_failed_sha() {{{
+inline void fetch_file_from_url_on_failed_sha(fs::path const& path_file, cpr::Url const& url)
 {
-  // Log mode
-  if ( is_check_sha )
+  try
   {
-    ns_log::write('i', "Only checking SHA");
-  } // if
-
-  if ( opt_path_json )
+    check_file_from_sha(path_file, url);
+  }
+  // Re-download if SHA failed, and json write is disabled
+  catch(std::exception const& e)
   {
-    ns_log::write('i', "Only writting json");
-  } // if
+    // Re-download on failure
+    ns_log::write('i', "Failed to check SHA for file ", path_file);
+    fetch_file_from_url(path_file, url);
+  }
+} // }}}
 
-  // Fetch a file
-  auto f_fetch = [&](fs::path path_file, cpr::Url url, bool is_check_sha = false, bool to_json = false)
+// list_base_and_dwarfs() {{{
+inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
+  , fs::path const& path_dir_dst)
+{
+  struct Ret
   {
-    // Check if should only append json
-    if ( to_json )
-    {
-      ns_db::from_file(*opt_path_json,
-      [&](auto& db)
-      {
-        db("paths") |= path_file.c_str();
-        db("urls") |= url.c_str();
-      }, std::ios_base::out);
-      return;
-    } // if
-
-    try
-    {
-      check_sha_from_url(path_file, url);
-    }
-    // Re-download if SHA failed, and json write is disabled
-    catch(std::exception const& e)
-    {
-      // Only check SHA
-      if ( is_check_sha )
-      {
-        "Failed to check SHA for file '{}'"_throw(path_file);
-      }
-      // Re-download on failure
-      ns_log::write('i', "Failed to check SHA for file ");
-      fetch_file_from_url(path_file, url);
-    }
+    fs::path path_file_dwarfs;
+    fs::path path_file_base;
+    cpr::Url url_dwarfs;
+    cpr::Url url_base;
   };
 
-  // Erase previous dry run file if exists
-  if (opt_path_json.has_value()
-    && ns_fs::ns_path::file_exists<false>(*opt_path_json)._bool)
+  // Create parent directories directory
+  fs::create_directories(path_dir_dst);
+
+  // Temporary file with fetch list
+  auto path_json = path_dir_dst / "fetch.base.json";
+
+  // Fetch fetch list
+  fetch_file_from_url(path_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
+
+  // Create platform string
+  auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
+
+  return Ret
   {
-    fs::remove(*opt_path_json);
-  } // if
+    .path_file_dwarfs = fs::path{path_dir_dst} / "{}.dwarfs"_fmt(str_platform),
+    .path_file_base = fs::path{path_dir_dst} / "{}.tar.xz"_fmt(str_platform),
+    .url_dwarfs = cpr::Url(ns_db::query(path_json, "dwarfs", str_platform)),
+    .url_base = cpr::Url(ns_db::query(path_json, "base", str_platform)),
+  };
+} // get_files_by_platform() }}}
 
-  // Create temporary fetch dir
-  fs::create_directories(GIMG_PATH_JSON_FETCH);
-
-  // Fetch file list
-  auto path_json = fs::path{GIMG_PATH_JSON_FETCH} /= "fetch.json";
-  f_fetch(path_json
-    , cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/9102a93df9a36a505b4941aa51fbfbd4b2e53336/fetch.json"});
-
-  // Set temporary directory
-  fs::path dir_dest = path_dest.parent_path();
-
-  // Create temporary directory
-  fs::create_directories(dir_dest);
-
-  // Helper to downloads/merge files
-  auto f_fetch_by_platform = [&](auto& db_fetch, ns_enum::Platform platform)
-  {
-    // Create platform string
-    auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
-
-    // Determine paths for base and platform
-    fs::path path_platform = fs::path{dir_dest} / "{}.dwarfs"_fmt(str_platform);
-    fs::path path_base_tarball = fs::path{dir_dest} / "{}.tar.xz"_fmt(str_platform);
-
-    // Fetch base and platform
-    f_fetch(path_platform, cpr::Url{db_fetch["dwarfs"][str_platform]}, is_check_sha, opt_path_json.has_value());
-    f_fetch(path_base_tarball, cpr::Url{db_fetch["base"][str_platform]}, is_check_sha, opt_path_json.has_value());
-
-    // Check if is dry run, if so stop here
-    if ( opt_path_json.has_value() ) { return; }
-
+// merge_base_and_dwarfs() {{{
+inline void merge_base_and_dwarfs(std::string str_platform
+  , fs::path const& path_file_base
+  , fs::path const& path_file_dwarfs
+  , fs::path const& path_file_out)
+{
     // Find tar in PATH
     fs::path path_tar;
     "Could not find tar in PATH"_throw_if([&]
@@ -219,7 +190,7 @@ inline void fetch_to_file(ns_enum::Platform const& platform
     std::string tar_name_file =
     [&]
     {
-      auto ret = ns_subprocess::sync(path_tar, "-tf", path_base_tarball);
+      auto ret = ns_subprocess::sync(path_tar, "-tf", path_file_base);
       std::string file_name;
       std::getline(ret.ss_stdout, file_name);
       return file_name;
@@ -227,44 +198,117 @@ inline void fetch_to_file(ns_enum::Platform const& platform
     ns_log::write('i', "Tarball contains '{}'"_fmt(tar_name_file));
 
     // Extract base
-    ns_subprocess::sync(path_tar, "-xf", path_base_tarball, tar_name_file);
+    ns_subprocess::sync(path_tar, "-xf", path_file_base, tar_name_file);
 
     // Move to target name
-    fs::path path_base = fs::path{dir_dest} / "{}.flatimage"_fmt(str_platform);
-    fs::rename(tar_name_file, path_base);
-    ns_log::write('i', "Rename from '{}' to '{}'"_fmt(tar_name_file, path_base));
+    fs::rename(tar_name_file, path_file_out);
+    ns_log::write('i', "Extracted file ", path_file_out);
 
     // Merge files
-    ns_subprocess::sync(path_base, "fim-dwarfs-add", path_platform, "/fim/mount/{}"_fmt(str_platform));
+    ns_subprocess::sync(path_file_out, "fim-dwarfs-add", path_file_dwarfs, "/fim/mount/{}"_fmt(str_platform));
+} // merge_base_and_dwarfs() }}}
 
-    // Move to target
-    fs::rename(path_base, path_dest);
+} // anonymous namespace
+
+// cores_list() {{{
+inline decltype(auto) cores_list(fs::path const& path_dir_dst)
+{
+  // Create parent directories directory
+  fs::create_directories(path_dir_dst);
+
+  // Temporary file with fetch list
+  auto path_json = path_dir_dst / "fetch.cores.json";
+
+  // Fetch fetch list
+  fetch_file_from_url(path_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
+
+  struct Ret
+  {
+    std::string core;
+    std::string url;
   };
 
-  // Open file list
-  ns_db::from_file(path_json, [&](auto&& db_fetch)
+  std::vector<Ret> vector_cores;
+
+  // Get cores
+  ns_db::from_file(path_json, [&](auto&& db)
   {
-    f_fetch_by_platform(db_fetch, platform);
-  }, std::ios::in);
+    for( auto const& [key, value] : db["retroarch"].items() )
+    {
+      vector_cores.push_back(Ret{ns_common::to_string(key), ns_common::to_string(value)});
+    }
+  });
 
-} // fetch_to_file() }}}
+  // Return cores
+  return vector_cores;
+} // get_files_by_platform() }}}
 
-// fetch() {{{
-inline void fetch(std::string str_platform
-  , fs::path path_file_name
-  , bool is_check_sha
-  , std::optional<fs::path> opt_path_json)
+// base_fetch() {{{
+inline void base_fetch(ns_enum::Platform platform, fs::path path_file_name)
 {
   // Validate input
-  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-  fs::path path_image        = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
 
   // Log
-  ns_log::write('i', "platform: ", str_platform);
+  ns_log::write('i', "platform: ", ns_enum::to_string(platform));
   ns_log::write('i', "image: ", path_image);
 
-  // Fetch files
-  ns_fetch::fetch_to_file(platform, path_image, is_check_sha, opt_path_json);
+  // Get files and destination paths to download
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+
+  // base_fetch base and dwarfs
+  fetch_file_from_url_on_failed_sha(fetch_paths_and_urls.path_file_base, fetch_paths_and_urls.url_base);
+  fetch_file_from_url_on_failed_sha(fetch_paths_and_urls.path_file_dwarfs, fetch_paths_and_urls.url_dwarfs);
+
+  // Merge base and dwarfs
+  merge_base_and_dwarfs(ns_string::to_lower(ns_enum::to_string(platform))
+    , fetch_paths_and_urls.path_file_base
+    , fetch_paths_and_urls.path_file_dwarfs
+    , path_image);
+} // base_fetch() }}}
+
+// base_sha() {{{
+inline void base_sha(ns_enum::Platform platform, fs::path path_file_name)
+{
+  // Validate input
+  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+
+  // Log
+  ns_log::write('i', "platform: ", ns_enum::to_string(platform));
+  ns_log::write('i', "image: ", path_image);
+
+  // Get files and destination paths to download
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+
+  // Check SHA only
+  ns_log::write('i', "Only checking SHA");
+  check_file_from_sha(fetch_paths_and_urls.path_file_base, fetch_paths_and_urls.url_base);
+  check_file_from_sha(fetch_paths_and_urls.path_file_dwarfs, fetch_paths_and_urls.url_dwarfs);
+} // base_sha() }}}
+
+// base_json() {{{
+inline void base_json(ns_enum::Platform platform, fs::path path_file_name, fs::path path_json)
+{
+  // Validate input
+  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+
+  // Log
+  ns_log::write('i', "platform: ", ns_enum::to_string(platform));
+  ns_log::write('i', "image: ", path_image);
+
+  // Get files and destination paths to download
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+
+  ns_log::write('i', "Only writting json for base");
+  fs::remove(path_json);
+  ns_db::from_file(ns_fs::ns_path::file_create<true>(path_json)._ret, [&](auto& db)
+  {
+    db("paths") |= fetch_paths_and_urls.path_file_base.c_str();
+    db("paths") |= fetch_paths_and_urls.path_file_dwarfs.c_str();
+    db("urls") |= fetch_paths_and_urls.url_base.c_str();
+    db("urls") |= fetch_paths_and_urls.url_dwarfs.c_str();
+  }, std::ios_base::out);
+
 } // fetch() }}}
 
 } // namespace ns_fetch

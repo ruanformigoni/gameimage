@@ -11,6 +11,8 @@
 #include <cppcoro/generator.hpp>
 #include <matchit.h>
 
+#include "fetch.hpp"
+
 #include "../common.hpp"
 #include "../enum.hpp"
 
@@ -36,12 +38,12 @@ enum class Op
 };
 // }}}
 
-// namespace ns_impl {{{
-namespace ns_impl
+// anonymous namespace
+namespace
 {
 
-// search() {{{
-inline cr::generator<fs::path> search(fs::path path_dir
+// search_files() {{{
+inline cr::generator<fs::path> search_files(fs::path path_dir
   , char const* str_pattern
   , char const* str_exclude)
 {
@@ -70,36 +72,64 @@ inline cr::generator<fs::path> search(fs::path path_dir
 
     if ( fs::is_regular_file(entry->path()) && std::regex_match(target, regex_pattern))
     {
+      ns_log::write('i', "Found :: ", fs::relative(path_dir, entry->path()));
       fs::path curr = entry->path();
       co_yield curr;
     } // if
   } // for
 
-} // search() }}}
+} // search_files() }}}
 
-} // namespace ns_impl }}}
-
-// search() {{{
-inline void search(std::optional<fs::path> to_json, std::optional<std::string> query)
+// search_dirs() {{{
+inline cr::generator<fs::path> search_dirs(fs::path const& path_dir_search)
 {
-  std::string str_project;
-  std::string str_platform;
-  fs::path path_project;
+  for(fs::path i : fs::directory_iterator(path_dir_search)) { co_yield i; }
+} // search_dirs() }}}
 
-  ns_db::from_file_default([&](auto&& db)
+// search_remote() {{{
+inline cr::generator<std::string> search_remote(fs::path path_dir_project)
+{
+  for( auto i : ns_fetch::cores_list(path_dir_project) )
   {
-    str_project = db["project"];
-    str_platform = db[str_project]["platform"];
-    path_project = std::string(db[str_project]["path-project"]); 
-  }, std::ios_base::in);
+    ns_log::write('i', "Found :: ", i.core);
+    co_yield i.core;
+  } // for
+} // search_remote() }}}
 
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
+// paths_to_json() {{{
+auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
+{
+  // Write to json
+  if ( opt_path_file_json.has_value() )
+  {
+    // Erase file if exists
+    fs::remove(*opt_path_file_json);
+
+    // Open file list
+    ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
+    {
+      for(auto&& path_file : vec_paths)
+      {
+        db(ns_enum::to_string_lower(op)) |= path_file;
+      }
+    }, std::ios::out);
+  } // if
+} // paths_to_json() }}}
+
+} // anonymous namespace
+
+// search_remote() {{{
+inline void search_remote(std::optional<std::string> opt_query, std::optional<fs::path> opt_path_file_json)
+{
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+  std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
   // Retrieve operation selected by user
   Op op;
 
-  // Check if has query
-  if ( ! query )
+  // Check if has opt_query
+  if ( ! opt_query )
   {
     "Empty operation for search"_throw();
   } // if
@@ -107,84 +137,70 @@ inline void search(std::optional<fs::path> to_json, std::optional<std::string> q
   // Fetch query
   "Invalid operation for search\n"_try([&]
   { 
-    op = ns_enum::from_string<Op>(*query);
+    op = ns_enum::from_string<Op>(*opt_query);
   });
 
-  // Writes paths to json database
-  auto f_paths_to_json = [&](Op op, std::vector<fs::path> const& vec_paths)
+  // Get search dir
+  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+
+  // Handle fetch for each platform
+  switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
-    // Write to json
-    if ( to_json.has_value() )
-    {
-      // Erase file if exists
-      fs::remove(*to_json);
+    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote(path_dir_project));
+    break;
+    case ns_enum::Platform::WINE:
+    case ns_enum::Platform::PCSX2:
+    case ns_enum::Platform::RPCS3:
+    case ns_enum::Platform::YUZU : "Not implemented"_throw();
+  } // switch
 
-      // Open file list
-      ns_db::from_file(*to_json, [&]<typename T>(T&& db)
-      {
-        for(fs::path const& path_file : vec_paths)
-        {
-          db(ns_enum::to_string_lower(op)) |= path_file;
-        }
-      }, std::ios::out);
-    } // if
-  };
+} // search_remote() }}}
 
-  // Searches for existing files matching search inside the path_search path
-  auto f_search_files = [](fs::path const& path_search
-    , std::string str_search
-    , std::string str_exclude)
+// search_local() {{{
+inline void search_local(std::optional<std::string> opt_query, std::optional<fs::path> opt_path_file_json)
+{
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+  std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+
+  // Retrieve operation selected by user
+  Op op;
+
+  // Check if has opt_query
+  if ( ! opt_query )
   {
-    // Save to vec for json
-    std::vector<fs::path> vec_paths;
-    // Search executables
-    for(auto i : ns_impl::search(path_search, str_search.c_str(), str_exclude.c_str()))
-    {
-      i = fs::relative(i, path_search);
-      ns_log::write('i', "Found :: ", i);
-      vec_paths.push_back(i);
-    } // for
-    // Return written paths
-    return vec_paths;
-  };
+    "Empty operation for search"_throw();
+  } // if
 
-  // Searches for existing files matching search inside the path_search path
-  auto f_search_dirs = [](fs::path const& path_search)
-  {
-    // Save to vec for json
-    std::vector<fs::path> vec_paths;
-    // Search directories
-    for(fs::path i : fs::directory_iterator(path_search))
-    {
-      i = fs::relative(i, path_search);
-      ns_log::write('i', "Found :: ", i);
-      vec_paths.push_back(i);
-    } // for
-    // Return written paths
-    return vec_paths;
-  };
+  // Fetch query
+  "Invalid operation for search\n"_try([&]
+  { 
+    op = ns_enum::from_string<Op>(*opt_query);
+  });
 
-  // Get op as str
-  fs::path path_search = path_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
-  switch(enum_platform)
+  // Get search dir
+  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+
+  // Handle fetch for each platform
+  switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
     case ns_enum::Platform::WINE:
     {
       // Check if is rom
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
-      path_search = (path_project / "wine") / "drive_c";
+      path_dir_search = (path_dir_project / "wine") / "drive_c";
       // Save files to json
-      f_paths_to_json(op, f_search_files(path_search, R"(.*\.exe$)", R"(windows)"));
+      paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*\.exe$)", R"(windows)"));
     } // case
     break;
-    case ns_enum::Platform::RETROARCH : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
-    case ns_enum::Platform::PCSX2     : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
-    case ns_enum::Platform::RPCS3     : f_paths_to_json(op, f_search_dirs(path_search)); break;
-    case ns_enum::Platform::YUZU      : f_paths_to_json(op, f_search_files(path_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
+    case ns_enum::Platform::PCSX2    : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RPCS3    : paths_to_json(op, opt_path_file_json, search_dirs(path_dir_search)); break;
+    case ns_enum::Platform::YUZU     : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
   } // switch
 
-} // search() }}}
+} // search_local() }}}
 
 } // namespace ns_select
 

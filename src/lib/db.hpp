@@ -65,6 +65,7 @@ class Db
   private:
     std::variant<json_t, std::reference_wrapper<json_t>> m_json;
     std::ofstream m_file_database;
+    std::ios_base::openmode m_mode;
 
     Db(std::reference_wrapper<json_t> json);
 
@@ -91,6 +92,7 @@ class Db
     ~Db();
 
     // Access
+    decltype(auto) items() const;
     template<bool _throw = true, IsString T>
     bool contains(T&& t) const;
     bool empty() const;
@@ -124,8 +126,9 @@ inline Db::Db(std::reference_wrapper<json_t> json)
 } // Json
 
 inline Db::Db(fs::path t, std::ios_base::openmode mode)
+  : m_mode(mode)
 {
-  if ( ns_fs::ns_path::file_exists<false>(t)._bool )
+  if ( ns_fs::ns_path::file_exists<false>(t)._bool && m_mode == std::ios_base::in )
   {
     // Open file
     std::ifstream ifile{t, mode};
@@ -138,7 +141,7 @@ inline Db::Db(fs::path t, std::ios_base::openmode mode)
   } // if
   else
   {
-    ns_log::write('i', "File '", t, "' does not exist, creating...");
+    ns_log::write('i', "Creating json file '", t);
     m_json = json_t::parse("{}");
   } // else
 
@@ -153,7 +156,7 @@ inline Db::Db(fs::path t, std::ios_base::openmode mode)
 
 inline Db::~Db()
 {
-  if (std::holds_alternative<json_t>(m_json))
+  if ( m_mode != std::ios_base::in && std::holds_alternative<json_t>(m_json))
   {
     m_file_database << std::setw(2) << std::get<json_t>(m_json);
     m_file_database.close();
@@ -178,6 +181,12 @@ inline json_t& Db::data() const
 {
   return const_cast<Db*>(this)->data();
 } // data() const }}}
+
+// items() {{{
+inline decltype(auto) Db::items() const
+{
+  return data().items();
+} // items() }}}
 
 // contains() {{{
 template<bool _throw, IsString T>
@@ -373,7 +382,7 @@ inline void from_file_project(F&& f, std::ios_base::openmode mode)
 
 // query() {{{
 template<typename F, typename... Args>
-inline std::string query(F&& f, Args... args)
+inline std::string query(F&& file, Args... args)
 {
   std::string ret;
 
@@ -387,7 +396,7 @@ inline std::string query(F&& f, Args... args)
     ( f_access_impl(ref_db, std::forward<U>(u)), ... );
   }; // f_access
 
-  from_file(f, [&]<typename T>(T&& db)
+  from_file(file, [&]<typename T>(T&& db)
   {
     // Get a ref to db
     auto ref_db = std::reference_wrapper<Db const>(db);

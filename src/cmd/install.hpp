@@ -23,7 +23,9 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/db.hpp"
+#include "../lib/zip.hpp"
 
+#include "fetch.hpp"
 #include "select.hpp"
 
 namespace ns_install
@@ -32,107 +34,20 @@ namespace ns_install
 namespace fs = std::filesystem;
 namespace match = matchit;
 
-
-// icon() {{{
-inline void icon(std::string str_file_icon)
+// enum class Op {{{
+enum class Op
 {
-  namespace gil = boost::gil;
+  ICON,
+  ROM,
+  CORE,
+  BIOS,
+  KEYS,
+  GUI,
+};
+// }}}
 
-  // Current application
-  std::string str_app;
-
-  // Current application directory
-  fs::path path_app;
-
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Current application
-    str_app = db["project"];
-
-    // Current application directory
-    path_app = std::string(db[str_app]["path-project"]);
-  }
-  , std::ios_base::in);
-
-  // Validate that file exists
-  fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
-
-  // File extension
-  std::string ext = path_file_icon_src.extension();
-
-  // // Check result
-  "Empty file extension"_throw_if([&]{ return ext.empty(); });
-
-  // // Remove the leading dot
-  ext.erase(ext.begin());
-
-  // Create icon directory and set file name
-  fs::path path_dir_icon = path_app / "icon";
-  ns_fs::ns_path::dir_create<true>(path_dir_icon);
-  fs::path path_file_icon_dst = path_dir_icon / "icon.png";
-
-  // Get enum option
-  ns_enum::ImageFormat image_format;
-
-  // Check image type
-  "Image type '{}' is not supported, supported types are '.jpg, .jpeg, .png'"_try(
-    [&]{ image_format = ns_enum::from_string<ns_enum::ImageFormat>(ext); }
-    , ext
-  );
-
-  ns_log::write('i', "Reading image from ", path_file_icon_src);
-  gil::rgb8_image_t img; 
-  switch ( image_format )
-  {
-    // Convert jpg to png
-    case ns_enum::ImageFormat::JPG:
-    case ns_enum::ImageFormat::JPEG:
-      gil::read_image(path_file_icon_src, img, gil::jpeg_tag());
-      break;
-    // Copy
-    case ns_enum::ImageFormat::PNG:
-      gil::read_image(path_file_icon_src, img, gil::png_tag());
-      break;
-  } // switch
-
-  ns_log::write('i', "Image size is ", std::to_string(img.width()), "x", std::to_string(img.height()));
-
-  // Target dimms
-  int const width = 600;
-  int const height = 900;
-
-  // Calculate desired and current aspected ratios
-  double src_aspect = static_cast<double>(img.width()) / img.height();
-  double dst_aspect = static_cast<double>(width) / height;
-
-  // Calculate novel dimensions that preserve the aspect ratio
-  int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
-  int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
-
-  // Resize
-  gil::rgb8_image_t img_resized(width_new, height_new);
-  ns_log::write('i', "Image  aspect ratio is ", std::to_string(src_aspect));
-  ns_log::write('i', "Target aspect ratio is ", std::to_string(dst_aspect));
-  ns_log::write('i', "Resizing image to ", std::to_string(width_new), "x", std::to_string(height_new));
-  gil::resize_view(gil::const_view(img), gil::view(img_resized), gil::bilinear_sampler());
-
-  // Calculate crop
-  int crop_x = (width_new - width) / 2;
-  int crop_y = (height_new - height) / 2;
-
-  // Crop the image
-  auto view_img_cropped = gil::subimage_view(gil::view(img_resized), crop_x, crop_y, width, height);
-  
-  ns_log::write('i', "Writing image to ", path_file_icon_dst);
-  gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
-
-  // Save icon path in project database
-  ns_db::from_file_project([&](auto&& db)
-  {
-    db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
-  }
-  , std::ios_base::out);
-} // icon() }}}
+namespace
+{
 
 // wine() {{{
 inline void wine(std::vector<std::string> args)
@@ -204,7 +119,7 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(ns_enum::Platform enum_platform, bool is_remove, std::vector<std::string> args)
+inline void emulator(Op op, ns_enum::Platform enum_platform, bool is_remove, std::vector<std::string> args)
 {
   // Current project name
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -333,18 +248,16 @@ inline void emulator(ns_enum::Platform enum_platform, bool is_remove, std::vecto
   }; // f_install_roms
 
   // Get command
-  std::string str_cmd = args.front();
-  args.erase(args.begin());
-
-  match::match(str_cmd)
-  (
-    match::pattern | "gui"      = [&]
+  switch(op)
+  {
+    case Op::GUI:
     {
       ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
       ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
       ns_subprocess::sync(path_flatimage);
-    },
-    match::pattern | "bios"     = [&]
+    }
+    break;
+    case Op::BIOS:
     {
       if ( enum_platform == ns_enum::Platform::RPCS3 )
       {
@@ -359,39 +272,128 @@ inline void emulator(ns_enum::Platform enum_platform, bool is_remove, std::vecto
       } // if
 
       f_install_files("bios", path_dir_bios, args);
-    },
-    match::pattern | "rom"      = [&]{ f_install_files("rom", path_dir_rom, args); },
-    match::pattern | "core"     = [&]{ f_install_files("core", path_dir_core, args); },
-    match::pattern | "keys"     = [&]{ f_install_files("keys", path_dir_keys, args); },
-    match::pattern | match::_   = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
-  );
+    }
+    break;
+    case Op::ROM: { f_install_files("rom", path_dir_rom, args); }; break;
+    case Op::CORE: { f_install_files("core", path_dir_core, args); }; break;
+    case Op::KEYS: { f_install_files("keys", path_dir_keys, args); }; break;
+    case Op::ICON: "Invalid op in emulator install"_throw(); break;
+  } // switch
 } // emulator() }}}
 
+} // anonymous namespace
+
+// icon() {{{
+inline void icon(std::string str_file_icon)
+{
+  namespace gil = boost::gil;
+
+  // Current application
+  std::string str_app;
+
+  // Current application directory
+  fs::path path_app;
+
+  ns_db::from_file_default([&](auto&& db)
+  {
+    // Current application
+    str_app = db["project"];
+
+    // Current application directory
+    path_app = std::string(db[str_app]["path-project"]);
+  }
+  , std::ios_base::in);
+
+  // Validate that file exists
+  fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
+
+  // File extension
+  std::string ext = path_file_icon_src.extension();
+
+  // // Check result
+  "Empty file extension"_throw_if([&]{ return ext.empty(); });
+
+  // // Remove the leading dot
+  ext.erase(ext.begin());
+
+  // Create icon directory and set file name
+  fs::path path_dir_icon = path_app / "icon";
+  ns_fs::ns_path::dir_create<true>(path_dir_icon);
+  fs::path path_file_icon_dst = path_dir_icon / "icon.png";
+
+  // Get enum option
+  ns_enum::ImageFormat image_format;
+
+  // Check image type
+  "Image type '{}' is not supported, supported types are '.jpg, .jpeg, .png'"_try(
+    [&]{ image_format = ns_enum::from_string<ns_enum::ImageFormat>(ext); }
+    , ext
+  );
+
+  ns_log::write('i', "Reading image from ", path_file_icon_src);
+  gil::rgb8_image_t img; 
+  switch ( image_format )
+  {
+    // Convert jpg to png
+    case ns_enum::ImageFormat::JPG:
+    case ns_enum::ImageFormat::JPEG:
+      gil::read_image(path_file_icon_src, img, gil::jpeg_tag());
+      break;
+    // Copy
+    case ns_enum::ImageFormat::PNG:
+      gil::read_image(path_file_icon_src, img, gil::png_tag());
+      break;
+  } // switch
+
+  ns_log::write('i', "Image size is ", std::to_string(img.width()), "x", std::to_string(img.height()));
+
+  // Target dimms
+  int const width = 600;
+  int const height = 900;
+
+  // Calculate desired and current aspected ratios
+  double src_aspect = static_cast<double>(img.width()) / img.height();
+  double dst_aspect = static_cast<double>(width) / height;
+
+  // Calculate novel dimensions that preserve the aspect ratio
+  int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
+  int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
+
+  // Resize
+  gil::rgb8_image_t img_resized(width_new, height_new);
+  ns_log::write('i', "Image  aspect ratio is ", std::to_string(src_aspect));
+  ns_log::write('i', "Target aspect ratio is ", std::to_string(dst_aspect));
+  ns_log::write('i', "Resizing image to ", std::to_string(width_new), "x", std::to_string(height_new));
+  gil::resize_view(gil::const_view(img), gil::view(img_resized), gil::bilinear_sampler());
+
+  // Calculate crop
+  int crop_x = (width_new - width) / 2;
+  int crop_y = (height_new - height) / 2;
+
+  // Crop the image
+  auto view_img_cropped = gil::subimage_view(gil::view(img_resized), crop_x, crop_y, width, height);
+  
+  ns_log::write('i', "Writing image to ", path_file_icon_dst);
+  gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
+
+  // Save icon path in project database
+  ns_db::from_file_project([&](auto&& db)
+  {
+    db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
+  }
+  , std::ios_base::out);
+} // icon() }}}
+
 // install() {{{
-inline void install(std::vector<std::string> args)
+inline void install(Op op, std::vector<std::string> args)
 {
   if ( args.empty() ) { "Empty arguments for install command"_throw(); }
 
-  // Install icon
-  if ( args.front() == "icon" )
-  {
-    // Pop front
-    args.erase(args.begin());
-    // Check if has icon path
-    "No file name specified for icon"_throw_if([&]{ return args.empty(); });
-    // Create icon
-    icon(args.front());
-    return;
-  } // if
-
   // Get platform
-  ns_enum::Platform enum_platform;
-  ns_db::from_file_default([&](auto&& db)
-  { 
-    std::string str_app = db[db["project"]]["platform"];
-    enum_platform = ns_enum::from_string<ns_enum::Platform>(str_app);
-  }
-  , std::ios_base::in);
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(
+    ns_db::query(ns_db::file_default(), str_project, "platform")
+  );
 
   // Remove instead of install
   bool is_remove = false;
@@ -409,9 +411,55 @@ inline void install(std::vector<std::string> args)
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU: ns_install::emulator(enum_platform, is_remove, args);
+    case ns_enum::Platform::YUZU: ns_install::emulator(op, enum_platform, is_remove, args);
     break;
   } // switch
+  
+} // install() }}}
+
+// install() {{{
+inline void install_core_remote(std::vector<std::string> vec_cores)
+{
+  // Get project
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+
+  // Get platform
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(
+    ns_db::query(ns_db::file_default(), str_project, "platform")
+  );
+
+  if ( enum_platform != ns_enum::Platform::RETROARCH )
+  {
+    "Core install is only available for retroarch"_throw();
+  } // if
+
+  // Get project directory
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+
+  // Fetch cores / urls
+  auto vec_core_url = ns_fetch::cores_list(path_dir_project);
+
+  // Put in a set
+  std::set<std::string> set_cores(vec_cores.begin(), vec_cores.end());
+
+  // Install if match
+  for( auto i : vec_core_url )
+  {
+    if ( ! set_cores.contains(i.core) )
+    {
+      ns_log::write('i', "Skip ", i.core);
+      continue;
+    } // if
+
+    ns_log::write('i', "Install ", i.core);
+    fs::path path_file_out = (path_dir_project / "core" ) / i.core;
+    ns_fetch::fetch_file_from_url( path_file_out, i.url);
+    // Extract from zip
+    if ( i.core.ends_with(".zip") )
+    {
+      ns_zip::extract(path_file_out, path_file_out.parent_path());
+    } // if
+  } // for
   
 } // install() }}}
 

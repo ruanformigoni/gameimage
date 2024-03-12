@@ -38,11 +38,21 @@ namespace match = matchit;
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
-  ns_fetch::fetch(parser["--platform"]
-    , parser["--output-file"]
-    , parser.contains("--sha")
-    , parser.optional("--json")
-  );
+  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
+
+  if ( parser.contains("--sha") )
+  {
+    ns_fetch::base_sha(platform, *parser.optional("--output-file"));
+  } // if
+  else if ( parser.optional("--json") )
+  {
+    ns_fetch::base_json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
+  } // else if
+  else
+  {
+    ns_fetch::base_fetch(platform, *parser.optional("--output-file"));
+  } // else
+
 } // fetch() }}}
 
 // init() {{{
@@ -60,7 +70,43 @@ void project(ns_parser::Parser const& parser)
 // install() {{{
 void install(ns_parser::Parser const& parser)
 {
-  ns_install::install(parser.remaining());
+  auto args{parser.remaining()};
+
+  // Check for op
+  "No option was specified"_throw_if([&]{ return args.empty(); });
+
+  // Get project
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+
+  // Get platform
+  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(
+    ns_db::query(ns_db::file_default(), str_project, "platform")
+  );
+
+  ns_install::Op op = ns_enum::from_string<ns_install::Op>(args.front());
+  args.erase(args.begin());
+
+  switch(op)
+  {
+    case ns_install::Op::ICON:
+    {
+      // Check if has icon path
+      "No file name specified for icon"_throw_if([&]{ return args.empty(); });
+      // Create icon
+      ns_install::icon(args.front());
+    } // case
+    break;
+    default:
+    {
+      if ( parser.contains("--remote") && enum_platform == ns_enum::Platform::RETROARCH )
+      {
+        ns_install::install_core_remote(args);
+        return;
+      } // if
+      ns_install::install(op, args);
+    } // default
+  } // switch
+
 } // install() }}}
 
 // compress() {{{
@@ -72,7 +118,13 @@ void compress()
 // search() {{{
 void search(ns_parser::Parser const& parser)
 {
-  ns_search::search(parser.optional("--json"), parser.optional("query"));
+  if ( parser.contains("--remote") ) 
+  {
+    ns_search::search_remote(parser.optional("query"), parser.optional("--json"));
+    return;
+  } // if
+
+  ns_search::search_local(parser.optional("query"), parser.optional("--json"));
 } // search() }}}
 
 // select() {{{

@@ -35,6 +35,7 @@ find_package(libjpeg-turbo REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(cppcoro REQUIRED)
+find_package(libzippp REQUIRED)
 
 # Main executable
 add_executable(main main.cpp)
@@ -51,6 +52,7 @@ target_link_libraries(main PRIVATE
   PNG::PNG
   ZLIB::ZLIB
   cppcoro::cppcoro
+  libzippp::libzippp
 )
 target_include_directories(main PRIVATE ${fmt_INCLUDE_DIRS})
 
