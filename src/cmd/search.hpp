@@ -100,20 +100,26 @@ inline cr::generator<std::string> search_remote(fs::path path_dir_project)
 auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
 {
   // Write to json
-  if ( opt_path_file_json.has_value() )
+  if ( ! opt_path_file_json.has_value() )
   {
-    // Erase file if exists
-    fs::remove(*opt_path_file_json);
-
-    // Open file list
-    ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
+    for(auto&& path_file : vec_paths)
     {
-      for(auto&& path_file : vec_paths)
-      {
-        db(ns_enum::to_string_lower(op)) |= path_file;
-      }
-    }, std::ios::out);
+      ns_log::write('i', "Found :: ", path_file);
+    }
+    return;
   } // if
+
+  // Erase file if exists
+  fs::remove(*opt_path_file_json);
+
+  // Open file list
+  ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
+  {
+    for(auto&& path_file : vec_paths)
+    {
+      db(ns_enum::to_string_lower(op)) |= path_file;
+    }
+  }, std::ios::out);
 } // paths_to_json() }}}
 
 } // anonymous namespace
