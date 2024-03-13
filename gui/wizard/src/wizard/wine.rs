@@ -40,7 +40,7 @@ use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::frame;
-use crate::frame::wizard;
+use crate::wizard;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

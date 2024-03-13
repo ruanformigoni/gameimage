@@ -28,7 +28,7 @@ use crate::log;
 use crate::dimm;
 use crate::svg;
 use crate::frame;
-use crate::frame::wizard;
+use crate::wizard;
 use crate::db;
 
 // pub fn name() {{{

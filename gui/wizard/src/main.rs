@@ -18,6 +18,7 @@ mod dimm;
 mod download;
 mod db;
 mod svg;
+mod wizard;
 
 use common::Msg;
 // }}}
@@ -130,27 +131,27 @@ fn redraw(&mut self, msg : Msg)
     //
     Msg::DrawWineName =>
     {
-      frame::wizard::wine::name(self.tx, "Select the Application Name");
+      wizard::wine::name(self.tx, "Select the Application Name");
     }
     Msg::DrawWineIcon =>
     {
-      frame::wizard::wine::icon(self.tx, "Select the Application Icon");
+      wizard::wine::icon(self.tx, "Select the Application Icon");
     }
     Msg::DrawWineConfigure =>
     {
-      frame::wizard::wine::configure(self.tx, "Configure Wine");
+      wizard::wine::configure(self.tx, "Configure Wine");
     }
     Msg::DrawWineRom =>
     {
-      frame::wizard::wine::rom(self.tx, "Install/Test the Application(s)");
+      wizard::wine::rom(self.tx, "Install/Test the Application(s)");
     }
     Msg::DrawWineDefault =>
     {
-      frame::wizard::wine::default(self.tx, "Select the Default Executable");
+      wizard::wine::default(self.tx, "Select the Default Executable");
     }
     Msg::DrawWineCompress =>
     {
-      frame::wizard::wine::compress(self.tx, "Compress the Created Package");
+      wizard::wine::compress(self.tx, "Compress the Created Package");
     }
 
     //
@@ -158,31 +159,31 @@ fn redraw(&mut self, msg : Msg)
     //
     Msg::DrawRetroarchName =>
     {
-      frame::wizard::retroarch::name(self.tx, "Select the Application Name");
+      wizard::retroarch::name(self.tx, "Select the Application Name");
     }
     Msg::DrawRetroarchIcon =>
     {
-      frame::wizard::retroarch::icon(self.tx, "Select the Application Icon");
+      wizard::retroarch::icon(self.tx, "Select the Application Icon");
     }
     Msg::DrawRetroarchRom =>
     {
-      frame::wizard::retroarch::rom(self.tx, "Install the Rom File(s)");
+      wizard::retroarch::rom(self.tx, "Install the Rom File(s)");
     }
     Msg::DrawRetroarchCore =>
     {
-      frame::wizard::retroarch::core(self.tx, "Install the Core File(s)");
+      wizard::retroarch::core(self.tx, "Install the Core File(s)");
     }
     Msg::DrawRetroarchBios =>
     {
-      frame::wizard::retroarch::bios(self.tx, "Install the Bios File(s)");
+      wizard::retroarch::bios(self.tx, "Install the Bios File(s)");
     }
     Msg::DrawRetroarchTest =>
     {
-      frame::wizard::retroarch::test(self.tx, "Test the Created Package");
+      wizard::retroarch::test(self.tx, "Test the Created Package");
     }
     Msg::DrawRetroarchCompress =>
     {
-      frame::wizard::retroarch::compress(self.tx, "Compress the Created Package");
+      wizard::retroarch::compress(self.tx, "Compress the Created Package");
     }
 
     //
@@ -190,27 +191,27 @@ fn redraw(&mut self, msg : Msg)
     //
     Msg::DrawPcsx2Name =>
     {
-      frame::wizard::pcsx2::name(self.tx, "Select the Application Name");
+      wizard::pcsx2::name(self.tx, "Select the Application Name");
     }
     Msg::DrawPcsx2Icon =>
     {
-      frame::wizard::pcsx2::icon(self.tx, "Select the Application Icon");
+      wizard::pcsx2::icon(self.tx, "Select the Application Icon");
     }
     Msg::DrawPcsx2Rom =>
     {
-      frame::wizard::pcsx2::rom(self.tx, "Install the Rom File(s)");
+      wizard::pcsx2::rom(self.tx, "Install the Rom File(s)");
     }
     Msg::DrawPcsx2Bios =>
     {
-      frame::wizard::pcsx2::bios(self.tx, "Install the Bios File(s)");
+      wizard::pcsx2::bios(self.tx, "Install the Bios File(s)");
     }
     Msg::DrawPcsx2Test =>
     {
-      frame::wizard::pcsx2::test(self.tx, "Test the Created Package");
+      wizard::pcsx2::test(self.tx, "Test the Created Package");
     }
     Msg::DrawPcsx2Compress =>
     {
-      frame::wizard::pcsx2::compress(self.tx, "Compress the Created Package");
+      wizard::pcsx2::compress(self.tx, "Compress the Created Package");
     }
 
     //
@@ -218,27 +219,27 @@ fn redraw(&mut self, msg : Msg)
     //
     Msg::DrawRpcs3Name =>
     {
-      frame::wizard::rpcs3::name(self.tx, "Select the Application Name");
+      wizard::rpcs3::name(self.tx, "Select the Application Name");
     }
     Msg::DrawRpcs3Icon =>
     {
-      frame::wizard::rpcs3::icon(self.tx, "Select the Application Icon");
+      wizard::rpcs3::icon(self.tx, "Select the Application Icon");
     }
     Msg::DrawRpcs3Rom =>
     {
-      frame::wizard::rpcs3::rom(self.tx, "Install the Rom Directory(ies)");
+      wizard::rpcs3::rom(self.tx, "Install the Rom Directory(ies)");
     }
     Msg::DrawRpcs3Bios =>
     {
-      frame::wizard::rpcs3::bios(self.tx, "Install the Bios and DLC Files");
+      wizard::rpcs3::bios(self.tx, "Install the Bios and DLC Files");
     }
     Msg::DrawRpcs3Test =>
     {
-      frame::wizard::rpcs3::test(self.tx, "Test the Created Package");
+      wizard::rpcs3::test(self.tx, "Test the Created Package");
     }
     Msg::DrawRpcs3Compress =>
     {
-      frame::wizard::rpcs3::compress(self.tx, "Compress the Created Package");
+      wizard::rpcs3::compress(self.tx, "Compress the Created Package");
     }
 
     //
@@ -246,31 +247,31 @@ fn redraw(&mut self, msg : Msg)
     //
     Msg::DrawYuzuName =>
     {
-      frame::wizard::yuzu::name(self.tx, "Select the Application Name");
+      wizard::yuzu::name(self.tx, "Select the Application Name");
     }
     Msg::DrawYuzuIcon =>
     {
-      frame::wizard::yuzu::icon(self.tx, "Select the Application Icon");
+      wizard::yuzu::icon(self.tx, "Select the Application Icon");
     }
     Msg::DrawYuzuRom =>
     {
-      frame::wizard::yuzu::rom(self.tx, "Install the Rom File(s)");
+      wizard::yuzu::rom(self.tx, "Install the Rom File(s)");
     }
     Msg::DrawYuzuBios =>
     {
-      frame::wizard::yuzu::bios(self.tx, "Install the firmware Files");
+      wizard::yuzu::bios(self.tx, "Install the firmware Files");
     }
     Msg::DrawYuzuKeys =>
     {
-      frame::wizard::yuzu::keys(self.tx, "Install the Decryption Keys");
+      wizard::yuzu::keys(self.tx, "Install the Decryption Keys");
     }
     Msg::DrawYuzuTest =>
     {
-      frame::wizard::yuzu::test(self.tx, "Test the Created Package");
+      wizard::yuzu::test(self.tx, "Test the Created Package");
     }
     Msg::DrawYuzuCompress =>
     {
-      frame::wizard::yuzu::compress(self.tx, "Compress the Created Package");
+      wizard::yuzu::compress(self.tx, "Compress the Created Package");
     }
 
     //

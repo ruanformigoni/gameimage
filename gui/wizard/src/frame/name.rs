@@ -28,13 +28,13 @@ use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
+use crate::wizard;
 use crate::common;
 use crate::log;
 use crate::db;
 use crate::download;
 use crate::svg;
 
-use crate::frame::wizard;
 
 
 // pub fn name() {{{
