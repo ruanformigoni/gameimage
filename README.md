@@ -401,44 +401,6 @@ there. Remove the `bios` folder for platforms that do not require it.
 ---
 
 <details>
-<summary>yuzu example with video</summary>
-
-Video tutorial:
-
-![gameimage-yuzu-example](doc/yuzu.mp4)
-
-For `yuzu`:
-
-```
-my-game-dir
-├── bios
-│   └── my-firmware.[zip,7z]
-├── keys
-│   └── my-keys.[zip,7z]
-├── icon
-│   └── my-game-cover.png
-├── rom
-│   └── my-game.nsp
-└── update # This folder is optional
-    ├── my-dlc-1.nsp
-    ├── my-dlc-2.nsp
-    └── my-update.nsp
-```
-
-and run:
-
-```
-./gameimage.AppImage --platform=yuzu --name="My cool game" --dir=./my-game-dir
-```
-
-During the install, yuzu will open to install the updates in the `update`
-folder.
-
-</details>
-
----
-
-<details>
 <summary>wine example with video</summary>
 
 Since version `0.2.0` the wine module works across several linux distros.
