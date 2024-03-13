@@ -81,7 +81,7 @@ pub fn compress(tx: Sender<common::Msg>
       return;
     }; // else
 
-    term.dispatch(vec![path_gimg_backend.string().as_str(), "compress"]
+    term.dispatch(vec![&path_gimg_backend.string(), "compress"]
       , move |code : i32|
       {
         clone_tx.send(common::Msg::WindActivate);

@@ -68,6 +68,8 @@ pub enum Msg
   DrawYuzuTest,
   DrawYuzuCompress,
 
+  DrawFinish,
+
   WindActivate,
   WindDeactivate,
 

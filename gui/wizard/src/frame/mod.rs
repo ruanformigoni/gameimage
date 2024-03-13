@@ -6,3 +6,4 @@ pub mod fetch;
 pub mod creator;
 pub mod desktop;
 pub mod name;
+pub mod finish;

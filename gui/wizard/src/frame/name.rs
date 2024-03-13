@@ -29,12 +29,12 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::wizard;
-use crate::common;
 use crate::log;
 use crate::db;
 use crate::lib::download;
 use crate::lib::svg;
-
+use crate::common;
+use crate::common::PathBufExt;
 
 
 // pub fn name() {{{
@@ -141,7 +141,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     }; // else
 
     // Move image
-    if let Err(e) = std::fs::rename(path_file_image_src, path_file_image_dst)
+    if let Err(e) = std::fs::rename(path_file_image_src, &path_file_image_dst)
     {
       let msg = format!("Could not move image: {}", e.to_string());
       clone_output_status.set_value(&msg);
@@ -149,8 +149,11 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
+    // Save location in var to display in draw finish
+    env::set_var("GIMG_FINISH_LOCATION", &path_file_image_dst.string());
+
     // Go to next frame
-    clone_tx.send(common::Msg::DrawWelcome);
+    clone_tx.send(common::Msg::DrawFinish);
   });
 } // }}}
 

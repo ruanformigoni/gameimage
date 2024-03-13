@@ -101,6 +101,10 @@ fn redraw(&mut self, msg : Msg)
     //
     // Common
     //
+    Msg::DrawFinish =>
+    {
+      frame::finish::finish(self.tx, "Thank You for Using GameImage!");
+    }
     Msg::DrawWelcome =>
     {
       frame::welcome::welcome(self.tx, "Welcome to GameImage");
@@ -321,7 +325,8 @@ fn init(&mut self)
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   // self.tx.send(Msg::DrawRetroarchIcon);
-  self.tx.send(Msg::DrawWelcome);
+  self.tx.send(Msg::DrawFinish);
+  // self.tx.send(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages
