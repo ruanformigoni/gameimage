@@ -31,7 +31,7 @@ use crate::frame;
 use crate::common;
 use crate::log;
 use crate::db;
-use crate::download;
+use crate::lib::download;
 
 // fn url_basename() {{{
 fn url_basename(url : Url::Url) -> anyhow::Result<String>

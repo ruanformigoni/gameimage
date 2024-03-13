@@ -25,11 +25,11 @@ use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
-use crate::dimm;
-use crate::svg;
 use crate::frame;
-use crate::wizard;
 use crate::db;
+use crate::wizard;
+use crate::lib::dimm;
+use crate::lib::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

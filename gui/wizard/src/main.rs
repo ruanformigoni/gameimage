@@ -6,22 +6,22 @@ use fltk::{
   prelude::*,
   app::App,
   window::Window,
+  dialog,
   enums::{FrameType,Color},
 };
 use fltk_theme::{ColorTheme, color_themes};
 
 // Modules {{{
 mod common;
-mod scaling;
 mod frame;
-mod dimm;
-mod download;
+mod lib;
 mod db;
-mod svg;
 mod wizard;
+// }}}
 
 use common::Msg;
-// }}}
+use lib::dimm;
+use lib::svg;
 
 // struct: Gui {{{
 #[derive(Debug)]
@@ -291,62 +291,69 @@ fn redraw(&mut self, msg : Msg)
   app::awake();
 } // }}}
 
-} // }}}
-
-// impl: Drop for Gui {{{
-impl Drop for Gui
+// init() {{{
+fn init(&mut self)
 {
-  fn drop(&mut self)
+  // Ask the user he really wants to exit gameimage
+  let clone_tx = self.tx.clone();
+  let f_callback_close = move |w: &mut fltk::window::DoubleWindow|
   {
-    // Create & show logging window
-    self.wind_log.begin();
-    log!("Initialized logging!");
-    self.wind_log.end();
-    self.wind_log.show();
-
-    // Show main window
-    self.wind_main.show();
-
-    // Set log window to the left of the main window
-    self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
-
-    // self.tx.send(Msg::DrawRetroarchIcon);
-    self.tx.send(Msg::DrawWelcome);
-    while self.app.wait()
+    if fltk::app::event() == fltk::enums::Event::Close
+      && dialog::choice2_default("Exit GameImage?", "No", "Yes", "") == Some(1)
     {
-      match self.rx.recv()
+      clone_tx.send(common::Msg::Quit);
+    } // if
+  };
+
+  self.wind_main.set_callback(f_callback_close.clone());
+  self.wind_log.set_callback(f_callback_close.clone());
+
+  // Create & show logging window
+  self.wind_log.begin();
+  log!("Initialized logging!");
+  self.wind_log.end();
+  self.wind_log.show();
+
+  // Show main window
+  self.wind_main.show();
+
+  // Set log window to the left of the main window
+  self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
+
+  // self.tx.send(Msg::DrawRetroarchIcon);
+  self.tx.send(Msg::DrawWelcome);
+  while self.app.wait()
+  {
+    // Handle messages
+    match self.rx.recv()
+    {
+      Some(common::Msg::WindActivate) =>
       {
-        Some(common::Msg::WindActivate) =>
-        {
-          let children = self.wind_main.children();
-          for i in 0..children {
-            let mut widget = self.wind_main.child(i).unwrap();
-            widget.activate();
-          }
-          app::flush();
-          app::awake();
-        }
-        Some(common::Msg::WindDeactivate) =>
-        {
-          let children = self.wind_main.children();
-          for i in 0..children
-          {
-            let mut widget = self.wind_main.child(i).unwrap();
-            widget.deactivate();
-          }
-          app::flush();
-          app::awake();
-        }
-        Some(value) => self.redraw(value),
-        None => (),
-      } // match
-    } // while
-  }
+        ( 0..self.wind_main.children() )
+          .into_iter()
+          .for_each(|e| { self.wind_main.child(e).unwrap().clone().activate() });
+        app::flush();
+        app::awake();
+      }
+      Some(common::Msg::WindDeactivate) =>
+      {
+        ( 0..self.wind_main.children() )
+          .into_iter()
+          .for_each(|e| { self.wind_main.child(e).unwrap().clone().deactivate() });
+        app::flush();
+        app::awake();
+      }
+      Some(value) => self.redraw(value),
+      None => (),
+    } // match
+  } // while
+} // fn: init }}}
+
 } // }}}
 
 // fn: main {{{
 fn main() {
-  let _ = Gui::new();
+  let _ = Gui::new().init();
 } // fn: main }}}
 
 // cmd: !GIMG_PKG_TYPE=flatimage cargo run --release

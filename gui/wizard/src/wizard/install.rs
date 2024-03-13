@@ -34,8 +34,8 @@ use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 // fetch_items() {{{
 pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Vec<String>>

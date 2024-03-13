@@ -32,8 +32,8 @@ use crate::wizard;
 use crate::common;
 use crate::log;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 
 // pub fn name() {{{

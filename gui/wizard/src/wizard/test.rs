@@ -32,8 +32,8 @@ use crate::common;
 use crate::log;
 use crate::common::PathBufExt;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 // pub fn test() {{{
 pub fn test(tx: Sender<common::Msg>

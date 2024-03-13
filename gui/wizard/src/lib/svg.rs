@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::scaling;
+use crate::lib::scaling;
 
 const ICON_HOME: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-house-fill" viewBox="0 0 16 16">

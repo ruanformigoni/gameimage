@@ -31,8 +31,8 @@ use crate::frame;
 use crate::common;
 use crate::log;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 // set_image_preview() {{{
 fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>

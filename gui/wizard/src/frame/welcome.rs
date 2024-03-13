@@ -18,8 +18,8 @@ use fltk::{
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::svg;
 use crate::log;
+use crate::lib::svg;
 use crate::common::PathBufExt;
 
 // pub fn welcome() {{{

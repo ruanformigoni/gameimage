@@ -39,8 +39,8 @@ use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 // fn create_entry() {{{
 fn create_entry(entry : db::project::Entry

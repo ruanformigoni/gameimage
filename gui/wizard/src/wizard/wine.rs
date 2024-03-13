@@ -32,8 +32,6 @@ use fltk::{
 
 use anyhow::anyhow as ah;
 
-use crate::svg;
-use crate::dimm;
 use crate::log;
 use crate::db;
 use crate::common;
@@ -41,6 +39,8 @@ use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::frame;
 use crate::wizard;
+use crate::lib::svg;
+use crate::lib::dimm;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

@@ -40,9 +40,9 @@ use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
-use crate::svg;
 use crate::common;
 use crate::log;
+use crate::lib::svg;
 
 pub struct Term
 {

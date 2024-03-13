@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::scaling;
+use crate::lib::scaling;
 
 pub const HEIGHT : i32 = 500;
 pub const WIDTH  : i32 = 500;

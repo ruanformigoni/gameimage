@@ -35,8 +35,8 @@ use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
-use crate::download;
-use crate::svg;
+use crate::lib::download;
+use crate::lib::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

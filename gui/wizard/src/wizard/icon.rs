@@ -42,10 +42,10 @@ use crate::common;
 use crate::common::WidgetExtExtra;
 use crate::common::PathBufExt;
 use crate::db;
-use crate::download;
-use crate::svg;
 use crate::log;
-use crate::scaling;
+use crate::lib::scaling;
+use crate::lib::download;
+use crate::lib::svg;
 
 
 // get_icon() {{{
