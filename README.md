@@ -4,6 +4,8 @@
 
 # GameImage - FlatImage / AppImage Game Packer
 
+![](./doc/functionalities.svg)
+
 - [GameImage - FlatImage / AppImage Game Packer](#gameimage---flatimage-/-appimage-game-packer)
   - [Supported applications for packaging](#supported-applications-for-packaging)
   - [Showcase](#showcase)
