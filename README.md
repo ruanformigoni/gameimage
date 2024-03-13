@@ -73,10 +73,6 @@ Also watch it on [youtube](https://www.youtube.com/watch?v=_15QkwCS7bg), thanks 
 <img src="doc/wine.svg"  width="120" height="120">
 </a>
 
-<a href="https://yuzu-emu.org/" target="_blank">
-<img src="doc/yuzu.jpg"  width="120" height="120">
-</a>
-
 ## Showcase
 
 Files displayed on the `thunar` file manager.
