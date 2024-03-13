@@ -87,9 +87,9 @@ inline cr::generator<fs::path> search_dirs(fs::path const& path_dir_search)
 } // search_dirs() }}}
 
 // search_remote() {{{
-inline cr::generator<std::string> search_remote(fs::path path_dir_project)
+inline cr::generator<std::string> search_remote()
 {
-  for( auto i : ns_fetch::cores_list(path_dir_project) )
+  for( auto i : ns_fetch::cores_list() )
   {
     ns_log::write('i', "Found :: ", i.core);
     co_yield i.core;
@@ -152,7 +152,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
-    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote(path_dir_project));
+    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote());
     break;
     case ns_enum::Platform::WINE:
     case ns_enum::Platform::PCSX2:

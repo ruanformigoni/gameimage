@@ -200,16 +200,15 @@ inline void merge_base_and_dwarfs(std::string str_platform
 } // anonymous namespace
 
 // cores_list() {{{
-inline decltype(auto) cores_list(fs::path const& path_dir_dst)
+inline decltype(auto) cores_list()
 {
-  // Create parent directories directory
-  fs::create_directories(path_dir_dst);
-
   // Temporary file with fetch list
-  auto path_json = path_dir_dst / "fetch.cores.json";
+  fs::path str_project = ns_db::query(ns_db::file_default(), "project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_file_json = path_dir_project / "fetch.cores.json";
 
   // Fetch fetch list
-  fetch_file_from_url(path_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
+  fetch_file_from_url(path_file_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
 
   struct Ret
   {
@@ -220,7 +219,7 @@ inline decltype(auto) cores_list(fs::path const& path_dir_dst)
   std::vector<Ret> vector_cores;
 
   // Get cores
-  ns_db::from_file(path_json, [&](auto&& db)
+  ns_db::from_file(path_file_json, [&](auto&& db)
   {
     for( auto const& [key, value] : db["retroarch"].items() )
     {

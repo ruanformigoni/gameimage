@@ -463,7 +463,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   );
 
   // Core dir
-  fs::path path_dir_core = ns_db::query(ns_db::file_project(), "path-dir-core");
+  fs::path rpath_dir_core = ns_db::query(ns_db::file_project(), "path-dir-core");
 
   if ( enum_platform != ns_enum::Platform::RETROARCH )
   {
@@ -479,7 +479,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
   // Fetch cores / urls
-  auto vec_core_url = ns_fetch::cores_list(path_dir_project);
+  auto vec_core_url = ns_fetch::cores_list();
 
   // Put in a set
   std::set<std::string> set_cores(vec_cores.begin(), vec_cores.end());
@@ -493,7 +493,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
       continue;
     } // if
 
-    fs::path path_file_out = path_dir_core / i.core;
+    fs::path path_file_out = path_dir_project / rpath_dir_core / i.core;
     ns_log::write('i', "Install ", i.core, " to ", path_file_out);
     ns_fetch::fetch_file_from_url(path_file_out, i.url);
     // Extract & install

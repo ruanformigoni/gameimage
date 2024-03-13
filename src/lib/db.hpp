@@ -128,16 +128,35 @@ inline Db::Db(std::reference_wrapper<json_t> json)
 inline Db::Db(fs::path t, std::ios_base::openmode mode)
   : m_mode(mode)
 {
+  // Open file if exists
   if ( ns_fs::ns_path::file_exists<false>(t)._bool )
   {
     // Open file
     std::ifstream ifile{t, mode};
     // Check for failure
-    "Failed to open '{}' for read"_throw_if([&]{ return ! ifile.good(); }, t);
-    // Parse json
-    m_json = json_t::parse(ifile);
+    "Failed to open '{}'"_throw_if([&]{ return ! ifile.good(); }, t);
+    // Read to string
+    std::string contents;
+    {
+      std::stringstream ss;
+      ss << ifile.rdbuf();
+      contents = ss.str();
+    }
     // Close file
     ifile.close();
+    // Try to parse contents
+    if ( json_t::accept(contents) )
+    {
+      m_json = json_t::parse(contents);
+    } // if
+    else
+    {
+      // Failed to parse, create an empty json instead
+      // if mode is not 'read'
+      ns_log::write('i', "Failed to parse json, will create if mode is write");
+      // If mode is not in, create as new file
+      if ( mode != std::ios_base::in ) { m_json = json_t::parse("{}"); } // if
+    } // catch
   } // if
   else
   {
