@@ -60,14 +60,11 @@ enum class Stage
 template<Enum U, ns_concept::StreamInsertable T>
 inline decltype(auto) from_string(T&& t)
 {
-	if ( auto opt = magic::enum_cast<U>(ns_common::to_string(t), magic::case_insensitive); opt )
-	{
-		return U{*opt};
-	} // if
+  auto opt = magic::enum_cast<U>(ns_common::to_string(t), magic::case_insensitive);
 
-	"Could not convert enum"_throw();
+	if ( ! opt ) { "Could not convert enum from '{}'"_throw(t); } // if
 
-	return U{};
+	return U{*opt};
 }
 
 template<Enum T>
