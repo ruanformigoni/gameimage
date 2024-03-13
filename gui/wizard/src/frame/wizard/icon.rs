@@ -391,7 +391,6 @@ pub fn icon(tx: Sender<common::Msg>
           });
         });
       btn_image.set_selection_color(Color::Blue);
-      if ( curr_col == 0 && curr_row == 0 ) { btn_image.toggle(true); }
 
       if let Ok(mut lock) = arc_vec_radio.lock()
       {

@@ -166,12 +166,6 @@ pub fn name(tx: Sender<common::Msg>
       return;
     } // else
 
-    // Export project dir
-    if let Ok(env_dir) = env::var("GIMG_DIR")
-    {
-      env::set_var("GIMG_PROJECT", env_dir + "/" + name.as_str());
-    } // if
-
     // Go to next frame
     clone_tx.send(clone_msg_next);
   });
