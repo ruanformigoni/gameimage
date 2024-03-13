@@ -78,20 +78,24 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
 
   let mut output_info = text::TextDisplay::default()
     .with_width_of(&output_saved_location)
-    .with_height(dimm::height_button_wide()*6)
+    .with_height(dimm::height_button_wide()*8)
     .below_of(&output_saved_location, dimm::border())
     .with_color(fltk::enums::Color::BackGround)
     .with_frame(fltk::enums::FrameType::NoBox);
   output_info.wrap_mode(text::WrapMode::AtColumn, 0);
   output_info.set_buffer(text::TextBuffer::default());
   output_info.insert("You can now move the package to your games folder,");
-  output_info.insert(" other linux computer or an external hard drive.");
-  output_info.insert(" To start using your application, just click the file to open the launcher.");
+  output_info.insert(" other Linux computer or an external hard drive.");
+  output_info.insert(" To start using your application, simply click to launch.");
   output_info.insert("\n\n");
-  output_info.insert("Wherever you save your package, when launched for the first time it will create");
-  output_info.insert(&format!(" a file called '{}'", str_package_basename));
-  output_info.insert(", this is where your application data such as save games will be");
-  output_info.insert(" stored at.");
+  output_info.insert("Regardless of where you store your package,");
+  output_info.insert(" launching it for the first time will generate");
+  output_info.insert(&format!(" a directory called '{}'", str_package_basename));
+  output_info.insert(", this directory contains application data such as save games.");
+  output_info.insert("\n\n");
+  output_info.insert("If you encounter any issues or have suggestions for new features,");
+  output_info.insert(" I encourage you to create an issue on GitHub or GitLab.");
+  output_info.insert(" Your feedback is invaluable to help project improve.");
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
