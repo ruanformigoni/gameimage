@@ -18,6 +18,7 @@
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
 #include "../lib/sha.hpp"
+#include "../lib/tar.hpp"
 
 inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/996de19054610efac4e13fb5d291e40c910e54c8/fetch.json";
 
@@ -170,30 +171,29 @@ inline void merge_base_and_dwarfs(std::string str_platform
   , fs::path const& path_file_dwarfs
   , fs::path const& path_file_out)
 {
-    // Find tar in PATH
-    fs::path path_tar;
-    "Could not find tar in PATH"_throw_if([&]
-    {
-      path_tar = boost::process::search_path("tar").string();
-      return ! ns_fs::ns_path::file_exists<false>(path_tar)._bool;
-    });
+    auto archive_files = ns_tar::list(path_file_base.c_str());
 
-    // Get file name inside the tarball
-    std::string tar_name_file =
-    [&]
+    if ( archive_files.empty() )
     {
-      auto ret = ns_subprocess::sync(path_tar, "-tf", path_file_base);
-      std::string file_name;
-      std::getline(ret.ss_stdout, file_name);
-      return file_name;
-    }();
-    ns_log::write('i', "Tarball contains '{}'"_fmt(tar_name_file));
+      ns_log::write('e', "Empty archive'", path_file_base, "'");
+      return;
+    } // if
+
+    auto it_str_file_name = std::ranges::find_if(archive_files, [](auto&& e){ return e.ends_with(".flatimage"); });
+
+    if ( it_str_file_name == std::ranges::end(archive_files) )
+    {
+      ns_log::write('e', "Could not find the flatimage file in '", path_file_base, "'");
+      return;
+    } // if
+
+    ns_log::write('i', "Tarball contains file '{}'"_fmt(*it_str_file_name));
 
     // Extract base
-    ns_subprocess::sync(path_tar, "-xf", path_file_base, tar_name_file);
+    ns_tar::extract(path_file_base.c_str(), *it_str_file_name);
 
     // Move to target name
-    fs::rename(tar_name_file, path_file_out);
+    fs::rename(*it_str_file_name, path_file_out);
     ns_log::write('i', "Extracted file ", path_file_out);
 
     // Merge files
