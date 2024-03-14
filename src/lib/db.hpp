@@ -70,8 +70,8 @@ class JsonIterator
 enum class Mode
 {
   READ,
-  WRITE,
-  APPEND,
+  CREATE,
+  UPDATE,
 };
 // }}}
 
@@ -162,7 +162,7 @@ inline Db::Db(fs::path t, Mode mode)
   };
 
   // Open file on read mode
-  if ( mode == Mode::READ or mode == Mode::APPEND )
+  if ( mode == Mode::READ or mode == Mode::UPDATE )
   {
     // Open target file as read
     std::ifstream file(t, std::ios::in);
@@ -175,7 +175,7 @@ inline Db::Db(fs::path t, Mode mode)
     return;
   } // if
 
-  if ( mode == Mode::WRITE )
+  if ( mode == Mode::CREATE )
   {
     // Print file name
     ns_log::write('i', "Creating db file '", t);
@@ -193,7 +193,7 @@ inline Db::Db(fs::path t, Mode mode)
 
 inline Db::~Db()
 {
-  if ( ( m_mode == Mode::APPEND or m_mode == Mode::WRITE ) && std::holds_alternative<json_t>(m_json))
+  if ( ( m_mode == Mode::UPDATE or m_mode == Mode::CREATE ) && std::holds_alternative<json_t>(m_json))
   {
     std::ofstream file(m_path_file_db, std::ios::trunc);
     "Failed to open '{}' for writing"_throw_if([&]{ return ! file.good(); }, m_path_file_db);

@@ -103,7 +103,7 @@ inline void by_op(ns_enum::Platform enum_platform
     db(str_op) = path_file_op;
     ns_log::write('i', "Selected ", str_op, ": ", path_file_op);
   }
-  , ns_db::Mode::APPEND);
+  , ns_db::Mode::UPDATE);
 
 } // select() }}}
 

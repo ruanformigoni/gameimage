@@ -296,7 +296,7 @@ inline void base_json(ns_enum::Platform platform, fs::path path_file_image, fs::
     db("paths") |= fetch_paths_and_urls.path_file_dwarfs.c_str();
     db("urls") |= fetch_paths_and_urls.url_base.c_str();
     db("urls") |= fetch_paths_and_urls.url_dwarfs.c_str();
-  }, ns_db::Mode::WRITE);
+  }, ns_db::Mode::CREATE);
 
 } // fetch() }}}
 

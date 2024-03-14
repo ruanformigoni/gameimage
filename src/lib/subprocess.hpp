@@ -85,9 +85,7 @@ inline void set_flatimage_home()
   } // if
 
   // Get build directory
-  fs::path path_projects = ns_db::query(ns_db::file_default()
-    , ns_db::query(ns_db::file_default(), "project")
-    , "path-projects");
+  fs::path path_projects = ns_db::query(ns_db::file_default(), "path-build");
 
   // Set HOME as the directory in which current image is in
   ns_env::set("FIM_HOME", path_projects.c_str(), ns_env::Replace::N);

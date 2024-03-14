@@ -26,7 +26,7 @@ inline void set(std::string const& s)
 
     ns_log::write('i', "Set default project to: ", s);
   }
-  , ns_db::Mode::APPEND);
+  , ns_db::Mode::UPDATE);
 } // set() }}}
 
 // get() {{{

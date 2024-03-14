@@ -114,7 +114,7 @@ void remove_files(Op const& op
       ns_log::write('i', e.what());
     } // catch
   }
-  , ns_db::Mode::APPEND);
+  , ns_db::Mode::UPDATE);
 } // remove_files() }}}
 
 // wine() {{{
@@ -266,7 +266,7 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
     {
       db(fmt::format("paths-file-{}", type)) |= path_file_dst_relative;
     }
-    , ns_db::Mode::APPEND);
+    , ns_db::Mode::UPDATE);
 
     // Set as default
     ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
@@ -413,7 +413,7 @@ inline void icon(std::string str_file_icon)
   {
     db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
   }
-  , ns_db::Mode::APPEND);
+  , ns_db::Mode::UPDATE);
 } // icon() }}}
 
 // remove() {{{

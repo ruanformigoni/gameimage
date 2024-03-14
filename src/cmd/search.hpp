@@ -109,7 +109,7 @@ auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
     {
       db(ns_enum::to_string_lower(op)) |= path_file;
     }
-  }, ns_db::Mode::WRITE);
+  }, ns_db::Mode::CREATE);
 } // paths_to_json() }}}
 
 } // anonymous namespace
