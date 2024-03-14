@@ -299,7 +299,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         .right_of(&output, dimm::border())
         .with_callback(move |_|
         {
-          let path_dir_project = if let Ok(path_dir_project) = db::project::dir()
+          let path_dir_project = if let Ok(project) = db::project::current()
+            && let Some(path_dir_project) = project.path_dir_self
           {
             path_dir_project
           } // if

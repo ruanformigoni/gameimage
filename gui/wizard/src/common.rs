@@ -438,6 +438,7 @@ pub trait PathBufExt
 {
   fn string(&self) -> String;
   fn append_extension(&self, val: &str) -> Self;
+  fn prepend(&self, upper: &PathBuf) -> Self;
 }
 
 impl PathBufExt for PathBuf
@@ -451,6 +452,11 @@ impl PathBufExt for PathBuf
   {
     PathBuf::from(self.clone().into_os_string().append(val).string())
   } // fn: extend_extension
+
+  fn prepend(&self, upper: &PathBuf) -> Self
+  {
+    upper.join(self)
+  } // fn: prepend
 }
 // }}}
 

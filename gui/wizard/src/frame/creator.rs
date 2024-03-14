@@ -43,7 +43,7 @@ use crate::lib::download;
 use crate::lib::svg;
 
 // fn create_entry() {{{
-fn create_entry(entry : db::project::Entry
+fn create_entry(project : db::project::Entry
   , parent_base : Widget
   , parent_curr : Widget) -> anyhow::Result<(Widget, CheckButton, PathBuf)>
 {
@@ -61,7 +61,7 @@ fn create_entry(entry : db::project::Entry
   //
   // Set icon
   //
-  if let Some(path_file_icon) = entry.path_file_icon.clone()
+  if let Some(path_file_icon) = project.path_file_icon.clone()
   {
     let path_file_resized = PathBuf::from(path_file_icon.clone())
       .parent()
@@ -87,9 +87,9 @@ fn create_entry(entry : db::project::Entry
   frame_info.set_buffer(buffer.clone());
   frame_info.set_color(Color::Background);
 
-  let mut f_add_entry = |title: &str, entry : Option<String>, push_newline: bool|
+  let mut f_add_entry = |title: &str, field : Option<String>, push_newline: bool|
   {
-    if let Some(value) = entry
+    if let Some(value) = field
     {
       frame_info.insert(title);
       frame_info.insert(value.as_str());
@@ -98,25 +98,25 @@ fn create_entry(entry : db::project::Entry
   }; // f_add_entry
 
   f_add_entry("Platform: "
-    , entry.platform
+    , project.platform
     , true
   );
   f_add_entry("Default rom: "
-    , entry.path_file_rom.clone().and_then(|e|
+    , project.path_file_rom.clone().and_then(|e|
       {
         e.file_name().map(|e|{ e.string() })
       })
     , true
   );
   f_add_entry("Default core: "
-    , entry.path_file_core.clone().and_then(|e|
+    , project.path_file_core.clone().and_then(|e|
       {
         e.file_name().map(|e|{ e.string() })
       })
     , true
   );
   f_add_entry("Default bios: "
-    , entry.path_file_bios.clone().and_then(|e|
+    , project.path_file_bios.clone().and_then(|e|
       {
         e.file_name().map(|e|{ e.string() })
       })
@@ -131,13 +131,10 @@ fn create_entry(entry : db::project::Entry
     .right_bottom_of(&frame_info, - dimm::border() / 2);
   btn_checkbox.visible_focus(false);
 
-  // Try to get project dir
-  let path_dir_project = db::project::dir()?;
-
   Ok((
       frame_icon.as_base_widget()
     , btn_checkbox
-    , path_dir_project
+    , project.path_dir_self.ok_or(ah!("Could not read project directory"))?
   ))
 } // }}}
 
@@ -195,9 +192,8 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   scroll.begin();
 
   // Populate entries
-
   let vec_btn_checkbox = Arc::new(Mutex::new(Vec::<(CheckButton,PathBuf)>::new()));
-  if let Ok(projects) = db::project::get()
+  if let Ok(projects) = db::project::list()
   {
     let mut parent = scroll.as_base_widget();
 

@@ -51,21 +51,23 @@ use crate::lib::svg;
 // get_icon() {{{
 fn get_icon() -> anyhow::Result<PathBuf>
 {
-  Ok(db::project::dir()?.join("icon/icon.png"))
+  Ok(db::project::current()?
+    .path_file_icon
+    .ok_or(ah!("Could not read path to icon file"))?)
 } // fn: get_icon }}}
 
 // set_image() {{{
 fn set_image(mut frame : Frame) -> anyhow::Result<()>
 {
   // Get image
-  let path_icon = get_icon()?;
+  let path_file_icon = get_icon()?;
 
   // Resize
-  let path_icon_resized = PathBuf::from(path_icon.clone())
+  let path_icon_resized = PathBuf::from(path_file_icon.clone())
     .parent()
     .unwrap()
     .join("icon.wizard.resized.png");
-  common::image_resize(path_icon_resized.clone(), path_icon, frame.w() as u32, frame.h() as u32);
+  common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32);
 
   match fltk::image::PngImage::load(path_icon_resized)
   {
@@ -179,7 +181,7 @@ pub fn icon(tx: Sender<common::Msg>
     // Set environment variable
     match get_icon()
     {
-      Ok(path_icon) => env::set_var("GIMG_ICON", path_icon),
+      Ok(path_file_icon) => env::set_var("GIMG_ICON", path_file_icon),
       Err(e) =>
       {
         log!("Could not get icon path: {}", e);
