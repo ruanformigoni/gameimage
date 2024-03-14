@@ -85,9 +85,6 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     Some(input)
   };
 
-  // Rename "Next" button to "Finish"
-  ret_frame_footer.btn_next.clone().set_label("Finish");
-
   // Set prev to desktop
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawDesktop);
 
