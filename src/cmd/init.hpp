@@ -77,7 +77,7 @@ inline void init(std::string const& str_platform
   ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_bios);
   ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_keys);
 
-  // Update global
+  // Set global data
   ns_db::from_file_default([&](auto&& db_global)
   {
     // project name is Dir name
@@ -92,7 +92,7 @@ inline void init(std::string const& str_platform
     db_global(str_name)("path-projects")   = path_dir_projects;
     db_global(str_name)("platform")     = ns_enum::to_string(platform);
   }
-  , std::ios_base::out);
+  , ns_db::Mode::WRITE);
 
   // Copy boot file for platform
   fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(
@@ -101,7 +101,7 @@ inline void init(std::string const& str_platform
   fs::copy_file(path_file_boot, path_dir_project / "boot", fs::copy_options::overwrite_existing);
   ns_log::write('i', "Copy ", path_file_boot, " -> ", path_dir_project / "boot");
 
-  // Update project
+  // Set project data
   ns_db::from_file_project([&](auto&& db_project)
   {
     db_project("platform")         = ns_enum::to_string(platform);
@@ -112,7 +112,7 @@ inline void init(std::string const& str_platform
     db_project("path-dir-core")    = path_dir_core;
     db_project("path-dir-keys")    = path_dir_keys;
   }
-  , std::ios_base::out);
+  , ns_db::Mode::WRITE);
 } // function: init }}}
 
 } // namespace ns_init

@@ -19,7 +19,7 @@
 #include "../lib/db.hpp"
 #include "../lib/sha.hpp"
 
-inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/3934178cf9b738fdf0234d895d5b4d60/raw/5517e3d1771b95cf233fe4ade3c572ba35297437/fetch-preview.json";
+inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/996de19054610efac4e13fb5d291e40c910e54c8/fetch.json";
 
 namespace ns_fetch
 {
@@ -131,7 +131,9 @@ inline void fetch_file_from_url_on_failed_sha(fs::path const& path_file, cpr::Ur
 } // }}}
 
 // list_base_and_dwarfs() {{{
-inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform)
+inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
+  , fs::path const& path_dir_fetch
+)
 {
   struct Ret
   {
@@ -141,12 +143,11 @@ inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform)
     cpr::Url url_base;
   };
 
-  // Project path
-  fs::path str_project = ns_db::query(ns_db::file_default(), "project");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  // Create dir
+  ns_fs::ns_path::dir_create<true>(path_dir_fetch);
 
   // Temporary file with fetch list
-  auto path_json = path_dir_project / "fetch.base.json";
+  auto path_json = path_dir_fetch / "fetch.base.json";
 
   // Fetch list
   fetch_file_from_url(path_json, cpr::Url{FETCH_URL});
@@ -156,8 +157,8 @@ inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform)
 
   return Ret
   {
-    .path_file_dwarfs = fs::path{path_dir_project} / "{}.dwarfs"_fmt(str_platform),
-    .path_file_base = fs::path{path_dir_project} / "{}.tar.xz"_fmt(str_platform),
+    .path_file_dwarfs = fs::path{path_dir_fetch} / "{}.dwarfs"_fmt(str_platform),
+    .path_file_base = fs::path{path_dir_fetch} / "{}.tar.xz"_fmt(str_platform),
     .url_dwarfs = cpr::Url(ns_db::query(path_json, "dwarfs", str_platform)),
     .url_base = cpr::Url(ns_db::query(path_json, "base", str_platform)),
   };
@@ -202,12 +203,10 @@ inline void merge_base_and_dwarfs(std::string str_platform
 } // anonymous namespace
 
 // cores_list() {{{
-inline decltype(auto) cores_list()
+inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
 {
   // Temporary file with fetch list
-  fs::path str_project = ns_db::query(ns_db::file_default(), "project");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
-  fs::path path_file_json = path_dir_project / "fetch.cores.json";
+  fs::path path_file_json = path_dir_fetch / "fetch.cores.json";
 
   // Fetch fetch list
   fetch_file_from_url(path_file_json, cpr::Url{FETCH_URL});
@@ -227,24 +226,24 @@ inline decltype(auto) cores_list()
     {
       vector_cores.push_back(Ret{ns_common::to_string(key), ns_common::to_string(value)});
     }
-  });
+  }, ns_db::Mode::READ);
 
   // Return cores
   return vector_cores;
 } // get_files_by_platform() }}}
 
 // base_fetch() {{{
-inline void base_fetch(ns_enum::Platform platform, fs::path path_file_name)
+inline void base_fetch(ns_enum::Platform platform, fs::path path_file_image)
 {
   // Validate input
-  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string(platform));
-  ns_log::write('i', "image: ", path_image);
+  ns_log::write('i', "image: ", path_file_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_file_image.parent_path());
 
   // base_fetch base and dwarfs
   fetch_file_from_url_on_failed_sha(fetch_paths_and_urls.path_file_base, fetch_paths_and_urls.url_base);
@@ -254,21 +253,21 @@ inline void base_fetch(ns_enum::Platform platform, fs::path path_file_name)
   merge_base_and_dwarfs(ns_string::to_lower(ns_enum::to_string(platform))
     , fetch_paths_and_urls.path_file_base
     , fetch_paths_and_urls.path_file_dwarfs
-    , path_image);
+    , path_file_image);
 } // base_fetch() }}}
 
 // base_sha() {{{
-inline void base_sha(ns_enum::Platform platform, fs::path path_file_name)
+inline void base_sha(ns_enum::Platform platform, fs::path path_file_image)
 {
   // Validate input
-  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string(platform));
-  ns_log::write('i', "image: ", path_image);
+  ns_log::write('i', "image: ", path_file_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_file_image.parent_path());
 
   // Check SHA only
   ns_log::write('i', "Only checking SHA");
@@ -277,27 +276,27 @@ inline void base_sha(ns_enum::Platform platform, fs::path path_file_name)
 } // base_sha() }}}
 
 // base_json() {{{
-inline void base_json(ns_enum::Platform platform, fs::path path_file_name, fs::path path_json)
+inline void base_json(ns_enum::Platform platform, fs::path path_file_image, fs::path path_json)
 {
   // Validate input
-  fs::path path_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_name)._ret;
+  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string(platform));
-  ns_log::write('i', "image: ", path_image);
+  ns_log::write('i', "image: ", path_file_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_file_image.parent_path());
 
   ns_log::write('i', "Only writting json for base");
   fs::remove(path_json);
-  ns_db::from_file(ns_fs::ns_path::file_create<true>(path_json)._ret, [&](auto& db)
+  ns_db::from_file(path_json, [&](auto& db)
   {
     db("paths") |= fetch_paths_and_urls.path_file_base.c_str();
     db("paths") |= fetch_paths_and_urls.path_file_dwarfs.c_str();
     db("urls") |= fetch_paths_and_urls.url_base.c_str();
     db("urls") |= fetch_paths_and_urls.url_dwarfs.c_str();
-  }, std::ios_base::out);
+  }, ns_db::Mode::WRITE);
 
 } // fetch() }}}
 

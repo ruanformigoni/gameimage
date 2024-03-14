@@ -77,20 +77,20 @@ inline void set_flatimage_home()
 {
   if ( ! fs::exists(ns_db::file_default()) )
   {
+    ns_log::write('e', "Could not set flatimage HOME because file '"
+      , ns_db::file_default()
+      , "' does not exist"
+    );
     return;
   } // if
 
-  ns_db::from_file_default([](auto&& db)
-  {
-    // Get current project name
-    std::string str_project = db["project"];
-    // Get path to currently used image
-    fs::path path_image = db[str_project]["path-image"];
-    // Get directory in which current image is in
-    fs::path path_projects = ns_fs::ns_path::dir_exists<true>(path_image.parent_path())._ret;
-    // Set HOME as the directory in which current image is in
-    ns_env::set("FIM_HOME", path_projects.c_str(), ns_env::Replace::N);
-  }, std::ios_base::in);
+  // Get build directory
+  fs::path path_projects = ns_db::query(ns_db::file_default()
+    , ns_db::query(ns_db::file_default(), "project")
+    , "path-projects");
+
+  // Set HOME as the directory in which current image is in
+  ns_env::set("FIM_HOME", path_projects.c_str(), ns_env::Replace::N);
 } // set_flatimage_home() }}}
 
 // sync() {{{

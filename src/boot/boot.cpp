@@ -109,7 +109,7 @@ void db_files_copy(std::string db_entry
       // Try to copy entry
       ns_copy::file(path_file_entry_src, path_file_entry_target);
     } // for
-  } , std::ios_base::in); // ns_db::from_file
+  } , ns_db::Mode::READ); // ns_db::from_file
 } // db_files_copy() }}}
 
 // boot_wine() {{{
@@ -127,7 +127,7 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   {
     path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Enter directory of rom file
   fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
@@ -158,7 +158,7 @@ void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_dat
     // Core
     path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Check if has bios
   db_files_copy("paths-file-bios"
@@ -194,7 +194,7 @@ void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_databas
     // Bios
     path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-bios"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Check if has bios
   db_files_copy("paths-file-bios"
@@ -243,7 +243,7 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
     // Data
     path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Set XDG vars
   ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
@@ -281,7 +281,7 @@ void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database
     // Data
     path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Set XDG vars
   ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
@@ -320,7 +320,7 @@ void boot(int argc, char** argv)
   {
     platform = ns_enum::from_string<ns_enum::Platform>(std::string(db["platform"]));
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   switch(platform)
   {

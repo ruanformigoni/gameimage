@@ -41,15 +41,15 @@ void fetch(ns_parser::Parser const& parser)
 {
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
 
-  if ( parser.contains("--sha") )
+  if (  parser.optional("--output-file") && parser.contains("--sha") )
   {
     ns_fetch::base_sha(platform, *parser.optional("--output-file"));
   } // if
-  else if ( parser.optional("--json") )
+  else if ( parser.optional("--output-file") && parser.optional("--json")  )
   {
     ns_fetch::base_json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
   } // else if
-  else
+  else if ( parser.optional("--output-file") )
   {
     ns_fetch::base_fetch(platform, *parser.optional("--output-file"));
   } // else

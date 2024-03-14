@@ -36,7 +36,7 @@ inline decltype(auto) desktop(fs::path path_file_icon)
     // Path to flatimage
     path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Configure application name
   ns_subprocess::sync(path_file_flatimage

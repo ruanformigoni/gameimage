@@ -106,27 +106,6 @@ Ret<fs::path> file_exists(fs::path path_file)
   return Ret(canonical<_throw>(path_file)._ret, true, "");
 } // file_exists() }}}
 
-// file_create() {{{
-// File exists and is a regular file
-template<bool _throw> 
-Ret<fs::path> file_create(fs::path path_file)
-{
-  // Does not exist
-  if ( fs::exists(path_file) && not fs::is_regular_file(path_file) )
-  {
-    return should_throw<_throw, fs::path>("File '{}' exists and is not a regular file"_fmt(path_file));
-  } // if
-
-  // Remove file if exists
-  fs::remove(path_file);
-
-  // Touch file
-  std::ofstream{path_file, std::ios_base::out};
-
-  // Return cannonical path
-  return Ret(canonical<_throw>(path_file)._ret, true, "");
-} // file_create() }}}
-
 // file_name() {{{
 // Check if last component is a file name
 template<bool _throw> 

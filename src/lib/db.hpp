@@ -11,6 +11,7 @@
 #include <variant>
 
 #include "../common.hpp"
+#include "../enum.hpp"
 
 #include "../std/filesystem.hpp"
 
@@ -19,7 +20,11 @@
 namespace ns_db
 {
 
+namespace
+{
+
 namespace fs = std::filesystem;
+
 
 using json_t = nlohmann::json;
 using Exception = json_t::exception;
@@ -59,13 +64,24 @@ class JsonIterator
     bool operator!=(const JsonIterator& other) const { return m_it != other.m_it; }
 }; // }}}
 
+} // anonymous namespace
+
+// enum class Mode {{{
+enum class Mode
+{
+  READ,
+  WRITE,
+  APPEND,
+};
+// }}}
+
 // class Db {{{
 class Db
 {
   private:
     std::variant<json_t, std::reference_wrapper<json_t>> m_json;
-    std::ofstream m_file_database;
-    std::ios_base::openmode m_mode;
+    fs::path m_path_file_db;
+    Mode m_mode;
 
     Db(std::reference_wrapper<json_t> json);
 
@@ -86,7 +102,7 @@ class Db
     Db() = delete;
     Db(Db const&) = delete;
     Db(Db&&) = delete;
-    Db(fs::path t, std::ios_base::openmode mode);
+    Db(fs::path t, Mode mode);
 
     // Destructors
     ~Db();
@@ -125,48 +141,50 @@ inline Db::Db(std::reference_wrapper<json_t> json)
   m_json = json;
 } // Json
 
-inline Db::Db(fs::path t, std::ios_base::openmode mode)
-  : m_mode(mode)
+inline Db::Db(fs::path t, Mode mode)
+  : m_path_file_db(t)
+  , m_mode(mode)
 {
-  // Open file if exists
-  if ( ns_fs::ns_path::file_exists<false>(t)._bool )
+  ns_log::write('i', "Open file '", m_path_file_db, "'", " as ", ns_enum::to_string(mode));
+
+  auto f_parse_file = [](std::string const& name_file, std::ifstream const& f)
   {
-    // Open file
-    std::ifstream ifile{t, mode};
-    // Check for failure
-    "Failed to open '{}'"_throw_if([&]{ return ! ifile.good(); }, t);
     // Read to string
-    std::string contents;
+    std::string contents = ns_common::to_string(f.rdbuf());
+    // Validate contents
+    if ( ! json_t::accept(contents) )
     {
-      std::stringstream ss;
-      ss << ifile.rdbuf();
-      contents = ss.str();
-    }
-    // Close file
-    ifile.close();
-    // Try to parse contents
-    if ( json_t::accept(contents) )
-    {
-      m_json = json_t::parse(contents);
+      // Failed to parse
+      "Failed to parse db '{}', will create if mode is write"_throw(name_file);
     } // if
-    else
-    {
-      // Failed to parse, create an empty json instead
-      // if mode is not 'read'
-      ns_log::write('i', "Failed to parse json, will create if mode is write");
-      // If mode is not in, create as new file
-      if ( mode != std::ios_base::in ) { m_json = json_t::parse("{}"); } // if
-    } // catch
-  } // if
-  else
+    // Parse contents
+    return json_t::parse(contents);
+  };
+
+  // Open file on read mode
+  if ( mode == Mode::READ or mode == Mode::APPEND )
   {
-    ns_log::write('i', "Creating json file '", t);
+    // Open target file as read
+    std::ifstream file(t, std::ios::in);
+    // Check for failure
+    "Failed to open '{}'"_throw_if([&]{ return ! file.good(); }, t);
+    // Try to parse
+    m_json = f_parse_file(t.string(), file);
+    // Close file
+    file.close();
+    return;
+  } // if
+
+  if ( mode == Mode::WRITE )
+  {
+    // Print file name
+    ns_log::write('i', "Creating db file '", t);
+    // Create empty json
     m_json = json_t::parse("{}");
+    return;
   } // else
 
-  // Open target file as write
-  m_file_database.open(t, mode);
-  "Could not open database file '{}'"_throw_if([&]{ return ! m_file_database.good(); });
+  "Invalid open mode in db"_throw();
 } // Db
 
 // }}}
@@ -175,10 +193,12 @@ inline Db::Db(fs::path t, std::ios_base::openmode mode)
 
 inline Db::~Db()
 {
-  if ( m_mode != std::ios_base::in && std::holds_alternative<json_t>(m_json))
+  if ( ( m_mode == Mode::APPEND or m_mode == Mode::WRITE ) && std::holds_alternative<json_t>(m_json))
   {
-    m_file_database << std::setw(2) << std::get<json_t>(m_json);
-    m_file_database.close();
+    std::ofstream file(m_path_file_db, std::ios::trunc);
+    "Failed to open '{}' for writing"_throw_if([&]{ return ! file.good(); }, m_path_file_db);
+    file << std::setw(2) << std::get<json_t>(m_json);
+    file.close();
   } // if
 } // Db
 
@@ -350,7 +370,7 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
 
 // from_file() {{{
 template<IsString T, typename F>
-void from_file(T&& t, F&& f, std::ios_base::openmode mode = std::ios_base::in)
+void from_file(T&& t, F&& f, Mode mode)
 {
   // Create DB
   Db db = Db(std::forward<T>(t), mode);
@@ -382,20 +402,21 @@ inline fs::path file_project()
   { 
     std::string str_project = db["project"];
     path_project = std::string(db[str_project]["path-project"]);
-  }, std::ios_base::in);
+  }, Mode::READ);
+
   return path_project /= "gameimage.json";
 } // file_project() }}}
 
 // from_file_default() {{{
 template<typename F>
-inline void from_file_default(F&& f, std::ios_base::openmode mode)
+inline void from_file_default(F&& f, Mode mode)
 {
   from_file(file_default(), f, mode);
 } // function: from_file_default }}}
 
 // from_file_project() {{{
 template<typename F>
-inline void from_file_project(F&& f, std::ios_base::openmode mode)
+inline void from_file_project(F&& f, Mode mode)
 {
   from_file(file_project(), f, mode);
 } // function: from_file_project }}}
@@ -426,7 +447,7 @@ inline std::string query(F&& file, Args... args)
 
     // Assign result
     ret = ref_db.get();
-  });
+  }, Mode::READ);
 
   return ret;
 } // query() }}}

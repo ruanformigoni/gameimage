@@ -30,7 +30,7 @@ inline void validate()
     str_platform = db[str_project]["platform"];
     path_project = std::string(db[str_project]["path-project"]);
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   auto enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
 
@@ -38,7 +38,7 @@ inline void validate()
   "Icon is not installed"_try([&]
   {
     fs::path path_file_icon;
-    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; }, std::ios_base::in);
+    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; }, ns_db::Mode::READ);
     ns_fs::ns_path::file_exists<true>(path_file_icon);
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
@@ -50,7 +50,7 @@ inline void validate()
     {
       std::string str_tag_db = "path-file-{}"_fmt(type);
       fs::path path_file;
-      ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, std::ios_base::in);
+      ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, ns_db::Mode::READ);
       try
       {
         ns_fs::ns_path::file_exists<true>(path_file);
@@ -73,7 +73,7 @@ inline void validate()
       {
         paths_file.push_back(path_file);
       } // for
-    }, std::ios_base::in);
+    }, ns_db::Mode::READ);
     
     for(auto&& path_file : paths_file)
     {
@@ -174,7 +174,7 @@ inline decltype(auto) compress()
     // Path to image
     str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Output file
   std::string str_target = str_path_project + ".dwarfs";

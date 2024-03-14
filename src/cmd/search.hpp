@@ -87,9 +87,9 @@ inline cr::generator<fs::path> search_dirs(fs::path const& path_dir_search)
 } // search_dirs() }}}
 
 // search_remote() {{{
-inline cr::generator<std::string> search_remote()
+inline cr::generator<std::string> search_remote(fs::path const& path_dir_fetch)
 {
-  for( auto i : ns_fetch::cores_list() )
+  for( auto i : ns_fetch::cores_list(path_dir_fetch) )
   {
     ns_log::write('i', "Found :: ", i.core);
     co_yield i.core;
@@ -102,9 +102,6 @@ auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
   // Check if should write to json
   if ( ! opt_path_file_json.has_value() ) { return; } // if
 
-  // Erase file if exists
-  fs::remove(*opt_path_file_json);
-
   // Open file list
   ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
   {
@@ -112,7 +109,7 @@ auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
     {
       db(ns_enum::to_string_lower(op)) |= path_file;
     }
-  }, std::ios::out);
+  }, ns_db::Mode::WRITE);
 } // paths_to_json() }}}
 
 } // anonymous namespace
@@ -145,7 +142,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
-    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote());
+    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote(path_dir_project));
     break;
     case ns_enum::Platform::WINE:
     case ns_enum::Platform::PCSX2:

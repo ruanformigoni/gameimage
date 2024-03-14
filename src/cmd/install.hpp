@@ -114,7 +114,7 @@ void remove_files(Op const& op
       ns_log::write('i', e.what());
     } // catch
   }
-  , std::ios_base::out);
+  , ns_db::Mode::APPEND);
 } // remove_files() }}}
 
 // wine() {{{
@@ -135,7 +135,7 @@ inline void wine(std::vector<std::string> args)
     // Path to flatimage
     path_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path-image"])._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Default working directory
   fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
@@ -266,7 +266,7 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
     {
       db(fmt::format("paths-file-{}", type)) |= path_file_dst_relative;
     }
-    , std::ios_base::out);
+    , ns_db::Mode::APPEND);
 
     // Set as default
     ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
@@ -334,7 +334,7 @@ inline void icon(std::string str_file_icon)
     // Current application directory
     path_app = std::string(db[str_app]["path-project"]);
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -413,7 +413,7 @@ inline void icon(std::string str_file_icon)
   {
     db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
   }
-  , std::ios_base::out);
+  , ns_db::Mode::APPEND);
 } // icon() }}}
 
 // remove() {{{
@@ -479,7 +479,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
   // Fetch cores / urls
-  auto vec_core_url = ns_fetch::cores_list();
+  auto vec_core_url = ns_fetch::cores_list(path_dir_project);
 
   // Put in a set
   std::set<std::string> set_cores(vec_cores.begin(), vec_cores.end());

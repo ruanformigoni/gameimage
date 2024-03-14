@@ -43,7 +43,7 @@ inline decltype(auto) test()
     // Path to boot file
     path_file_boot = ns_fs::ns_path::file_exists<true>(path_dir_project / "boot")._ret;
   }
-  , std::ios_base::in);
+  , ns_db::Mode::READ);
 
   // Start application
   ns_subprocess::sync(path_file_flatimage, "fim-exec", path_file_boot);
