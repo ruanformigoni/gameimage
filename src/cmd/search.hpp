@@ -99,15 +99,8 @@ inline cr::generator<std::string> search_remote()
 // paths_to_json() {{{
 auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
 {
-  // Write to json
-  if ( ! opt_path_file_json.has_value() )
-  {
-    for(auto&& path_file : vec_paths)
-    {
-      ns_log::write('i', "Found :: ", path_file);
-    }
-    return;
-  } // if
+  // Check if should write to json
+  if ( ! opt_path_file_json.has_value() ) { return; } // if
 
   // Erase file if exists
   fs::remove(*opt_path_file_json);

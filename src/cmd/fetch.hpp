@@ -19,6 +19,8 @@
 #include "../lib/db.hpp"
 #include "../lib/sha.hpp"
 
+inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/3934178cf9b738fdf0234d895d5b4d60/raw/5517e3d1771b95cf233fe4ade3c572ba35297437/fetch-preview.json";
+
 namespace ns_fetch
 {
 
@@ -129,8 +131,7 @@ inline void fetch_file_from_url_on_failed_sha(fs::path const& path_file, cpr::Ur
 } // }}}
 
 // list_base_and_dwarfs() {{{
-inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
-  , fs::path const& path_dir_dst)
+inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform)
 {
   struct Ret
   {
@@ -140,22 +141,23 @@ inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
     cpr::Url url_base;
   };
 
-  // Create parent directories directory
-  fs::create_directories(path_dir_dst);
+  // Project path
+  fs::path str_project = ns_db::query(ns_db::file_default(), "project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
 
   // Temporary file with fetch list
-  auto path_json = path_dir_dst / "fetch.base.json";
+  auto path_json = path_dir_project / "fetch.base.json";
 
-  // Fetch fetch list
-  fetch_file_from_url(path_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
+  // Fetch list
+  fetch_file_from_url(path_json, cpr::Url{FETCH_URL});
 
   // Create platform string
   auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
 
   return Ret
   {
-    .path_file_dwarfs = fs::path{path_dir_dst} / "{}.dwarfs"_fmt(str_platform),
-    .path_file_base = fs::path{path_dir_dst} / "{}.tar.xz"_fmt(str_platform),
+    .path_file_dwarfs = fs::path{path_dir_project} / "{}.dwarfs"_fmt(str_platform),
+    .path_file_base = fs::path{path_dir_project} / "{}.tar.xz"_fmt(str_platform),
     .url_dwarfs = cpr::Url(ns_db::query(path_json, "dwarfs", str_platform)),
     .url_base = cpr::Url(ns_db::query(path_json, "base", str_platform)),
   };
@@ -208,7 +210,7 @@ inline decltype(auto) cores_list()
   fs::path path_file_json = path_dir_project / "fetch.cores.json";
 
   // Fetch fetch list
-  fetch_file_from_url(path_file_json, cpr::Url{"https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/665c7f36bd823f319b554a96859c5acad5aa852d/fetch.json"});
+  fetch_file_from_url(path_file_json, cpr::Url{FETCH_URL});
 
   struct Ret
   {
@@ -221,7 +223,7 @@ inline decltype(auto) cores_list()
   // Get cores
   ns_db::from_file(path_file_json, [&](auto&& db)
   {
-    for( auto const& [key, value] : db["retroarch"].items() )
+    for( auto const& [key, value] : db["retroarch"]["core"].items() )
     {
       vector_cores.push_back(Ret{ns_common::to_string(key), ns_common::to_string(value)});
     }
@@ -242,7 +244,7 @@ inline void base_fetch(ns_enum::Platform platform, fs::path path_file_name)
   ns_log::write('i', "image: ", path_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
 
   // base_fetch base and dwarfs
   fetch_file_from_url_on_failed_sha(fetch_paths_and_urls.path_file_base, fetch_paths_and_urls.url_base);
@@ -266,7 +268,7 @@ inline void base_sha(ns_enum::Platform platform, fs::path path_file_name)
   ns_log::write('i', "image: ", path_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
 
   // Check SHA only
   ns_log::write('i', "Only checking SHA");
@@ -285,7 +287,7 @@ inline void base_json(ns_enum::Platform platform, fs::path path_file_name, fs::p
   ns_log::write('i', "image: ", path_image);
 
   // Get files and destination paths to download
-  auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_image.parent_path());
+  auto fetch_paths_and_urls = list_base_and_dwarfs(platform);
 
   ns_log::write('i', "Only writting json for base");
   fs::remove(path_json);
