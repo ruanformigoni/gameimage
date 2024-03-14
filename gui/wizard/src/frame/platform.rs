@@ -169,6 +169,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     else
     {
       log!("Could not recover return code");
+      clone_tx.send(common::Msg::WindActivate);
       return;
     }; // else
 

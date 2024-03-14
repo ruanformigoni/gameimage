@@ -194,7 +194,7 @@ pub fn install(tx: Sender<common::Msg>
 
     for item in vec_items
     {
-      if let Ok(rx) = common::gameimage_cmd(vec!["install", "remove", &clone_label, &item])
+      if let Ok(rx) = common::gameimage_cmd(vec!["install", "--remove", &clone_label, &item])
       {
         let _ = rx.recv();
       } // if
