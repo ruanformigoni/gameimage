@@ -122,7 +122,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
   btn_add.set_color(Color::Green);
   let clone_tx = tx.clone();
-  let clone_label : String = "rom".to_string();
   btn_add.set_callback(move |_|
   {
     // Pick files to install
@@ -151,7 +150,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     let str_choice = chooser.value(1).unwrap();
 
     // Install directory with backend
-    if common::gameimage_sync(vec!["install", &clone_label, &str_choice]) != 0
+    if common::gameimage_sync(vec!["install", "rom", &str_choice]) != 0
     {
       log!("Failed to install '{}'", str_choice);
     } // else
@@ -169,7 +168,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   btn_del.set_color(Color::Red);
   let clone_frame_list = frame_list.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
-  let clone_label = "rom".to_string();
   btn_del.set_callback(move |_|
   {
     let vec_indices = frame_list.selected_items();
@@ -185,7 +183,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
     for item in vec_items
     {
-      if common::gameimage_sync(vec!["install", "--remove", &clone_label, &item]) != 0
+      if common::gameimage_sync(vec!["install", "--remove", "rom", &item]) != 0
       {
         log!("Could not remove '{}", item);
       }; // else
