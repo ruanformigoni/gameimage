@@ -20,7 +20,7 @@
 #include "../lib/sha.hpp"
 #include "../lib/tar.hpp"
 
-inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/80f95232844df9b0c0cd94161d5f9bb71968ab90/fetch.json";
+inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/82858489ebab7a4cfe6ce4fb9bde654e9a122e10/fetch.json";
 
 namespace ns_fetch
 {
