@@ -1,41 +1,17 @@
-#![allow(warnings)]
-
-use std::env;
 use std::path::PathBuf;
-use std::fs::File;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
-  app::{Sender,Receiver},
-  window::Window,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
-  button,
-  group::Group,
-  image::SharedImage,
-  input::{Input,FileInput},
+  app::Sender,
   output,
   text,
-  group::PackType,
-  frame::Frame,
-  dialog::{file_chooser,dir_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
 };
 
-use url as Url;
-use anyhow;
-use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
-use crate::wizard;
 use crate::common;
-use crate::log;
-use crate::db;
-use crate::lib::download;
-use crate::lib::svg;
 use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
 
@@ -45,9 +21,7 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Hide prev button
   ret_frame_footer.btn_prev.clone().hide();
@@ -73,7 +47,7 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
       str_package_basename = format!(".{}.config",  &stem.string());
     } // if
 
-    output_saved_location.insert(&var);
+    let _ = output_saved_location.insert(&var);
   } // if
 
   let mut output_info = text::TextDisplay::default()

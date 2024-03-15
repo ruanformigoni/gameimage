@@ -1,5 +1,3 @@
-#![allow(warnings)]
-
 use fltk::app::Sender;
 
 use crate::common;

@@ -1,10 +1,6 @@
-#![allow(warnings)]
-
 use std::sync::{Arc,Mutex};
-use std::env;
 use std::path::PathBuf;
 use std::fs;
-use std::ffi::OsStr;
 
 // Gui
 use fltk::prelude::*;
@@ -12,23 +8,14 @@ use fltk::{
   widget::Widget,
   app::Sender,
   text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   button::{Button,CheckButton},
-  group::{Group, Scroll},
-  image::SharedImage,
-  input::FileInput,
-  output::MultilineOutput,
+  group::Scroll,
   group::PackType,
   frame::Frame,
-  output::Output,
   dialog,
-  dialog::dir_chooser,
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  enums::{FrameType,Color},
 };
 
-use url as Url;
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
@@ -39,7 +26,6 @@ use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
-use crate::lib::download;
 use crate::lib::svg;
 
 // fn create_entry() {{{
@@ -67,7 +53,12 @@ fn create_entry(project : db::project::Entry
       .parent()
       .unwrap()
       .join("icon.creator.resized.png");
-    common::image_resize(path_file_resized.clone(), path_file_icon, frame_icon.w() as u32, frame_icon.h() as u32);
+    if let Err(e) = common::image_resize(path_file_resized.clone()
+      , path_file_icon.clone()
+      , frame_icon.w() as u32, frame_icon.h() as u32)
+    {
+      log!("Failed to resize image {}, with error {}", path_file_icon.string(), e);
+    }
     if let Ok(mut image) = fltk::image::SharedImage::load(path_file_resized)
     {
       image.scale(frame_icon.w(), frame_icon.h(), true, true);
@@ -87,7 +78,7 @@ fn create_entry(project : db::project::Entry
   frame_info.set_buffer(buffer.clone());
   frame_info.set_color(Color::Background);
 
-  let mut f_add_entry = |title: &str, field : Option<String>, push_newline: bool|
+  let f_add_entry = |title: &str, field : Option<String>, push_newline: bool|
   {
     if let Some(value) = field
     {
@@ -149,9 +140,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   if let Err(e) = common::common()
   {
@@ -162,7 +151,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   ret_frame_footer.btn_prev.clone().set_callback(move |_|
   {
-    if dialog::choice_default("This will reset the image, are you sure?", "No", "Yes", "") == 1
+    if dialog::choice2_default("This will reset the image, are you sure?", "No", "Yes", "") == Some(1)
     {
       clone_tx.send(common::Msg::DrawFetch);
     } // if
@@ -171,7 +160,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   // Finish package creation on click next
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    if dialog::choice_default("Finish image creation?", "No", "Yes", "") == 1
+    if dialog::choice2_default("Finish image creation?", "No", "Yes", "") == Some(1)
     {
       clone_tx.send(common::Msg::DrawDesktop);
     } // if
@@ -234,7 +223,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
   {
-    if dialog::choice_default("Erase the selected projects?", "No", "Yes", "") != 1
+    if dialog::choice2_default("Erase the selected projects?", "No", "Yes", "") != Some(1)
     {
       return;
     } // if
@@ -251,8 +240,8 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     {
       if checkbutton.is_checked()
       {
-        fs::remove_file(path_dir_project.with_extension("dwarfs"));
-        fs::remove_dir_all(path_dir_project);
+        let _ = fs::remove_file(path_dir_project.with_extension("dwarfs"));
+        let _ = fs::remove_dir_all(path_dir_project);
       }
     } // for
 
@@ -268,12 +257,11 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_insert.set_frame(FrameType::RoundedFrame);
   btn_insert.visible_focus(false);
   btn_insert.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_box_heart(1.0).as_str()).unwrap()));
-  let clone_vec_checkbutton = vec_btn_checkbox.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
   btn_insert.set_callback(move |_|
   {
-    if dialog::choice_default("Include selected projects in the image?", "No", "Yes", "") != 1
+    if dialog::choice2_default("Include selected projects in the image?", "No", "Yes", "") != Some(1)
     {
       return;
     } // if

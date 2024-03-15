@@ -1,33 +1,21 @@
-#![allow(warnings)]
-
 // Gui
 use std::
 {
   path,
-  sync::{Arc,Mutex,mpsc}
+  sync::{Arc,Mutex}
 };
 
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
   widget::Widget,
-  browser::{HoldBrowser,MultiBrowser},
-  text,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   button,
   button::Button,
   group,
-  group::Group,
-  image::SharedImage,
   output,
-  input::FileInput,
-  group::PackType,
   frame::Frame,
   dialog,
-  dialog::{dir_chooser,file_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  enums::{FrameType,Color},
 };
 
 use anyhow::anyhow as ah;
@@ -68,9 +56,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineIcon);
@@ -121,22 +107,22 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     (btn, label)
   };
 
-  let (mut btn, label) = f_add_entry(frame_content.as_base_widget()
+  let (_, label) = f_add_entry(frame_content.as_base_widget()
     , "Install DXVK for directx 9/10/11"
     , Some(vec!["install", "dxvk"])
   );
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
+  let (_, label) = f_add_entry(label.clone().as_base_widget()
     , "Install VKD3D for directx 12"
     , Some(vec!["install", "vkd3d"])
   );
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
+  let (_, label) = f_add_entry(label.clone().as_base_widget()
     , "Run regedit"
     , Some(vec!["install", "wine", "regedit"])
   );
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
+  let (_, label) = f_add_entry(label.clone().as_base_widget()
     , "Run add/remove programs"
     , Some(vec!["install", "wine", "uninstaller"])
   );
@@ -165,7 +151,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
+  let (mut btn, _) = f_add_entry(label.clone().as_base_widget()
     , "Run a custom wine command"
     , None
   );
@@ -192,7 +178,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 } // fn: configure }}}
 
 // find_roms() {{{
-fn find_roms(tx : Sender<common::Msg>) -> anyhow::Result<Vec<String>>
+fn find_roms() -> anyhow::Result<Vec<String>>
 {
   // Ask back-end for the item files
   if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", "rom"]) != 0
@@ -212,16 +198,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
   ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineDefault);
 
   // List of the currently installed items
-  let mut frame_list = Frame::default()
+  let frame_list = Frame::default()
     .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
       , frame_content.height() - dimm::border()*2)
     .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border())
@@ -240,7 +224,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
 
   let mut parent = scroll.as_base_widget();
-  if let Ok(vec_items) = find_roms(tx.clone())
+  if let Ok(vec_items) = find_roms()
   {
     for item in vec_items
     {
@@ -269,12 +253,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       let mut output = output::Output::default()
         .with_size(frame_list.width() - dimm::width_button_rec()*2 - dimm::border()*3, dimm::height_button_wide())
         .right_of(&btn_check, dimm::border());
-      output.insert(item.as_str());
+      let _ = output.insert(item.as_str());
 
       // Button to open file in file manager
-      let mut clone_item = item.clone();
+      let clone_item = item.clone();
       let mut clone_output_status = ret_frame_footer.output_status.clone();
-      let mut btn_explore = button::Button::default()
+      let _ = button::Button::default()
         .with_focus(false)
         .with_svg(svg::icon_folder(1.0).as_str())
         .with_size(dimm::width_button_rec(), dimm::height_button_rec())
@@ -319,8 +303,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Add new item
   let clone_tx = tx.clone();
-  let clone_label : String = "rom".to_string();
-  let mut btn_add = Button::default()
+  let btn_add = Button::default()
     .with_color(Color::Green)
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_frame(FrameType::RoundedFrame)
@@ -371,7 +354,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   btn_run.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_play(1.0).as_str()).unwrap()));
   btn_run.set_color(Color::Green);
   let clone_tx = tx.clone();
-  let clone_frame_list = frame_list.clone();
   let clone_vec_radio_path = vec_radio_path.clone();
   btn_run.set_callback(move |_|
   {
@@ -426,9 +408,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
@@ -465,7 +445,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       .with_size(clone_scroll.width() - dimm::width_button_rec() - dimm::width_button_rec()/2 - dimm::border()*3
         , dimm::height_button_rec())
       .right_of(&btn_radio, dimm::border());
-    frame_label.insert(label);
+    let _ = frame_label.insert(label);
     frame_label.set_frame(FrameType::BorderBox);
   
     if let Ok(mut vec) = clone_arc_vec_btn_label.lock()
@@ -476,7 +456,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   };
 
   // Insert items in list of currently installed items
-  if let Ok(vec_items) = find_roms(tx.clone())
+  if let Ok(vec_items) = find_roms()
   {
     for item in vec_items { f_list_add(item.as_str()); } // for
   } // if

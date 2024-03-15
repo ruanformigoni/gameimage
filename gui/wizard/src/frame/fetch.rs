@@ -1,29 +1,19 @@
-#![allow(warnings)]
-
 use std::env;
 use std::path::PathBuf;
-use std::fs::File;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   button::Button,
-  group::Group,
-  image::SharedImage,
-  input::FileInput,
   output::Output,
   group::PackType,
   frame::Frame,
-  dialog::dir_chooser,
-  enums::{Align,FrameType,Color},
+  enums::{FrameType,Color},
   misc::Progress,
 };
 
 use url as Url;
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
@@ -114,9 +104,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   if let Err(e) = common::common()
   {
@@ -175,7 +163,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     }; // if
 
     // Get basename
-    let mut url_basename = if let Ok(value) = url_basename(url.clone())
+    let url_basename = if let Ok(value) = url_basename(url.clone())
     {
       value
     }
@@ -266,7 +254,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         clone_prog_finish.set_value(100.0);
       } // else
       fltk::app::awake();
-    });    
+    });
   };
 
 
@@ -274,7 +262,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   {
     let clone_data = data.clone();
     let mut clone_btn_fetch = clone_data.btn_fetch.clone();
-    clone_btn_fetch.set_callback(move |e|
+    clone_btn_fetch.set_callback(move |_|
     {
       f_fetch(clone_data.clone());
     });
@@ -282,8 +270,6 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
 
   // Set callback to btn next
-  let clone_vec_fetch = vec_fetch.clone();
-  let clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
@@ -291,12 +277,15 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     clone_tx.send(common::Msg::WindDeactivate);
 
     let clone_vec_fetch = vec_fetch.clone();
-    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    let clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
     {
       if fetch_files(clone_vec_fetch.clone(), clone_output_status.clone()).is_ok()
       {
-        set_image_path();
+        if let Err(e) = set_image_path()
+        {
+          log!("Could not set image path for GIMG_IMAGE with error {}", e);
+        } // if
         // Draw package creator
         clone_tx.send(common::Msg::DrawCreator);
       } // if

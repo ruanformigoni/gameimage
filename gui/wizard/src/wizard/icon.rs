@@ -1,40 +1,22 @@
-#![allow(warnings)]
-
 use std::env;
 use std::path::PathBuf;
-use std::fs::File;
 use std::sync::{Arc,Mutex};
 use std::borrow::BorrowMut;
 
 // Gui
 use fltk::prelude::*;
-use fltk_grid;
-use fltk_evented;
 use fltk::{
-  app::{Sender,Receiver},
-  window::Window,
-  text::{TextBuffer,TextDisplay},
+  app::Sender,
   menu,
-  menu::MenuButton,
   button,
-  button::Button,
-  group::Group,
-  image::SharedImage,
   input,
-  input::{Input,FileInput},
-  group::PackType,
+  input::FileInput,
   frame::Frame,
-  dialog::{file_chooser,dir_chooser},
+  dialog::file_chooser,
   enums::{Align,FrameType,Color},
-  misc,
-  misc::Progress,
 };
 
-use url as Url;
-use anyhow;
 use anyhow::anyhow as ah;
-use once_cell;
-use image_search;
 
 use crate::dimm;
 use crate::frame;
@@ -44,9 +26,6 @@ use crate::common::PathBufExt;
 use crate::db;
 use crate::log;
 use crate::lib::scaling;
-use crate::lib::download;
-use crate::lib::svg;
-
 
 // get_icon() {{{
 fn get_icon() -> anyhow::Result<PathBuf>
@@ -67,7 +46,11 @@ fn set_image(mut frame : Frame) -> anyhow::Result<()>
     .parent()
     .unwrap()
     .join("icon.wizard.resized.png");
-  common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32);
+
+  if let Err(e) = common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32)
+  {
+    log!("Failed to resize image to '{}', with err '{}'", path_icon_resized.string(), e);
+  } // if
 
   match fltk::image::PngImage::load(path_icon_resized)
   {
@@ -125,15 +108,13 @@ pub fn icon(tx: Sender<common::Msg>
   , msg_next : common::Msg)
 {
   // Keep track of which frame to draw (search web or local)
-  static icon_frame : once_cell::sync::Lazy<Mutex<IconFrame>>
+  static ICON_FRAME : once_cell::sync::Lazy<Mutex<IconFrame>>
     = once_cell::sync::Lazy::new(|| Mutex::new(IconFrame::Web));
 
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Footer callbacks
   ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
@@ -141,8 +122,7 @@ pub fn icon(tx: Sender<common::Msg>
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    if let Ok(project) = db::project::current()
-    && let Some(path_file_icon) = project.path_file_icon
+    if let Ok(project) = db::project::current() && project.path_file_icon.is_some()
     {
       clone_tx.send(msg_next);
       return;
@@ -154,7 +134,7 @@ pub fn icon(tx: Sender<common::Msg>
 
   // Callback to install the selected icon with the backend
   let clone_tx = tx.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_output_status = ret_frame_footer.output_status.clone();
   let f_install_icon = move |path_file_icon : PathBuf|
   {
     clone_tx.send(common::Msg::WindDeactivate);
@@ -188,14 +168,14 @@ pub fn icon(tx: Sender<common::Msg>
       let label = e.text(e.value()).unwrap_or(String::new());
       e.set_label(label.as_str());
       clone_tx.send(msg_curr);
-      if let Ok(mut lock)  = icon_frame.lock()
+      if let Ok(mut lock)  = ICON_FRAME.lock()
       {
         *lock = lock.from_str(label.as_str());
       } // if
     });
     menu_source.add_choice(IconFrame::Web.as_str());
     menu_source.add_choice(IconFrame::Local.as_str());
-    menu_source.set_label(icon_frame.lock().unwrap().as_str());
+    menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
 
   // Scale icon image size
   let f_scale = |val: i32| -> i32
@@ -203,7 +183,7 @@ pub fn icon(tx: Sender<common::Msg>
     (val as f32 * scaling::factor().unwrap_or(1.0)) as i32
   };
 
-  if let Ok(lock) = icon_frame.lock() && *lock == IconFrame::Local
+  if let Ok(lock) = ICON_FRAME.lock() && *lock == IconFrame::Local
   {
     // Create icon box
     let frame_icon = Frame::default()
@@ -234,7 +214,7 @@ pub fn icon(tx: Sender<common::Msg>
     } // if
 
     // // Set input_icon callback
-    let mut clone_f_install_icon = f_install_icon.clone();
+    let clone_f_install_icon = f_install_icon.clone();
     let mut clone_output_status = ret_frame_footer.output_status.clone();
     input_icon.set_callback(move |e|
     {
@@ -270,12 +250,12 @@ pub fn icon(tx: Sender<common::Msg>
   {
     // search input
     // Keep track of the last text the user entered
-    static static_str_input : once_cell::sync::Lazy<Mutex<String>> = once_cell::sync::Lazy::new(|| Mutex::new(String::new()));
+    static STATIC_STR_INPUT : once_cell::sync::Lazy<Mutex<String>> = once_cell::sync::Lazy::new(|| Mutex::new(String::new()));
     let mut input_search = input::Input::default()
       .with_size_of(&menu_source)
       .with_width(menu_source.w() - dimm::border() - dimm::width_button_wide())
       .below_of(&menu_source, dimm::border());
-    input_search.set_value((static_str_input.lock().unwrap().as_str()));
+    input_search.set_value(STATIC_STR_INPUT.lock().unwrap().as_str());
 
     // search button
     let mut btn_search = button::Button::default()
@@ -286,7 +266,7 @@ pub fn icon(tx: Sender<common::Msg>
       .with_color(Color::Green);
 
     // Temporary images path
-    let path_dir_images = if let Ok(mut str_dir_projects) = env::var("GIMG_DIR")
+    let path_dir_images = if let Ok(str_dir_projects) = env::var("GIMG_DIR")
     {
       let path_dir_images = PathBuf::from(str_dir_projects).join("thumbnails");
       let _  = std::fs::create_dir_all(&path_dir_images);
@@ -307,8 +287,8 @@ pub fn icon(tx: Sender<common::Msg>
 
     scroll.begin();
 
-    let mut count_row : i32 = 5;
-    let mut count_col : i32 = 4;
+    let count_row : i32 = 5;
+    let count_col : i32 = 4;
 
     let mut grid = fltk_grid::Grid::default()
       .with_width(menu_source.w() - dimm::border())
@@ -352,7 +332,6 @@ pub fn icon(tx: Sender<common::Msg>
         return;
       }; // else
 
-      let clone_arc_vec_radio = arc_vec_radio.clone();
       let clone_f_install_icon = f_install_icon.clone();
       let clone_tx = tx.clone();
       let arc_path_file_image = Arc::new(Mutex::new(path_file_image.clone()));
@@ -362,12 +341,10 @@ pub fn icon(tx: Sender<common::Msg>
         .with_focus(false)
         .with_shared_image(path_file_image)
         .with_pos_of(&grid)
-        .with_callback(move |e|
+        .with_callback(move |_|
         {
           clone_tx.send(common::Msg::WindDeactivate);
-          let clone_tx = clone_tx.clone();
-          let clone_btn = e.clone();
-          let mut clone_f_install_icon = clone_f_install_icon.clone();
+          let clone_f_install_icon = clone_f_install_icon.clone();
           let clone_arc_path_file_image = arc_path_file_image.clone();
           std::thread::spawn(move ||
           {
@@ -384,10 +361,10 @@ pub fn icon(tx: Sender<common::Msg>
         lock.push(btn_image.clone());
       } // if
 
-      grid.set_widget(&mut btn_image, curr_row as usize, curr_col as usize);
+      let _ = grid.set_widget(&mut btn_image, curr_row as usize, curr_col as usize);
 
-      if ( curr_row == count_row-1 && curr_col == count_col-1 ) { break; }
-      else if ( curr_col == count_col-1 ) { curr_row += 1; curr_col = 0; }
+      if curr_row == count_row-1 && curr_col == count_col-1 { break; }
+      else if curr_col == count_col-1 { curr_row += 1; curr_col = 0; }
       else { curr_col += 1; }
     } // for
 
@@ -395,15 +372,14 @@ pub fn icon(tx: Sender<common::Msg>
 
     let clone_input_search = input_search.clone();
     let clone_path_dir_images = path_dir_images.clone();
-    let clone_tx = tx.clone();
     let mut clone_output_status = ret_frame_footer.output_status.clone();
 
-    let mut f_callback_search = move ||
+    let f_callback_search = move ||
     {
       let args = image_search::Arguments::new(clone_input_search.value().as_str(), 15)
         .directory(&clone_path_dir_images);
 
-      if let Ok(mut lock) = static_str_input.lock()
+      if let Ok(mut lock) = STATIC_STR_INPUT.lock()
       {
         *lock = clone_input_search.value();
       } // if

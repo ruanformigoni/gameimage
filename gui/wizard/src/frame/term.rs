@@ -1,42 +1,19 @@
-#![allow(warnings)]
-
-use std::sync::mpsc;
-use std::io;
-use std::borrow::BorrowMut;
 use std::fs;
-use std::env;
 use std::path::PathBuf;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::io::{BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::process::{Command, Stdio, Child};
-use std::collections::HashSet;
 
-use walkdir::WalkDir;
-use closure::closure;
 use fltk::{
   app,
-  app::App,
   // app::{Sender,Receiver},
-  button::{Button,CheckButton},
-  dialog::{file_chooser, dir_chooser, FileChooser, FileChooserType, FileDialogOptions, NativeFileChooser, FileDialogType, NativeFileChooserOptions},
-  group::{Group, PackType},
-  input::{Input,FileInput},
-  output::Output,
-  menu::MenuButton,
-  prelude::{ImageExt, DisplayExt, InputExt, GroupExt, MenuExt, WidgetBase, WidgetExt, WindowExt},
-  window::Window,
-  enums::{Align,FrameType,Color},
-  frame::Frame,
+  button::Button,
+  dialog::file_chooser,
+  prelude::*,
+  enums::{FrameType,Color},
   text::SimpleTerminal,
-  image::SharedImage,
 };
 
-use fltk_theme::{ColorTheme, color_themes};
-
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
@@ -86,7 +63,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
       return;
     } // if
 
-    let mut path_file_dest = some_path_file_dest.unwrap();
+    let path_file_dest = some_path_file_dest.unwrap();
 
     // Get contents of terminal
     let str_contents = clone_term.text();
@@ -100,7 +77,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
     } // if
 
     // Write to file
-    writeln!(&mut file_dest.unwrap(), "{}", str_contents);
+    let _ = writeln!(&mut file_dest.unwrap(), "{}", str_contents);
   });
 
   // Return new term
@@ -108,7 +85,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
 } // new() }}}
 
 // pub fn dispatch() {{{
-pub fn dispatch<F>(&self, mut args : Vec<&str>, callback : F) -> anyhow::Result<Arc<Mutex<Child>>>
+pub fn dispatch<F>(&self, args : Vec<&str>, callback : F) -> anyhow::Result<Arc<Mutex<Child>>>
   where F : Fn(i32) + Send + 'static
 {
   let (cmd_base, cmd_args) = args.split_first().ok_or(ah!("No command to execute"))?;
@@ -138,7 +115,7 @@ pub fn dispatch<F>(&self, mut args : Vec<&str>, callback : F) -> anyhow::Result<
       else
       {
         clone_term.append("Failed to acquire mut stdout\n");
-        return; 
+        return;
       }; // else
 
     // Create buf

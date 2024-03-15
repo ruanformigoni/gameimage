@@ -1,44 +1,22 @@
-#![allow(warnings)]
-
-use std::env;
-use std::path::PathBuf;
-use std::fs::File;
-
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
   browser::MultiBrowser,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   button::Button,
-  group::Group,
-  image::SharedImage,
-  input::FileInput,
-  group::PackType,
-  frame::Frame,
   dialog,
   text,
-  output,
-  dialog::{dir_chooser,file_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  enums::{FrameType,Color},
 };
 
-use url as Url;
-use anyhow;
-use anyhow::anyhow as ah;
-
 use crate::dimm;
-use crate::frame;
 use crate::wizard;
 use crate::common;
 use crate::common::PathBufExt;
-use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
+use crate::common::VecExt;
 use crate::log;
 use crate::db;
-use crate::lib::download;
 use crate::lib::svg;
 
 // pub fn name() {{{
@@ -74,7 +52,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let mut frame_list = install.frame_list.clone();
   let output_status = install.ret_frame_footer.output_status.clone();
   let btn_add = install.btn_add.clone();
-  let mut btn_del = install.btn_del.clone();
+  let btn_del = install.btn_del.clone();
 
   // Adjust to include the field below
   frame_list.set_size(frame_list.w(), frame_list.h() - dimm::border() - dimm::height_button_wide());
@@ -148,7 +126,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       }); // std::thread
     }); // with_callback
 
-    btn_del = btn_del.below_of(&btn_default, dimm::border());
+  // Update del button position
+  let _ = btn_del.below_of(&btn_default, dimm::border());
 } // }}}
 
 // pub fn core() {{{
@@ -166,7 +145,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   let frame_content = install.ret_frame_header.frame_content.clone();
   let output_status = install.ret_frame_footer.output_status.clone();
   let mut btn_add = install.btn_add.clone();
-  let mut btn_del = install.btn_del.clone();
+  let btn_del = install.btn_del.clone();
 
   // Adjust size
   frame_list_installed.set_size(
@@ -227,16 +206,11 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     clone_tx.send(common::Msg::WindDeactivate);
 
     // Get items
-    let mut vec_items = (1..chooser.count()+1).into_iter().map(|e| chooser.value(e).unwrap()).collect::<Vec<String>>();
+    let vec_items = (1..chooser.count()+1).into_iter().map(|e| chooser.value(e).unwrap()).collect::<Vec<String>>();
     std::thread::spawn(move ||
     {
-      // To &str collection
-      let mut vec_str_items : Vec<&str> = vec_items.iter().map(|e| &**e).collect();
-      // Prepend command
-      let mut vec_cmd = vec!["install", "core"];
-      vec_cmd.extend_from_slice(&vec_str_items);
       // Install cores
-      if common::gameimage_sync(vec_cmd) != 0
+      if common::gameimage_sync(vec!["install", "core"].append_strings(vec_items).as_str_slice()) != 0
       {
         log!("Failed to install one or more cores");
       } // else
@@ -308,19 +282,11 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     // Get items
     let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list_installed.text(e).unwrap() }).collect();
 
-    // To &str collection
-    let mut vec_str_items : Vec<&str> = vec_items.iter().map(|e| &**e).collect();
-
-    // Prepend command
-    let mut vec_cmd = vec!["install", "--remove", "core"];
-    vec_cmd.extend_from_slice(&vec_str_items);
-
     // Run backend
-    if common::gameimage_sync(vec_cmd) != 0
+    if common::gameimage_sync(vec!["install", "--remove", "core"].append_strings(vec_items).as_str_slice()) != 0
     {
       log!("Failed to delete one or more items");
     }; // else
-    
     // Redraw
     clone_tx.send(common::Msg::DrawRetroarchCore);
   });
@@ -334,8 +300,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   frame_list_remote.set_text_size(dimm::height_text());
 
   // Insert remote items in list
-  let mut parent = frame_list_remote.as_base_widget();
-  if let Ok(vec_items) = wizard::install::fetch_items(tx.clone(), "core".to_string(), true)
+  if let Ok(vec_items) = wizard::install::fetch_items("core".to_string(), true)
   {
     vec_items.iter().for_each(|item| frame_list_remote.add(item.as_str()) );
   } // if
@@ -357,20 +322,14 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
       let clone_frame_list_remote = clone_frame_list_remote.clone();
       std::thread::spawn(move ||
       {
+        // Get indices
         let vec_indices = clone_frame_list_remote.selected_items();
 
-        // Get items
+        // Get text
         let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list_remote.text(e).unwrap() }).collect();
 
-        // To &str collection
-        let mut vec_str_items : Vec<&str> = vec_items.iter().map(|e| &**e).collect();
-
-        // Prepend command
-        let mut vec_cmd = vec!["install", "--remote", "core"];
-        vec_cmd.extend_from_slice(&vec_str_items);
-
         // Install with backend
-        if common::gameimage_sync(vec_cmd) != 0
+        if common::gameimage_sync(vec!["install", "--remote", "core"].append_strings(vec_items).as_str_slice()) != 0
         {
           log!("Failed to execute backend to fetch remote cores");
         } // else

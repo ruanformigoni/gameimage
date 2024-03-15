@@ -1,10 +1,6 @@
-#![allow(warnings)]
-
 use fltk::
 {
-  app::{
-    Sender,
-  },
+  app::Sender,
   enums::{
     FrameType,
     Color,
@@ -13,16 +9,13 @@ use fltk::
   button,
   button::Button,
   dialog,
-  text,
   output,
   prelude::*,
 };
 
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::common;
-use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::frame;
@@ -52,7 +45,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 } // }}}
 
 // fetch_items() {{{
-pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Vec<String>>
+pub fn fetch_items(label : String) -> anyhow::Result<Vec<String>>
 {
   // Ask back-end for the item files
   if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", &label]) != 0
@@ -89,9 +82,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Icon);
@@ -106,8 +97,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   frame_list.set_text_size(dimm::height_text());
 
   // Insert items in list of currently installed items
-  let mut parent = frame_list.as_base_widget();
-  let result_vec_items = fetch_items(tx.clone(), "rom".to_string());
+  let result_vec_items = fetch_items("rom".to_string());
   if let Ok(vec_items) = result_vec_items
   {
     for item in vec_items { frame_list.add(item.as_str()); } // for
@@ -166,7 +156,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   btn_del.visible_focus(false);
   btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
   btn_del.set_color(Color::Red);
-  let clone_frame_list = frame_list.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   btn_del.set_callback(move |_|
   {
@@ -188,7 +177,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         log!("Could not remove '{}", item);
       }; // else
     } // for
-    
     clone_tx.send(common::Msg::DrawRpcs3Rom);
   });
 } // }}}
@@ -199,9 +187,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set bottom callbacks
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Rom);
@@ -218,19 +204,18 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
   frame_text.set_frame(FrameType::BorderBox);
   frame_text.set_text_size(dimm::height_text());
 
-  frame_text.append("Here you can install the firmware and the .pkg, .rap and .edat files\n");
-  frame_text.append("Clicking on 'Open' will open RPCS3\n");
-  frame_text.append("Go to 'File -> Install Packages/Raps/Edats' for DLC\n");
-  frame_text.append("Go to 'File -> Install Firmware' for the BIOS\n");
+  let _ = frame_text.append("Here you can install the firmware and the .pkg, .rap and .edat files\n");
+  let _ = frame_text.append("Clicking on 'Open' will open RPCS3\n");
+  let _ = frame_text.append("Go to 'File -> Install Packages/Raps/Edats' for DLC\n");
+  let _ = frame_text.append("Go to 'File -> Install Firmware' for the BIOS\n");
 
   // Button to launch rpcs3 and install files
-  let frame_bottom = fltk::frame::Frame::default()
+  let _frame_bottom = fltk::frame::Frame::default()
     .with_size(frame_text.w(), frame_content.h() - frame_text.h() - dimm::border())
     .with_frame(FrameType::BorderBox)
     .below_of(&frame_text, 0);
 
-  let clone_tx = tx.clone();
-  let btn_launch = button::Button::default()
+  let _btn_launch = button::Button::default()
     .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .below_center_of(&frame_text, dimm::border())
     .with_color(Color::Green)

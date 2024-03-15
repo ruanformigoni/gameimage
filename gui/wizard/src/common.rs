@@ -11,11 +11,9 @@ use std::
 use fltk::
 {
   app,
-  widget::Widget,
   prelude::WidgetExt,
 };
 
-use image;
 use anyhow::anyhow as ah;
 
 use crate::frame;
@@ -253,6 +251,7 @@ pub fn image_resize(path_out : PathBuf, path_in : PathBuf, width : u32, height :
 } // }}}
 
 // pub trait WidgetExtExtra {{{
+#[allow(warnings)]
 pub trait WidgetExtExtra
 {
   fn with_callback<F>(&mut self, callback : F) -> Self
@@ -499,6 +498,42 @@ impl PathBufExt for PathBuf
     self.file_name().unwrap_or_default().to_string_lossy().to_string()
   } // fn: file_name_string
 }
+// }}}
+
+// pub trait VecExt {{{
+pub struct VecString
+{
+  str_owned: Vec<String>,
+} // VecString
+
+impl VecString
+{
+  // Method to access the &str references of the owned strings
+  pub fn as_str_slice(&self) -> Vec<&str>
+  {
+    self.str_owned.iter().map(|s| s.as_str()).collect()
+  } // as_str_slice()
+} // impl VecString
+
+pub trait VecExt
+{
+  fn append_strings(&self, other: Vec<String>) -> VecString;
+} // trait VecExt
+
+impl VecExt for Vec<&str>
+{
+  fn append_strings(&self, other: Vec<String>) -> VecString
+  {
+    // Map self to String
+    let mut str_owned: Vec<String> = self.iter().map(|s| s.to_string()).collect();
+
+    // Extend self with other
+    str_owned.extend(other);
+
+    // Create VecString
+    VecString { str_owned }
+  }
+} // impl VecExt
 // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

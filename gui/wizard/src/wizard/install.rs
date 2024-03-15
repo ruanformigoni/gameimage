@@ -1,46 +1,26 @@
-#![allow(warnings)]
-
-use std::env;
-use std::path::PathBuf;
-use std::fs::File;
-
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
   browser::MultiBrowser,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   button::Button,
-  group::Group,
-  image::SharedImage,
-  input::FileInput,
-  group::PackType,
-  frame::Frame,
   dialog,
-  dialog::{dir_chooser,file_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  enums::{FrameType,Color},
 };
 
-use url as Url;
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::VecExt;
 use crate::log;
 use crate::db;
-use crate::lib::download;
 use crate::lib::svg;
 
 // fetch_items() {{{
-pub fn fetch_items(tx: Sender<common::Msg>
-  , label : String
-  , use_remote : bool) -> anyhow::Result<Vec<String>>
+pub fn fetch_items(label : String , use_remote : bool) -> anyhow::Result<Vec<String>>
 {
   let cmd = if use_remote
   {
@@ -100,9 +80,7 @@ pub fn install(tx: Sender<common::Msg>
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), msg_prev);
@@ -117,14 +95,11 @@ pub fn install(tx: Sender<common::Msg>
   frame_list.set_text_size(dimm::height_text());
 
   // Insert items in list of currently installed items
-  let mut parent = frame_list.as_base_widget();
-
-  let clone_tx = tx.clone();
   let clone_label : String = label.into();
   let mut clone_frame_list = frame_list.clone();
   std::thread::spawn(move ||
   {
-    match fetch_items(clone_tx.clone(), clone_label, false)
+    match fetch_items(clone_label, false)
     {
       Ok(vec_items) => for item in vec_items { clone_frame_list.add(item.as_str()); },
       Err(e) => log!("Could not get items to insert: {}", e),
@@ -134,7 +109,7 @@ pub fn install(tx: Sender<common::Msg>
   // Add new item
   let clone_tx = tx.clone();
   let clone_label : String = label.to_string();
-  let mut btn_add = Button::default()
+  let btn_add = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .right_of(&frame_list, dimm::border())
     .with_frame(FrameType::RoundedFrame)
@@ -192,7 +167,6 @@ pub fn install(tx: Sender<common::Msg>
   btn_del.visible_focus(false);
   btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
   btn_del.set_color(Color::Red);
-  let clone_frame_list = frame_list.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_label = label.to_string();
   let clone_frame_list = frame_list.clone();
@@ -217,14 +191,9 @@ pub fn install(tx: Sender<common::Msg>
     std::thread::spawn(move ||
     {
       // Get items
-      let mut vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list.text(e).unwrap() }).collect();
-      // To &str collection
-      let mut vec_str_items : Vec<&str> = vec_items.iter().map(|e| &**e).collect();
+      let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list.text(e).unwrap() }).collect();
       // Prepend command
-      let mut vec_cmd = vec!["install", "--remove", &clone_label];
-      vec_cmd.extend_from_slice(&vec_str_items);
-      // Run command
-      if common::gameimage_sync(vec_cmd) != 0
+      if common::gameimage_sync(vec!["install", "--remove", &clone_label].append_strings(vec_items).as_str_slice()) != 0
       {
         log!("Failed to delete items");
       } // if

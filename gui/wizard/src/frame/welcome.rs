@@ -1,5 +1,3 @@
-#![allow(warnings)]
-
 use std::env;
 use std::path::PathBuf;
 
@@ -7,12 +5,11 @@ use std::path::PathBuf;
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  image::SharedImage,
   input::FileInput,
   group::PackType,
   frame::Frame,
   dialog::dir_chooser,
-  enums::{Align,FrameType},
+  enums::Align,
 };
 
 use crate::dimm;
@@ -32,7 +29,6 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
@@ -40,7 +36,6 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   {
     log!("Err: {}", e.to_string());
   } // if
-  
   // Project Logo
   let mut frame_image = Frame::default()
     .with_size(dimm::height_button_rec()*4, dimm::height_button_rec()*4);

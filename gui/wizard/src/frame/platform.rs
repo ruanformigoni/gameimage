@@ -1,7 +1,4 @@
-#![allow(warnings)]
-
 use std::env;
-use std::path::PathBuf;
 
 // Gui
 use fltk::prelude::*;
@@ -9,13 +6,9 @@ use fltk::{
   app::Sender,
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
-  group::Group,
-  image::SharedImage,
-  input::FileInput,
   group::PackType,
   frame::Frame,
-  dialog::dir_chooser,
-  enums::{Align,FrameType,Color},
+  enums::{Align,FrameType},
 };
 
 use crate::dimm;
@@ -34,7 +27,6 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
@@ -118,7 +110,6 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
   // Set callback for prev
   let mut clone_btn_prev = ret_frame_footer.btn_prev.clone();
-  let mut clone_tx = tx.clone();
   clone_btn_prev.set_callback(move |_|
   {
     tx.send(common::Msg::DrawWelcome);
@@ -128,34 +119,27 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   // Set callback for next
   let mut clone_btn_next = ret_frame_footer.btn_next.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
-  let mut clone_tx = tx.clone();
+  let clone_tx = tx.clone();
   clone_btn_next.set_callback(move |_|
   {
-    let env_platform = env::var("GIMG_PLATFORM");
-
-    let mut str_platform = String::new();
-
-    // Allow next if dropdown has valid value
-    if let Some(platform) = env_platform.ok()
+    let str_platform = if let Ok(str_platform) = env::var("GIMG_PLATFORM")
+      && btn_menu.label() == str_platform
     {
-      if platform != btn_menu.label()
-      {
-        clone_output_status.set_value("Please select a platform to proceed");
-        return;
-      } // if
-      str_platform = platform;
+      str_platform
     } // if
     else
     {
       clone_output_status.set_value("Please select a platform to proceed");
       return;
-    } // else
+    }; // else
 
+    // Fetch files
     clone_output_status.set_value("Fetching list of files to download");
 
     // Disable window
     clone_tx.send(common::Msg::WindDeactivate);
 
+    // Fetch files
     std::thread::spawn(move ||
     {
       // Ask back-end for the files to download for the selected platform

@@ -1,4 +1,5 @@
 #![feature(let_chains)]
+#![allow(special_module_name)]
 
 use fltk::{
   app,
@@ -300,7 +301,7 @@ fn init(&mut self)
 {
   // Ask the user he really wants to exit gameimage
   let clone_tx = self.tx.clone();
-  let f_callback_close = move |w: &mut fltk::window::DoubleWindow|
+  let f_callback_close = move |_: &mut fltk::window::DoubleWindow|
   {
     if fltk::app::event() == fltk::enums::Event::Close
       && dialog::choice2_default("Exit GameImage?", "No", "Yes", "") == Some(1)

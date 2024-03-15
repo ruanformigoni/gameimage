@@ -1,38 +1,18 @@
-#![allow(warnings)]
-
 use std::env;
-use std::path::PathBuf;
-use std::fs::File;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
-  app::{Sender,Receiver},
-  window::Window,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
-  button::Button,
-  group::Group,
-  image::SharedImage,
-  input::{Input,FileInput},
-  group::PackType,
+  app::Sender,
+  input::Input,
   frame::Frame,
-  dialog::{file_chooser,dir_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  enums::{Align,FrameType},
 };
-
-use url as Url;
-use anyhow;
-use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
-use crate::wizard;
 use crate::common;
 use crate::log;
-use crate::db;
-use crate::lib::download;
 use crate::lib::svg;
 
 
@@ -45,9 +25,7 @@ pub fn name(tx: Sender<common::Msg>
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Create icon box
   let mut frame_icon = Frame::default()
@@ -92,7 +70,7 @@ pub fn name(tx: Sender<common::Msg>
   } // if
 
   // // Set input_name callback
-  input_name.set_callback(move |mut e|
+  input_name.set_callback(move |e|
   {
     env::set_var("GIMG_NAME", f_sanitize(e.value()));
   });

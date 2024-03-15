@@ -1,11 +1,7 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use downloader::Downloader;
-use sha256;
 
 use url as Url;
 
@@ -14,7 +10,6 @@ use anyhow::anyhow as ah;
 use crate::log;
 use crate::common;
 use crate::common::PathBufExt;
-use crate::common::OsStringExt;
 
 // struct SimpleReporterPrivate {{{
 struct SimpleReporterPrivate
@@ -173,7 +168,7 @@ where
 
   // Fetch sha
   log!("Start download sha");
-  let summary_sha = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
+  let _ = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
 
   // Fetch file
   log!("Start download file");

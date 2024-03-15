@@ -1,13 +1,9 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use std::iter;
 use std::env;
 use std::fs::File;
 use std::path::PathBuf;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 // struct Entry {{{
 #[derive(Serialize, Deserialize)]

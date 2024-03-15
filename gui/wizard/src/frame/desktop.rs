@@ -1,38 +1,22 @@
-#![allow(warnings)]
-
-use std::env;
 use std::path::PathBuf;
-use std::fs::File;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
-  app::{Sender,Receiver},
-  window::Window,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
-  button::Button,
-  group::Group,
-  image::SharedImage,
-  input::{Input,FileInput},
-  group::PackType,
+  app::Sender,
+  input::FileInput,
   frame::Frame,
-  dialog::{file_chooser,dir_chooser},
-  enums::{Align,FrameType,Color},
-  misc::Progress,
+  dialog::file_chooser,
+  enums::{Align,FrameType},
 };
 
-use url as Url;
-use anyhow;
 use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
 use crate::log;
-use crate::db;
-use crate::lib::download;
-use crate::lib::svg;
 
 // set_image_preview() {{{
 fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
@@ -44,7 +28,12 @@ fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
     .join("icon.wizard.resized.png");
 
   // Do the actual resizing
-  common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32);
+  if let Err(e) = common::image_resize(path_icon_resized.clone()
+    , path_file_icon.clone()
+    , frame.w() as u32, frame.h() as u32)
+  {
+    log!("Failed to resize image {} with error {}", path_file_icon.string(), e);
+  } // if
 
   // Set as icon in frame
   match fltk::image::PngImage::load(path_icon_resized)
@@ -71,9 +60,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let frame_header = ret_frame_header.frame.clone();
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   // Create icon box
   let mut frame_icon = Frame::default()
@@ -135,7 +122,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
       // Set preview image
       if let Err(e) = set_image_preview(clone_frame_icon.clone(), str_choice.into())
       {
-        clone_output_status.set_value("Failed to load icon image into preview");
+        clone_output_status.set_value(format!("Failed to load icon image into preview with error {}", e).as_str());
       } // if
       else
       {
