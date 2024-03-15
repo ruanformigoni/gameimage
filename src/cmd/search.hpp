@@ -84,7 +84,12 @@ inline cr::generator<fs::path> search_files(fs::path path_dir_search
 // search_dirs() {{{
 inline cr::generator<fs::path> search_dirs(fs::path const& path_dir_search)
 {
-  for(fs::path i : fs::directory_iterator(path_dir_search)) { co_yield i; }
+  for(fs::path path_file_found : fs::directory_iterator(path_dir_search))
+  {
+    path_file_found = fs::relative(path_file_found, path_dir_search.parent_path());
+    ns_log::write('i', "Found :: ", path_file_found);
+    co_yield path_file_found;
+  } // for
 } // search_dirs() }}}
 
 // search_remote() {{{

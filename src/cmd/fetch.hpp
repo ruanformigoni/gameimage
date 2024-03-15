@@ -20,7 +20,7 @@
 #include "../lib/sha.hpp"
 #include "../lib/tar.hpp"
 
-inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/996de19054610efac4e13fb5d291e40c910e54c8/fetch.json";
+inline const char* FETCH_URL = "https://gist.githubusercontent.com/ruanformigoni/e6f023c9d071e24fc95a50c14c06c88b/raw/80f95232844df9b0c0cd94161d5f9bb71968ab90/fetch.json";
 
 namespace ns_fetch
 {
@@ -100,11 +100,8 @@ inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url con
   fs::path path_file_sha256sum = path_file_to_check.string() + ".sha256sum";
 
   // Fetch SHA file if not exists
-  if ( ! ns_fs::ns_path::file_exists<false>(path_file_sha256sum)._bool )
-  {
-    // SHA url is url + sha256sum
-    fetch_file_from_url(path_file_sha256sum, url.str() + ".sha256sum");
-  } // if
+  // SHA url is url + sha256sum
+  fetch_file_from_url(path_file_sha256sum, url.str() + ".sha256sum");
 
   // Check SHA
   if ( not ns_sha::check_256sum(path_file_to_check, path_file_sha256sum))
@@ -156,12 +153,34 @@ inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
   // Create platform string
   auto str_platform = ns_string::to_lower(ns_enum::to_string(platform));
 
+  // Select wine distribution
+  std::string str_url_base = ns_db::query(path_json, str_platform, "base");
+  std::string str_url_dwarfs;
+  if ( const char* dist = ns_env::get("GIMG_WINE_DIST"); platform == ns_enum::Platform::WINE )
+  {
+    if ( dist != nullptr )
+    {
+      str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs", dist);
+    } // if
+    else
+    {
+      str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs", "default");
+    } // else
+  } // if
+  else
+  {
+    str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs");
+  } // else
+
+  ns_log::write('i', "url base  : ", str_url_base);
+  ns_log::write('i', "url dwarfs: ", str_url_dwarfs);
+
   return Ret
   {
     .path_file_dwarfs = fs::path{path_dir_fetch} / "{}.dwarfs"_fmt(str_platform),
     .path_file_base = fs::path{path_dir_fetch} / "{}.tar.xz"_fmt(str_platform),
-    .url_dwarfs = cpr::Url(ns_db::query(path_json, "dwarfs", str_platform)),
-    .url_base = cpr::Url(ns_db::query(path_json, "base", str_platform)),
+    .url_dwarfs = cpr::Url(str_url_dwarfs),
+    .url_base = cpr::Url(str_url_base),
   };
 } // get_files_by_platform() }}}
 

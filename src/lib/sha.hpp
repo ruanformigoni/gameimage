@@ -25,6 +25,8 @@ inline bool check_256sum(fs::path path_file_src, fs::path path_file_sha)
   if (!file_src.good()) { "Cannot open file '{}' "_throw(path_file_src); }
   if (!file_sha.good()) { "Cannot open file '{}' "_throw(path_file_sha); }
 
+  ns_log::write('i', "Calculating SHA for: ", path_file_src);
+
   SHA256 sha256;
   char buffer[16384];
   while (file_src.read(buffer, sizeof(buffer)) || file_src.gcount())

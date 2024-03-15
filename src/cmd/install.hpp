@@ -187,7 +187,7 @@ inline void wine(std::vector<std::string> args)
 } // wine() }}}
 
 // emulator() {{{
-inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::string> args)
+inline void emulator(Op op, std::vector<std::string> args)
 {
   // Current project name
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -214,16 +214,11 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
   ns_log::write('i', "path bios     : ", path_dir_bios);
   ns_log::write('i', "path keys     : ", path_dir_keys);
 
-  // No command
-  if ( args.empty() )
-  {
-    ns_log::write('i', "No command passed to install phase");
-    return;
-  }
-
   // Install helpers
   auto f_install_file = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
   {
+    ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
+
     // Check if src and dst are the same
     if ( path_file_src == path_file_dst )
     {
@@ -251,10 +246,7 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
         // Verify if source directory exists
         path_file_src = ns_fs::ns_path::dir_exists<true>(path_file_src)._ret;
         // Copy recursive
-        for(auto path_dir_src : args)
-        {
-          fs::copy(path_dir_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
-        } // for
+        fs::copy(path_file_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
       } // catch
     } // else
 
@@ -276,7 +268,11 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
   {
     // Check for arguments of command
     "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
-    std::ranges::for_each(args, [&](fs::path e){ f_install_file(cmd, e, path_dir_dst / e.filename()); });
+    std::ranges::for_each(args, [&](fs::path e)
+    {
+      e = ns_fs::ns_path::canonical<true>(e)._ret;
+      f_install_file(cmd, e, path_dir_dst / e.filename());
+    });
   }; // f_install_roms
 
   // Get command
@@ -289,24 +285,8 @@ inline void emulator(Op op, ns_enum::Platform enum_platform, std::vector<std::st
       ns_subprocess::sync(path_flatimage);
     }
     break;
-    case Op::BIOS:
-    {
-      if ( enum_platform == ns_enum::Platform::RPCS3 )
-      {
-        ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
-        ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
-        if ( args.empty() ) { "No firmware file was passed for installation"_throw(); }
-        for( auto const& file : args )
-        {
-          ns_subprocess::sync(path_flatimage, "--installfw", file);
-        } // for
-        return;
-      } // if
-
-      f_install_files("bios", path_dir_bios, args);
-    }
-    break;
-    case Op::ROM: { f_install_files("rom", path_dir_rom, args); }; break;
+    case Op::BIOS: { f_install_files("bios", path_dir_bios, args); } break;
+    case Op::ROM : { f_install_files("rom", path_dir_rom, args); }; break;
     case Op::CORE: { f_install_files("core", path_dir_core, args); }; break;
     case Op::KEYS: { f_install_files("keys", path_dir_keys, args); }; break;
     case Op::ICON: "Invalid op in emulator install"_throw(); break;
@@ -429,7 +409,7 @@ void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 // install() {{{
 inline void install(Op op, std::vector<std::string> args)
 {
-  if ( args.empty() ) { "Empty arguments for install command"_throw(); }
+  if ( args.empty() && op != Op::GUI ) { "Empty arguments for install command"_throw(); }
 
   // Get platform
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
@@ -445,7 +425,7 @@ inline void install(Op op, std::vector<std::string> args)
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU: ns_install::emulator(op, enum_platform, args);
+    case ns_enum::Platform::YUZU: ns_install::emulator(op, args);
     break;
   } // switch
   
