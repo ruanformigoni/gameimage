@@ -154,9 +154,7 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
 // pub fn dir_build() {{{
 pub fn dir_build() -> anyhow::Result<()>
 {
-  let path_dir_gimg = path::PathBuf::from(env::var("GIMG_DIR")?);
-
-  Ok(env::set_current_dir(path_dir_gimg)?)
+  Ok(env::set_current_dir(path::PathBuf::from(env::var("GIMG_DIR")?))?)
 } // fn: dir_build }}}
 
 // pub fn gameimage_async() {{{
