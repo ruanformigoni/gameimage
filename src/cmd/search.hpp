@@ -28,15 +28,7 @@ namespace ns_search
 namespace fs = std::filesystem;
 namespace cr = cppcoro;
 
-// enum class Op {{{
-enum class Op
-{
-  ROM,
-  CORE,
-  BIOS,
-  KEYS,
-};
-// }}}
+using Op = ns_enum::Op;
 
 // anonymous namespace
 namespace
@@ -66,7 +58,7 @@ inline cr::generator<fs::path> search_files(fs::path path_dir_search
 
     if (fs::is_directory(path_file_entry) && std::regex_match(name_file, regex_exclude))
     {
-      ns_log::write('i', "Exclude directory '", ns_common::to_string(*entry), "'");
+      ns_log::write('i', "Exclude directory '", ns_string::to_string(*entry), "'");
       entry.disable_recursion_pending();
       continue;
     } // if

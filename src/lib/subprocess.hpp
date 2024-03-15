@@ -106,7 +106,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   } // catch
 
   // Wait for busy file
-  if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
+  if constexpr ( ns_enum::check_and(options, SubProcessOptions::WAITFILE) )
   {
     wait(path_file);
   } // if
@@ -138,7 +138,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
     for(std::string line; pipe_stream_stdout && std::getline(pipe_stream_stdout, line) && !line.empty();)
     {
       data.ss_stdout << line << '\n';
-      if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
+      if constexpr ( ns_enum::check_and(options, SubProcessOptions::PRINT) )
       {
         ns_log::write('i', "[o] :: ", line);
       } // if
@@ -150,7 +150,7 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
     for(std::string line; pipe_stream_stderr && std::getline(pipe_stream_stderr, line) && !line.empty();)
     {
       data.ss_stderr << line;
-      if constexpr ( ns_common::check_and(options, SubProcessOptions::PRINT) )
+      if constexpr ( ns_enum::check_and(options, SubProcessOptions::PRINT) )
       {
         ns_log::write('i', "[e] :: ", line);
       } // if
@@ -165,17 +165,17 @@ decltype(auto) sync(fs::path path_file, Args&&... args)
   // Save return
   data.exit_code = child.exit_code();
 
-  if ( child.exit_code() != 0 && ns_common::check_and(options, SubProcessOptions::CHECKERR) )
+  if ( child.exit_code() != 0 && ns_enum::check_and(options, SubProcessOptions::CHECKERR) )
   {
     ns_log::write('e', "Command did not exit successfully: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
   } // if
-  else if ( ns_common::check_and(options, SubProcessOptions::PRINT) )
+  else if ( ns_enum::check_and(options, SubProcessOptions::PRINT) )
   {
     ns_log::write('i', "Finished Command: '{} {}'"_fmt(path_file, ns_string::from_container(arguments)));
   } // else
 
   // Wait for busy file
-  if constexpr ( ns_common::check_and(options, SubProcessOptions::WAITFILE) )
+  if constexpr ( ns_enum::check_and(options, SubProcessOptions::WAITFILE) )
   {
     wait(path_file);
   } // if

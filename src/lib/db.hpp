@@ -150,7 +150,7 @@ inline Db::Db(fs::path t, Mode mode)
   auto f_parse_file = [](std::string const& name_file, std::ifstream const& f)
   {
     // Read to string
-    std::string contents = ns_common::to_string(f.rdbuf());
+    std::string contents = ns_string::to_string(f.rdbuf());
     // Validate contents
     if ( ! json_t::accept(contents) )
     {
@@ -323,7 +323,7 @@ bool Db::erase(T&& t)
 {
   json_t& json = data();
 
-  auto key = ns_common::to_string(t);
+  auto key = ns_string::to_string(t);
 
   if ( json.is_array() )
   {

@@ -135,7 +135,26 @@ void search(ns_parser::Parser const& parser)
 // select() {{{
 void select(ns_parser::Parser const& parser)
 {
-  ns_select::select(parser.remaining());
+  auto args{parser.remaining()};
+
+  // Check for op
+  "No option was specified"_throw_if([&]{ return args.empty(); });
+
+  // Get project
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+
+  // Get project path
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+
+  // Parse operation
+  ns_install::Op op = ns_enum::from_string<ns_install::Op>(args.front());
+  args.erase(args.begin());
+
+  // Check for args
+  "No argument was passed for the select command"_throw_if([&]{ return args.empty(); });
+
+  // Select
+  ns_select::select(op, args.front());
 } // select() }}}
 
 // test() {{{

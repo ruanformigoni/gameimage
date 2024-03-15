@@ -34,17 +34,7 @@ namespace ns_install
 namespace fs = std::filesystem;
 namespace match = matchit;
 
-// enum class Op {{{
-enum class Op
-{
-  ICON,
-  ROM,
-  CORE,
-  BIOS,
-  KEYS,
-  GUI,
-};
-// }}}
+using Op = ns_enum::Op;
 
 namespace
 {
@@ -186,6 +176,60 @@ inline void wine(std::vector<std::string> args)
   );
 } // wine() }}}
 
+// emulator_install_file() {{{
+void emulator_install_file(Op const& op, fs::path path_file_src, fs::path const& path_file_dst)
+{
+  // Path to project
+  fs::path path_dir_project = ns_db::query(ns_db::file_default()
+    , ns_db::query(ns_db::file_default(), "project")
+    , "path-project");
+
+  ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
+
+  // Check if src and dst are the same
+  if ( path_file_src == path_file_dst )
+  {
+    ns_log::write('i', "Src and dst are the same for '", path_file_src, "'");
+  } // if
+  else if ( auto ret = ns_fs::ns_path::file_exists<false>(path_file_src); ret._bool )
+  {
+    ns_log::write('i', "Src file is a regular file with path: '", path_file_src, "'");
+    // Update to canonical
+    path_file_src = ret._ret;
+    // Copy to target file
+    ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
+    , [&](double percentage, auto&& path_src, auto&& path_dst)
+    {
+      ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
+    }));
+  } // else if
+  else if ( auto ret = ns_fs::ns_path::dir_exists<false>(path_file_src); ret._bool )
+  {
+    ns_log::write('i', "Src file is a directory with path: '", path_file_src, "'");
+    // Update to canonical
+    path_file_src = ret._ret;
+    // Copy recursive
+    fs::copy(path_file_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+  } // else
+  else
+  {
+    "Source file is not a directory nor a regular file: '{}'"_throw(path_file_src);
+  } // else
+
+  // Relative path
+  fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
+
+  // Save in database
+  ns_db::from_file_project([&](auto&& db)
+  {
+    db(fmt::format("paths-file-{}", ns_enum::to_string_lower(op))) |= path_file_dst_relative;
+  }
+  , ns_db::Mode::UPDATE);
+
+  // Set as default
+  ns_select::select(op, path_file_dst_relative);
+} // emulator_install_file() }}}
+
 // emulator() {{{
 inline void emulator(Op op, std::vector<std::string> args)
 {
@@ -215,63 +259,15 @@ inline void emulator(Op op, std::vector<std::string> args)
   ns_log::write('i', "path keys     : ", path_dir_keys);
 
   // Install helpers
-  auto f_install_file = [&](std::string const& type, fs::path path_file_src, fs::path path_file_dst)
-  {
-    ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
-
-    // Check if src and dst are the same
-    if ( path_file_src == path_file_dst )
-    {
-      ns_log::write('i', "Src and dst are the same for '", path_file_src, "'");
-    } // if
-    else
-    {
-      // Try to copy file
-      try
-      {
-        // Verify if source file exists
-        path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
-        // Copy to target file
-        ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
-          , [&](double percentage, auto&& path_src, auto&& path_dst)
-          {
-            ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
-          })
-        );
-      } // try
-      // Try to copy dir
-      catch(std::exception const& e)
-      {
-        ns_log::write('i', e.what());
-        // Verify if source directory exists
-        path_file_src = ns_fs::ns_path::dir_exists<true>(path_file_src)._ret;
-        // Copy recursive
-        fs::copy(path_file_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
-      } // catch
-    } // else
-
-    // Relative path
-    fs::path path_file_dst_relative = fs::relative(path_file_dst, path_dir_project);
-
-    // Save in database
-    ns_db::from_file_project([&](auto&& db)
-    {
-      db(fmt::format("paths-file-{}", type)) |= path_file_dst_relative;
-    }
-    , ns_db::Mode::UPDATE);
-
-    // Set as default
-    ns_select::select(std::vector<std::string>{type, path_file_dst_relative});
-  }; // f_install_file
-
-  auto f_install_files = [&](std::string const& cmd, fs::path path_dir_dst, std::vector<std::string> const& args)
+  auto f_install_files = [&](Op const& op, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
     // Check for arguments of command
-    "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, cmd);
+    "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, ns_enum::to_string_lower(op));
+    // For each entry run the install command
     std::ranges::for_each(args, [&](fs::path e)
     {
       e = ns_fs::ns_path::canonical<true>(e)._ret;
-      f_install_file(cmd, e, path_dir_dst / e.filename());
+      emulator_install_file(op, e, path_dir_dst / e.filename());
     });
   }; // f_install_roms
 
@@ -285,11 +281,11 @@ inline void emulator(Op op, std::vector<std::string> args)
       ns_subprocess::sync(path_flatimage);
     }
     break;
-    case Op::BIOS: { f_install_files("bios", path_dir_bios, args); } break;
-    case Op::ROM : { f_install_files("rom", path_dir_rom, args); }; break;
-    case Op::CORE: { f_install_files("core", path_dir_core, args); }; break;
-    case Op::KEYS: { f_install_files("keys", path_dir_keys, args); }; break;
-    case Op::ICON: "Invalid op in emulator install"_throw(); break;
+    case Op::BIOS: { f_install_files(op, path_dir_bios, args); } break;
+    case Op::ROM : { f_install_files(op, path_dir_rom , args); } break;
+    case Op::CORE: { f_install_files(op, path_dir_core, args); } break;
+    case Op::KEYS: { f_install_files(op, path_dir_keys, args); } break;
+    default: "Invalid op in emulator install"_throw(); break;
   } // switch
 } // emulator() }}}
 

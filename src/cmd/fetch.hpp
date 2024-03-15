@@ -129,9 +129,7 @@ inline void fetch_file_from_url_on_failed_sha(fs::path const& path_file, cpr::Ur
 } // }}}
 
 // list_base_and_dwarfs() {{{
-inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform
-  , fs::path const& path_dir_fetch
-)
+inline decltype(auto) list_base_and_dwarfs(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
 {
   struct Ret
   {
@@ -243,7 +241,7 @@ inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
   {
     for( auto const& [key, value] : db["retroarch"]["core"].items() )
     {
-      vector_cores.push_back(Ret{ns_common::to_string(key), ns_common::to_string(value)});
+      vector_cores.push_back(Ret{ns_string::to_string(key), ns_string::to_string(value)});
     }
   }, ns_db::Mode::READ);
 
@@ -307,14 +305,20 @@ inline void base_json(ns_enum::Platform platform, fs::path path_file_image, fs::
   // Get files and destination paths to download
   auto fetch_paths_and_urls = list_base_and_dwarfs(platform, path_file_image.parent_path());
 
+  // Get members separately to avoid linkage warning
+  auto path_file_base = fetch_paths_and_urls.path_file_base;
+  auto path_file_dwarfs = fetch_paths_and_urls.path_file_dwarfs;
+  auto url_base = fetch_paths_and_urls.url_base;
+  auto url_dwarfs = fetch_paths_and_urls.url_dwarfs;
+
   ns_log::write('i', "Only writting json for base");
   fs::remove(path_json);
-  ns_db::from_file(path_json, [&](auto& db)
+  ns_db::from_file(path_json, [&](auto&& db)
   {
-    db("paths") |= fetch_paths_and_urls.path_file_base.c_str();
-    db("paths") |= fetch_paths_and_urls.path_file_dwarfs.c_str();
-    db("urls") |= fetch_paths_and_urls.url_base.c_str();
-    db("urls") |= fetch_paths_and_urls.url_dwarfs.c_str();
+    db("paths") |= path_file_base.c_str();
+    db("paths") |= path_file_dwarfs.c_str();
+    db("urls")  |= url_base.c_str();
+    db("urls")  |= url_dwarfs.c_str();
   }, ns_db::Mode::CREATE);
 
 } // fetch() }}}

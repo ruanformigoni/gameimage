@@ -10,20 +10,13 @@
 #include <fmt/ranges.h>
 #include <sstream>
 #include <typeinfo>
-#include <boost/type_index.hpp>
 
 #include "std/concepts.hpp"
+#include "std/string.hpp"
 
 #include "lib/log.hpp"
 
 inline const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
-
-// ns_common {{{
-namespace ns_common
-{
-template<typename T>
-std::string to_string(T&& t);
-} // namespace ns_common }}}
 
 // class Exception {{{
 class Exception : public std::exception
@@ -49,7 +42,7 @@ inline decltype(auto) operator ""_fmt(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
-    return fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))... ) ;
+    return fmt::format(fmt::runtime(str), ns_string::to_string(std::forward<Args>(args))... ) ;
   };
 } //
 
@@ -58,7 +51,7 @@ inline decltype(auto) operator ""_throw(const char* str, size_t)
 {
   return [str]<typename... Args>(Args&&... args)
   {
-    throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+    throw Exception(fmt::format(fmt::runtime(str), ns_string::to_string(std::forward<Args>(args))...));
   };
 } 
 
@@ -74,7 +67,7 @@ inline decltype(auto) operator ""_catch(const char* str, size_t)
     catch(std::exception const& e)
     {
       ns_log::write('e', e.what());
-      ns_log::write('e', fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+      ns_log::write('e', fmt::format(fmt::runtime(str), ns_string::to_string(std::forward<Args>(args))...));
     } // catch
   };
 }
@@ -86,7 +79,7 @@ inline decltype(auto) operator ""_throw_if(const char* str, size_t)
   {
     if ( f() )
     {
-      throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+      throw Exception(fmt::format(fmt::runtime(str), ns_string::to_string(std::forward<Args>(args))...));
     }
   };
 }
@@ -103,7 +96,7 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
     catch(std::exception const& e)
     {
       ns_log::write('e', e.what());
-      throw Exception(fmt::format(fmt::runtime(str), ns_common::to_string(std::forward<Args>(args))...));
+      throw Exception(fmt::format(fmt::runtime(str), ns_string::to_string(std::forward<Args>(args))...));
     } // catch
   };
 }
@@ -114,36 +107,6 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
 
 namespace ns_common
 {
-
-// to_string() {{{
-template<typename T>
-inline std::string to_string(T&& t)
-{
-  if constexpr ( ns_concept::StringConvertible<T> )
-  {
-    return t;
-  } // if
-  else if constexpr ( ns_concept::StringConstructible<T> )
-  {
-    return std::string{t};
-  } // else if
-  else if constexpr ( ns_concept::Numeric<T> )
-  {
-    return std::to_string(t);
-  } // else if 
-  else if constexpr ( ns_concept::StreamInsertable<T> )
-  {
-    std::stringstream ss;
-    ss << t;
-    return ss.str();
-  } // else if 
-  
-  // Throw
-  "Cannot convert '{}' to a valid string"_throw(boost::typeindex::type_id_with_cvr<T>().pretty_name());
-
-  // Suppress compiler warning of no return, it throws before this
-  return {};
-} // to_string() }}}
 
 // check_and() {{{
 template<ns_concept::Enum T, ns_concept::Enum... Args>
