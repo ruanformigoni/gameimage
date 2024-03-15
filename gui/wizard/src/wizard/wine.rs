@@ -57,10 +57,37 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_content = ret_frame_header.frame_content.clone();
+  let output_status = ret_frame_footer.output_status.clone();
 
   // Set previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineIcon);
-  ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineRom);
+
+  // Set next frame
+  let clone_tx = tx.clone();
+  let mut clone_output_status = output_status.clone();
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  {
+    // Get path to wine prefix
+    let path_dir_wine_prefix = if let Ok(project) = db::project::current()
+      && let Some(path_dir_self) = project.path_dir_self
+      {
+        path_dir_self.join("wine")
+      } // if
+      else
+      {
+        log!("Could not get path to current project");
+        return;
+      }; // else
+
+    if ! path_dir_wine_prefix.exists()
+    {
+      clone_output_status.set_value("Wine prefix does not exist");
+      log!("Wine prefix does not exist");
+      return;
+    } // if
+
+    clone_tx.send(common::Msg::DrawWineRom);
+  });
 
   let clone_tx = tx.clone();
   let f_add_entry = |w: Widget

@@ -275,6 +275,8 @@ pub trait WidgetExtExtra
   fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_width(&mut self, width : i32) -> Self;
   fn with_height(&mut self, height : i32) -> Self;
+  fn set_width(&mut self, width : i32);
+  fn set_height(&mut self, height : i32);
   fn with_width_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_height_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
 }
@@ -415,6 +417,16 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   {
     self.set_size(self.w(), height);
     self.clone()
+  }
+
+  fn set_width(&mut self, width : i32)
+  {
+    self.set_size(width, self.h());
+  }
+
+  fn set_height(&mut self, height : i32)
+  {
+    self.set_size(self.w(), height);
   }
 
   fn with_width_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self

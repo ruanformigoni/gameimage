@@ -6,29 +6,22 @@ use fltk::{
   app::Sender,
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
-  group::PackType,
-  frame::Frame,
   enums::{Align,FrameType},
 };
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::WidgetExtExtra;
 use crate::log;
 
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
-  let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
-  frame.set_frame(FrameType::BorderBox);
-  frame.set_type(PackType::Vertical);
-
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_content = ret_frame_header.frame_content.clone();
-  let frame_footer = ret_frame_footer.frame.clone();
 
   if let Err(e) = common::common()
   {
@@ -38,20 +31,10 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   // Menu options to select platform
   let mut btn_menu = MenuButton::default()
     .with_size(dimm::width() - dimm::border()*2, dimm::height_button_wide())
-    .above_of(&frame_footer, dimm::border());
-  btn_menu.set_pos(btn_menu.x() + dimm::border(), btn_menu.y());
-
-  // Create entries
-  let mut clone_btn = btn_menu.clone();
-  let mut f_add_entry = |platform : &str|
-  {
-    clone_btn.add_choice(platform);
-  };
-  f_add_entry("wine");
-  f_add_entry("retroarch");
-  f_add_entry("pcsx2");
-  f_add_entry("rpcs3");
-  f_add_entry("yuzu");
+    .bottom_of(&frame_content, - dimm::border())
+    .center_x(&frame_content)
+    .with_focus(false);
+  btn_menu.add_choice("wine|retroarch|pcsx2|rpcs3|ryujinx");
 
   // Create callback with descriptions
   let buffer = TextBuffer::default();
@@ -83,29 +66,53 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   // Check if variable is already set
   if let Some(env_platform) = env::var("GIMG_PLATFORM").ok()
   {
-    match env_platform.as_str()
+    if env_platform.as_str() == "wine"
     {
-      "wine" | "retroarch" | "pcsx2" | "rpcs3" | "yuzu" =>
+      btn_menu.set_width(frame_text.w() - dimm::border() - dimm::width_button_wide()*2);
+      let mut btn_wine_dist = MenuButton::default()
+        .with_size(dimm::width_button_wide()*2, dimm::height_button_wide())
+        .with_focus(false)
+        .right_of(&btn_menu, dimm::border())
+        .with_callback(|e|
+        {
+          let choice = e.choice().unwrap_or(String::from("None"));
+          std::env::set_var("GIMG_WINE_DIST", choice.as_str());
+          e.set_label(&choice);
+        });
+      // Set dist options
+      btn_wine_dist.add_choice("caffe|default|osu-tkg|soda|staging|tkg|vaniglia");
+      // Init default value for btn_wine_dist
+      if let Ok(var) = std::env::var("GIMG_WINE_DIST")
       {
-        btn_menu.set_label(env_platform.as_str());
-        f_update_buffer(env_platform);
-      },
-      _ => (),
-    } // match
+        btn_wine_dist.set_label(&var);
+      } // if
+      else
+      {
+        std::env::set_var("GIMG_WINE_DIST", "default");
+        btn_wine_dist.set_label("default");
+      } // else
+    }
+    // Update menu
+    btn_menu.set_label(env_platform.as_str());
+    // Update description box
+    f_update_buffer(env_platform);
   } // if
 
   // Set callback to dropdown menu selection
   let mut clone_update_buffer = f_update_buffer.clone();
+  let clone_tx = tx.clone();
   btn_menu.set_callback(move |e|
   {
     // Fetch choice
     let choice = e.choice().unwrap_or(String::from("None"));
     // Set as label
-    e.set_label(choice.as_str());
+    e.set_label(&choice);
     // Set as env var for later use
-    env::set_var("GIMG_PLATFORM", choice.as_str());
+    env::set_var("GIMG_PLATFORM", &choice);
     // Draw description of selection
-    clone_update_buffer(choice);
+    clone_update_buffer(choice.clone());
+    // Redraw
+    clone_tx.send(common::Msg::DrawPlatform)
   });
 
   // Set callback for prev

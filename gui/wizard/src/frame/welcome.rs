@@ -6,7 +6,6 @@ use fltk::prelude::*;
 use fltk::{
   app::Sender,
   input::FileInput,
-  group::PackType,
   frame::Frame,
   dialog::dir_chooser,
   enums::Align,
@@ -22,10 +21,6 @@ use crate::common::PathBufExt;
 // pub fn welcome() {{{
 pub fn welcome(tx: Sender<common::Msg>, title: &str)
 {
-  let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
-  frame.set_type(PackType::Vertical);
-
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 

@@ -7,8 +7,6 @@ use fltk::{
   app::Sender,
   button::Button,
   output::Output,
-  group::PackType,
-  frame::Frame,
   enums::{FrameType,Color},
   misc::Progress,
 };
@@ -96,11 +94,6 @@ fn fetch_files(vec_data : Vec<Data>
 // pub fn fetch() {{{
 pub fn fetch(tx: Sender<common::Msg>, title: &str)
 {
-  let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
-  frame.set_frame(FrameType::BorderBox);
-  frame.set_type(PackType::Vertical);
-
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
