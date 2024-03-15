@@ -43,21 +43,21 @@ namespace
 {
 
 // search_files() {{{
-inline cr::generator<fs::path> search_files(fs::path path_dir
+inline cr::generator<fs::path> search_files(fs::path path_dir_search
   , char const* str_pattern
   , char const* str_exclude)
 {
   // Validate file path
-  ns_fs::ns_path::dir_exists<true>(path_dir);
+  ns_fs::ns_path::dir_exists<true>(path_dir_search);
 
-  ns_log::write('i', "Search directory '", path_dir.c_str(), "'");
+  ns_log::write('i', "Search directory '", path_dir_search.c_str(), "'");
 
   // Create regex
   std::regex regex_pattern(str_pattern);
   std::regex regex_exclude(str_exclude);
 
   // Find all files that match pattern
-  for(auto entry = fs::recursive_directory_iterator(path_dir);
+  for(auto entry = fs::recursive_directory_iterator(path_dir_search);
     entry != fs::recursive_directory_iterator();
     ++entry)
   {
@@ -73,8 +73,9 @@ inline cr::generator<fs::path> search_files(fs::path path_dir
 
     if ( fs::is_regular_file(path_file_entry) && std::regex_match(name_file, regex_pattern))
     {
-      ns_log::write('i', "Found :: ", fs::relative(path_file_entry, path_dir));
-      co_yield fs::relative(path_file_entry, path_dir);
+      fs::path path_file_found = fs::relative(path_file_entry, path_dir_search.parent_path());
+      ns_log::write('i', "Found :: ", path_file_found);
+      co_yield path_file_found;
     } // if
   } // for
 
