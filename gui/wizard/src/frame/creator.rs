@@ -311,20 +311,10 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         let path_file_dwarfs = path_dir_project.with_extension("dwarfs");
         log!("File: {}", path_file_dwarfs.string());
 
-        let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["package", &path_file_dwarfs.string()])
-        {
-          rx_gameimage
-        }
-        else
+        // Wait for message & check return value
+        if common::gameimage_sync(vec!["package", &path_file_dwarfs.string()]) != 0
         {
           log!("Could not include {} into the image", path_file_dwarfs.string());
-          continue;
-        }; // else
-
-        // Wait for message & check return value
-        if let Ok(code) = rx_gameimage.recv() && code != 0
-        {
-          log!("Failed to package with code {}", code);
         } // if
       } // for
 

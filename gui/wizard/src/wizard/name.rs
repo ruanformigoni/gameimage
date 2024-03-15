@@ -143,30 +143,31 @@ pub fn name(tx: Sender<common::Msg>
     }; // else
 
     // Init project
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-        "init"
-      , "--dir"
-      , &name
-      , "--platform"
-      , &platform
-      , "--image"
-      , &image
-    ])
-    {
-      clone_tx.send(common::Msg::WindDeactivate);
-      let _ = rx_gameimage.recv();
-      clone_tx.send(common::Msg::WindActivate);
-    } // if
-    else
-    {
-      let msg = format!("Could not execute backend");
-      clone_output_status.set_value(&msg);
-      log!("{}", &msg);
-      return;
-    } // else
+    clone_tx.send(common::Msg::WindDeactivate);
 
-    // Go to next frame
-    clone_tx.send(clone_msg_next);
+    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    std::thread::spawn(move ||
+    {
+      if common::gameimage_sync(vec![
+          "init"
+        , "--dir"
+        , &name
+        , "--platform"
+        , &platform
+        , "--image"
+        , &image
+      ]) != 0
+      {
+        clone_tx.send(common::Msg::WindActivate);
+        let msg = format!("Could not execute backend");
+        clone_output_status.set_value(&msg);
+        log!("{}", &msg);
+        return;
+      } // if
+
+      // Go to next frame
+      clone_tx.send(clone_msg_next);
+    });
   });
 } // }}}
 

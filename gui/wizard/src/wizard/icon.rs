@@ -74,7 +74,8 @@ fn set_image(mut frame : Frame) -> anyhow::Result<()>
     Ok(png_image) =>
     {
       frame.set_image_scaled(Some(png_image));
-      frame.redraw();
+      fltk::app::redraw();
+      fltk::app::awake();
       return Ok(())
     },
     Err(e) =>
@@ -140,23 +141,15 @@ pub fn icon(tx: Sender<common::Msg>
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    if let Ok(path_file_icon) = env::var("GIMG_ICON")
+    if let Ok(project) = db::project::current()
+    && let Some(path_file_icon) = project.path_file_icon
     {
-      if ! PathBuf::from(path_file_icon).is_file()
-      {
-        log!("Icon file is invalid");
-        clone_output_status.set_value("Icon file is invalid");
-        return;
-      } // if
-    } // if
-    else
-    {
-      log!("Icon is not set");
-      clone_output_status.set_value("Icon is not set");
+      clone_tx.send(msg_next);
       return;
-    } // else
+    } // if
 
-    clone_tx.send(msg_next);
+    log!("Icon is not set");
+    clone_output_status.set_value("Icon is not set");
   });
 
   // Callback to install the selected icon with the backend
@@ -164,30 +157,22 @@ pub fn icon(tx: Sender<common::Msg>
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let f_install_icon = move |path_file_icon : PathBuf|
   {
-    // Try to install icon
-    clone_output_status.set_value("Installing icon...");
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", "icon", &path_file_icon.string()])
-    {
-      clone_tx.send(common::Msg::WindDeactivate);
-      let _ = rx_gameimage.recv();
-      clone_tx.send(common::Msg::WindActivate);
-    } // if
-    else
-    {
-      clone_output_status.set_value("Could not install icon, use .jpg or .png");
-      return;
-    } // else
+    clone_tx.send(common::Msg::WindDeactivate);
 
-    // Set environment variable
-    match get_icon()
+    let clone_tx = clone_tx.clone();
+    let mut clone_output_status = clone_output_status.clone();
+    std::thread::spawn(move ||
     {
-      Ok(path_file_icon) => env::set_var("GIMG_ICON", path_file_icon),
-      Err(e) =>
+      // Try to install icon
+      clone_output_status.set_value("Installing icon...");
+
+      if common::gameimage_sync(vec!["install", "icon", &path_file_icon.string()]) != 0
       {
-        log!("Could not get icon path: {}", e);
-        clone_output_status.set_value(format!("Could not get icon path: {}", e).as_str());
-      }
-    } // if
+        clone_output_status.set_value("Could not install icon, use .jpg or .png");
+      } // if
+
+      clone_tx.send(msg_curr);
+    });
   };
 
   // Select source
@@ -229,17 +214,16 @@ pub fn icon(tx: Sender<common::Msg>
     // Icon
     let mut input_icon = FileInput::default()
       .with_size(frame_content.w() - dimm::border()*2, dimm::height_button_wide() + dimm::border())
-      .below_of(&frame_content, 0)
+      .bottom_of(&frame_content, - dimm::border())
+      .with_posx_of(&menu_source)
       .with_align(Align::Top | Align::Left);
-    input_icon.set_pos(frame_content.x() + dimm::border()
-      , input_icon.y() - input_icon.h() - dimm::border());
     input_icon.set_readonly(true);
 
-    // Check if GIMG_ICON exists
-    if let Some(env_icon) = env::var("GIMG_ICON").ok()
+    if let Ok(project) = db::project::current()
+    && let Some(path_file_icon) = project.path_file_icon
     {
       // Set value of select field
-      input_icon.set_value(&env_icon);
+      input_icon.set_value(&path_file_icon.string());
       // Update preview
       if let Err(e) = set_image(frame_icon.clone())
       {
@@ -254,14 +238,16 @@ pub fn icon(tx: Sender<common::Msg>
     let mut clone_output_status = ret_frame_footer.output_status.clone();
     input_icon.set_callback(move |e|
     {
-      let choice = file_chooser("Select the icon", "*.{jpg,png}", ".", false);
-
-      if choice.is_none()
+      let str_choice = if let Some(str_choice) = file_chooser("Select the icon", "*.{jpg,png}", ".", false)
       {
-        return;
+        str_choice
       } // if
-
-      let str_choice = choice.unwrap();
+      else
+      {
+        clone_output_status.set_value("No file selected");
+        log!("No file selected");
+        return;
+      }; // else
 
       // Show file path on selector
       e.set_value(str_choice.as_str());
@@ -270,15 +256,15 @@ pub fn icon(tx: Sender<common::Msg>
       clone_f_install_icon(str_choice.into());
 
       // Set preview image
-      if let Err(e) = set_image(frame_icon.clone())
+      if set_image(frame_icon.clone()).is_ok()
       {
-        clone_output_status.set_value("Failed to load icon image into preview");
+        clone_output_status.set_value("Set preview image");
       } // if
       else
       {
-        clone_output_status.set_value("Set preview image");
+        clone_output_status.set_value("Failed to load icon image into preview");
       } // else
-      });
+    });
   } // if
   else
   {
@@ -389,7 +375,6 @@ pub fn icon(tx: Sender<common::Msg>
             {
               clone_f_install_icon(lock.clone());
             } // if
-            clone_tx.send(common::Msg::WindActivate);
           });
         });
       btn_image.set_selection_color(Color::Blue);
@@ -448,7 +433,6 @@ pub fn icon(tx: Sender<common::Msg>
           clone_output_status.set_value("Download failed, try again");
         } // else
 
-        tx.send(common::Msg::WindActivate);
         tx.send(msg_curr);
       });
     };

@@ -55,13 +55,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 pub fn fetch_items(tx: Sender<common::Msg>, label : String) -> anyhow::Result<Vec<String>>
 {
   // Ask back-end for the item files
-  if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["search", "--json", "gameimage.search.json", &label])
-  {
-    tx.send(common::Msg::WindDeactivate);
-    let _ = rx_gameimage.recv();
-    tx.send(common::Msg::WindActivate);
-  } // if
-  else
+  if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", &label]) != 0
   {
     log!("Could not execute backend to search files");
   }; // else
@@ -157,14 +151,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     let str_choice = chooser.value(1).unwrap();
 
     // Install directory with backend
-    if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", &clone_label, &str_choice])
+    if common::gameimage_sync(vec!["install", &clone_label, &str_choice]) != 0
     {
-      // Wait for command to finish
-      let _ = rx_gameimage.recv();
-    } // if
-    else
-    {
-      log!("Failed to execute backend");
+      log!("Failed to install '{}'", str_choice);
     } // else
     clone_tx.send(common::Msg::WindActivate);
     clone_tx.send(common::Msg::DrawRpcs3Rom);
@@ -196,13 +185,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
     for item in vec_items
     {
-      if let Ok(rx) = common::gameimage_cmd(vec!["install", "remove", &clone_label, &item])
+      if common::gameimage_sync(vec!["install", "--remove", &clone_label, &item]) != 0
       {
-        let _ = rx.recv();
-      } // if
-      else
-      {
-        log!("Could not wait for deletion of {}", item);
+        log!("Could not remove '{}", item);
       }; // else
     } // for
     
@@ -257,25 +242,10 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
       tx.send(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        let result = if let Ok(result) = common::gameimage_cmd(vec!["install", "gui"])
+        if common::gameimage_sync(vec!["install", "gui"]) != 0
         {
-          result
+          log!("Install gui exited with error");
         } // if
-        else
-        {
-          log!("Could not spawn gameimage backend to open RPCS3 GUI");
-          tx.send(common::Msg::WindActivate);
-          return;
-        }; // else
-
-        if let Ok(code_exit) = result.recv()
-        {
-          log!("Exited with code {}", code_exit);
-        } // if
-        else
-        {
-          log!("Could not fetch exit code");
-        } // else
 
         tx.send(common::Msg::WindActivate);
       });

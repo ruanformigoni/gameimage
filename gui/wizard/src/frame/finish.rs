@@ -73,7 +73,7 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
       str_package_basename = format!(".{}.config",  &stem.string());
     } // if
 
-    output_saved_location.set_value(&var);
+    output_saved_location.insert(&var);
   } // if
 
   let mut output_info = text::TextDisplay::default()

@@ -110,13 +110,9 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       std::thread::spawn(move ||
       {
         let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-        if let Ok(rx_gameimage) = common::gameimage_cmd(slices)
+        if common::gameimage_sync(slices) != 0
         {
-          let _ = rx_gameimage.recv();
-        } // if
-        else
-        {
-          log!("Could not spawn selected configure command");
+          log!("Command exited with non-zero status");
         } // else
         clone_tx.send(common::Msg::WindActivate);
       });
@@ -159,13 +155,9 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
-        if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", "winetricks", &clone_value])
+        if common::gameimage_sync(vec!["install", "winetricks", &clone_value]) != 0
         {
-          let _ = rx_gameimage.recv();
-        }
-        else
-        {
-          log!("Could not spawn selected configure command");
+          log!("Command exited with non zero status");
         } // else
 
         clone_tx.send(common::Msg::WindActivate);
@@ -187,13 +179,9 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
-        if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", "wine", &clone_value])
+        if common::gameimage_sync(vec!["install", "wine", &clone_value]) != 0
         {
-          let _ = rx_gameimage.recv();
-        }
-        else
-        {
-          log!("Could not spawn selected configure command");
+          log!("Command exited with non zero status");
         } // else
 
         clone_tx.send(common::Msg::WindActivate);
@@ -207,13 +195,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 fn find_roms(tx : Sender<common::Msg>) -> anyhow::Result<Vec<String>>
 {
   // Ask back-end for the item files
-  if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["search", "--json", "gameimage.search.json", "rom"])
-  {
-    tx.send(common::Msg::WindDeactivate);
-    let _ = rx_gameimage.recv();
-    tx.send(common::Msg::WindActivate);
-  } // if
-  else
+  if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", "rom"]) != 0
   {
     return Err(ah!("No items found (dir not found)"));
   } // else
@@ -371,17 +353,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       clone_tx.send(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["install", "wine", &str_choice ])
-        {
-          let _ = rx_gameimage.recv();
-        } // if
-        else
+        if common::gameimage_sync(vec!["install", "wine", &str_choice ]) != 0
         {
           log!("Could not execute selected file");
         }; // else
 
         clone_tx.send(common::Msg::WindActivate);
-        clone_tx.send(common::Msg::DrawWineRom);
       });
     });
 
@@ -423,11 +400,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     std::thread::spawn(move ||
     {
       // Set the selected binary as default
-      if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["select", "rom", &path_dir_selected.string()])
-      {
-        let _ = rx_gameimage.recv();
-      } // if
-      else
+      if common::gameimage_sync(vec!["select", "rom", &path_dir_selected.string()]) != 0
       {
         log!("Could not change default executable for test");
         clone_tx.send(common::Msg::WindActivate);
@@ -435,11 +408,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       } // else
 
       // Test the selected binary
-      if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["test"])
-      {
-        let _ = rx_gameimage.recv();
-      } // if
-      else
+      if common::gameimage_sync(vec!["test"]) != 0
       {
         log!("Could not test selected executable");
         clone_tx.send(common::Msg::WindActivate);
@@ -539,19 +508,9 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     }; // else
 
     // Set the selected binary as default
-    let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["select", "rom", &str_path])
+    if common::gameimage_sync(vec!["select", "rom", &str_path]) != 0
     {
-      rx_gameimage
-    }
-    else
-    {
-      log!("Could not recover return code");
-      return;
-    }; // else
-
-    if let Ok(code) = rx_gameimage.recv() && code != 0
-    {
-      log!("Failed with code {}", code);
+      log!("Could not select rom {}", str_path);
       return;
     } // if
     

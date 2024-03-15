@@ -124,27 +124,13 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     std::thread::spawn(move ||
     {
       // Set as desktop entry icon for image
-      let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec!["desktop", &str_choice])
-      {
-        rx_gameimage
-      } // if
-      else
-      {
-        log!("Could not recover return code");
-        clone_tx.send(common::Msg::WindActivate);
-        return;
-      }; // else
-
       // Wait for message & check return value
-      if let Ok(code) = rx_gameimage.recv() && code != 0
+      if common::gameimage_sync(vec!["desktop", &str_choice]) != 0
       {
-        log!("Failed with code {}", code);
+        log!("Failed to execute desktop command on backend");
         clone_tx.send(common::Msg::WindActivate);
         return;
       } // if
-
-      // Re-activate window
-      clone_tx.send(common::Msg::WindActivate);
 
       // Set preview image
       if let Err(e) = set_image_preview(clone_frame_icon.clone(), str_choice.into())
@@ -155,6 +141,9 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
       {
         clone_output_status.set_value("Set preview image");
       } // else
+
+      // Re-activate window
+      clone_tx.send(common::Msg::WindActivate);
     }); // std::thread
   }); // callback
 } // }}}

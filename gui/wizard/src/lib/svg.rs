@@ -90,6 +90,12 @@ const ICON_FOLDER: &str = r#"
 </svg>
 "#;
 
+const ICON_CHECK: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-check-lg" viewBox="0 0 16 16">
+  <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
+</svg>
+"#;
+
 pub const ICON_GAMEIMAGE: &str = r##"
 <svg
    width="127.1859mm"
@@ -270,5 +276,6 @@ icon!(icon_install, ICON_INSTALL, 16, 16);
 icon!(icon_gear, ICON_GEAR, 16, 16);
 icon!(icon_box_heart, ICON_BOX_HEART, 16, 16);
 icon!(icon_folder, ICON_FOLDER, 16, 16);
+icon!(icon_check, ICON_CHECK, 24, 24);
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

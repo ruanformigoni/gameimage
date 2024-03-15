@@ -156,31 +156,21 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     // Disable window
     clone_tx.send(common::Msg::WindDeactivate);
 
-    // Ask back-end for the files to download for the selected platform
-    let rx_gameimage = if let Ok(rx_gameimage) = common::gameimage_cmd(vec![
-          "fetch"
-        , format!("--output-file={}.flatimage", str_platform).as_str()
-        , format!("--platform={}", str_platform).as_str()
-        , "--json=gameimage.fetch.json"
-    ])
-    {
-      rx_gameimage
-    }
-    else
-    {
-      log!("Could not recover return code");
-      clone_tx.send(common::Msg::WindActivate);
-      return;
-    }; // else
-
     std::thread::spawn(move ||
     {
-      if let Ok(code) = rx_gameimage.recv() && code != 0
+      // Ask back-end for the files to download for the selected platform
+      if common::gameimage_sync(vec![
+            "fetch"
+          , format!("--output-file={}.flatimage", str_platform).as_str()
+          , format!("--platform={}", str_platform).as_str()
+          , "--json=gameimage.fetch.json"
+      ]) != 0
       {
-        log!("Failed with code {}", code);
+        log!("Failed to fetch");
         return;
       } // if
 
+      // Draw next frame
       clone_tx.send(common::Msg::DrawFetch);
     });
   });

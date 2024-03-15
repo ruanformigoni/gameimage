@@ -126,9 +126,11 @@ macro_rules! log
 {
   ($($arg:tt)*) =>
   {
-    let mut output = format!($($arg)*);
-    output.push('\n');
-    common::impl_log(output.as_str());
+    {
+      let mut output = format!($($arg)*);
+      output.push('\n');
+      common::impl_log(output.as_str());
+    }
   }
 }
 // }}}
@@ -157,8 +159,8 @@ pub fn dir_build() -> anyhow::Result<()>
   Ok(env::set_current_dir(path_dir_gimg)?)
 } // fn: dir_build }}}
 
-// pub fn gameimage_cmd() {{{
-pub fn gameimage_cmd(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
+// pub fn gameimage_async() {{{
+pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
 {
   dir_build()?;
 
@@ -228,7 +230,21 @@ pub fn gameimage_cmd(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
   });
 
   Ok(rx)
-} // fn: gameimage_cmd }}}
+} // fn: gameimage_async }}}
+
+// pub fn gameimage_sync() {{{
+pub fn gameimage_sync(args : Vec<&str>) -> i32
+{
+  if let Ok(rx) = gameimage_async(args)
+  && let Ok(code) = rx.recv()
+  {
+    return code;
+  } // if
+
+  impl_log("Could not retrieve exit code from backend");
+
+  1
+} // fn: gameimage_sync }}}
 
 // pub fn image_resize() {{{
 pub fn image_resize(path_out : PathBuf, path_in : PathBuf, width : u32, height : u32) -> anyhow::Result<()>
@@ -253,14 +269,17 @@ pub trait WidgetExtExtra
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn with_pos_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
+  fn with_posx_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
+  fn with_posy_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_size_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_width(&mut self, width : i32) -> Self;
   fn with_height(&mut self, height : i32) -> Self;
   fn with_width_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
   fn with_height_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
-  fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
-  fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
 }
 
 impl<T: WidgetExt + Clone> WidgetExtExtra for T
@@ -350,6 +369,12 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
     self.clone()
   }
 
+  fn bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(self.x(), other.y() + other.h() - self.h() + offset);
+    self.clone()
+  }
+
   fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
   {
     self.set_pos(
@@ -362,6 +387,18 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   fn with_pos_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
   {
     self.set_pos(other.x(), other.y());
+    self.clone()
+  }
+
+  fn with_posx_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_pos(other.x(), self.y());
+    self.clone()
+  }
+
+  fn with_posy_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self
+  {
+    self.set_pos(self.x(), other.y());
     self.clone()
   }
 
@@ -439,6 +476,7 @@ pub trait PathBufExt
   fn string(&self) -> String;
   fn append_extension(&self, val: &str) -> Self;
   fn prepend(&self, upper: &PathBuf) -> Self;
+  fn file_name_string(&self) -> String;
 }
 
 impl PathBufExt for PathBuf
@@ -457,6 +495,11 @@ impl PathBufExt for PathBuf
   {
     upper.join(self)
   } // fn: prepend
+
+  fn file_name_string(&self) -> String
+  {
+    self.file_name().unwrap_or_default().to_string_lossy().to_string()
+  } // fn: file_name_string
 }
 // }}}
 
