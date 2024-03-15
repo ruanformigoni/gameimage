@@ -64,12 +64,91 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
-  wizard::install::install(tx.clone()
+  let install = wizard::install::install(tx.clone()
     , title
     , "rom"
     , common::Msg::DrawRetroarchIcon
     , common::Msg::DrawRetroarchRom
     , common::Msg::DrawRetroarchCore);
+
+  let mut frame_list = install.frame_list.clone();
+  let output_status = install.ret_frame_footer.output_status.clone();
+  let btn_add = install.btn_add.clone();
+  let mut btn_del = install.btn_del.clone();
+
+  // Adjust to include the field below
+  frame_list.set_size(frame_list.w(), frame_list.h() - dimm::border() - dimm::height_button_wide());
+
+  // Set label for output field
+  let mut output_default_label = text::TextDisplay::default()
+    .with_width(frame_list.w() / 4)
+    .with_height(dimm::height_button_wide())
+    .below_of(&frame_list, dimm::border())
+    .with_color(Color::BackGround)
+    .with_frame(FrameType::NoBox);
+  output_default_label.set_buffer(text::TextBuffer::default());
+  output_default_label.insert("Default rom:");
+
+  // Show default item below all items
+  let mut output_default = text::TextDisplay::default()
+    .with_width(frame_list.w() - (frame_list.w() / 4))
+    .with_height(dimm::height_button_wide())
+    .right_of(&output_default_label, 0)
+    .with_color(Color::BackGround)
+    .with_frame(FrameType::NoBox);
+  output_default.set_buffer(text::TextBuffer::default());
+  if let Ok(project) = db::project::current()
+  && let Some(path_file_rom) = project.path_file_rom
+  {
+    output_default.insert(&path_file_rom.file_name_string());
+  } // if
+
+  // Update default rom
+  let clone_frame_list = frame_list.clone();
+  let mut clone_output_status = output_status.clone();
+  let clone_tx = tx.clone();
+  let btn_default = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .below_of(&btn_add, dimm::border())
+    .with_frame(FrameType::RoundedFrame)
+    .with_focus(false)
+    .with_svg(svg::icon_check(1.0).as_str())
+    .with_color(Color::Blue)
+    .with_callback(move |_|
+    {
+      let vec_indices = clone_frame_list.selected_items();
+
+      if vec_indices.len() == 0
+      {
+        clone_output_status.set_value("No item selected to set as default");
+        return;
+      } // if
+
+      if vec_indices.len() != 1
+      {
+        clone_output_status.set_value("Only one item can be set as the default");
+        return;
+      } // if
+
+      let selected = match clone_frame_list.text(*vec_indices.first().unwrap())
+      {
+        Some(item) => item,
+        None => return,
+      }; // match
+
+      clone_tx.send(common::Msg::WindDeactivate);
+      std::thread::spawn(move ||
+      {
+        if common::gameimage_sync(vec!["select", "rom", selected.as_str()]) != 0
+        {
+          log!("Could not select rom file '{}'", selected);
+        }; // else
+
+        clone_tx.send(common::Msg::DrawRetroarchRom);
+      }); // std::thread
+    }); // with_callback
+
+    btn_del = btn_del.below_of(&btn_default, dimm::border());
 } // }}}
 
 // pub fn core() {{{
@@ -96,28 +175,28 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   );
 
   // Set label for output field
-  let mut output_default_label = output::Output::default()
+  let mut output_default_label = text::TextDisplay::default()
     .with_width(frame_list_installed.w() / 4)
     .with_height(dimm::height_button_wide())
     .center_of(&frame_content)
     .with_posx_of(&frame_list_installed)
     .with_color(Color::BackGround)
     .with_frame(FrameType::NoBox);
+  output_default_label.set_buffer(text::TextBuffer::default());
   output_default_label.insert("Default core:");
 
   // Show default item below all items
-  let mut output_default = output::Output::default()
+  let mut output_default = text::TextDisplay::default()
     .with_width(frame_list_installed.w() - (frame_list_installed.w() / 4))
     .with_height(dimm::height_button_wide())
     .right_of(&output_default_label, 0)
     .with_color(Color::BackGround)
     .with_frame(FrameType::NoBox);
-  output_default.set_readonly(true);
+  output_default.set_buffer(text::TextBuffer::default());
   if let Ok(project) = db::project::current()
   && let Some(path_file_core) = project.path_file_core
   {
-    let name_core = path_file_core.file_name_string();
-    output_default.insert(&name_core);
+    output_default.insert(&path_file_core.file_name_string());
   } // if
 
 
@@ -161,8 +240,8 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
       {
         log!("Failed to install one or more cores");
       } // else
-      // Re-activate window
-      clone_tx.send(common::Msg::WindActivate);
+      // Redraw window
+      clone_tx.send(common::Msg::DrawRetroarchCore);
     });
   });
 
@@ -206,7 +285,6 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           log!("Could not select core file '{}'", selected);
         }; // else
 
-        clone_tx.send(common::Msg::WindActivate);
         clone_tx.send(common::Msg::DrawRetroarchCore);
       }); // std::thread
     }); // with_callback
@@ -297,7 +375,6 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           log!("Failed to execute backend to fetch remote cores");
         } // else
 
-        clone_tx.send(common::Msg::WindActivate);
         clone_tx.send(common::Msg::DrawRetroarchCore);
       });
     });

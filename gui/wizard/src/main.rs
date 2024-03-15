@@ -325,7 +325,7 @@ fn init(&mut self)
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   self.tx.send(Msg::DrawWelcome);
-  // self.tx.send(Msg::DrawRetroarchIcon);
+  // self.tx.send(Msg::DrawRetroarchRom);
   while self.app.wait()
   {
     // Handle messages
