@@ -23,7 +23,7 @@ fn from_file() -> anyhow::Result<PathBuf>
 } // from_file() }}}
 
 // read() {{{
-fn read() -> anyhow::Result<HashMap<String,String>>
+pub fn read() -> anyhow::Result<HashMap<String,String>>
 {
   let path_file = from_file()?;
 

@@ -77,7 +77,6 @@ pub fn get_path_absolute(&self, entry: EntryName) -> anyhow::Result<PathBuf>
     EntryName::PathFileRom  => f_to_absolute(&self.path_file_rom),
     EntryName::PathFileCore => f_to_absolute(&self.path_file_core),
     EntryName::PathFileBios => f_to_absolute(&self.path_file_bios),
-    _ => None,
   }; // match
 
   Ok(ok_path_file_absolute.ok_or(ah!("Could not read absolute path"))?)
@@ -91,7 +90,6 @@ pub fn get_path_relative(&self, entry: EntryName) -> anyhow::Result<PathBuf>
     EntryName::PathFileRom  => self.path_file_rom.clone(),
     EntryName::PathFileCore => self.path_file_core.clone(),
     EntryName::PathFileBios => self.path_file_bios.clone(),
-    _ => None,
   }; // match
 
   Ok(some_path_project_relative.ok_or(ah!("Could not read relative path"))?)

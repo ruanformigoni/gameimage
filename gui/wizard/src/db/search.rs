@@ -23,15 +23,9 @@ fn from_file() -> anyhow::Result<PathBuf>
 } // from_file() }}}
 
 // read() {{{
-fn read() -> anyhow::Result<Entries>
+pub fn read() -> anyhow::Result<Entries>
 {
   Ok(serde_json::from_reader(File::open(from_file()?)?)?)
 } // fn: read }}}
-
-// get() {{{
-pub fn get() -> anyhow::Result<Entries>
-{
-  read()
-} // get() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
