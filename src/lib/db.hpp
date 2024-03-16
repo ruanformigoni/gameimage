@@ -401,7 +401,7 @@ inline fs::path file_project()
   from_file(file_default(), [&](auto&& db)
   { 
     std::string str_project = db["project"];
-    path_project = std::string(db[str_project]["path-project"]);
+    path_project = std::string(db[str_project]["path_dir_project"]);
   }, Mode::READ);
 
   return path_project /= "gameimage.json";

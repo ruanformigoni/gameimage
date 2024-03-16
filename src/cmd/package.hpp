@@ -25,7 +25,7 @@ inline void package(fs::path path_file_dwarfs)
   ns_db::from_file_default([&](auto&& db)
   {
     str_project = db["project"];
-    path_image = fs::path(db[str_project]["path-image"]);
+    path_image = fs::path(db[str_project]["path_file_image"]);
   }
   , ns_db::Mode::READ);
 

@@ -35,10 +35,10 @@ inline decltype(auto) test()
     str_app = db["project"];
 
     // Path to flatimage
-    path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path-image"])._ret;
+    path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path_file_image"])._ret;
 
     // Path to project
-    path_dir_project = ns_fs::ns_path::dir_exists<true>(db[str_app]["path-project"])._ret;
+    path_dir_project = ns_fs::ns_path::dir_exists<true>(db[str_app]["path_dir_project"])._ret;
 
     // Path to boot file
     path_file_boot = ns_fs::ns_path::file_exists<true>(path_dir_project / "boot")._ret;

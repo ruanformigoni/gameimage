@@ -84,7 +84,7 @@ inline void init(std::string const& str_platform
     std::string str_name = path_dir_project.filename();
 
     // build dir
-    db_global("path-build") = path_dir_build;
+    db_global("path_dir_build") = path_dir_build;
 
     // Set as default project
     db_global("project") = str_name;
@@ -93,8 +93,8 @@ inline void init(std::string const& str_platform
     db_global("projects") |= str_name;
 
     // Set data
-    db_global(str_name)("path-image")   = path_image;
-    db_global(str_name)("path-project") = path_dir_project;
+    db_global(str_name)("path_file_image")   = path_image;
+    db_global(str_name)("path_dir_project") = path_dir_project;
     db_global(str_name)("platform")     = ns_enum::to_string(platform);
   }
   , fs::exists(ns_db::file_default())? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
@@ -111,12 +111,12 @@ inline void init(std::string const& str_platform
   {
     db_project("project")          = path_dir_project.filename();
     db_project("platform")         = ns_enum::to_string(platform);
-    db_project("path-dir-config")  = path_dir_config;
-    db_project("path-dir-data")    = path_dir_data;
-    db_project("path-dir-bios")    = path_dir_bios;
-    db_project("path-dir-rom")     = path_dir_rom;
-    db_project("path-dir-core")    = path_dir_core;
-    db_project("path-dir-keys")    = path_dir_keys;
+    db_project("path_dir_config")  = path_dir_config;
+    db_project("path_dir_data")    = path_dir_data;
+    db_project("path_dir_bios")    = path_dir_bios;
+    db_project("path_dir_rom")     = path_dir_rom;
+    db_project("path_dir_core")    = path_dir_core;
+    db_project("path_dir_keys")    = path_dir_keys;
   }
   , ns_db::Mode::CREATE);
 } // function: init }}}

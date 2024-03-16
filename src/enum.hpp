@@ -52,6 +52,10 @@ enum class Op
   CONFIG,
   DATA,
   GUI,
+	WINE,
+	WINETRICKS,
+	DXVK,
+	VKD3D
 }; // enum class Op }}}
 
 // enum class Stage {{{

@@ -117,7 +117,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
 {
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
   std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Retrieve operation selected by user
   Op op;
@@ -135,7 +135,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
   });
 
   // Get search dir
-  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_{}"_fmt(ns_enum::to_string_lower(op)));
 
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
@@ -155,7 +155,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
 {
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
   std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Retrieve operation selected by user
   Op op;
@@ -173,7 +173,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
   });
 
   // Get search dir
-  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_{}"_fmt(ns_enum::to_string_lower(op)));
 
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
@@ -184,8 +184,13 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
       path_dir_search = (path_dir_project / "wine") / "drive_c";
+      // Get files iterator
+      auto it_files = search_files(path_dir_search, R"(.*\.exe$)", R"(windows)");
+      // For each file, prepend "wine" to be relative to path_dir_project
+      std::vector<fs::path> paths_file_matches;
+      std::ranges::for_each(it_files, [&](fs::path const& e){ paths_file_matches.push_back(fs::path("wine") / e); });
       // Save files to json
-      paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*\.exe$)", R"(windows)"));
+      paths_to_json(op, opt_path_file_json, paths_file_matches);
     } // case
     break;
     case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;

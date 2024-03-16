@@ -80,13 +80,13 @@ void install(ns_parser::Parser const& parser)
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
   // Get project path
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
-  ns_install::Op op = ns_enum::from_string<ns_install::Op>(args.front());
+  ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());
   args.erase(args.begin());
 
   // Install icon
-  if ( op == ns_install::Op::ICON )
+  if ( op == ns_enum::Op::ICON )
   {
     // Check if has icon path
     "No file name specified for icon"_throw_if([&]{ return args.empty(); });
@@ -144,10 +144,10 @@ void select(ns_parser::Parser const& parser)
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
   // Get project path
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Parse operation
-  ns_install::Op op = ns_enum::from_string<ns_install::Op>(args.front());
+  ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());
   args.erase(args.begin());
 
   // Check for args

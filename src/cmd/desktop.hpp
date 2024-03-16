@@ -34,7 +34,7 @@ inline decltype(auto) desktop(fs::path path_file_icon)
     str_project = db["project"];
 
     // Path to flatimage
-    path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
+    path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
   }
   , ns_db::Mode::READ);
 

@@ -38,7 +38,6 @@ inline void by_op(ns_enum::Platform enum_platform
     case ns_enum::Platform::WINE:
     {
       "Only the rom option is available for wine"_throw_if([&]{ return op != Op::ROM; });
-      path_file_op = (fs::path("wine") / "drive_c") / path_file_op;
     } // case
     break;
     case ns_enum::Platform::RETROARCH:
@@ -88,7 +87,7 @@ inline void by_op(ns_enum::Platform enum_platform
   ns_db::from_file_project([&](auto&& db)
   {
     // Get op
-    std::string str_op = "path-file-{}"_fmt(ns_enum::to_string_lower(op));
+    std::string str_op = "path_file_{}"_fmt(ns_enum::to_string_lower(op));
     // Set as default rom file
     db(str_op) = path_file_op;
     ns_log::write('i', "Selected ", str_op, ": ", path_file_op);
@@ -108,7 +107,7 @@ inline void select(Op const& op, std::string const& entry)
   {
     str_project  = db["project"];
     str_platform = db[str_project]["platform"];
-    path_project = fs::path(db[str_project]["path-project"]);
+    path_project = fs::path(db[str_project]["path_dir_project"]);
   }
   , ns_db::Mode::READ);
 

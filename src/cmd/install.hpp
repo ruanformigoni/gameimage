@@ -7,7 +7,6 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <matchit.h>
 
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
@@ -32,7 +31,6 @@ namespace ns_install
 {
 
 namespace fs = std::filesystem;
-namespace match = matchit;
 
 using Op = ns_enum::Op;
 
@@ -75,7 +73,7 @@ void remove_files(Op const& op
   // Remove from database
   ns_db::from_file_project([&](auto&& db)
   {
-    std::string entry_db = fmt::format("path-file-{}", ns_enum::to_string_lower(op));
+    std::string entry_db = fmt::format("path_file_{}", ns_enum::to_string_lower(op));
     try
     {
       // Remove default key if is default
@@ -89,7 +87,7 @@ void remove_files(Op const& op
       ns_log::write('i', e.what());
     } // catch
 
-    std::string entries_db = fmt::format("paths-file-{}", ns_enum::to_string_lower(op));
+    std::string entries_db = fmt::format("paths_file_{}", ns_enum::to_string_lower(op));
     try
     {
       // Remove from list
@@ -108,33 +106,22 @@ void remove_files(Op const& op
 } // remove_files() }}}
 
 // wine() {{{
-inline void wine(std::vector<std::string> args)
+inline void wine(Op const& op, std::vector<std::string> args)
 {
   // Current application
-  std::string str_app;
-
-  // Path to flatimage
-  fs::path path_flatimage;
-
-  // Get default path
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Current application
-    str_app = db["project"];
-
-    // Path to flatimage
-    path_flatimage = ns_fs::ns_path::file_exists<true>(db[str_app]["path-image"])._ret;
-  }
-  , ns_db::Mode::READ);
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
   // Default working directory
-  fs::path path_dir_project = ns_fs::ns_path::canonical<true>(str_app)._ret;
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+
+  // Path to flatimage
+  fs::path path_flatimage = ns_db::query(ns_db::file_default(), str_project, "path_file_image");
 
   // Path to wine prefix
   fs::path path_wineprefix = fs::path{path_dir_project} / "wine";
 
   // Log
-  ns_log::write('i', "application: ", str_app);
+  ns_log::write('i', "application: ", str_project);
   ns_log::write('i', "image: ", path_flatimage);
   ns_log::write('i', "prefix: ", path_wineprefix);
 
@@ -155,25 +142,15 @@ inline void wine(std::vector<std::string> args)
     ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(_args)...);
   };
 
-  // No command
-  if ( args.empty() )
+  // Execute operation
+  switch(op)
   {
-    ns_log::write('i', "No command for wine");
-    return;
-  }
-
-  // Get command
-  std::string str_cmd = args.front();
-  args.erase(args.begin());
-
-  match::match(str_cmd)
-  (
-    match::pattern | "winetricks" = [&]{ f_winetricks(args); },
-    match::pattern | "wine"       = [&]{ f_wine(args); },
-    match::pattern | "dxvk"       = [&]{ f_winetricks("dxvk"); },
-    match::pattern | "vkd3d"      = [&]{ f_winetricks("vkd3d"); },
-    match::pattern | match::_     = [&]{ "Unknown command '{}'"_throw(str_cmd.c_str()); }
-  );
+    case Op::WINE       : f_wine(args); break;
+    case Op::WINETRICKS : f_winetricks(args); break;
+    case Op::DXVK       : f_winetricks("dxvk"); break;
+    case Op::VKD3D      : f_winetricks("vkd3d"); break;
+    default             :  "Unsupported wine operation '{}'"_throw(ns_enum::to_string_lower(op)); break;
+  } // switch
 } // wine() }}}
 
 // emulator_install_file() {{{
@@ -182,7 +159,7 @@ void emulator_install_file(Op const& op, fs::path path_file_src, fs::path const&
   // Path to project
   fs::path path_dir_project = ns_db::query(ns_db::file_default()
     , ns_db::query(ns_db::file_default(), "project")
-    , "path-project");
+    , "path_dir_project");
 
   ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
 
@@ -222,7 +199,7 @@ void emulator_install_file(Op const& op, fs::path path_file_src, fs::path const&
   // Save in database
   ns_db::from_file_project([&](auto&& db)
   {
-    db(fmt::format("paths-file-{}", ns_enum::to_string_lower(op))) |= path_file_dst_relative;
+    db(fmt::format("paths_file_{}", ns_enum::to_string_lower(op))) |= path_file_dst_relative;
   }
   , ns_db::Mode::UPDATE);
 
@@ -237,18 +214,18 @@ inline void emulator(Op op, std::vector<std::string> args)
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
   // Path to project
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Path to flatimage
-  fs::path path_flatimage = ns_db::query(ns_db::file_default(), str_project, "path-image");
+  fs::path path_flatimage = ns_db::query(ns_db::file_default(), str_project, "path_file_image");
 
   // Install paths
-  fs::path path_dir_config = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-config");
-  fs::path path_dir_data   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-data");
-  fs::path path_dir_rom    = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-rom");
-  fs::path path_dir_core   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-core");
-  fs::path path_dir_bios   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-bios");
-  fs::path path_dir_keys   = path_dir_project / ns_db::query(ns_db::file_project(), "path-dir-keys");
+  fs::path path_dir_config = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_config");
+  fs::path path_dir_data   = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_data");
+  fs::path path_dir_rom    = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_rom");
+  fs::path path_dir_core   = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_core");
+  fs::path path_dir_bios   = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_bios");
+  fs::path path_dir_keys   = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_keys");
 
   // Log
   ns_log::write('i', "application   : ", str_project);
@@ -261,8 +238,6 @@ inline void emulator(Op op, std::vector<std::string> args)
   // Install helpers
   auto f_install_files = [&](Op const& op, fs::path path_dir_dst, std::vector<std::string> const& args)
   {
-    // Check for arguments of command
-    "No argument provided for command '{}'"_throw_if([&]{ return args.empty(); }, ns_enum::to_string_lower(op));
     // For each entry run the install command
     std::ranges::for_each(args, [&](fs::path e)
     {
@@ -297,20 +272,10 @@ inline void icon(std::string str_file_icon)
   namespace gil = boost::gil;
 
   // Current application
-  std::string str_app;
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
-  // Current application directory
-  fs::path path_app;
-
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Current application
-    str_app = db["project"];
-
-    // Current application directory
-    path_app = std::string(db[str_app]["path-project"]);
-  }
-  , ns_db::Mode::READ);
+  // Default working directory
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -325,7 +290,7 @@ inline void icon(std::string str_file_icon)
   ext.erase(ext.begin());
 
   // Create icon directory and set file name
-  fs::path path_dir_icon = path_app / "icon";
+  fs::path path_dir_icon = path_dir_project / "icon";
   ns_fs::ns_path::dir_create<true>(path_dir_icon);
   fs::path path_file_icon_dst = path_dir_icon / "icon.png";
 
@@ -387,7 +352,7 @@ inline void icon(std::string str_file_icon)
   // Save icon path in project database
   ns_db::from_file_project([&](auto&& db)
   {
-    db("path-file-icon") = fs::relative(path_file_icon_dst, path_app);
+    db("path_file_icon") = fs::relative(path_file_icon_dst, path_dir_project);
   }
   , ns_db::Mode::UPDATE);
 } // icon() }}}
@@ -397,7 +362,7 @@ template<typename R>
 void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 {
   // Remove Bios or Rom or Core...
-  fs::path path_dir_item = ns_db::query(ns_db::file_project(), "path-dir-{}"_fmt(ns_enum::to_string_lower(op)));
+  fs::path path_dir_item = ns_db::query(ns_db::file_project(), "path_dir_{}"_fmt(ns_enum::to_string_lower(op)));
   // Remove file by file
   std::ranges::for_each(files, [&](fs::path e){ remove_files(op, path_dir_project, path_dir_item / e.filename()); });
 } // remove() }}}
@@ -405,8 +370,6 @@ void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 // install() {{{
 inline void install(Op op, std::vector<std::string> args)
 {
-  if ( args.empty() && op != Op::GUI ) { "Empty arguments for install command"_throw(); }
-
   // Get platform
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
   ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(
@@ -416,7 +379,7 @@ inline void install(Op op, std::vector<std::string> args)
   // Install based on platform
   switch(enum_platform)
   {
-    case ns_enum::Platform::WINE: ns_install::wine(args);
+    case ns_enum::Platform::WINE: ns_install::wine(op, args);
     break;
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
@@ -439,7 +402,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   );
 
   // Core dir
-  fs::path rpath_dir_core = ns_db::query(ns_db::file_project(), "path-dir-core");
+  fs::path rpath_dir_core = ns_db::query(ns_db::file_project(), "path_dir_core");
 
   if ( enum_platform != ns_enum::Platform::RETROARCH )
   {
@@ -452,7 +415,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   } // if
 
   // Get project directory
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path-project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Fetch cores / urls
   auto vec_core_url = ns_fetch::cores_list(path_dir_project);

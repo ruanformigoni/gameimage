@@ -28,7 +28,7 @@ inline void validate()
   {
     str_project = db["project"];
     str_platform = db[str_project]["platform"];
-    path_project = std::string(db[str_project]["path-project"]);
+    path_project = std::string(db[str_project]["path_dir_project"]);
   }
   , ns_db::Mode::READ);
 
@@ -38,7 +38,7 @@ inline void validate()
   "Icon is not installed"_try([&]
   {
     fs::path path_file_icon;
-    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path-file-icon"]; }, ns_db::Mode::READ);
+    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path_file_icon"]; }, ns_db::Mode::READ);
     ns_fs::ns_path::file_exists<true>(path_file_icon);
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
@@ -48,7 +48,7 @@ inline void validate()
   {
     "Default {} is not selected"_try([&]
     {
-      std::string str_tag_db = "path-file-{}"_fmt(type);
+      std::string str_tag_db = "path_file_{}"_fmt(type);
       fs::path path_file;
       ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, ns_db::Mode::READ);
       try
@@ -69,7 +69,7 @@ inline void validate()
 
     ns_db::from_file_project([&](auto&& db)
     {
-      for(auto&& path_file : db["paths-file-{}"_fmt(type)])
+      for(auto&& path_file : db["paths_file_{}"_fmt(type)])
       {
         paths_file.push_back(path_file);
       } // for
@@ -169,10 +169,10 @@ inline decltype(auto) compress()
     str_project = db["project"];
 
     // Path to current application
-    str_path_project = ns_fs::ns_path::dir_exists<true>(db[str_project]["path-project"])._ret;
+    str_path_project = ns_fs::ns_path::dir_exists<true>(db[str_project]["path_dir_project"])._ret;
 
     // Path to image
-    str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path-image"])._ret;
+    str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
   }
   , ns_db::Mode::READ);
 

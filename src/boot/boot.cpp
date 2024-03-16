@@ -125,7 +125,7 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   ns_db::from_file(path_file_database
   , [&](auto&& db)
   {
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
   }
   , ns_db::Mode::READ);
 
@@ -153,15 +153,15 @@ void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_dat
   , [&](auto&& db)
   {
     // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
 
     // Core
-    path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-core"])._ret;
+    path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_core"])._ret;
   }
   , ns_db::Mode::READ);
 
   // Check if has bios
-  db_files_copy("paths-file-bios"
+  db_files_copy("paths_file_bios"
     , path_file_database
     , path_dir_self
     , ( get_xdg_config_home() / "retroarch/system")
@@ -189,15 +189,15 @@ void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_databas
   , [&](auto&& db)
   {
     // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
 
     // Bios
-    path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-bios"])._ret;
+    path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_bios"])._ret;
   }
   , ns_db::Mode::READ);
 
   // Check if has bios
-  db_files_copy("paths-file-bios"
+  db_files_copy("paths_file_bios"
     , path_file_database
     , path_dir_self
     , ( get_xdg_config_home() / "PCSX2/bios")
@@ -229,19 +229,19 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
     // Rom
     try
     {
-      path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+      path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
     } // try
     catch(std::exception const& e)
     {
       ns_log::write('i', e.what());
-      path_file_rom = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+      path_file_rom = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_file_rom"])._ret;
     } // catch
 
     // Config
-    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-config"])._ret;
+    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_config"])._ret;
 
     // Data
-    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
+    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_data"])._ret;
   }
   , ns_db::Mode::READ);
 
@@ -273,13 +273,13 @@ void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database
   , [&](auto&& db)
   {
     // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path-file-rom"])._ret;
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
 
     // Config
-    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-config"])._ret;
+    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_config"])._ret;
 
     // Data
-    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path-dir-data"])._ret;
+    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_data"])._ret;
   }
   , ns_db::Mode::READ);
 
