@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use fltk::
 {
   app::Sender,
@@ -16,6 +18,7 @@ use fltk::
 use anyhow::anyhow as ah;
 
 use crate::common;
+use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::frame;
@@ -45,7 +48,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 } // }}}
 
 // fetch_items() {{{
-pub fn fetch_items(label : String) -> anyhow::Result<Vec<String>>
+pub fn fetch_items(label : String) -> anyhow::Result<Vec<PathBuf>>
 {
   // Ask back-end for the item files
   if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", &label]) != 0
@@ -100,7 +103,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let result_vec_items = fetch_items("rom".to_string());
   if let Ok(vec_items) = result_vec_items
   {
-    for item in vec_items { frame_list.add(item.as_str()); } // for
+    for item in vec_items { frame_list.add(&item.string()); } // for
   } // if
 
   // Add new item

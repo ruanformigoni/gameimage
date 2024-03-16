@@ -15,7 +15,6 @@ use crate::common;
 use crate::log;
 use crate::lib::svg;
 
-
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>
   , title: &str

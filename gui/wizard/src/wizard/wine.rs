@@ -2,6 +2,7 @@
 use std::
 {
   path,
+  path::PathBuf,
   sync::{Arc,Mutex}
 };
 
@@ -69,7 +70,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
   {
     // Get path to wine prefix
     let path_dir_wine_prefix = if let Ok(project) = db::project::current()
-      && let Some(path_dir_self) = project.path_dir_self
+      && let Ok(path_dir_self) = project.get_dir_self()
       {
         path_dir_self.join("wine")
       } // if
@@ -205,7 +206,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 } // fn: configure }}}
 
 // find_roms() {{{
-fn find_roms() -> anyhow::Result<Vec<String>>
+fn find_roms() -> anyhow::Result<Vec<PathBuf>>
 {
   // Ask back-end for the item files
   if common::gameimage_sync(vec!["search", "--json", "gameimage.search.json", "rom"]) != 0
@@ -280,7 +281,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       let mut output = output::Output::default()
         .with_size(frame_list.width() - dimm::width_button_rec()*2 - dimm::border()*3, dimm::height_button_wide())
         .right_of(&btn_check, dimm::border());
-      let _ = output.insert(item.as_str());
+      let _ = output.insert(&item.string());
 
       // Button to open file in file manager
       let clone_item = item.clone();
@@ -293,7 +294,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         .with_callback(move |_|
         {
           let path_dir_project = if let Ok(project) = db::project::current()
-            && let Some(path_dir_project) = project.path_dir_self
+            && let Ok(path_dir_project) = project.get_dir_self()
           {
             path_dir_project
           } // if
@@ -303,10 +304,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
             return;
           }; // else
 
-          let mut path_dir_executable = path_dir_project
-            .join("wine")
-            .join("drive_c")
-            .join(&clone_item);
+          let mut path_dir_executable = path_dir_project.join(&clone_item);
+
+          log!("Executable: {}", path_dir_executable.string());
 
           if ! path_dir_executable.pop()
           {
@@ -368,7 +368,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           log!("Could not execute selected file");
         }; // else
 
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send(common::Msg::DrawWineRom);
       });
     });
 
@@ -395,12 +395,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     }; // else
 
     let path_dir_selected = if let Some(entry) = vec_radio_path.clone().into_iter().find(|e| e.0.is_toggled())
+      && let Ok(project) = db::project::current()
+      && let Ok(path_dir_project) = project.get_dir_self()
     {
-      entry.1
+      path_dir_project.join(entry.1)
     } // if
     else
     {
-      log!("No checkbutton is selected");
+      log!("Could not execute selected entry");
       return;
     }; // else
 
@@ -438,7 +440,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineRom);
 
   // List of the currently installed items
   let mut scroll = group::Scroll::default()
@@ -474,7 +476,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       .right_of(&btn_radio, dimm::border());
     let _ = frame_label.insert(label);
     frame_label.set_frame(FrameType::BorderBox);
-  
+
     if let Ok(mut vec) = clone_arc_vec_btn_label.lock()
     {
       vec.push((btn_radio.clone(), frame_label.clone()));
@@ -485,34 +487,26 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   // Insert items in list of currently installed items
   if let Ok(vec_items) = find_roms()
   {
-    for item in vec_items { f_list_add(item.as_str()); } // for
+    for item in vec_items { f_list_add(&item.string()); } // for
   } // if
 
   let clone_arc_vec_btn_label = arc_vec_btn_label.clone();
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
-  {    
-    // Get vector
-    let vec_btn_label = if let Ok(vec) = clone_arc_vec_btn_label.lock()
+  {
+    // Get the selected button label (it contains the path to the default binary)
+    let vec_btn_label = match clone_arc_vec_btn_label.lock()
     {
-      vec
-    }
-    else
-    {
-      log!("Could not get lock to button-label vector");
-      return;
-    }; // else
+      Ok(vec) => vec,
+      Err(e) => { log!("Could not get lock to button-label vector: {}", e); return; },
+    }; // match
 
     // Get the selected button label (it contains the path to the default binary)
-    let str_path = if let Some(value) = vec_btn_label.iter().find(|x| x.0.is_set() )
+    let str_path = match vec_btn_label.iter().find(|x| x.0.is_set() )
     {
-      value.1.value()
-    }
-    else
-    {
-      log!("No button selected!");
-      return;
-    }; // else
+      Some(value) => value.1.value(),
+      None => { log!("No button selected!"); return; },
+    }; // match
 
     // Set the selected binary as default
     if common::gameimage_sync(vec!["select", "rom", &str_path]) != 0
@@ -520,7 +514,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       log!("Could not select rom {}", str_path);
       return;
     } // if
-    
+
     // Compress
     clone_tx.send(common::Msg::DrawWineCompress);
   });

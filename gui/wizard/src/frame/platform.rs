@@ -18,15 +18,16 @@ use crate::log;
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_content = ret_frame_header.frame_content.clone();
-
-  if let Err(e) = common::common()
-  {
-    log!("Err: {}", e.to_string());
-  } // if
 
   // Menu options to select platform
   let mut btn_menu = MenuButton::default()

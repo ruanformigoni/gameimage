@@ -3,12 +3,7 @@ use std::path::PathBuf;
 
 // Gui
 use fltk::prelude::*;
-use fltk::{
-  app::Sender,
-  group::PackType,
-  frame::Frame,
-  enums::FrameType,
-};
+use fltk::app::Sender;
 
 use crate::dimm;
 use crate::frame;
@@ -23,11 +18,6 @@ pub fn compress(tx: Sender<common::Msg>
   , _msg_curr: common::Msg
   , _msg_next: common::Msg)
 {
-  let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
-  frame.set_frame(FrameType::BorderBox);
-  frame.set_type(PackType::Vertical);
-
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 

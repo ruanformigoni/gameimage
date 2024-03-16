@@ -57,6 +57,12 @@ fn set_image_preview(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
 // pub fn desktop() {{{
 pub fn desktop(tx: Sender<common::Msg>, title: &str)
 {
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 

@@ -11,7 +11,7 @@ use std::
 use fltk::
 {
   app,
-  prelude::WidgetExt,
+  prelude::*,
 };
 
 use anyhow::anyhow as ah;
@@ -84,16 +84,6 @@ pub const STR_DESC_PCSX2 : &str = "Being almost as old as the console it is emul
 pub const STR_DESC_RPCS3 : &str = "RPCS3 is a multi-platform open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows, Linux, macOS and FreeBSD. The purpose of the project is to completely and accurately emulate the Sony PlayStation 3 Computer Entertainment System in its entirety with the power of open-source community and reverse engineering. Our goal is to preserve the legacy of the PlayStation 3 hardware and its vast library by bringing it and its exclusives to the PC platform. We want to achieve this by targeting and supporting multiple operating systems as well as being compatible with a wide range of computer hardware with realistic requirements.";
 
 pub const STR_DESC_YUZU : &str = "Yuzu is an experimental open-source emulator for the Nintendo Switch from the creators of Citra. It is written in C++ with portability in mind, with builds actively maintained for Windows, Linux and Android.";
-// }}}
-
-// pub fn common() {{{
-pub fn common() -> anyhow::Result<()>
-{
-  // Enter build dir
-  dir_build()?;
-
-  Ok(())
-} // fn: common
 // }}}
 
 // impl_log() {{{
@@ -480,6 +470,7 @@ impl OsStringExt for OsString
 // }}}
 
 // pub trait PathBufExt {{{
+#[allow(warnings)]
 pub trait PathBufExt
 {
   fn string(&self) -> String;
@@ -547,5 +538,60 @@ impl VecExt for Vec<&str>
   }
 } // impl VecExt
 // }}}
+
+// pub struct ScrollList {{{
+
+pub struct ScrollList
+{
+  scroll : fltk::group::Scroll,
+  opt_current : Option<fltk::widget::Widget>,
+} // ScrollList
+
+impl ScrollList
+{
+  pub fn new(w : i32, h : i32, x : i32, y : i32) -> Self
+  {
+    let mut scroll = fltk::group::Scroll::default()
+      .with_size(w, h)
+      .with_pos(x, y);
+    scroll.set_scrollbar_size(dimm::border());
+
+    ScrollList{scroll: scroll.clone(), opt_current: None}
+  } // new()
+
+  pub fn begin(&self)
+  {
+    self.scroll.begin();
+  } // begin()
+
+  pub fn end(&self)
+  {
+    self.scroll.end();
+  } // end()
+
+  pub fn widget_mut(&mut self) -> &mut fltk::group::Scroll
+  {
+    &mut self.scroll
+  } // widget_mut()
+
+  pub fn widget_ref(&self) -> &fltk::group::Scroll
+  {
+    &self.scroll
+  } // widget_ref()
+
+  pub fn add(&mut self, w : &mut fltk::widget::Widget, border : i32)
+  {
+    let (x, y) = match &self.opt_current
+    {
+      Some(current) => ( current.x(), current.y() + current.h() ),
+      None => ( self.scroll.x(), self.scroll.y() ),
+    }; // match
+
+    w.set_pos(x, y + border);
+
+    self.opt_current = Some(w.as_base_widget());
+  } // add()
+
+} // impl ScrollList }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

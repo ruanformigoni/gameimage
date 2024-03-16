@@ -20,6 +20,12 @@ use crate::common::PathBufExt;
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
 {
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 

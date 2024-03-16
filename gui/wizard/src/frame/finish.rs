@@ -11,6 +11,7 @@ use fltk::{
 
 use crate::dimm;
 use crate::frame;
+use crate::log;
 use crate::common;
 use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
@@ -18,6 +19,12 @@ use crate::common::WidgetExtExtra;
 // pub fn finish() {{{
 pub fn finish(tx: Sender<common::Msg>, title: &str)
 {
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 

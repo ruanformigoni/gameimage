@@ -27,10 +27,6 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
   let frame_footer = ret_frame_footer.frame.clone();
 
-  if let Err(e) = common::common()
-  {
-    log!("Err: {}", e.to_string());
-  } // if
   // Project Logo
   let mut frame_image = Frame::default()
     .with_size(dimm::height_button_rec()*4, dimm::height_button_rec()*4);

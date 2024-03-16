@@ -4,55 +4,103 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::db::global;
+use crate::common;
 use crate::common::PathBufExt;
+use crate::log;
+
+pub enum EntryName
+{
+  PathFileIcon,
+  PathFileRom,
+  PathFileCore,
+  PathFileBios,
+}
 
 // struct Entry {{{
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Entry
 {
-  pub path_dir_self: Option<PathBuf>,
-  #[serde(rename = "project")]
-  pub project: Option<String>,
-  #[serde(rename = "path-file-icon")]
-  pub path_file_icon: Option<PathBuf>,
-  #[serde(rename = "path-file-rom")]
-  pub path_file_rom: Option<PathBuf>,
-  #[serde(rename = "path-file-core")]
-  pub path_file_core: Option<PathBuf>,
-  #[serde(rename = "path-file-bios")]
-  pub path_file_bios: Option<PathBuf>,
-  #[serde(rename = "platform")]
-  pub platform: Option<String>,
-} // Entry }}}
+  project        : Option<String>,
+  platform       : Option<String>,
+  path_file_icon : Option<PathBuf>,
+  path_file_rom  : Option<PathBuf>,
+  path_file_core : Option<PathBuf>,
+  path_file_bios : Option<PathBuf>,
+} // Entry
 
-pub type Entries = Vec<Entry>;
-
-// to_absolute_paths() {{{
-fn to_absolute_paths(mut entry : Entry) -> anyhow::Result<Entry>
+impl Entry
 {
-  entry.path_dir_self = Some(global::get()?
-    .path_build
-    .ok_or(ah!("Could not read build dir"))?
-    .join(entry.project.clone().ok_or(ah!("Could not read project name"))?));
 
-  let path_dir_self = entry.path_dir_self.clone().unwrap();
-  let f_to_absolute = |field : Option<PathBuf>| -> Option<PathBuf>
+pub fn get_project(&self) -> anyhow::Result<String>
+{
+  Ok(self.project.clone().ok_or(ah!("Could not read project name"))?)
+} // project
+
+pub fn get_platform(&self) -> anyhow::Result<String>
+{
+  Ok(self.platform.clone().ok_or(ah!("Could not read platform name"))?)
+} // project
+
+pub fn get_dir_self(&self) -> anyhow::Result<PathBuf>
+{
+  // Get the build dir
+  let path_dir_build = global::read()?.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
+
+  // Get project name
+  let project = match self.get_project()
   {
-    if field.is_none()
-    {
-      return None;
-    } // if
-
-    Some(field.unwrap().prepend(&path_dir_self))
+    Ok(project) => project,
+    Err(e) => return Err(ah!("Could not get project name: {}", e)),
   };
 
-  entry.path_file_rom = f_to_absolute(entry.path_file_rom);
-  entry.path_file_core = f_to_absolute(entry.path_file_core);
-  entry.path_file_bios = f_to_absolute(entry.path_file_bios);
-  entry.path_file_icon = f_to_absolute(entry.path_file_icon);
+  // Get project dir == build_dir / project_name
+  Ok(path_dir_build.join(project))
+}
 
-  Ok(entry)
-} // to_absolute_paths() }}}
+pub fn get_path_absolute(&self, entry: EntryName) -> anyhow::Result<PathBuf>
+{
+  // Get project dir == build_dir / project_name
+  let project_dir_self = self.get_dir_self()?;
+
+  let f_to_absolute = |entry : &Option<PathBuf>| -> Option<PathBuf>
+  {
+    match entry
+    {
+      Some(pathbuf) => Some(project_dir_self.join(pathbuf)),
+      None => None,
+    }
+  };
+
+  let ok_path_file_absolute = match entry
+  {
+    EntryName::PathFileIcon => f_to_absolute(&self.path_file_icon),
+    EntryName::PathFileRom  => f_to_absolute(&self.path_file_rom),
+    EntryName::PathFileCore => f_to_absolute(&self.path_file_core),
+    EntryName::PathFileBios => f_to_absolute(&self.path_file_bios),
+    _ => None,
+  }; // match
+
+  Ok(ok_path_file_absolute.ok_or(ah!("Could not read absolute path"))?)
+} // dir_absolute
+
+pub fn get_path_relative(&self, entry: EntryName) -> anyhow::Result<PathBuf>
+{
+  let some_path_project_relative = match entry
+  {
+    EntryName::PathFileIcon => self.path_file_icon.clone(),
+    EntryName::PathFileRom  => self.path_file_rom.clone(),
+    EntryName::PathFileCore => self.path_file_core.clone(),
+    EntryName::PathFileBios => self.path_file_bios.clone(),
+    _ => None,
+  }; // match
+
+  Ok(some_path_project_relative.ok_or(ah!("Could not read relative path"))?)
+} // get_dir_relative
+
+}
+// struct Entry }}}
+
+pub type Entries = Vec<Entry>;
 
 // list() {{{
 
@@ -61,17 +109,38 @@ pub fn list() -> anyhow::Result<Entries>
 {
   let mut entries : Entries = Vec::new();
 
-  for path_dir_project in global::get()?
+  // Get global info
+  let global = global::read()?;
+
+  // Get the build dir
+  let path_dir_build = global.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
+
+  for project in global::read()?
     .projects
     .ok_or(ah!("Could not read projects from global database"))?
   {
-    let file = File::open(path_dir_project.join("gameimage.json").clone())?;
+    // Expected project directory
+    let path_dir_project = path_dir_build.join(project);
+
+    // Expected json file
+    let path_file_json = path_dir_project.join("gameimage.json");
+
+    // Open project file
+    let file = match File::open(&path_file_json)
+    {
+      Ok(file) => file,
+      Err(e) => { log!("Could not open file '{}' with error '{}'", path_file_json.string(), e); continue; }
+    };
 
     // Get project entry
-    let entry : Entry = serde_json::from_reader(file)?;
+    let entry : Entry = match serde_json::from_reader(file)
+    {
+      Ok(entry) => entry,
+      Err(_) => continue,
+    };
 
     // Include in vec
-    entries.push(to_absolute_paths(entry)?);
+    entries.push(entry);
   } // for
 
   Ok(entries)
@@ -83,10 +152,17 @@ pub fn list() -> anyhow::Result<Entries>
 pub fn current() -> anyhow::Result<Entry>
 {
   // Get global info
-  let global = global::get()?;
+  let global = global::read()?;
+
+  // Get the build dir
+  let path_dir_build = global.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
 
   // Get the current project
-  let path_dir_project = global.project.ok_or(ah!("Could not get project dir"))?;
+  let path_dir_project = match global.project.ok_or(ah!("Could not get project dir"))
+  {
+    Ok(project) => path_dir_build.join(project),
+    Err(e) => { log!("Could not read project directory with error: {}", e); return Err(e); },
+  };
 
   // Path to file with the project info
   let path_file_project = path_dir_project.join("gameimage.json");
@@ -94,10 +170,8 @@ pub fn current() -> anyhow::Result<Entry>
   // Read file
   let file = File::open(path_file_project.clone())?;
 
-  // Parse from json
-  let project : Entry = serde_json::from_reader(file)?;
-
-  Ok(to_absolute_paths(project)?)
+  // Read entry
+  Ok(serde_json::from_reader(file)?)
 } // current() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

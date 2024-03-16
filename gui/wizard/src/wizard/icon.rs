@@ -27,19 +27,11 @@ use crate::db;
 use crate::log;
 use crate::lib::scaling;
 
-// get_icon() {{{
-fn get_icon() -> anyhow::Result<PathBuf>
-{
-  Ok(db::project::current()?
-    .path_file_icon
-    .ok_or(ah!("Could not read path to icon file"))?)
-} // fn: get_icon }}}
-
 // set_image() {{{
 fn set_image(mut frame : Frame) -> anyhow::Result<()>
 {
   // Get image
-  let path_file_icon = get_icon()?;
+  let path_file_icon = db::project::current()?.get_path_absolute(db::project::EntryName::PathFileIcon)?;
 
   // Resize
   let path_icon_resized = PathBuf::from(path_file_icon.clone())
@@ -122,7 +114,8 @@ pub fn icon(tx: Sender<common::Msg>
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    if let Ok(project) = db::project::current() && project.path_file_icon.is_some()
+    if let Ok(project) = db::project::current()
+      && project.get_path_absolute(db::project::EntryName::PathFileIcon).is_ok()
     {
       clone_tx.send(msg_next);
       return;
@@ -200,7 +193,7 @@ pub fn icon(tx: Sender<common::Msg>
     input_icon.set_readonly(true);
 
     if let Ok(project) = db::project::current()
-    && let Some(path_file_icon) = project.path_file_icon
+    && let Ok(path_file_icon) = project.get_path_absolute(db::project::EntryName::PathFileIcon)
     {
       // Set value of select field
       input_icon.set_value(&path_file_icon.string());

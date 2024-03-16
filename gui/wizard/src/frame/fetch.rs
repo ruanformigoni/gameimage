@@ -94,15 +94,16 @@ fn fetch_files(vec_data : Vec<Data>
 // pub fn fetch() {{{
 pub fn fetch(tx: Sender<common::Msg>, title: &str)
 {
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_content = ret_frame_header.frame_content.clone();
-
-  if let Err(e) = common::common()
-  {
-    log!("Err: {}", e.to_string());
-  } // if
 
   // Set callback to btn prev
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawPlatform);

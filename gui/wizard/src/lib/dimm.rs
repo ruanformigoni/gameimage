@@ -53,4 +53,6 @@ function_scale!(height_footer, HEIGHT_FOOTER);
 
 function_scale!(posy_footer, POSY_FOOTER);
 
+pub fn width_checkbutton() -> i32 { 20 }
+
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

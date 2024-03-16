@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 // Gui
 use fltk::prelude::*;
 use fltk::{
@@ -13,6 +15,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
 use crate::common::VecExt;
 use crate::log;
@@ -20,7 +23,7 @@ use crate::db;
 use crate::lib::svg;
 
 // fetch_items() {{{
-pub fn fetch_items(label : String , use_remote : bool) -> anyhow::Result<Vec<String>>
+pub fn fetch_items(label : String , use_remote : bool) -> anyhow::Result<Vec<PathBuf>>
 {
   let cmd = if use_remote
   {
@@ -101,7 +104,7 @@ pub fn install(tx: Sender<common::Msg>
   {
     match fetch_items(clone_label, false)
     {
-      Ok(vec_items) => for item in vec_items { clone_frame_list.add(item.as_str()); },
+      Ok(vec_items) => for item in vec_items { clone_frame_list.add(&item.string()); },
       Err(e) => log!("Could not get items to insert: {}", e),
     }; // match
   });

@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct Entries
 {
-  pub rom: Option<Vec<String>>,
-  pub core: Option<Vec<String>>,
-  pub bios: Option<Vec<String>>,
-  pub keys: Option<Vec<String>>,
+  pub rom: Option<Vec<PathBuf>>,
+  pub core: Option<Vec<PathBuf>>,
+  pub bios: Option<Vec<PathBuf>>,
+  pub keys: Option<Vec<PathBuf>>,
 } // Entries }}}
 
 // from_file() {{{
@@ -25,13 +25,7 @@ fn from_file() -> anyhow::Result<PathBuf>
 // read() {{{
 fn read() -> anyhow::Result<Entries>
 {
-  let path_file = from_file()?;
-
-  let file = File::open(path_file)?;
-
-  let entries : Entries = serde_json::from_reader(file)?;
-
-  Ok(entries)
+  Ok(serde_json::from_reader(File::open(from_file()?)?)?)
 } // fn: read }}}
 
 // get() {{{

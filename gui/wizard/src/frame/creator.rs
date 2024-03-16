@@ -5,24 +5,20 @@ use std::fs;
 // Gui
 use fltk::prelude::*;
 use fltk::{
-  widget::Widget,
   app::Sender,
-  text::{TextBuffer,TextDisplay},
+  button,
   button::{Button,CheckButton},
-  group::Scroll,
-  group::PackType,
+  group,
   frame::Frame,
+  output,
   dialog,
   enums::{FrameType,Color},
 };
-
-use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
-use crate::common::OsStrExt;
 use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::db;
@@ -30,25 +26,28 @@ use crate::lib::svg;
 
 // fn create_entry() {{{
 fn create_entry(project : db::project::Entry
-  , parent_base : Widget
-  , parent_curr : Widget) -> anyhow::Result<(Widget, CheckButton, PathBuf)>
+  , scroll : &mut common::ScrollList
+  , width: i32
+  , height: i32) -> anyhow::Result<(button::CheckButton, PathBuf)>
 {
+  let frame_pack = group::Pack::default()
+    .with_size(width, height)
+    .with_type(group::PackType::Horizontal);
+
+  // Include in scroll list
+  scroll.add(&mut frame_pack.as_base_widget(), dimm::border());
+
+  //
+  // Icon
+  //
+  let width_icon = (height as f32 * 0.66666666) as i32;
   let mut frame_icon = Frame::default()
-    .with_size(dimm::height_button_rec()*2, dimm::height_button_rec()*3)
-    .below_of(&parent_curr, dimm::border());
-  frame_icon.set_frame(FrameType::BorderBox);
+    .with_focus(false)
+    .with_size(width_icon, height);
 
-  // Adjust position if parent is base
-  if parent_curr.is_same(&parent_base.as_base_widget())
+  if let Ok(path_file_icon) = project.get_path_absolute(db::project::EntryName::PathFileIcon)
   {
-    frame_icon.set_pos(parent_base.x() + dimm::border(), parent_base.y() + dimm::border());
-  } // if
-
-  //
-  // Set icon
-  //
-  if let Some(path_file_icon) = project.path_file_icon.clone()
-  {
+    log!("Path to icon: {}", path_file_icon.string());
     let path_file_resized = PathBuf::from(path_file_icon.clone())
       .parent()
       .unwrap()
@@ -65,87 +64,64 @@ fn create_entry(project : db::project::Entry
       frame_icon.set_image_scaled(Some(image));
     } // if
   } // if
+  else
+  {
+    log!("Could not read icon directory for project");
+  } // else
 
   //
-  // Set Info
+  // Info
   //
-  // let buffer = TextBuffer::default();
-  let buffer = TextBuffer::default();
-  let mut frame_info = TextDisplay::default()
-    .with_size(parent_base.w() - dimm::border()*3 - dimm::height_button_rec()*2, dimm::height_button_rec()*3)
-    .right_of(&frame_icon, dimm::border());
-  frame_info.set_frame(FrameType::BorderBox);
-  frame_info.set_buffer(buffer.clone());
-  frame_info.set_color(Color::Background);
+  let mut frame_info = output::MultilineOutput::default()
+    .with_size(width - width_icon - dimm::width_checkbutton(), height)
+    .with_frame(FrameType::BorderBox)
+    .with_color(Color::Background);
+  frame_info.set_text_size(dimm::height_text());
 
-  let f_add_entry = |title: &str, field : Option<String>, push_newline: bool|
+  // Include fields in entry
+  let mut f_add_field = |title: &str, field : &Option<String>, push_newline: bool|
   {
     if let Some(value) = field
     {
-      frame_info.insert(title);
-      frame_info.insert(value.as_str());
-      if push_newline { frame_info.insert("\n"); }
+      let _ = frame_info.insert(title);
+      let _ = frame_info.insert(value.as_str());
+      if push_newline { let _ = frame_info.insert("\n"); }
     }
-  }; // f_add_entry
-
-  f_add_entry("Platform: "
-    , project.platform
-    , true
-  );
-  f_add_entry("Default rom: "
-    , project.path_file_rom.clone().and_then(|e|
-      {
-        e.file_name().map(|e|{ e.string() })
-      })
-    , true
-  );
-  f_add_entry("Default core: "
-    , project.path_file_core.clone().and_then(|e|
-      {
-        e.file_name().map(|e|{ e.string() })
-      })
-    , true
-  );
-  f_add_entry("Default bios: "
-    , project.path_file_bios.clone().and_then(|e|
-      {
-        e.file_name().map(|e|{ e.string() })
-      })
-    , false
-  );
+  }; // f_add_field
+  f_add_field("Project: ", &project.get_project().ok(), true);
+  f_add_field("Platform: ", &project.get_platform().ok(), true);
+  f_add_field("Default rom: ", &project.get_path_relative(db::project::EntryName::PathFileRom).ok().map(|e| e.string()), true);
+  f_add_field("Default core: ", &project.get_path_relative(db::project::EntryName::PathFileCore).ok().map(|e| e.string()), true);
+  f_add_field("Default bios: ", &project.get_path_relative(db::project::EntryName::PathFileBios).ok().map(|e| e.string()), false);
+  let _ = frame_info.set_position(0);
 
   //
-  // Set checkbox
+  // CheckButton
   //
-  let mut btn_checkbox = CheckButton::default()
-    .with_size(dimm::width_button_rec() / 2, dimm::height_button_rec() / 2)
-    .right_bottom_of(&frame_info, - dimm::border() / 2);
-  btn_checkbox.visible_focus(false);
+  let btn_checkbox = CheckButton::default()
+    .with_size(dimm::width_checkbutton(), height)
+    .with_focus(false)
+    .with_frame(FrameType::BorderBox);
 
-  Ok((
-      frame_icon.as_base_widget()
-    , btn_checkbox
-    , project.path_dir_self.ok_or(ah!("Could not read project directory"))?
-  ))
+  frame_pack.end();
+
+  Ok((btn_checkbox , project.get_dir_self()?))
 } // }}}
 
 // pub fn creator() {{{
 pub fn creator(tx: Sender<common::Msg>, title: &str)
 {
-  let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
-  frame.set_frame(FrameType::BorderBox);
-  frame.set_type(PackType::Vertical);
+  // Enter the build directory
+  if let Err(e) = common::dir_build()
+  {
+    log!("Err: {}", e.to_string());
+  } // if
 
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
   let frame_content = ret_frame_header.frame_content.clone();
 
-  if let Err(e) = common::common()
-  {
-    log!("Err: {}", e.to_string());
-  } // if
 
   // Configure bottom buttons
   let clone_tx = tx.clone();
@@ -166,44 +142,47 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  // List of currently built packages
-  let mut frame_list = Frame::default()
-    .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-      , frame_content.height() - dimm::border()*2)
+  let mut scroll = common::ScrollList::new(
+    frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
+    , frame_content.height() - dimm::border()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border()
+  );
 
-    .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
-  frame_list.set_frame(FrameType::BorderBox);
-
-  let mut scroll = Scroll::default()
-    .with_size(frame_list.w(), frame_list.h())
-    .with_pos(frame_list.x(), frame_list.y());
-  scroll.set_frame(FrameType::BorderBox);
   scroll.begin();
 
-  // Populate entries
-  let vec_btn_checkbox = Arc::new(Mutex::new(Vec::<(CheckButton,PathBuf)>::new()));
-  if let Ok(projects) = db::project::list()
+  // Fetch entries
+  let projects = match db::project::list()
   {
-    let mut parent = scroll.as_base_widget();
+    Ok(projects) => projects,
+    Err(e) => { log!("Could not get project list: {}", e); vec![] },
+  };
 
-    for project in projects
+  // Process entries if any
+  let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,PathBuf)>::new()));
+  for project in &projects
+  {
+    let width_entry = scroll.widget_ref().w() - scroll.widget_ref().scrollbar_size() - dimm::border();
+    let height_entry = dimm::height_button_rec()*4;
+    let (button, path_dir_project) = match create_entry(project.clone(), &mut scroll, width_entry, height_entry)
     {
-      if   let Ok(( parent_new,  checkbutton , path_dir_project )) =
-              create_entry(project.clone(), scroll.clone().as_base_widget(), parent.clone())
-        && let Ok(mut lock) = vec_btn_checkbox.lock()
-      {
-        lock.push((checkbutton, path_dir_project));
-        parent = parent_new;
-      }
-    } // for
-  } // if
+      Ok(ret) => ret,
+      Err(e) => { log!("Could not create entry for project with error: {}", e); continue; },
+    }; // match
+
+    match vec_btn.lock()
+    {
+      Ok(mut lock) => lock.push((button, path_dir_project)),
+      Err(e) => log!("Could not lock checkbox buttons with error: {}", e),
+    }
+  } // for
 
   scroll.end();
 
   // Add new package
   let mut btn_add = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .right_of(&frame_list, dimm::border());
+    .right_of(scroll.widget_mut(), dimm::border());
   btn_add.set_frame(FrameType::RoundedFrame);
   btn_add.visible_focus(false);
   btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
@@ -218,8 +197,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_del.visible_focus(false);
   btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
   btn_del.set_color(Color::Red);
-  let clone_vec_checkbutton = vec_btn_checkbox.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
   {
@@ -228,15 +206,14 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    let lock = clone_vec_checkbutton.lock();
-
-    if lock.is_err()
+    let lock = match clone_vec_checkbutton.lock()
     {
-      clone_output_status.set_value("Could not acquire lock for checkbutton");
-    } // if
+      Ok(lock) => lock,
+      Err(e) => { log!("Could not acquire lock for checkbutton: {}", e); return; },
+    };
 
     // Remove all currently selected projects
-    for (checkbutton, path_dir_project) in lock.unwrap().iter()
+    for (checkbutton, path_dir_project) in lock.iter()
     {
       if checkbutton.is_checked()
       {
@@ -272,31 +249,24 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     // Disable window
     clone_tx.send(common::Msg::WindDeactivate);
 
-    // Update GUI
-    fltk::app::flush();
-    fltk::app::awake();
-
     // Include files in new thread
-    let clone_vec_checkbutton = vec_btn_checkbox.clone();
-    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    let clone_vec_checkbutton = vec_btn.clone();
     std::thread::spawn(move ||
     {
-      let lock = clone_vec_checkbutton.lock();
-
-      if lock.is_err()
+      // Get lock to vector of checkbuttons
+      let lock = match clone_vec_checkbutton.lock()
       {
-        clone_output_status.set_value("Could not acquire lock for checkbutton");
-      } // if
+        Ok(lock) => lock,
+        Err(e) => { log!("Failed to lock checkbutton vector with: {}", e); return; }
+      }; // match
 
       // Remove all currently selected projects
-      for (checkbutton, path_dir_project) in lock.unwrap().iter()
+      for (checkbutton, path_dir_project) in lock.iter()
       {
-        if ! checkbutton.is_checked()
-        {
-          continue;
-        } // if
+        if ! checkbutton.is_checked() { continue; } // if
 
         let path_file_dwarfs = path_dir_project.with_extension("dwarfs");
+
         log!("File: {}", path_file_dwarfs.string());
 
         // Wait for message & check return value
@@ -307,7 +277,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       } // for
 
       // Refresh
-      clone_tx.send(common::Msg::WindActivate);
       clone_tx.send(common::Msg::DrawCreator);
     });
   });

@@ -76,7 +76,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     .with_frame(FrameType::NoBox);
   output_default.set_buffer(text::TextBuffer::default());
   if let Ok(project) = db::project::current()
-  && let Some(path_file_rom) = project.path_file_rom
+  && let Ok(path_file_rom) = project.get_path_relative(db::project::EntryName::PathFileRom)
   {
     output_default.insert(&path_file_rom.file_name_string());
   } // if
@@ -173,7 +173,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     .with_frame(FrameType::NoBox);
   output_default.set_buffer(text::TextBuffer::default());
   if let Ok(project) = db::project::current()
-  && let Some(path_file_core) = project.path_file_core
+  && let Ok(path_file_core) = project.get_path_relative(db::project::EntryName::PathFileCore)
   {
     output_default.insert(&path_file_core.file_name_string());
   } // if
@@ -302,7 +302,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   // Insert remote items in list
   if let Ok(vec_items) = wizard::install::fetch_items("core".to_string(), true)
   {
-    vec_items.iter().for_each(|item| frame_list_remote.add(item.as_str()) );
+    vec_items.iter().for_each(|item| frame_list_remote.add(&item.string()) );
   } // if
 
   // Add new item from remote
