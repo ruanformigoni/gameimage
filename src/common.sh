@@ -328,7 +328,7 @@ function files_copy()
     fi
   fi
 
-  # Keys [yuzu]
+  # Keys [ryujinx]
   if [ "$keys" != "null" ]; then
     mkdir -p AppDir/app/keys
     if [[ "$keys" =~ (\.zip|\.7z) ]]; then

@@ -44,10 +44,10 @@ inline void init(std::string const& str_platform
   fs::path path_dir_keys     = "keys";
 
   // Adjust by platform
-  if ( platform == ns_enum::Platform::YUZU )
+  if ( platform == ns_enum::Platform::RYUJINX )
   {
-    path_dir_bios = path_dir_data / "yuzu/nand/system/Contents/registered";
-    path_dir_keys = path_dir_data / "yuzu/keys";
+    path_dir_bios = path_dir_config / "Ryujinx/nand/system/Contents/registered";
+    path_dir_keys = path_dir_config / "Ryujinx/system";
   } // if
 
   // Log

@@ -38,7 +38,7 @@ enum class Platform
 	RETROARCH,
 	PCSX2,
 	RPCS3,
-	YUZU,
+	RYUJINX,
 }; // enum class Platform }}}
 
 // enum class Op {{{

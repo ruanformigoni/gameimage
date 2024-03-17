@@ -64,11 +64,11 @@ inline void by_op(ns_enum::Platform enum_platform
       });
     } // case
     break;
-    case ns_enum::Platform::YUZU:
+    case ns_enum::Platform::RYUJINX:
     {
-      "Only keys and bios selection are available for yuzu"_throw_if([&]
+      "Only keys and bios selection are available for ryujinx"_throw_if([&]
       {
-        return op != Op::ROM && op != Op::BIOS && op != Op::KEYS;
+        return op != Op::ROM && op != Op::KEYS;
       });
     } // case
     break;

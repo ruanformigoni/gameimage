@@ -256,8 +256,8 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
   ns_subprocess::sync(str_cmd.c_str(), "--allow-any-location", "--no-gui", "--", path_file_rom);
 } // boot_rpcs3() }}}
 
-// boot_yuzu() {{{
-void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database)
+// boot_ryujinx() {{{
+void boot_ryujinx(fs::path const& path_dir_self, fs::path const& path_file_database)
 {
   // Rom
   fs::path path_file_rom;
@@ -288,11 +288,11 @@ void boot_yuzu(fs::path const& path_dir_self, fs::path const& path_file_database
   ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_YUZU");
+  std::string str_cmd = ns_env::get("FIM_BINARY_RYUJINX");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), "-f", "-g", path_file_rom);
-} // boot_yuzu() }}}
+  ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
+} // boot_ryujinx() }}}
 
 // boot() {{{
 void boot(int argc, char** argv)
@@ -328,7 +328,7 @@ void boot(int argc, char** argv)
     case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
     case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
     case ns_enum::Platform::RPCS3    : boot_rpcs3(path_dir_self, path_file_database)     ; break;
-    case ns_enum::Platform::YUZU     : boot_yuzu(path_dir_self, path_file_database)      ; break;
+    case ns_enum::Platform::RYUJINX     : boot_ryujinx(path_dir_self, path_file_database)      ; break;
   } // switch
 } // function: boot }}}
 

@@ -145,7 +145,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
     case ns_enum::Platform::WINE:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU : "Not implemented"_throw();
+    case ns_enum::Platform::RYUJINX : "Not implemented"_throw();
   } // switch
 
 } // search_remote() }}}
@@ -196,7 +196,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
     case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
     case ns_enum::Platform::PCSX2    : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
     case ns_enum::Platform::RPCS3    : paths_to_json(op, opt_path_file_json, search_dirs(path_dir_search)); break;
-    case ns_enum::Platform::YUZU     : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RYUJINX     : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
   } // switch
 
 } // search_local() }}}

@@ -128,18 +128,15 @@ inline void validate()
       f_file_default("rom");
     } // case
     break;
-    case ns_enum::Platform::YUZU:
+    case ns_enum::Platform::RYUJINX:
     {
+      // default bios is managed by ryujinx
       // default rom
       f_file_default("rom");
-      // default bios
-      f_file_default("bios");
       // default key
       f_file_default("keys");
       // all roms
       f_files_validate("rom");
-      // all bios
-      f_files_validate("bios");
       // all keys
       f_files_validate("keys");
     } // case

@@ -153,14 +153,88 @@ inline void wine(Op const& op, std::vector<std::string> args)
   } // switch
 } // wine() }}}
 
+// emulator_install_file_ryujinx() {{{
+void emulator_install_file_ryujinx(Op const& op, fs::path path_file_src, fs::path path_file_dst)
+{
+  // Path to project
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default() , str_project, "path_dir_project");
+
+  ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
+
+  // Validate source path
+  path_file_src = ns_fs::ns_path::file_exists<true>(path_file_src)._ret;
+
+  // List of installed files
+  std::vector<fs::path> paths_file_installed;
+
+  // Check if src and dst are the same
+  if ( path_file_src == path_file_dst )
+  {
+    ns_log::write('i', "Src and dst are the same for '", path_file_src, "'");
+    // Include in db afterwards
+    paths_file_installed.push_back(path_file_dst);
+  } // if
+  // Unzip zip file for ryujinx
+  else if ( path_file_src.string().ends_with(".zip") )
+  {
+    ns_log::write('i', "Src file is a regular zip file with path: '", path_file_src, "'");
+    // Extract if platform is ryujinx and is a zipfile
+    ns_log::write('i', "Extracting '", path_file_src, "'", " to '", path_file_dst.parent_path(), "'");
+    ns_zip::extract(path_file_src, path_file_dst.parent_path());
+    // Prepend parent dir to each extracted file
+    for (auto&& i : ns_zip::list_regular_files(path_file_src) )
+    {
+      fs::path path_file_target = path_file_dst.parent_path() / i;
+      ns_log::write('i', "Unzipped file '", i, "'", " to ", path_file_dst.parent_path());
+      // Include in db afterwards
+      paths_file_installed.push_back(path_file_target);
+    } // for
+  } // else if
+  else
+  {
+    // Copy to regular file to destination regular file
+    ns_copy::file(path_file_src, path_file_dst, ns_copy::callback_seconds(std::chrono::seconds(1)
+    , [&](double percentage, auto&& path_src, auto&& path_dst)
+    {
+      ns_log::write('i', "Copy ", path_src, " to ", path_dst,  " - ", percentage*100, " %");
+    }));
+    // Include in db afterwards
+    paths_file_installed.push_back(path_file_dst);
+  } // else
+
+  // Save in database
+  ns_db::from_file_project([&](auto&& db)
+  {
+    for(auto&& e : paths_file_installed)
+    {
+      // Path relative to project
+      fs::path path_file_dst_relative = fs::relative(e, path_dir_project);
+      ns_log::write('i', "Save entry '", path_file_dst_relative, "' in database");
+      // Save in DB
+      db(fmt::format("paths_file_{}", ns_enum::to_string_lower(op))) |= path_file_dst_relative;
+    } // for
+  } , ns_db::Mode::UPDATE);
+
+  // Set as default
+  if ( not paths_file_installed.empty() )
+  {
+    ns_select::select(op, fs::relative(paths_file_installed.front(), path_dir_project));
+  } // if
+} // emulator_install_file_ryujinx() }}}
+
 // emulator_install_file() {{{
 void emulator_install_file(Op const& op, fs::path path_file_src, fs::path const& path_file_dst)
 {
-  // Path to project
-  fs::path path_dir_project = ns_db::query(ns_db::file_default()
-    , ns_db::query(ns_db::file_default(), "project")
-    , "path_dir_project");
+  if ( op == Op::KEYS )
+  {
+    emulator_install_file_ryujinx(op, path_file_src, path_file_dst);
+    return;
+  } // if
 
+  // Path to project
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+  fs::path path_dir_project = ns_db::query(ns_db::file_default() , str_project, "path_dir_project");
   ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
 
   // Check if src and dst are the same
@@ -384,7 +458,7 @@ inline void install(Op op, std::vector<std::string> args)
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::YUZU: ns_install::emulator(op, args);
+    case ns_enum::Platform::RYUJINX: ns_install::emulator(op, args);
     break;
   } // switch
   

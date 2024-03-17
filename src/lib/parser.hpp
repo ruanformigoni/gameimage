@@ -19,7 +19,7 @@ inline const char* HELP_FETCH
 {
   "Usage\n"
   "    :: Short: This is the fetch command, it is used to fetch an image from github\n"
-  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --output-file=my-image.flatimage --json=some-file.json\n"
+  "    :: Usage: gameimage fetch --platform=[wine,retroarch,pcsx2,rpcs3,ryujinx] --output-file=my-image.flatimage --json=some-file.json\n"
   "    :: Example: gameimage fetch --platform=wine --output-file=wine.flatimage\n"
 };
 
@@ -27,7 +27,7 @@ inline const char* HELP_INIT
 {
   "Usage\n"
   "    :: Short: This is the init command, it creates a new project with the provided image\n"
-  "    :: Usage: gameimage init --platform=[wine,retroarch,pcsx2,rpcs3,yuzu] --dir=my-game --image=some-image.flatimage\n"
+  "    :: Usage: gameimage init --platform=[wine,retroarch,pcsx2,rpcs3,ryujinx] --dir=my-game --image=some-image.flatimage\n"
   "    :: Example: gameimage init --platform=wine --dir=aliens --image=wine.flatimage\n"
 };
 
@@ -48,7 +48,7 @@ inline const char* HELP_INSTALL
   "    ::    :: retroarch: gameimage install [bios,rom,core]\n"
   "    ::    :: pcsx2: gameimage install [bios,rom]\n"
   "    ::    :: rpcs3: gameimage install [bios,rom]\n"
-  "    ::    :: yuzu: gameimage install [rom, keys]\n"
+  "    ::    :: ryujinx: gameimage install [rom, keys]\n"
   "    :: Examples:\n"
   "    ::    :: wine:\n"
   "    ::    ::    gameimage install icon ./my-cover.png\n"
@@ -70,7 +70,7 @@ inline const char* HELP_INSTALL
   "    ::    ::    gameimage install icon ./my-cover.png\n"
   "    ::    ::    gameimage install bios ./my-bios\n"
   "    ::    ::    gameimage install rom\n"
-  "    ::    :: yuzu:\n"
+  "    ::    :: ryujinx:\n"
   "    ::    ::    gameimage install icon ./my-cover.png\n"
   "    ::    ::    gameimage install bios ./my-bios\n"
   "    ::    ::    gameimage install keys ./my-keys\n"
