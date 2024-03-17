@@ -58,13 +58,13 @@ pub enum Msg
   DrawRpcs3Test,
   DrawRpcs3Compress,
 
-  DrawYuzuName,
-  DrawYuzuIcon,
-  DrawYuzuRom,
-  DrawYuzuBios,
-  DrawYuzuKeys,
-  DrawYuzuTest,
-  DrawYuzuCompress,
+  DrawRyujinxName,
+  DrawRyujinxIcon,
+  DrawRyujinxRom,
+  DrawRyujinxBios,
+  DrawRyujinxKeys,
+  DrawRyujinxTest,
+  DrawRyujinxCompress,
 
   DrawFinish,
 
@@ -83,7 +83,7 @@ pub const STR_DESC_PCSX2 : &str = "Being almost as old as the console it is emul
 
 pub const STR_DESC_RPCS3 : &str = "RPCS3 is a multi-platform open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows, Linux, macOS and FreeBSD. The purpose of the project is to completely and accurately emulate the Sony PlayStation 3 Computer Entertainment System in its entirety with the power of open-source community and reverse engineering. Our goal is to preserve the legacy of the PlayStation 3 hardware and its vast library by bringing it and its exclusives to the PC platform. We want to achieve this by targeting and supporting multiple operating systems as well as being compatible with a wide range of computer hardware with realistic requirements.";
 
-pub const STR_DESC_YUZU : &str = "Yuzu is an experimental open-source emulator for the Nintendo Switch from the creators of Citra. It is written in C++ with portability in mind, with builds actively maintained for Windows, Linux and Android.";
+pub const STR_DESC_RYUJINX : &str = "Ryujinx is an open-source Nintendo Switch emulator created by gdkchan and written in C#. This emulator aims at providing excellent accuracy and performance, a user-friendly interface, and consistent builds.";
 // }}}
 
 // impl_log() {{{
@@ -133,7 +133,7 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
     "retroarch" => Ok(Msg::DrawRetroarchName),
     "pcsx2"     => Ok(Msg::DrawPcsx2Name),
     "rpcs3"     => Ok(Msg::DrawRpcs3Name),
-    "yuzu"      => Ok(Msg::DrawYuzuName),
+    "ryujinx"      => Ok(Msg::DrawRyujinxName),
     _           => Err(ah!("Unrecognized platform")),
   } // match
 

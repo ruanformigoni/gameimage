@@ -248,35 +248,35 @@ fn redraw(&mut self, msg : Msg)
     }
 
     //
-    // Yuzu
+    // Ryujinx
     //
-    Msg::DrawYuzuName =>
+    Msg::DrawRyujinxName =>
     {
-      wizard::yuzu::name(self.tx, "Select the Application Name");
+      wizard::ryujinx::name(self.tx, "Select the Application Name");
     }
-    Msg::DrawYuzuIcon =>
+    Msg::DrawRyujinxIcon =>
     {
-      wizard::yuzu::icon(self.tx, "Select the Application Icon");
+      wizard::ryujinx::icon(self.tx, "Select the Application Icon");
     }
-    Msg::DrawYuzuRom =>
+    Msg::DrawRyujinxRom =>
     {
-      wizard::yuzu::rom(self.tx, "Install the Rom File(s)");
+      wizard::ryujinx::rom(self.tx, "Install the Rom File(s)");
     }
-    Msg::DrawYuzuBios =>
+    Msg::DrawRyujinxBios =>
     {
-      wizard::yuzu::bios(self.tx, "Install the firmware Files");
+      wizard::ryujinx::bios(self.tx, "Install the firmware Files");
     }
-    Msg::DrawYuzuKeys =>
+    Msg::DrawRyujinxKeys =>
     {
-      wizard::yuzu::keys(self.tx, "Install the Decryption Keys");
+      wizard::ryujinx::keys(self.tx, "Install the Decryption Keys");
     }
-    Msg::DrawYuzuTest =>
+    Msg::DrawRyujinxTest =>
     {
-      wizard::yuzu::test(self.tx, "Test the Created Package");
+      wizard::ryujinx::test(self.tx, "Test the Created Package");
     }
-    Msg::DrawYuzuCompress =>
+    Msg::DrawRyujinxCompress =>
     {
-      wizard::yuzu::compress(self.tx, "Compress the Created Package");
+      wizard::ryujinx::compress(self.tx, "Compress the Created Package");
     }
 
     //

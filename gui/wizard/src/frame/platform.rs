@@ -59,7 +59,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
       "retroarch" => clone_buffer.insert(0, common::STR_DESC_RETR),
       "pcsx2" => clone_buffer.insert(0, common::STR_DESC_PCSX2),
       "rpcs3" => clone_buffer.insert(0, common::STR_DESC_RPCS3),
-      "yuzu" => clone_buffer.insert(0, common::STR_DESC_YUZU),
+      "ryujinx" => clone_buffer.insert(0, common::STR_DESC_RYUJINX),
       _ => ()
     }
   };
