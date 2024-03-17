@@ -108,7 +108,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
   let _ = frame_text.append("Clicking on 'Open' will open Ryujinx\n");
   let _ = frame_text.append("Go to 'Tools -> Install Firmware to install the firmware\n");
 
-  // Button to launch rpcs3 and install files
+  // Button to launch ryujinx and install files
   let _frame_bottom = fltk::frame::Frame::default()
     .with_size(frame_text.w(), frame_content.h() - frame_text.h() - dimm::border())
     .with_frame(FrameType::BorderBox)
