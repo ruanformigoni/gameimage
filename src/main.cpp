@@ -34,8 +34,6 @@
 // Start logging
 INITIALIZE_EASYLOGGINGPP
 
-namespace match = matchit;
-
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
@@ -44,16 +42,22 @@ void fetch(ns_parser::Parser const& parser)
   if (  parser.optional("--output-file") && parser.contains("--sha") )
   {
     ns_fetch::base_sha(platform, *parser.optional("--output-file"));
+    return;
   } // if
-  else if ( parser.optional("--output-file") && parser.optional("--json")  )
+
+  if ( parser.optional("--output-file") && parser.optional("--json")  )
   {
     ns_fetch::base_json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
-  } // else if
-  else if ( parser.optional("--output-file") )
+    return;
+  } // if
+
+  if ( parser.optional("--output-file") )
   {
     ns_fetch::base_fetch(platform, *parser.optional("--output-file"));
+    return;
   } // else
 
+  "Missing arguments for fetch phase"_throw();
 } // fetch() }}}
 
 // init() {{{
@@ -182,123 +186,76 @@ int main(int argc, char** argv)
   // Init log
   ns_log::init(argc, argv, "gameimage.log");
 
-  if ( argc < 2 )
-  {
-    ns_log::write('i', ns_parser::HELP_ALL);
-    ns_log::write('e', "No arguments provided for GameImage");
-    return EXIT_FAILURE;
-  } // if
-
   // Export path to self directory
   ns_env::set("GIMG_SCRIPT_DIR"
     , ns_fs::ns_path::dir_executable<true>()._ret.c_str()
     , ns_env::Replace::Y
   );
 
-  std::unique_ptr<ns_parser::Parser> parser;
+  // Parse args
+  ns_parser::Parser parser("GameImage", "Create portable single-file games that work across linux distributions");
 
-  //
-  // Select stage
-  //
-  std::string str_stage = std::string{argv[1]};
+  parser.add_subparser(std::make_unique<ns_parser::Fetch>()   );
+  parser.add_subparser(std::make_unique<ns_parser::Init>()    );
+  parser.add_subparser(std::make_unique<ns_parser::Project>() );
+  parser.add_subparser(std::make_unique<ns_parser::Install>() );
+  parser.add_subparser(std::make_unique<ns_parser::Compress>());
+  parser.add_subparser(std::make_unique<ns_parser::Search>()  );
+  parser.add_subparser(std::make_unique<ns_parser::Select>()  );
+  parser.add_subparser(std::make_unique<ns_parser::Test>()    );
+  parser.add_subparser(std::make_unique<ns_parser::Desktop>() );
+  parser.add_subparser(std::make_unique<ns_parser::Package>() );
+
+  // Parse args
   try
   {
-    // Fetch parser for option
-    match::match(str_stage)
-    (
-      match::pattern | "fetch"    = [&]{ parser = std::make_unique<ns_parser::Fetch>("fetch");       },
-      match::pattern | "init"     = [&]{ parser = std::make_unique<ns_parser::Init>("init");         },
-      match::pattern | "project"  = [&]{ parser = std::make_unique<ns_parser::Project>("project");   },
-      match::pattern | "install"  = [&]{ parser = std::make_unique<ns_parser::Install>("install");   },
-      match::pattern | "compress" = [&]{ parser = std::make_unique<ns_parser::Compress>("compress"); },
-      match::pattern | "search"   = [&]{ parser = std::make_unique<ns_parser::Search>("search");     },
-      match::pattern | "select"   = [&]{ parser = std::make_unique<ns_parser::Select>("select");     },
-      match::pattern | "test"     = [&]{ parser = std::make_unique<ns_parser::Test>("test");         },
-      match::pattern | "desktop"  = [&]{ parser = std::make_unique<ns_parser::Desktop>("desktop");   },
-      match::pattern | "package"  = [&]{ parser = std::make_unique<ns_parser::Package>("package");   },
-      match::pattern | match::_   = [&]{ "Invalid stage '{}'"_throw(str_stage);                      }
-    );
+    parser.parse_args(argc, argv);
   } // try
   catch(std::exception const& e)
   {
-    ns_log::write('i', ns_parser::HELP_ALL);
-    ns_log::write('e', e.what());
-    return EXIT_FAILURE;
-  } // catch
-
-  try
-  {
-    // Parse args
-    parser->parse_args(argc-1, argv+1);
-  } // try
-  catch(std::exception const& e)
-  {
-    parser->usage();
-    ns_log::write('e', e.what());
-    return EXIT_FAILURE;
-  } // catch
-
-  //
-  // Execute stage
-  //
-  try
-  {
-    switch(parser->enum_stage())
+    // Get selected subparser if any
+    if ( auto subparser = parser.used_subparser() )
     {
-      case ns_enum::Stage::FETCH:
-      {
-        fetch(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::INIT:
-      {
-        init(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::PROJECT:
-      {
-        project(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::INSTALL:
-      {
-        install(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::COMPRESS:
-      {
-        compress();
-      } // case
-      break;
-      case ns_enum::Stage::SEARCH:
-      {
-        search(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::SELECT:
-      {
-        select(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::TEST:
-      {
-        test();
-      } // case
-      break;
-      case ns_enum::Stage::DESKTOP:
-      {
-        desktop(*parser);
-      } // case
-      break;
-      case ns_enum::Stage::PACKAGE:
-      {
-        package(*parser);
-      } // case
-      break;
+      ns_log::write('i', subparser->get().help());
+    }
+    else
+    {
+      ns_log::write('i', parser.help());
+    } // else
+    ns_log::write('e', e.what());
+    return EXIT_FAILURE;
+  } // catch
+
+  // Get selected subparser if any
+  auto subparser = parser.used_subparser();
+
+  if ( ! subparser )
+  {
+    ns_log::write('i', parser.help());
+    return EXIT_FAILURE;
+  } // if
+
+
+  // Execute selected stage
+  try
+  {
+    switch(subparser->get().enum_stage())
+    {
+      case ns_enum::Stage::FETCH    : fetch(*subparser); break;
+      case ns_enum::Stage::INIT     : init(*subparser); break;
+      case ns_enum::Stage::PROJECT  : project(*subparser); break;
+      case ns_enum::Stage::INSTALL  : install(*subparser); break;
+      case ns_enum::Stage::COMPRESS : compress(); break;
+      case ns_enum::Stage::SEARCH   : search(*subparser); break;
+      case ns_enum::Stage::SELECT   : select(*subparser); break;
+      case ns_enum::Stage::TEST     : test(); break;
+      case ns_enum::Stage::DESKTOP  : desktop(*subparser); break;
+      case ns_enum::Stage::PACKAGE  : package(*subparser); break;
     } // switch
   } // try
   catch(std::exception const& e)
   {
+    ns_log::write('i', subparser->get().help());
     ns_log::write('e', e.what());
     return EXIT_FAILURE;
   } // catch
