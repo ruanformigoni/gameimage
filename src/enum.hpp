@@ -34,6 +34,7 @@ enum class ImageFormat
 // enum class Platform {{{
 enum class Platform
 {
+  LINUX,
 	WINE,
 	RETROARCH,
 	PCSX2,

@@ -142,6 +142,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
   {
     case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote(path_dir_project));
     break;
+    case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
     case ns_enum::Platform::PCSX2:
     case ns_enum::Platform::RPCS3:
@@ -178,6 +179,18 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
+    case ns_enum::Platform::LINUX:
+    {
+       // Check if is rom
+      "Only rom operation is available for linux"_throw_if([&]{ return op != Op::ROM; });
+      // Enter application dir
+      path_dir_search = (path_dir_project / "linux");
+      // Get files iterator
+      auto it_files = search_files(path_dir_search, R"(.*)", "");
+      // Save files to json
+      paths_to_json(op, opt_path_file_json, it_files);
+    } // case
+    break;
     case ns_enum::Platform::WINE:
     {
       // Check if is rom

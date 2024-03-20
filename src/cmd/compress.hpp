@@ -93,6 +93,7 @@ inline void validate()
 
   switch(enum_platform)
   {
+    case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
     {
       f_file_default("rom");

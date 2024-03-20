@@ -132,14 +132,14 @@ inline void wine(Op const& op, std::vector<std::string> args)
   ns_env::set("WINEDEBUG", "fixme-all", ns_env::Replace::N);
 
   // Set callbacks for wine/winetricks
-  auto f_wine = [&]<typename... _Args>(_Args&&... _args)
+  auto f_wine = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "wine", std::forward<_Args>(_args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "wine", std::forward<T>(t));
   };
 
-  auto f_winetricks = [&]<typename... _Args>(_Args&&... _args)
+  auto f_winetricks = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<_Args>(_args)...);
+    ns_subprocess::sync(path_flatimage, "fim-exec", "winetricks", std::forward<T>(t));
   };
 
   // Execute operation
@@ -152,6 +152,29 @@ inline void wine(Op const& op, std::vector<std::string> args)
     default             :  "Unsupported wine operation '{}'"_throw(ns_enum::to_string_lower(op)); break;
   } // switch
 } // wine() }}}
+
+// linux() {{{
+inline void linux(Op const& op, std::vector<std::string> args)
+{
+  // Validate op
+  if ( op != Op::ROM )
+  {
+    "Only ROM is valid for the linux platform"_throw();
+  } // if
+
+  // Current application
+  std::string str_project = ns_db::query(ns_db::file_default(), "project");
+
+  // Path to flatimage
+  fs::path path_flatimage = ns_db::query(ns_db::file_default(), str_project, "path_file_image");
+
+  // Project dir
+  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+
+  // Run selected file
+  ns_env::set("FIM_HOME", (path_dir_project / "linux").c_str(), ns_env::Replace::Y);
+  ns_subprocess::sync(path_flatimage, "fim-exec", args);
+} // linux() }}}
 
 // emulator_install_file_ryujinx() {{{
 void emulator_install_file_ryujinx(Op const& op, fs::path path_file_src, fs::path path_file_dst)
@@ -453,6 +476,8 @@ inline void install(Op op, std::vector<std::string> args)
   // Install based on platform
   switch(enum_platform)
   {
+    case ns_enum::Platform::LINUX: ns_install::linux(op, args);
+    break;
     case ns_enum::Platform::WINE: ns_install::wine(op, args);
     break;
     case ns_enum::Platform::RETROARCH:

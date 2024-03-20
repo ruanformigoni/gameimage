@@ -112,6 +112,35 @@ void db_files_copy(std::string db_entry
   } , ns_db::Mode::READ); // ns_db::from_file
 } // db_files_copy() }}}
 
+// boot_linux() {{{
+void boot_linux(fs::path const& path_dir_self, fs::path const& path_file_database)
+{
+  // Binary to execute
+  fs::path path_file_rom;
+
+  // Database
+  ns_db::from_file(path_file_database
+  , [&](auto&& db)
+  {
+    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
+  }
+  , ns_db::Mode::READ);
+
+  // Enter application directory
+  fs::current_path(path_dir_self);
+
+  // Escape "'"
+  std::string cmd = ns_string::replace_substrings((path_dir_self / path_file_rom).c_str(), "'", R"('\'')");
+
+  // Sorround with ''
+  cmd = fmt::format(fmt::runtime("'{}'"), cmd);
+
+  // Start application
+  ns_log::write('i', "Execute: ", cmd);
+
+  ns_subprocess::sync(boost::process::search_path("bash").string(), "-c", cmd);
+} // boot_linux() }}}
+
 // boot_wine() {{{
 void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database)
 {
@@ -300,6 +329,9 @@ void boot(int argc, char** argv)
   // Path to self directory
   fs::path path_dir_self = ns_fs::ns_path::dir_self<true>()._ret;
 
+  // Set HOME
+  ns_env::set("FIM_HOME", path_dir_self.c_str(), ns_env::Replace::Y);
+
   // Start log
   ns_log::init(argc, argv, path_dir_self / "gameimage.log");
 
@@ -324,11 +356,12 @@ void boot(int argc, char** argv)
 
   switch(platform)
   {
+    case ns_enum::Platform::LINUX    : boot_linux(path_dir_self, path_file_database)     ; break;
     case ns_enum::Platform::WINE     : boot_wine(path_dir_self, path_file_database)      ; break;
     case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
     case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
     case ns_enum::Platform::RPCS3    : boot_rpcs3(path_dir_self, path_file_database)     ; break;
-    case ns_enum::Platform::RYUJINX     : boot_ryujinx(path_dir_self, path_file_database)      ; break;
+    case ns_enum::Platform::RYUJINX  : boot_ryujinx(path_dir_self, path_file_database)   ; break;
   } // switch
 } // function: boot }}}
 

@@ -35,6 +35,11 @@ inline void by_op(ns_enum::Platform enum_platform
 {
   switch(enum_platform)
   {
+    case ns_enum::Platform::LINUX:
+    {
+      "Only the rom option is available for linux"_throw_if([&]{ return op != Op::ROM; });
+    } // case
+    break;
     case ns_enum::Platform::WINE:
     {
       "Only the rom option is available for wine"_throw_if([&]{ return op != Op::ROM; });

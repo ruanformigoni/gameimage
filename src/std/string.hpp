@@ -9,11 +9,21 @@
 #include <sstream>
 #include <boost/type_index.hpp>
 #include <fmt/core.h>
+#include <boost/algorithm/string.hpp>
 
 #include "concepts.hpp"
 
 namespace ns_string
 {
+
+// replace_substrings() {{{
+inline std::string replace_substrings(std::string string
+  , std::string const& substring
+  , std::string const& replacement)
+{
+  boost::algorithm::replace_all(string, substring, replacement);
+  return string;
+} // replace_substrings()  }}}
 
 // to_string() {{{
 template<typename T>
