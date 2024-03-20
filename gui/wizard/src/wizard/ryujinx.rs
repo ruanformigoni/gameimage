@@ -1,4 +1,3 @@
-
 use fltk::
 {
   app::Sender,
@@ -106,7 +105,8 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
 
   let _ = frame_text.append("Here you can install the firmware\n");
   let _ = frame_text.append("Clicking on 'Open' will open Ryujinx\n");
-  let _ = frame_text.append("Go to 'Tools -> Install Firmware to install the firmware\n");
+  let _ = frame_text.append("Go to 'Tools -> Install Firmware' to install the firmware\n");
+  let _ = frame_text.append("Then close Ryujinx and click on next\n");
 
   // Button to launch ryujinx and install files
   let _frame_bottom = fltk::frame::Frame::default()
