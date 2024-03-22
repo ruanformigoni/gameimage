@@ -3,7 +3,6 @@
 // @file        : main
 ///
 
-#include <iostream>
 #include <fmt/ranges.h>
 #include <matchit.h>
 #include <magic_enum/magic_enum.hpp>
@@ -28,7 +27,6 @@
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
-#include "lib/sha.hpp"
 
 
 // Start logging
