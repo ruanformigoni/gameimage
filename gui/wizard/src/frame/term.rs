@@ -20,6 +20,7 @@ use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::common;
+use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::lib::svg;
 
@@ -51,33 +52,33 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   term.set_text_size((dimm::height_text() as f64 * 0.7) as i32);
   term.wrap_mode(fltk::text::WrapMode::None, 0);
 
-  let mut btn_save = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .right_of(&term, dimm::border());
-  btn_save.set_frame(FrameType::RoundedFrame);
-  btn_save.visible_focus(false);
-  btn_save.set_pos(btn_save.x(), term.y());
-  btn_save.set_color(Color::Blue);
-  btn_save.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_save(1.0).as_str()).unwrap()));
   let mut clone_term = term.clone();
-  btn_save.set_callback(move |_|
-  {
-    let path_file_dest = match file_chooser("Save as...",  "*.txt", ".", true).map(|e| PathBuf::from(e) )
+  let _btn_save = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .right_of(&term, dimm::border())
+    .with_posy_of(&term)
+    .with_frame(FrameType::RoundedFrame)
+    .with_focus(false)
+    .with_color(Color::Blue)
+    .with_svg(svg::icon_save(1.0).as_str())
+    .with_callback (move |_|
     {
-      Some(e) => PathBuf::from(e),
-      None => { clone_term.append("No file selected\n"); return; },
-    }; // match
+      let path_file_dest = match file_chooser("Save as...",  "*.txt", ".", true).map(|e| PathBuf::from(e) )
+      {
+        Some(e) => PathBuf::from(e),
+        None => { clone_term.append("No file selected\n"); return; },
+      }; // match
 
-    // Open dest file as write
-    let mut file_dest = match fs::File::create(path_file_dest.clone())
-    {
-      Ok(e) => { clone_term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str()); e },
-      Err(e) => { log!("Error to save selected file: {}", e); return; },
-    };
+      // Open dest file as write
+      let mut file_dest = match fs::File::create(path_file_dest.clone())
+      {
+        Ok(e) => { clone_term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str()); e },
+        Err(e) => { log!("Error to save selected file: {}", e); return; },
+      };
 
-    // Write to file
-    let _ = writeln!(&mut file_dest, "{}", clone_term.text());
-  });
+      // Write to file
+      let _ = writeln!(&mut file_dest, "{}", clone_term.text());
+    });
 
   // Return new term
   Term{ term, opt_proc_thread: None, opt_tx: None }
