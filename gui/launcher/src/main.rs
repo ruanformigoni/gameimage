@@ -184,7 +184,9 @@ impl Drop for Gui
           {
             let _ =  std::process::Command::new("sh")
               .args(["-c", "$GIMG_LAUNCHER_BOOT"])
-              .output();
+              .stdout(std::process::Stdio::inherit())
+              .stderr(std::process::Stdio::inherit())
+              .spawn();
             clone_tx.send(Msg::DrawCover);
           });
         }

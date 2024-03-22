@@ -29,7 +29,7 @@ pub fn compress(tx: Sender<common::Msg>
   // Rename 'next' to 'compress'
   ret_frame_footer.btn_next.clone().set_label("Start");
 
-  let term = frame::term::Term::new(dimm::border()
+  let mut term = frame::term::Term::new(dimm::border()
     , frame_content.w() - dimm::border()*2
     , frame_content.h() - dimm::border()*2
     , frame_content.x() + dimm::border()

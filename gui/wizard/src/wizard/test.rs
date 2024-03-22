@@ -47,7 +47,7 @@ pub fn test(tx: Sender<common::Msg>
   btn_test.set_pos(btn_test.x(), ret_frame_footer.btn_next.y());
   btn_test.set_color(Color::Green);
 
-  let term = frame::term::Term::new(dimm::border()
+  let mut term = frame::term::Term::new(dimm::border()
     , frame_content.w() - dimm::border()*2
     , frame_content.h() - dimm::border()*2
     , frame_content.x() + dimm::border()

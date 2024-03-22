@@ -29,6 +29,12 @@ pub enum Msg
   DrawDesktop,
   DrawName,
 
+  DrawLinuxName,
+  DrawLinuxIcon,
+  DrawLinuxRom,
+  DrawLinuxTest,
+  DrawLinuxCompress,
+
   DrawWineName,
   DrawWineIcon,
   DrawWineConfigure,
