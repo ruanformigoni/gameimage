@@ -62,31 +62,21 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   let mut clone_term = term.clone();
   btn_save.set_callback(move |_|
   {
-    // Get file name
-    let some_path_file_dest : Option<PathBuf> = file_chooser("Save as...",  "*.txt", ".", true)
-      .map(|e| PathBuf::from(e) );
-
-    if some_path_file_dest.is_none()
+    let path_file_dest = match file_chooser("Save as...",  "*.txt", ".", true).map(|e| PathBuf::from(e) )
     {
-      clone_term.append("No file selected\n");
-      return;
-    } // if
-
-    let path_file_dest = some_path_file_dest.unwrap();
-
-    // Get contents of terminal
-    let str_contents = clone_term.text();
+      Some(e) => PathBuf::from(e),
+      None => { clone_term.append("No file selected\n"); return; },
+    }; // match
 
     // Open dest file as write
-    let file_dest = fs::File::create(path_file_dest.clone());
-
-    if file_dest.is_err()
+    let mut file_dest = match fs::File::create(path_file_dest.clone())
     {
-      clone_term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str());
-    } // if
+      Ok(e) => { clone_term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str()); e },
+      Err(e) => { log!("Error to save selected file: {}", e); return; },
+    };
 
     // Write to file
-    let _ = writeln!(&mut file_dest.unwrap(), "{}", str_contents);
+    let _ = writeln!(&mut file_dest, "{}", clone_term.text());
   });
 
   // Return new term
