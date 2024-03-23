@@ -130,6 +130,8 @@ class Db
     template<IsString T>
     T operator=(T&& t);
     template<IsString T>
+    std::vector<T> operator=(std::vector<T> const& t);
+    template<IsString T>
     Db& operator|=(T&& t);
 
     friend std::ostream& operator<<(std::ostream& os, Db const& db);
@@ -345,6 +347,14 @@ T Db::operator=(T&& t)
   data() = t;
   return t;
 } // operator=(IsString) }}}
+
+// operator=(vector<path>) {{{
+template<IsString T>
+inline std::vector<T> Db::operator=(std::vector<T> const& t)
+{
+  data() = t;
+  return t;
+} // operator=(vector<path>) }}}
 
 // operator|= {{{
 template<IsString T>

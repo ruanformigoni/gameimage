@@ -39,19 +39,19 @@ void fetch(ns_parser::Parser const& parser)
 
   if (  parser.optional("--output-file") && parser.contains("--sha") )
   {
-    ns_fetch::base_sha(platform, *parser.optional("--output-file"));
+    ns_fetch::sha(platform, *parser.optional("--output-file"));
     return;
   } // if
 
   if ( parser.optional("--output-file") && parser.optional("--json")  )
   {
-    ns_fetch::base_json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
+    ns_fetch::json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
     return;
   } // if
 
   if ( parser.optional("--output-file") )
   {
-    ns_fetch::base_fetch(platform, *parser.optional("--output-file"));
+    ns_fetch::fetch(platform, *parser.optional("--output-file"));
     return;
   } // else
 

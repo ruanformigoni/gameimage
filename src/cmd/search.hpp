@@ -8,9 +8,6 @@
 #include <filesystem>
 #include <regex>
 
-#include <cppcoro/generator.hpp>
-#include <matchit.h>
-
 #include "fetch.hpp"
 
 #include "../common.hpp"
@@ -18,7 +15,6 @@
 
 #include "../std/filesystem.hpp"
 
-#include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
 
@@ -26,7 +22,6 @@ namespace ns_search
 {
 
 namespace fs = std::filesystem;
-namespace cr = cppcoro;
 
 using Op = ns_enum::Op;
 
@@ -35,10 +30,12 @@ namespace
 {
 
 // search_files() {{{
-inline cr::generator<fs::path> search_files(fs::path path_dir_search
+inline std::vector<fs::path> search_files(fs::path path_dir_search
   , char const* str_pattern
   , char const* str_exclude)
 {
+  std::vector<fs::path> ret;
+
   // Validate file path
   ns_fs::ns_path::dir_exists<true>(path_dir_search);
 
@@ -67,31 +64,36 @@ inline cr::generator<fs::path> search_files(fs::path path_dir_search
     {
       fs::path path_file_found = fs::relative(path_file_entry, path_dir_search.parent_path());
       ns_log::write('i', "Found :: ", path_file_found);
-      co_yield path_file_found;
+      ret.push_back(path_file_found);
     } // if
   } // for
 
+  return ret;
 } // search_files() }}}
 
 // search_dirs() {{{
-inline cr::generator<fs::path> search_dirs(fs::path const& path_dir_search)
+inline std::vector<fs::path> search_dirs(fs::path const& path_dir_search)
 {
+  std::vector<fs::path> ret;
   for(fs::path path_file_found : fs::directory_iterator(path_dir_search))
   {
     path_file_found = fs::relative(path_file_found, path_dir_search.parent_path());
     ns_log::write('i', "Found :: ", path_file_found);
-    co_yield path_file_found;
+    ret.push_back(path_file_found);
   } // for
+  return ret;
 } // search_dirs() }}}
 
 // search_remote() {{{
-inline cr::generator<std::string> search_remote(fs::path const& path_dir_fetch)
+inline std::vector<std::string> search_remote(fs::path const& path_dir_fetch)
 {
+  std::vector<std::string> ret;
   for( auto i : ns_fetch::cores_list(path_dir_fetch) )
   {
     ns_log::write('i', "Found :: ", i.core);
-    co_yield i.core;
+    ret.push_back(i.core);
   } // for
+  return ret;
 } // search_remote() }}}
 
 // paths_to_json() {{{
@@ -103,10 +105,7 @@ auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
   // Open file list
   ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
   {
-    for(auto&& path_file : vec_paths)
-    {
-      db(ns_enum::to_string_lower(op)) |= path_file;
-    }
+    db(ns_enum::to_string_lower(op)) = vec_paths;
   }, ns_db::Mode::CREATE);
 } // paths_to_json() }}}
 
@@ -186,7 +185,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
       // Enter application dir
       path_dir_search = (path_dir_project / "linux");
       // Get files iterator
-      auto it_files = search_files(path_dir_search, R"(.*)", "");
+      auto it_files = search_files(path_dir_search, R"(.*\.sh)", "");
       // Save files to json
       paths_to_json(op, opt_path_file_json, it_files);
     } // case
