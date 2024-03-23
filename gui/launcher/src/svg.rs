@@ -59,6 +59,12 @@ const ICON_DEL: &str = r#"
 </svg>
 "#;
 
+const ICON_SWITCH: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/>
+</svg>
+"#;
+
 pub const ICON_GAMEIMAGE: &str = r##"
 <svg
    width="127.1859mm"
@@ -234,5 +240,6 @@ icon!(icon_play, ICON_PLAY, 28, 28);
 icon!(icon_list, ICON_LIST, 16, 16);
 icon!(icon_add, ICON_ADD, 14, 14);
 icon!(icon_del, ICON_DEL, 16, 16);
+icon!(icon_switch, ICON_SWITCH, 16, 16);
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

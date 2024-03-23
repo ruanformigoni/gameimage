@@ -4,7 +4,6 @@ use fltk::{
   widget::Widget,
   button::Button,
   group::{PackType,Scroll},
-  prelude::WidgetExt,
   enums::{Align,FrameType},
   frame::Frame,
 };
@@ -73,8 +72,6 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
     entry
   };
 
-  let mut btn_games = f_make_entry("Switch Game");
-  btn_games.emit(tx, Msg::DrawSelector);
   let mut btn_env = f_make_entry("Environment");
   btn_env.emit(tx, Msg::DrawEnv);
 

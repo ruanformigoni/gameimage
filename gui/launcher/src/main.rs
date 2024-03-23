@@ -1,7 +1,6 @@
-#![feature(proc_macro_hygiene, stmt_expr_attributes)]
+#![feature(let_chains, proc_macro_hygiene, stmt_expr_attributes)]
 
 use std::env;
-use std::thread;
 
 // Gui
 use fltk::{
@@ -90,27 +89,6 @@ pub fn new() -> Self
   }
 } // fn: new }}}
 
-// fn: frame_switcher {{{
-fn frame_switcher(&self)
-{
-  // Fetch game entries
-  let vec_entry = mounts::mounts().unwrap_or(vec![]);
-  if vec_entry.is_empty()
-  {
-    frame::fail::new(dimm::width(), dimm::height(), dimm::border());
-    return;
-  } // if
-
-  // Update env
-  let (path_root, path_icon, path_boot) = vec_entry.first().unwrap();
-  env::set_var("GIMG_LAUNCHER_ROOT", path_root.to_str().unwrap_or(""));
-  env::set_var("GIMG_LAUNCHER_IMG", path_icon.to_str().unwrap_or(""));
-  env::set_var("GIMG_LAUNCHER_BOOT", path_boot.to_str().unwrap_or(""));
-
-  // Create initial cover frame
-  frame::cover::new(self.tx.clone(), 0, 0);
-} // fn: frame_switcher }}}
-
 // fn redraw() {{{
 fn redraw(&mut self, msg: Msg)
 {
@@ -140,67 +118,80 @@ fn redraw(&mut self, msg: Msg)
   self.wind.end();
 } // fn: redraw }}}
 
-} // impl: Gui }}}
-
-// impl: Drop for Gui {{{
-impl Drop for Gui
+// init() {{{
+fn init(&mut self)
 {
-  fn drop(&mut self)
+  // Fetch game entries
+  if let Ok(vec_entry) = mounts::mounts()
   {
-    self.wind.make_resizable(false);
-    self.wind.end();
-    self.wind.show();
+    // Create initial cover frame
+    self.tx.send(common::Msg::DrawCover);
+    // Update env
+    let (path_root, path_icon, path_boot) = vec_entry.first().unwrap();
+    env::set_var("GIMG_LAUNCHER_ROOT", path_root.to_str().unwrap_or(""));
+    env::set_var("GIMG_LAUNCHER_IMG", path_icon.to_str().unwrap_or(""));
+    env::set_var("GIMG_LAUNCHER_BOOT", path_boot.to_str().unwrap_or(""));
+  } // if
+  else
+  {
+    frame::fail::new(dimm::width(), dimm::height(), dimm::border());
+  } // else
 
-    while self.app.wait()
+  self.wind.make_resizable(false);
+  self.wind.end();
+  self.wind.show();
+
+  while self.app.wait()
+  {
+    match self.rx.recv()
     {
-      match self.rx.recv()
+      Some(common::Msg::WindActivate) =>
       {
-        Some(common::Msg::WindActivate) =>
-        {
-          let children = self.wind.children();
-          for i in 0..children {
-            let mut widget = self.wind.child(i).unwrap();
-            widget.activate();
-          }
-          app::flush();
-          app::awake();
+        let children = self.wind.children();
+        for i in 0..children {
+          let mut widget = self.wind.child(i).unwrap();
+          widget.activate();
         }
-        Some(common::Msg::WindDeactivate) =>
+        app::flush();
+        app::awake();
+      }
+      Some(common::Msg::WindDeactivate) =>
+      {
+        let children = self.wind.children();
+        for i in 0..children
         {
-          let children = self.wind.children();
-          for i in 0..children
-          {
-            let mut widget = self.wind.child(i).unwrap();
-            widget.deactivate();
-          }
-          app::flush();
-          app::awake();
+          let mut widget = self.wind.child(i).unwrap();
+          widget.deactivate();
         }
-        Some(Msg::Launch) =>
+        app::flush();
+        app::awake();
+      }
+      Some(Msg::Launch) =>
+      {
+        let clone_tx = self.tx.clone();
+        clone_tx.send(Msg::WindDeactivate);
+        std::thread::spawn(move ||
         {
-          let clone_tx = self.tx.clone();
-          clone_tx.send(Msg::WindDeactivate);
-          std::thread::spawn(move ||
-          {
-            let _ =  std::process::Command::new("sh")
-              .args(["-c", "$GIMG_LAUNCHER_BOOT"])
-              .stdout(std::process::Stdio::inherit())
-              .stderr(std::process::Stdio::inherit())
-              .spawn();
-            clone_tx.send(Msg::DrawCover);
-          });
-        }
-        Some(Msg::Quit) =>
-        {
-          app::quit();
-          app::flush();
-        }
-        Some(value) => self.redraw(value),
-        None => (),
-      } // match
-    } // while
-  }
-} // }}}
+          let _ =  std::process::Command::new("sh")
+            .args(["-c", "$GIMG_LAUNCHER_BOOT"])
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .spawn();
+          clone_tx.send(Msg::DrawCover);
+        });
+      }
+      Some(Msg::Quit) =>
+      {
+        app::quit();
+        app::flush();
+      }
+      Some(value) => self.redraw(value),
+      None => (),
+    } // match
+  } // while
+} // init() }}}
+
+} // impl: Gui }}}
 
 // fn: theme {{{
 fn theme()
@@ -218,7 +209,7 @@ fn main()
   // Set theme
   theme();
 
-  Gui::new().frame_switcher();
+  let _ = Gui::new().init();
 } // }}}
 
 // cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_PLATFORM=retroarch GIMG_PKG_TYPE=flatimage GIMG_LAUNCHER_NAME=prostreet GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release

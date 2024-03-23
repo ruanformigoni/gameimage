@@ -7,7 +7,6 @@ use fltk::{
   button::Button,
   widget::Widget,
   group::PackType,
-  prelude::WidgetExt,
   enums::FrameType,
   frame::Frame,
   image::SharedImage,
@@ -16,6 +15,7 @@ use fltk::{
 use crate::svg;
 use crate::dimm;
 use crate::common;
+use crate::mounts;
 use common::Msg;
 
 pub struct RetFrameCover
@@ -90,6 +90,22 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   btn_left.set_frame(FrameType::BorderBox);
   btn_left.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_list().as_str()).unwrap()));
   btn_left.emit(tx, Msg::DrawMenu);
+
+  // Button in the middle
+  let mut btn_middle = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .below_of(&frame_base, -dimm::height_button_rec())
+    .center_x(&frame_base);
+  btn_middle.set_pos(btn_middle.x(), btn_middle.y() - dimm::border());
+  btn_middle.set_frame(FrameType::BorderBox);
+  btn_middle.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_switch().as_str()).unwrap()));
+  btn_middle.emit(tx, Msg::DrawSelector);
+  btn_middle.hide();
+  // Only show switch button in case there is more than one game
+  if let Ok(vec_entry) = mounts::mounts() && vec_entry.len() > 1
+  {
+    btn_middle.show();
+  } // if
 
   // Button right aligned
   let mut btn_right = Button::default()

@@ -6,7 +6,6 @@ use fltk::{
   widget::Widget,
   button::Button,
   group::{PackType,Scroll},
-  prelude::WidgetExt,
   enums::{Align,FrameType},
   frame::Frame,
 };
