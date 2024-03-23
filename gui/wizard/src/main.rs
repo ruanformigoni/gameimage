@@ -144,11 +144,15 @@ fn redraw(&mut self, msg : Msg)
     }
     Msg::DrawLinuxRom =>
     {
-      wizard::linux::rom(self.tx, "Install/Test the Application(s)");
+      wizard::linux::rom(self.tx, "Install the Application");
+    }
+    Msg::DrawLinuxDefault =>
+    {
+      wizard::linux::default(self.tx, "Select the Main Binary");
     }
     Msg::DrawLinuxTest =>
     {
-      wizard::linux::test(self.tx, "Install/Test the Application(s)");
+      wizard::linux::test(self.tx, "Test the Application");
     }
     Msg::DrawLinuxCompress =>
     {
@@ -349,8 +353,8 @@ fn init(&mut self)
   // Set log window to the left of the main window
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
-  self.tx.send(Msg::DrawLinuxRom);
-  // self.tx.send(Msg::DrawWelcome);
+  // self.tx.send(Msg::DrawLinuxDefault);
+  self.tx.send(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages

@@ -35,7 +35,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     .bottom_of(&frame_content, - dimm::border())
     .center_x(&frame_content)
     .with_focus(false);
-  btn_menu.add_choice("wine|retroarch|pcsx2|rpcs3|ryujinx");
+  btn_menu.add_choice("linux|wine|retroarch|pcsx2|rpcs3|ryujinx");
 
   // Create callback with descriptions
   let buffer = TextBuffer::default();
@@ -55,6 +55,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     clone_buffer.remove(0, clone_buffer.length());
     match str_platform.as_str()
     {
+      "linux" => clone_buffer.insert(0, common::STR_DESC_LINUX),
       "wine" => clone_buffer.insert(0, common::STR_DESC_WINE),
       "retroarch" => clone_buffer.insert(0, common::STR_DESC_RETR),
       "pcsx2" => clone_buffer.insert(0, common::STR_DESC_PCSX2),

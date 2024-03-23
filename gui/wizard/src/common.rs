@@ -32,6 +32,7 @@ pub enum Msg
   DrawLinuxName,
   DrawLinuxIcon,
   DrawLinuxRom,
+  DrawLinuxDefault,
   DrawLinuxTest,
   DrawLinuxCompress,
 
@@ -81,6 +82,8 @@ pub enum Msg
 }
 
 // Constants {{{
+pub const STR_DESC_LINUX : &str = "GameImage enhances the Linux gaming experience by offering unparalleled portability and compatibility. In Linux-native games, the tool repackages your favorite titles, ensuring they run flawlessly across a myriad of Linux distributions. Whether you’re facing library incompatibilities or missing dependencies, GameImage bridges the gap, so you can enjoy your games without the hassle. Embrace the freedom to play your way, on any Linux environment, with GameImage.";
+
 pub const STR_DESC_WINE : &str = "Wine is a program which allows running Microsoft Windows programs (including DOS, Windows 3.x, Win32, and Win64 executables) on Unix. It consists of a program loader which loads and executes a Microsoft Windows binary, and a library (called Winelib) that implements Windows API calls using their Unix, X11 or Mac equivalents.  The library may also be used for porting Windows code into native Unix executables. Wine is free software, released under the GNU LGPL.";
 
 pub const STR_DESC_RETR : &str = "RetroArch is a frontend for emulators, game engines and media players. It enables you to run classic games on a wide range of computers and consoles through its slick graphical interface. Settings are also unified so configuration is done once and for all. In addition to this, you are able to run original game discs (CDs) from RetroArch. RetroArch has advanced features like shaders, netplay, rewinding, next-frame response times, runahead, machine translation, blind accessibility features, and more!";
@@ -135,6 +138,7 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
 
   match env::var("GIMG_PLATFORM")?.to_lowercase().as_str()
   {
+    "linux"      => Ok(Msg::DrawLinuxName),
     "wine"      => Ok(Msg::DrawWineName),
     "retroarch" => Ok(Msg::DrawRetroarchName),
     "pcsx2"     => Ok(Msg::DrawPcsx2Name),

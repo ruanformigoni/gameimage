@@ -36,6 +36,17 @@ pub struct Term
   pub term : SimpleTerminal,
 } // struct Term }}}
 
+impl Drop for Term
+{
+
+  // drop() {{{
+  fn drop(&mut self)
+  {
+    self.kill(self.opt_proc_thread.clone());
+  } // drop() }}}
+
+} // impl
+
 impl Term
 {
 
