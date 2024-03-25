@@ -388,19 +388,24 @@ pub fn icon(tx: Sender<common::Msg>
       {
         let _  = std::fs::remove_dir_all(&clone_path_dir_images);
         let _  = std::fs::create_dir_all(&clone_path_dir_images);
-        // Returns the urls of the search results
-        if let Ok(_image_urls) = image_search::blocking::urls(clone_args.clone())
-        // Returns the search results as Image structs
-        && let Ok(_images) = image_search::blocking::search(clone_args.clone())
-        // Downloads the search results and returns  the paths to the files
-        && let Ok(_paths) = image_search::blocking::download(clone_args)
+        // Try this 10 times, sometimes it doesnt work, idk why
+        for _ in 1..10
         {
-          clone_output_status.set_value("Download successful");
-        } // if
-        else
-        {
-          clone_output_status.set_value("Download failed, try again");
-        } // else
+          // Returns the urls of the search results
+          if let Ok(_image_urls) = image_search::blocking::urls(clone_args.clone())
+          // Returns the search results as Image structs
+          && let Ok(_images) = image_search::blocking::search(clone_args.clone())
+          // Downloads the search results and returns  the paths to the files
+          && let Ok(_paths) = image_search::blocking::download(clone_args.clone())
+          {
+            clone_output_status.set_value("Download successful");
+            break;
+          } // if
+          else
+          {
+            clone_output_status.set_value("Download failed, try again");
+          } // else
+        } // for
 
         tx.send(msg_curr);
       });
