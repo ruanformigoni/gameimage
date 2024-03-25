@@ -334,8 +334,8 @@ void boot(int argc, char** argv)
   // Start log
   ns_log::init(argc, argv, path_dir_self / "gameimage.log");
 
-  // Adjust environment
-  ns_env::set("LC_ALL", "C", ns_env::Replace::N);
+  // // Adjust environment
+  // ns_env::set("LC_ALL", "C", ns_env::Replace::N);
 
   // Flatimage distribution
   ns_log::write('i', "FlatImage distribution: ", ns_env::get("FIM_DIST"));
