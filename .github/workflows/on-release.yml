@@ -3,7 +3,6 @@
 name: linux-x86_64
 
 on:
-  workflow_dispatch:
   release:
     types: [ created, edited ]
 
