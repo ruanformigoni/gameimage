@@ -29,16 +29,16 @@ mkdir -p "$BIN_DIR"
 # Compile GUI
 #
 
-# Compile wizard, patch, and package with makeself
-docker build . -t gameimage-wizard:alpine -f deploy/Dockerfile.alpine.wizard
-docker run --rm -v "$(pwd)":/workdir gameimage-wizard:alpine cp -r /dist/makeself-wizard /workdir
-cp -fr ./makeself-wizard/. "$BIN_DIR"
-
 # Launcher does not need to be static since it runs inside the arch container
 docker build . -t gameimage-launcher:arch -f deploy/Dockerfile.arch.launcher
 docker run --rm -v "$(pwd)":/workdir gameimage-launcher:arch cp /dist/launcher /workdir
 cp -fv ./launcher "$BIN_DIR"/gameimage-launcher
 rm -f ./launcher
+
+# Compile wizard, patch, and package with makeself
+docker build . -t gameimage-wizard:alpine -f deploy/Dockerfile.alpine.wizard
+docker run --rm -v "$(pwd)":/workdir gameimage-wizard:alpine cp -r /dist/makeself-wizard /workdir
+cp -fr ./makeself-wizard/. "$BIN_DIR"
 
 # Create backend
 docker build . -t gameimage-backend:alpine -f deploy/Dockerfile.alpine.backend

@@ -2,9 +2,9 @@ FROM archlinux:latest
 
 # Update
 RUN pacman -Sy --noconfirm
-RUN cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.ref
-RUN pacman -S pacman-contrib --noconfirm
-RUN rankmirrors -n 6 /etc/pacman.d/mirrorlist.ref > /etc/pacman.d/mirrorlist
+RUN pacman-key --init
+RUN pacman -S --noconfirm archlinux-keyring
+RUN pacman -Syu --noconfirm
 
 # Install dependencies
 RUN pacman -S --noconfirm autoconf automake binutils bison debugedit fakeroot file findutils flex gawk gcc gettext grep groff gzip libtool m4 make patch pkgconf sed sudo texinfo which git cmake gtk3 
