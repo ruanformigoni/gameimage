@@ -158,11 +158,11 @@ chmod +x "$BUILD_DIR"/app/start.sh
 # Include fonts
 # # Copy from container
 mkdir -p "$BUILD_DIR"/app/usr/share
-docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /usr/share/fonts "$BUILD_DIR"/app/usr/share
-docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/usr/share
+docker run --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /usr/share/fonts "$BUILD_DIR"/app/usr/share
+docker run --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/usr/share
 mkdir -p "$BUILD_DIR"/app/etc
-docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /etc/fonts "$BUILD_DIR"/app/etc
-docker run -it --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/etc
+docker run --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine cp -Lr /etc/fonts "$BUILD_DIR"/app/etc
+docker run --rm -v"$BUILD_DIR":"$BUILD_DIR" gameimage-backend:alpine chown -R "$(id -u)":"$(id -u)" "$BUILD_DIR"/app/etc
 # # Patch custom search path
 sed -i 's|/usr/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
 sed -i 's|/usr/local/share/fonts|/tmp/gameimage/usr/share/fonts|' "$BUILD_DIR"/app/etc/fonts/fonts.conf
