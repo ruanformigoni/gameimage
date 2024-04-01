@@ -1,0 +1,68 @@
+# This is a basic workflow to help you get started with Actions
+
+name: linux-x86_64
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ created, edited ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build Package
+      run: |
+        # Install tools
+        sudo apt install -y jq wget tar xz-utils pv git pcregrep
+        # Custom packages
+        mkdir -p bin
+        export PATH="$(pwd)/bin:$PATH"
+        wget -q --show-progress --progress=dot:binary -O bin/jq \
+          https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux-amd64
+        chmod +x ./bin/*
+        # Build packages
+        ( HOME="$(pwd)" FIM_DEBUG=1 ./deploy/makeself-gameimage.sh )
+        # Create dist folder
+        mkdir -p dist
+        mv ./build/gameimage.run dist
+        # Create SHA for gameimage.run
+        ( cd dist && sha256sum gameimage.run > gameimage.run.sha256sum )
+
+    - name: Set permissions for dist directory
+      run: |
+        sudo chown -R "$(id -u)":"$(id -g)" dist/
+        sudo chmod -R 766 dist/
+
+    - name: Upload artifact to release
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: gameimage
+        path: dist
+
+    - name: Compute Short SHA
+      id: ssha
+      run: |
+        echo "ssha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+    outputs:
+      ssha: ${{ steps.ssha.outputs.ssha }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: gameimage
+          path: dist
+      - name: Upload to release
+        uses: fnkr/github-action-ghr@v1
+        env:
+          GHR_PATH: dist/
+          GHR_REPLACE: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

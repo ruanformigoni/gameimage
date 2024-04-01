@@ -10,7 +10,8 @@ RUN apk update
 RUN apk add git wget curl patchelf py3-pip pipx file build-base cmake \
   fuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev pango \
   pango-dev libayatana-appindicator libayatana-appindicator-dev gtk+3.0-dev \
-  bash fuse fuse3 zlib-static glib-static cairo-static lddtree font-noto
+  bash fuse fuse3 zlib-static glib-static cairo-static lddtree font-noto \
+  openssl-dev
 
 # Symlink compilers
 RUN ln -sfT /usr/bin/gcc /usr/bin/musl-gcc
@@ -28,7 +29,7 @@ ENV PATH="/tools:$PATH"
 ENV RUSTFLAGS='-C target-feature=-crt-static'
 
 # Install rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
 
 # Update env
 ENV PATH="/root/.cargo/bin:$PATH"
