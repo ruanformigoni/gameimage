@@ -191,7 +191,7 @@ inline void wait(fs::path path_file)
     // Update elapsed time
     elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start);
 
-    fmt::println("Elapsed: {}", elapsed.count());
+    ns_log::write('i', "Elapsed: ", elapsed.count());
 
     // Check if has passed limit
     if ( elapsed >= std::chrono::seconds{1800} )
