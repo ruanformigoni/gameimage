@@ -194,7 +194,7 @@ inline void wait(fs::path path_file)
     fmt::println("Elapsed: {}", elapsed.count());
 
     // Check if has passed limit
-    if ( elapsed >= std::chrono::seconds{30} )
+    if ( elapsed >= std::chrono::seconds{1800} )
     {
       std::ranges::for_each(pids, [](pid_t pid)
       {
