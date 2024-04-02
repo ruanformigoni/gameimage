@@ -70,13 +70,22 @@ Download the latest `gameimage.run` file in the [releases](https://github.com/ru
 
 https://github.com/ruanformigoni/gameimage/assets/18180693/208c41dd-2454-484a-a30f-8b711e94b41b
 
+[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-download.mp4)
+
 ## Tutorials
 
 ### Wine Single
+
 https://github.com/ruanformigoni/gameimage/assets/18180693/bf29fc74-399d-4068-bffc-0acb48ad1e89
 
+[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine-ubuntu.mp4)
+
+
 ### Wine Multiple
+
 https://github.com/ruanformigoni/gameimage/assets/18180693/2103cd47-728a-4a54-b2b8-93409277039f
+
+[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine-multi.mp4)
 
 ## FlatImage
 
