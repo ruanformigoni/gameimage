@@ -140,7 +140,7 @@ pub fn icon(tx: Sender<common::Msg>
         *lock = lock.from_str(label.as_str());
       } // if
     });
-    menu_source.add_choice(IconFrame::Web.as_str());
+    // menu_source.add_choice(IconFrame::Web.as_str());
     menu_source.add_choice(IconFrame::Local.as_str());
     menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
 
@@ -372,19 +372,25 @@ pub fn icon(tx: Sender<common::Msg>
         for _ in 1..10
         {
           // Returns the urls of the search results
-          if let Ok(_image_urls) = image_search::blocking::urls(clone_args.clone())
+          let _image_urls = match image_search::blocking::urls(clone_args.clone())
+          {
+            Ok(e) => e,
+            Err(e) => { log!("Could not fetch image url with error: {}", e); continue; }
+          }; // match
+
           // Returns the search results as Image structs
-          && let Ok(_images) = image_search::blocking::search(clone_args.clone())
+          let _images = match image_search::blocking::search(clone_args.clone())
+          {
+            Ok(e) => e,
+            Err(e) => { log!("Could not search images with error: {}", e); continue; }
+          }; // match
+
           // Downloads the search results and returns  the paths to the files
-          && let Ok(_paths) = image_search::blocking::download(clone_args.clone())
+          let _paths = match image_search::blocking::download(clone_args.clone())
           {
-            clone_output_status.set_value("Download successful");
-            break;
-          } // if
-          else
-          {
-            clone_output_status.set_value("Download failed, try again");
-          } // else
+            Ok(e) => { clone_output_status.set_value("Download successful"); e }
+            Err(e) => { log!("Failure to download with error {}", e); continue }
+          }; // if
         } // for
 
         tx.send(msg_curr);
@@ -399,11 +405,12 @@ pub fn icon(tx: Sender<common::Msg>
       if fltk::app::event_key() == fltk::enums::Key::Enter
       {
         clone_f_callback_search();
+        fltk::app::awake();
       }
     });
 
     let mut clone_f_callback_search = f_callback_search.clone();
-    btn_search.set_callback(move |_| { clone_f_callback_search() });
+    btn_search.set_callback(move |_| { clone_f_callback_search(); fltk::app::awake(); });
 
 
   } // else
