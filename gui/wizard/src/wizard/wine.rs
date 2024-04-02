@@ -277,14 +277,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
       // Label with file name
       let mut output = output::Output::default()
-        .with_size(frame_list.width() - dimm::width_button_rec()*2 - dimm::border()*3, dimm::height_button_wide())
+        .with_size(frame_list.width() - dimm::width_button_rec()*3 - dimm::border()*4, dimm::height_button_wide())
         .right_of(&btn_check, dimm::border());
       let _ = output.insert(&item.string());
 
       // Button to open file in file manager
       let clone_item = item.clone();
       let mut clone_output_status = ret_frame_footer.output_status.clone();
-      let _ = button::Button::default()
+      let btn_folder = button::Button::default()
         .with_focus(false)
         .with_svg(svg::icon_folder(1.0).as_str())
         .with_size(dimm::width_button_rec(), dimm::height_button_rec())
@@ -320,6 +320,39 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
               .arg(&path_dir_executable.string())
               .spawn();
         });
+
+      let clone_tx = tx.clone();
+      let _btn_run = button::Button::default()
+        .with_focus(false)
+        .with_svg(svg::icon_play(1.0).as_str())
+        .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+        .right_of(&btn_folder, dimm::border())
+        .with_callback(move |_|
+        {
+          // Execute wine
+          let clone_item = item.clone();
+          clone_tx.send(common::Msg::WindDeactivate);
+          std::thread::spawn(move ||
+          {
+            // Set the selected binary as default
+            if common::gameimage_sync(vec!["select", "rom", &clone_item.string()]) != 0
+            {
+              log!("Could not change default executable for test");
+              clone_tx.send(common::Msg::WindActivate);
+              return;
+            } // else
+
+            // Test the selected binary
+            if common::gameimage_sync(vec!["test"]) != 0
+            {
+              log!("Could not test selected executable");
+              clone_tx.send(common::Msg::WindActivate);
+              return;
+            } // else
+
+            clone_tx.send(common::Msg::WindActivate);
+          });
+        });
     } // for
   } // if
 
@@ -328,7 +361,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Add new item
   let clone_tx = tx.clone();
-  let btn_add = Button::default()
+  let _btn_add = Button::default()
     .with_color(Color::Green)
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_frame(FrameType::RoundedFrame)
@@ -369,60 +402,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         clone_tx.send(common::Msg::DrawWineRom);
       });
     });
-
-  // Run the selected application
-  let mut btn_run = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border());
-  btn_run.set_frame(FrameType::RoundedFrame);
-  btn_run.visible_focus(false);
-  btn_run.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_play(1.0).as_str()).unwrap()));
-  btn_run.set_color(Color::Green);
-  let clone_tx = tx.clone();
-  let clone_vec_radio_path = vec_radio_path.clone();
-  btn_run.set_callback(move |_|
-  {
-    let vec_radio_path = match clone_vec_radio_path.lock()
-    {
-      Ok(vec_radio_path) => vec_radio_path,
-      Err(e) => { log!("Could not open list of radio buttons: {}", e); return; },
-    }; // match
-
-    let path_dir_selected = if let Some(entry) = vec_radio_path.clone().into_iter().find(|e| e.0.is_toggled())
-      && let Ok(project) = db::project::current()
-      && let Ok(path_dir_project) = project.get_dir_self()
-    {
-      path_dir_project.join(entry.1)
-    } // if
-    else
-    {
-      log!("Could not execute selected entry");
-      return;
-    }; // else
-
-    // Execute wine
-    clone_tx.send(common::Msg::WindDeactivate);
-    std::thread::spawn(move ||
-    {
-      // Set the selected binary as default
-      if common::gameimage_sync(vec!["select", "rom", &path_dir_selected.string()]) != 0
-      {
-        log!("Could not change default executable for test");
-        clone_tx.send(common::Msg::WindActivate);
-        return;
-      } // else
-
-      // Test the selected binary
-      if common::gameimage_sync(vec!["test"]) != 0
-      {
-        log!("Could not test selected executable");
-        clone_tx.send(common::Msg::WindActivate);
-        return;
-      } // else
-
-      clone_tx.send(common::Msg::WindActivate);
-    });
-  });
 
   // Go to next frame iff a default executable was selected
   // ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineCompress);
