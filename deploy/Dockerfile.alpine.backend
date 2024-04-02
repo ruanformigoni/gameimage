@@ -32,8 +32,7 @@ WORKDIR /gameimage/src
 # Compile
 # # This will fail ;(, official xz is not available after the github repo was taken down
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
-RUN sed -ie 's|url:.*|url: https://master.dl.sourceforge.net/project/lzmautils/xz-5.4.5.tar.xz|' \
-  "/root/.conan2/p/xz_ute033bfcacc0c2/e/conandata.yml"
+RUN cp ../deploy/conandata.yml /root/.conan2/p/xz_*/e/conandata.yml
 
 # # This will fail ;(, needs to run, patch, run again
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
