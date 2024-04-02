@@ -104,7 +104,7 @@ pub fn icon(tx: Sender<common::Msg>
   , msg_curr : common::Msg) -> Icon
 {
   // Keep track of which frame to draw (search web or local)
-  static ICON_FRAME : once_cell::sync::Lazy<Mutex<IconFrame>> = once_cell::sync::Lazy::new(|| Mutex::new(IconFrame::Web));
+  static ICON_FRAME : once_cell::sync::Lazy<Mutex<IconFrame>> = once_cell::sync::Lazy::new(|| Mutex::new(IconFrame::Local));
 
   // Save previously selected icon path
   static OPTION_PATH_FILE_ICON : once_cell::sync::Lazy<Arc<Mutex<Option<PathBuf>>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
