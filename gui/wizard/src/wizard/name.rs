@@ -139,11 +139,13 @@ pub fn name(tx: Sender<common::Msg>
         let msg = format!("Could not execute backend");
         clone_output_status.set_value(&msg);
         log!("{}", &msg);
+        fltk::app::awake();
         return;
       } // if
 
       // Go to next frame
       clone_tx.send(clone_msg_next);
+      fltk::app::awake();
     });
   });
 } // }}}
