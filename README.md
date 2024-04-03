@@ -14,6 +14,10 @@
 
 ## About
 
+https://github.com/ruanformigoni/gameimage/assets/18180693/7690e65a-aed9-4bfa-aa98-3ffd57e20e65
+
+---
+
 ![](./doc/img/banner.svg)
 
 Game emulation is on the rise, with years of contribution from the community and
