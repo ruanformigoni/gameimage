@@ -433,7 +433,7 @@ inline void icon(std::string str_file_icon)
   int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
 
   // Resize
-  gil::rgb8_image_t img_resized(width_new, height_new);
+  gil::rgba8_image_t img_resized(width_new, height_new);
   ns_log::write('i', "Image  aspect ratio is ", std::to_string(src_aspect));
   ns_log::write('i', "Target aspect ratio is ", std::to_string(dst_aspect));
   ns_log::write('i', "Resizing image to ", std::to_string(width_new), "x", std::to_string(height_new));
@@ -451,10 +451,20 @@ inline void icon(std::string str_file_icon)
   gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
 
   // Save cropped image as grayscale
-  gil::gray8_image_t img_gray(view_img_cropped.dimensions());
-  copy_pixels(color_converted_view<gil::gray8_pixel_t>(view_img_cropped), view(img_gray));
   ns_log::write('i', "Writing grayscale image to ", path_file_icon_gray_dst);
-  gil::write_view(path_file_icon_gray_dst, const_view(img_gray), gil::png_tag());
+  gil::rgba8_image_t img_gray(view_img_cropped.dimensions());
+  auto view_gray = gil::view(img_gray);
+  for (int y = 0; y < view_img_cropped.height(); ++y)
+  {
+    for (int x = 0; x < view_img_cropped.width(); ++x)
+    {
+      auto pixel = view_img_cropped(x, y);
+      auto gray_val = static_cast<uint8_t>(0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]);
+      auto alpha_val = pixel[3];
+      view_gray(x,y) = gil::rgba8_pixel_t(gray_val, gray_val, gray_val, alpha_val);
+    } // for
+  } // for
+  gil::write_view(path_file_icon_gray_dst, view_gray, gil::png_tag());
 
   // Save icon path in project database
   ns_db::from_file_project([&](auto&& db)
