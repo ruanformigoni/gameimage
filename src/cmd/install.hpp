@@ -402,17 +402,19 @@ inline void icon(std::string str_file_icon)
   );
 
   ns_log::write('i', "Reading image from ", path_file_icon_src);
-  gil::rgb8_image_t img; 
+  gil::rgba8_image_t img; 
   switch ( image_format )
   {
     // Convert jpg to png
     case ns_enum::ImageFormat::JPG:
     case ns_enum::ImageFormat::JPEG:
-      gil::read_image(path_file_icon_src, img, gil::jpeg_tag());
+      ns_log::write('i', "Reading as 'jpg'");
+      gil::read_and_convert_image(path_file_icon_src, img, gil::jpeg_tag());
       break;
     // Copy
     case ns_enum::ImageFormat::PNG:
-      gil::read_image(path_file_icon_src, img, gil::png_tag());
+      ns_log::write('i', "Reading as 'png'");
+      gil::read_and_convert_image(path_file_icon_src, img, gil::png_tag());
       break;
   } // switch
 
