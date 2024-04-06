@@ -6,7 +6,9 @@
 #pragma once
 
 #include <filesystem>
+#include <numeric>
 #include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 #include "../common.hpp"
 
@@ -46,6 +48,47 @@ Ret<U> should_throw(T&& t)
 
   return Ret(U{}, false, t);
 } // should_throw() }}}
+
+// ends_with() {{{
+// Check if path ends_with components of path_sub
+// Returns the initial parts of the src path
+template<bool _throw> 
+Ret<fs::path> ends_with(fs::path const& std_path_src, fs::path const& std_path_sub)
+{
+  boost::filesystem::path path_src{std_path_src.string()};
+  boost::filesystem::path path_sub{std_path_sub.string()};
+
+  // Check component cound
+  if ( path_src.size() < path_sub.size() )
+  {
+    ns_log::write('d', "SrcPath: ", path_src);
+    ns_log::write('d', "Subpath: ", path_sub);
+    return should_throw<_throw, fs::path>("Subpath has more components than SrcPath");
+  } // if
+
+  // Consume sub_path
+  auto pair_it = std::mismatch(path_src.rbegin()
+    , path_src.rend()
+    , path_sub.rbegin()
+    , path_sub.rend()
+  );
+
+  // Consumed all path_sub, path_src contains subpath
+  if ( pair_it.second == path_sub.rend() )
+  {
+    // Get number of componets to use in resulting path
+    auto components = std::distance(pair_it.first, path_src.rend());
+    // Create output path
+    auto path_src_slice = std::accumulate(path_src.begin()
+      , std::next(path_src.begin(), components)
+      , boost::filesystem::path{}, std::divides{}
+    );
+    // Return as std::filesystem::path
+    return Ret(fs::path(path_src_slice.string()), true, "");
+  } // if
+
+  return Ret(fs::path{}, false, "");
+} // function: ends_with }}}
 
 // canonical() {{{
 // Try to make path canonical

@@ -128,6 +128,14 @@ class Fetch final : public Parser
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::FETCH;
+      // Set custom base url
+      m_parser->add_argument("--url-base")
+        .action([&](std::string const& s){ m_map_option_value["--url-base"]=s; })
+        .help("Custom url for the base");
+      // Set custom dwarfs url
+      m_parser->add_argument("--url-dwarfs")
+        .action([&](std::string const& s){ m_map_option_value["--url-dwarfs"]=s; })
+        .help("Custom url to for dwarfs");
       // Set platform
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })

@@ -14,13 +14,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <numeric>
 
 #include "../lib/log.hpp"
+#include "../std/filesystem.hpp"
 
 namespace ns_tar
 {
 
-namespace 
+namespace fs = std::filesystem;
+
+namespace
 {
 
 // copy_data() {{{
@@ -52,7 +56,70 @@ inline int copy_data(struct archive *ar, struct archive *aw)
   } // for
 } // copy_data() }}}
 
-} // namespace 
+} // namespace
+
+// struct Opts {{{
+struct Opts
+{
+  uint32_t strip_components = 0;
+  std::optional<std::string> const& opt_path_file_to_extract = std::nullopt;
+  std::optional<std::string> const& opt_path_dir_to_extract = std::nullopt;
+};
+// }}}
+
+// find() {{{
+// Finds queried path inside the tarball
+// Returns the parent path
+// Example:
+//   tarball contains: retro/file/hello/world.bin
+//   query contains  : hello/world.bin
+//   returns         : retro/file
+inline std::optional<fs::path> find(fs::path const& path_file_tarball, fs::path const& path_query)
+{
+  struct archive *a;
+  struct archive_entry *entry;
+  int r;
+
+  // Create new archive
+  a = archive_read_new();
+
+  // Enable all formats
+  archive_read_support_filter_all(a);
+  archive_read_support_format_all(a);
+
+  // Read file
+  r = archive_read_open_filename(a, path_file_tarball.c_str(), 10240);
+
+  // Check for errors
+  if (r != ARCHIVE_OK)
+  {
+    ns_log::write('e', "Failed to open archive ", path_file_tarball);
+    return {};
+  } // if
+
+  // Read entry from archive
+  while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
+  {
+    fs::path path_entry = archive_entry_pathname(entry);
+    if ( auto ret = ns_fs::ns_path::ends_with<false>(path_entry, path_query); ret._bool )
+    {
+      return ret._ret;
+    } // if
+    archive_read_data_skip(a);
+  } // while
+
+  // Free archive
+  r = archive_read_free(a);
+
+  // Check for errors
+  if (r != ARCHIVE_OK)
+  {
+    ns_log::write('e', "Failed to close archive ", path_file_tarball);
+    return {};
+  } // if
+
+  return std::nullopt;
+} // find() }}}
 
 // list() {{{
 inline std::vector<std::string> list(const char* filename)
@@ -101,19 +168,31 @@ inline std::vector<std::string> list(const char* filename)
 } // list() }}}
 
 // extract() {{{
-inline void extract(std::string const& path_file_archive, std::string const& path_file_to_extract)
+inline void extract(std::string const& path_file_archive, Opts const& opts = {})
 {
+  auto f_check_error = [&](int r, struct archive * a)
+  {
+    if (r < ARCHIVE_OK)
+    {
+      std::string string_error = archive_error_string(a);
+      ns_log::write('e', string_error);
+      throw std::runtime_error(string_error);
+    } // if
+
+    if (r < ARCHIVE_WARN)
+    {
+      ns_log::write('e', archive_error_string(a));
+    } // if
+  };
+
   struct archive *a;
   struct archive *ext;
   struct archive_entry *entry;
   int flags;
   int r;
 
-  /* Select which attributes we want to restore. */
-  flags = ARCHIVE_EXTRACT_TIME;
-  flags |= ARCHIVE_EXTRACT_PERM;
-  flags |= ARCHIVE_EXTRACT_ACL;
-  flags |= ARCHIVE_EXTRACT_FFLAGS;
+  // Select which attributes we want to restore
+  flags = ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_ACL | ARCHIVE_EXTRACT_FFLAGS;
 
   // Source archive
   a = archive_read_new();
@@ -142,53 +221,62 @@ inline void extract(std::string const& path_file_archive, std::string const& pat
       break;
     } // if
 
-    if (r < ARCHIVE_OK)
-    {
-      ns_log::write('e', archive_error_string(a));
-    } // if
+    // Check for eror in header
+    f_check_error(r, a);
 
-    if (r < ARCHIVE_WARN)
+    // Only extract specified file
+    if ( fs::path path_entry = archive_entry_pathname(entry);
+      opts.opt_path_file_to_extract.has_value() && path_entry != *opts.opt_path_file_to_extract )
     {
-      return;
-    } // if
-
-    if ( std::string str_entry = archive_entry_pathname(entry); str_entry != path_file_to_extract )
-    {
-      ns_log::write('i', "Ignoring file '", str_entry, "'");
+      ns_log::write('d', "Ignoring file '", path_entry, "'");
       continue;
     } // entry
 
-    r = archive_write_header(ext, entry);
+    // Remove initial components to extract into
+    if ( opts.strip_components > 0 )
+    {
+      fs::path path_entry = archive_entry_pathname(entry);
 
-    if (r < ARCHIVE_OK)
-    {
-      ns_log::write('e', archive_error_string(ext));
-    } // if
-    else if (archive_entry_size(entry) > 0)
-    {
-      r = copy_data(a, ext);
-      if (r < ARCHIVE_OK)
+      auto distance = std::distance(path_entry.begin(), path_entry.end());
+
+      // Check if can strip
+      if ( opts.strip_components >= distance ) { continue; }
+
+      // Create stripped path
+      path_entry = std::accumulate(std::next(path_entry.begin(), opts.strip_components), path_entry.end(), fs::path{}, std::divides{});
+
+      // Check if path is still valid
+      if ( path_entry.empty() ) { continue; }
+
+      // Prepend target path if was specified
+      if ( opts.opt_path_dir_to_extract.has_value() )
       {
-        ns_log::write('e', archive_error_string(ext));
-        return;
-      }
-      if (r < ARCHIVE_WARN)
-      {
-        return;
+        path_entry = *opts.opt_path_dir_to_extract / path_entry;
       } // if
+
+      // Set new path to entry
+      archive_entry_set_pathname(entry, path_entry.c_str());
+    } // entry
+
+    // Write file header
+    r = archive_write_header(ext, entry);
+    // Check for error in write header
+    f_check_error(r, ext);
+
+    // Write file data
+    if (archive_entry_size(entry) > 0)
+    {
+      // copy_data(from, to)
+      r = copy_data(a, ext);
+      // Check write error
+      f_check_error(r, ext);
     } // else if
 
+    // Write out padding required by some formats
     r = archive_write_finish_entry(ext);
+    // Check error
+    f_check_error(r, ext);
 
-    if (r < ARCHIVE_OK)
-    {
-      ns_log::write('e', archive_error_string(ext));
-    } // if
-
-    if (r < ARCHIVE_WARN)
-    {
-      return;
-    } // if
   } // for
   archive_read_close(a);
   archive_read_free(a);
