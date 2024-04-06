@@ -26,3 +26,4 @@ image_search = { version = "0.4.3", features = ["blocking"] }
 tokio = { version = "1", features = ["full"] }
 once_cell = "1.19.0"
 sysinfo = "0.30.7"
+regex = "1.10.3"

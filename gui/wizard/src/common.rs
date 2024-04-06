@@ -39,6 +39,7 @@ pub enum Msg
   DrawWineName,
   DrawWineIcon,
   DrawWineConfigure,
+  DrawWineEnvironment,
   DrawWineRom,
   DrawWineCompress,
 
@@ -265,6 +266,7 @@ pub trait WidgetExtExtra
   fn with_border(&mut self, x_border : i32, y_border : i32) -> Self;
   fn right_bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn top_right_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
@@ -346,6 +348,15 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
     self.set_pos(
         other.x()
       , other.y() + offset
+    );
+    self.clone()
+  }
+
+  fn top_right_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + other.w() - self.w() + offset
+      , other.y()
     );
     self.clone()
   }
@@ -551,6 +562,7 @@ impl VecExt for Vec<&str>
 
 // pub struct ScrollList {{{
 
+#[derive(Clone)]
 pub struct ScrollList
 {
   scroll : fltk::group::Scroll,

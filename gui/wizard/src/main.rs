@@ -174,6 +174,10 @@ fn redraw(&mut self, msg : Msg)
     {
       wizard::wine::configure(self.tx, "Configure Wine");
     }
+    Msg::DrawWineEnvironment =>
+    {
+      wizard::wine::environment(self.tx, "Configure the Environment");
+    }
     Msg::DrawWineRom =>
     {
       wizard::wine::rom(self.tx, "Install/Test the Application(s)");

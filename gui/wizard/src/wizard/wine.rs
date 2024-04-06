@@ -16,7 +16,7 @@ use fltk::{
   output,
   frame::Frame,
   dialog,
-  enums::{FrameType,Color},
+  enums::{FrameType,Color,Align},
 };
 
 use anyhow::anyhow as ah;
@@ -49,6 +49,164 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
     , common::Msg::DrawWineIcon
     , common::Msg::DrawWineConfigure
   );
+} // }}}
+
+// pub fn environment() {{{
+pub fn environment(tx: Sender<common::Msg>, title: &str)
+{
+  //
+  // Main
+  //
+  let ret_frame_header = frame::common::frame_header(title);
+  let ret_frame_footer = frame::common::frame_footer();
+
+  // Configure footer
+  ret_frame_footer.btn_next.clone().hide();
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWineConfigure);
+
+  let frame_content = ret_frame_header.frame_content.clone();
+
+  // Create scrollbar
+  let scroll = common::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
+    , frame_content.h()
+    , frame_content.x()
+    , frame_content.y());
+
+  //
+  // Create entries
+  //
+  let clone_tx = tx.clone();
+  let mut clone_scroll = scroll.clone();
+  let mut f_make_entry = move |key : String, val : String|
+  {
+    let group = fltk::group::Group::default()
+      .with_size(clone_scroll.widget_ref().w() - dimm::border(), dimm::height_button_wide()*2 + dimm::border() * 3);
+
+    group.begin();
+
+    // Setup key widget
+    let mut output_key = fltk::output::Output::default()
+      .with_size(group.w() - dimm::width_button_rec() - dimm::border()*3, dimm::height_button_wide())
+      .with_align(Align::Left | Align::Inside)
+      .with_pos(group.x() + dimm::border(), group.y());
+    output_key.set_value(key.as_str());
+    output_key.set_frame(FrameType::BorderBox);
+    output_key.set_text_size(dimm::height_text());
+    // Setup val widget
+    let mut output_val = fltk::output::Output::default()
+      .with_size(group.w() - dimm::border()*2, dimm::height_button_wide())
+      .with_align(Align::Left | Align::Inside)
+      .below_of(&output_key, dimm::border())
+      .with_frame(FrameType::BorderBox);
+    output_val.set_value(val.as_str());
+    output_val.set_text_size(dimm::height_text());
+    // Erase button
+    let clone_key = key.clone();
+    let clone_tx = clone_tx.clone();
+    let _btn_del = Button::default()
+      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+      .right_of(&output_key, dimm::border())
+      .with_svg(svg::icon_del(1.0).as_str())
+      .with_color(Color::Red)
+      .with_focus(false)
+      .with_callback(move |_|
+    {
+      match db::env::del(clone_key.clone())
+      {
+        Ok(_) => println!("Erased key '{}'", clone_key),
+        Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
+      } // if
+      clone_tx.send(common::Msg::DrawWineEnvironment);
+      fltk::app::awake();
+    });
+    // Separator
+    let mut sep = Frame::default()
+      .below_of(&output_val, dimm::border())
+      .with_size(clone_scroll.widget_ref().width() - dimm::border()*2, 2);
+    sep.set_frame(FrameType::FlatBox);
+    sep.set_color(Color::Black);
+
+    group.end();
+
+    clone_scroll.add(&mut group.as_base_widget(), dimm::border());
+  };
+
+  // Get current database entries
+  if let Ok(entries) = db::env::get()
+  {
+    for db::env::Var{ key, val } in entries.env
+    {
+      f_make_entry(key, val);
+    } // for
+  } // if
+
+  scroll.end();
+
+  // Add var button
+  let mut btn_add = Button::default()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .top_right_of(&frame_content, - dimm::border())
+    .with_border(0, dimm::border())
+    .with_focus(false)
+    .with_align(Align::Inside | Align::Center)
+    .with_label("+");
+  let clone_tx = tx.clone();
+  btn_add.set_frame(FrameType::BorderBox);
+  btn_add.set_label_size(dimm::height_text()*2);
+  btn_add.set_color(Color::Green);
+  btn_add.set_callback(move |_|
+  {
+    let mut wind = fltk::window::Window::default()
+      .with_size(
+          dimm::width_button_wide() * 4 + dimm::border() * 3
+        , dimm::height_button_wide() * 3 + dimm::border() * 4
+      );
+    wind.begin();
+    let input_key = fltk::input::Input::default()
+      .with_pos(wind.w() - dimm::width_button_wide()*3 - dimm::border(), dimm::border())
+      .with_size(dimm::width_button_wide()*3, dimm::height_button_wide())
+      .with_align(Align::Left);
+    let _label_key = Frame::default()
+      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+      .left_of(&input_key, dimm::border())
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Key");
+    let input_value = fltk::input::Input::default()
+      .below_of(&input_key, dimm::border())
+      .with_size(input_key.w(), input_key.h())
+      .with_align(input_key.align());
+    let label_value = Frame::default()
+      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+      .left_of(&input_value, dimm::border())
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Value");
+    let mut btn_ok = Button::default()
+      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+      .below_of(&label_value, dimm::border())
+      .with_label("OK");
+    btn_ok.set_pos(wind.w() / 2 - btn_ok.w() / 2, btn_ok.y());
+    btn_ok.set_color(Color::Green);
+    let mut clone_wind = wind.clone();
+    let clone_input_key = input_key.clone();
+    let clone_input_value = input_value.clone();
+    let clone_tx = clone_tx.clone();
+    btn_ok.set_callback(move |_|
+    {
+      clone_wind.hide();
+      let key = clone_input_key.value();
+      let value = clone_input_value.value();
+      if key.is_empty() { return; }
+      match db::env::set(key.clone(), value.clone())
+      {
+        Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
+        Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
+      } // if
+      clone_tx.send(common::Msg::DrawWineEnvironment);
+      fltk::app::awake();
+    });
+    wind.end();
+    wind.show();
+  });
 } // }}}
 
 // pub fn configure() {{{
@@ -179,7 +337,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let (mut btn, _) = f_add_entry(label.clone().as_base_widget()
+  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
     , "Run a custom wine command"
     , None
   );
@@ -202,6 +360,12 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       });
     } // if
   });
+
+  let (mut btn, _) = f_add_entry(label.clone().as_base_widget()
+    , "Configure environment"
+    , None
+  );
+  btn.emit(tx, common::Msg::DrawWineEnvironment);
 
 } // fn: configure }}}
 
