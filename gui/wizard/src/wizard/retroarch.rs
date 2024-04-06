@@ -5,8 +5,8 @@ use fltk::{
   browser::MultiBrowser,
   button::Button,
   dialog,
-  text,
-  enums::{FrameType,Color},
+  output,
+  enums::{FrameType,Color,Align},
 };
 
 use crate::dimm;
@@ -57,30 +57,20 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let btn_del = install.btn_del.clone();
 
   // Adjust to include the field below
-  frame_list.set_size(frame_list.w(), frame_list.h() - dimm::border() - dimm::height_button_wide());
-
-  // Set label for output field
-  let mut output_default_label = text::TextDisplay::default()
-    .with_width(frame_list.w() / 4)
-    .with_height(dimm::height_button_wide())
-    .below_of(&frame_list, dimm::border())
-    .with_color(Color::BackGround)
-    .with_frame(FrameType::NoBox);
-  output_default_label.set_buffer(text::TextBuffer::default());
-  output_default_label.insert("Default rom:");
+  frame_list.set_size(frame_list.w(), frame_list.h() - dimm::border() - dimm::height_text() - dimm::height_button_wide());
 
   // Show default item below all items
-  let mut output_default = text::TextDisplay::default()
-    .with_width(frame_list.w() - (frame_list.w() / 4))
+  let mut output_default = output::Output::default()
+    .with_width(frame_list.w())
     .with_height(dimm::height_button_wide())
-    .right_of(&output_default_label, 0)
-    .with_color(Color::BackGround)
-    .with_frame(FrameType::NoBox);
-  output_default.set_buffer(text::TextBuffer::default());
+    .below_of(&frame_list, dimm::border() + dimm::height_text())
+    .with_align(Align::Top | Align::Left)
+    .with_label("Default rom:");
+  output_default.deactivate();
   if let Ok(project) = db::project::current()
   && let Ok(path_file_rom) = project.get_path_relative(db::project::EntryName::PathFileRom)
   {
-    output_default.insert(&path_file_rom.file_name_string());
+    let _ = output_default.insert(&path_file_rom.file_name_string());
   } // if
 
   // Update default rom
@@ -152,32 +142,22 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   // Adjust size
   frame_list_installed.set_size(
       frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-    , frame_content.height() / 2 - ( ( dimm::border()*3 + dimm::height_button_wide() ) / 2 )
+    , frame_content.height() / 2 - ( ( dimm::border()*4 + dimm::height_button_wide() + dimm::height_text() ) / 2 )
   );
 
-  // Set label for output field
-  let mut output_default_label = text::TextDisplay::default()
-    .with_width(frame_list_installed.w() / 4)
-    .with_height(dimm::height_button_wide())
+  // Show default item below all items
+  let mut output_default = fltk::output::Output::default()
+    .with_size(frame_list_installed.w(), dimm::height_button_wide())
     .center_of(&frame_content)
     .with_posx_of(&frame_list_installed)
-    .with_color(Color::BackGround)
-    .with_frame(FrameType::NoBox);
-  output_default_label.set_buffer(text::TextBuffer::default());
-  output_default_label.insert("Default core:");
-
-  // Show default item below all items
-  let mut output_default = text::TextDisplay::default()
-    .with_width(frame_list_installed.w() - (frame_list_installed.w() / 4))
-    .with_height(dimm::height_button_wide())
-    .right_of(&output_default_label, 0)
-    .with_color(Color::BackGround)
-    .with_frame(FrameType::NoBox);
-  output_default.set_buffer(text::TextBuffer::default());
+    .with_border(0, dimm::border())
+    .with_align(Align::Top | Align::Left)
+    .with_label("Default core:");
+  output_default.deactivate();
   if let Ok(project) = db::project::current()
   && let Ok(path_file_core) = project.get_path_relative(db::project::EntryName::PathFileCore)
   {
-    output_default.insert(&path_file_core.file_name_string());
+    let _ = output_default.insert(&path_file_core.file_name_string());
   } // if
 
 
@@ -296,7 +276,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   // List of items to install
   let mut frame_list_remote = MultiBrowser::default()
     .with_size_of(&frame_list_installed)
-    .with_posx_of(&output_default_label)
+    .with_posx_of(&frame_list_installed)
     .bottom_of(&frame_content, - dimm::border())
     .with_frame(FrameType::BorderBox);
   frame_list_remote.set_text_size(dimm::height_text());
