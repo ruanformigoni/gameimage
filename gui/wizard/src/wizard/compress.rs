@@ -9,6 +9,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 use crate::log;
 
 // pub fn compress() {{{
@@ -38,7 +39,7 @@ pub fn compress(tx: Sender<common::Msg>
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
     {
@@ -53,11 +54,11 @@ pub fn compress(tx: Sender<common::Msg>
     let _ = term.dispatch(vec![&path_gimg_backend.string(), "compress"]
       , move |code : i32|
       {
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
 
         if code == 0
         {
-          clone_tx.send(common::Msg::DrawCreator);
+          clone_tx.send_awake(common::Msg::DrawCreator);
         } // if
       }
     );

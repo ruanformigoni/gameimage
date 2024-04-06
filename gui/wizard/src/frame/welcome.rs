@@ -17,6 +17,7 @@ use crate::common;
 use crate::log;
 use crate::lib::svg;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 
 // pub fn welcome() {{{
 pub fn welcome(tx: Sender<common::Msg>, title: &str)
@@ -111,7 +112,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    clone_tx.send(common::Msg::DrawPlatform);
+    clone_tx.send_awake(common::Msg::DrawPlatform);
   });
 } // fn: welcome }}}
 

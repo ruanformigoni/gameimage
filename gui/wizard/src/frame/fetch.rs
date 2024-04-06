@@ -17,6 +17,7 @@ use anyhow::anyhow as ah;
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::db;
 use crate::lib::download;
@@ -268,7 +269,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     // Disable GUI
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     let clone_vec_fetch = vec_fetch.clone();
     let clone_output_status = ret_frame_footer.output_status.clone();
@@ -281,11 +282,11 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
           log!("Could not set image path for GIMG_IMAGE with error {}", e);
         } // if
         // Draw package creator
-        clone_tx.send(common::Msg::DrawCreator);
+        clone_tx.send_awake(common::Msg::DrawCreator);
       } // if
 
       // Re-enable GUI
-      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send_awake(common::Msg::WindActivate);
     });
 
     // Export name for expected image path

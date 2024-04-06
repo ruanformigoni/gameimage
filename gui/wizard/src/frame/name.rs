@@ -16,6 +16,7 @@ use crate::log;
 use crate::lib::svg;
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
@@ -134,7 +135,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
     env::set_var("GIMG_FINISH_LOCATION", &path_file_image_dst.string());
 
     // Go to next frame
-    clone_tx.send(common::Msg::DrawFinish);
+    clone_tx.send_awake(common::Msg::DrawFinish);
   });
 } // }}}
 

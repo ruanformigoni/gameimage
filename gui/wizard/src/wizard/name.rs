@@ -12,6 +12,7 @@ use fltk::{
 use crate::dimm;
 use crate::frame;
 use crate::common;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::lib::svg;
 
@@ -120,7 +121,7 @@ pub fn name(tx: Sender<common::Msg>
     }; // else
 
     // Init project
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     let mut clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
@@ -135,17 +136,15 @@ pub fn name(tx: Sender<common::Msg>
         , &image
       ]) != 0
       {
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
         let msg = format!("Could not execute backend");
         clone_output_status.set_value(&msg);
         log!("{}", &msg);
-        fltk::app::awake();
         return;
       } // if
 
       // Go to next frame
-      clone_tx.send(clone_msg_next);
-      fltk::app::awake();
+      clone_tx.send_awake(clone_msg_next);
     });
   });
 } // }}}

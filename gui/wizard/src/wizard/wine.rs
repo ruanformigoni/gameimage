@@ -26,6 +26,7 @@ use crate::db;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::frame;
 use crate::wizard;
 use crate::lib::svg;
@@ -116,8 +117,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
         Ok(_) => println!("Erased key '{}'", clone_key),
         Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
       } // if
-      clone_tx.send(common::Msg::DrawWineEnvironment);
-      fltk::app::awake();
+      clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
     // Separator
     let mut sep = Frame::default()
@@ -201,8 +201,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
         Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
         Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
       } // if
-      clone_tx.send(common::Msg::DrawWineEnvironment);
-      fltk::app::awake();
+      clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
     wind.end();
     wind.show();
@@ -245,7 +244,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    clone_tx.send(common::Msg::DrawWineRom);
+    clone_tx.send_awake(common::Msg::DrawWineRom);
   });
 
   let clone_tx = tx.clone();
@@ -277,7 +276,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     let args_owned : Vec<String> = args.iter().map(|s| s.to_string()).collect();
     btn.set_callback(move |_|
     {
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       let args_owned = args_owned.clone();
       std::thread::spawn(move ||
       {
@@ -286,7 +285,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
         {
           log!("Command exited with non-zero status");
         } // else
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
       });
     });
 
@@ -323,7 +322,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     let some_value = dialog::input_default("Enter the winetricks command to execute", "");
     if let Some(value) = some_value
     {
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
@@ -332,7 +331,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
           log!("Command exited with non zero status");
         } // else
 
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
       });
     } // if
   });
@@ -347,7 +346,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     let some_value = dialog::input_default("Enter the wine command to execute", "");
     if let Some(value) = some_value
     {
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
@@ -356,7 +355,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
           log!("Command exited with non zero status");
         } // else
 
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
       });
     } // if
   });
@@ -495,14 +494,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         {
           // Execute wine
           let clone_item = item.clone();
-          clone_tx.send(common::Msg::WindDeactivate);
+          clone_tx.send_awake(common::Msg::WindDeactivate);
           std::thread::spawn(move ||
           {
             // Set the selected binary as default
             if common::gameimage_sync(vec!["select", "rom", &clone_item.string()]) != 0
             {
               log!("Could not change default executable for test");
-              clone_tx.send(common::Msg::WindActivate);
+              clone_tx.send_awake(common::Msg::WindActivate);
               return;
             } // else
 
@@ -510,11 +509,11 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
             if common::gameimage_sync(vec!["test"]) != 0
             {
               log!("Could not test selected executable");
-              clone_tx.send(common::Msg::WindActivate);
+              clone_tx.send_awake(common::Msg::WindActivate);
               return;
             } // else
 
-            clone_tx.send(common::Msg::WindActivate);
+            clone_tx.send_awake(common::Msg::WindActivate);
           });
         });
     } // for
@@ -555,7 +554,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
       // Execute wine
       let str_choice = chooser.value(1).unwrap();
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
         if common::gameimage_sync(vec!["install", "wine", &str_choice ]) != 0
@@ -563,7 +562,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           log!("Could not execute selected file");
         }; // else
 
-        clone_tx.send(common::Msg::DrawWineRom);
+        clone_tx.send_awake(common::Msg::DrawWineRom);
       });
     });
 
@@ -594,7 +593,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    clone_tx.send(common::Msg::DrawWineCompress);
+    clone_tx.send_awake(common::Msg::DrawWineCompress);
   });
 
 } // }}}

@@ -20,6 +20,7 @@ use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::db;
 use crate::lib::svg;
@@ -129,7 +130,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   {
     if dialog::choice2_default("This will reset the image, are you sure?", "No", "Yes", "") == Some(1)
     {
-      clone_tx.send(common::Msg::DrawFetch);
+      clone_tx.send_awake(common::Msg::DrawFetch);
     } // if
   });
 
@@ -138,7 +139,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   {
     if dialog::choice2_default("Finish image creation?", "No", "Yes", "") == Some(1)
     {
-      clone_tx.send(common::Msg::DrawDesktop);
+      clone_tx.send_awake(common::Msg::DrawDesktop);
     } // if
   });
 
@@ -223,7 +224,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     } // for
 
     // Refresh
-    clone_tx.send(common::Msg::DrawCreator);
+    clone_tx.send_awake(common::Msg::DrawCreator);
   });
 
   // Include inside image
@@ -247,7 +248,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     clone_output_status.set_value("Inserting projects in the image");
 
     // Disable window
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Include files in new thread
     let clone_vec_checkbutton = vec_btn.clone();
@@ -257,7 +258,11 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       let lock = match clone_vec_checkbutton.lock()
       {
         Ok(lock) => lock,
-        Err(e) => { log!("Failed to lock checkbutton vector with: {}", e); return; }
+        Err(e) =>
+        {
+          clone_tx.send_awake(common::Msg::WindActivate);
+          log!("Failed to lock checkbutton vector with: {}", e); return;
+        }
       }; // match
 
       // Remove all currently selected projects
@@ -277,7 +282,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       } // for
 
       // Refresh
-      clone_tx.send(common::Msg::DrawCreator);
+      clone_tx.send_awake(common::Msg::DrawCreator);
     });
   });
 

@@ -17,6 +17,7 @@ use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::common::VecExt;
 use crate::log;
 use crate::db;
@@ -98,16 +99,11 @@ pub fn install(tx: Sender<common::Msg>
   frame_list.set_text_size(dimm::height_text());
 
   // Insert items in list of currently installed items
-  let clone_label : String = label.into();
-  let mut clone_frame_list = frame_list.clone();
-  std::thread::spawn(move ||
+  match fetch_items(label.to_string(), false)
   {
-    match fetch_items(clone_label, false)
-    {
-      Ok(vec_items) => for item in vec_items { clone_frame_list.add(&item.string()); },
-      Err(e) => log!("Could not get items to insert: {}", e),
-    }; // match
-  });
+    Ok(vec_items) => for item in vec_items { frame_list.add(&item.string()); },
+    Err(e) => log!("Could not get items to insert: {}", e),
+  }; // match
 
   // Add new item
   let clone_tx = tx.clone();
@@ -141,7 +137,7 @@ pub fn install(tx: Sender<common::Msg>
       } // if
 
       // Install files
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
 
       let count = chooser.count()+1;
       let clone_label = clone_label.clone();
@@ -157,8 +153,7 @@ pub fn install(tx: Sender<common::Msg>
             log!("Failed to execute backend");
           } // if
         } // for
-        clone_tx.send(common::Msg::WindActivate);
-        clone_tx.send(msg_curr);
+        clone_tx.send_awake(msg_curr);
       });
     });
 
@@ -176,14 +171,14 @@ pub fn install(tx: Sender<common::Msg>
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
   {
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     let vec_indices = clone_frame_list.selected_items();
 
     if vec_indices.len() == 0
     {
       clone_output_status.set_value("No item selected for deletion");
-      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send_awake(common::Msg::WindActivate);
       return;
     } // if
 

@@ -490,6 +490,23 @@ impl OsStringExt for OsString
 }
 // }}}
 
+// pub trait FltkSenderExt {{{
+pub trait FltkSenderExt<T>
+{
+  fn send_awake(&self, value: T);
+} // pub trait FltkSenderExt 
+
+impl<T: 'static + Send + Sync> FltkSenderExt<T> for fltk::app::Sender<T>
+{
+  fn send_awake(&self, value: T)
+  {
+    // Send
+    self.send(value);
+    // Awake app
+    fltk::app::awake();
+  } // send_awake
+} // impl }}}
+
 // pub trait PathBufExt {{{
 #[allow(warnings)]
 pub trait PathBufExt

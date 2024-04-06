@@ -16,6 +16,7 @@ use crate::frame;
 use crate::common;
 use crate::log;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 
 // pub fn test() {{{
 pub fn test(tx: Sender<common::Msg>
@@ -56,7 +57,7 @@ pub fn test(tx: Sender<common::Msg>
   let clone_tx = tx.clone();
   btn_test.set_callback(move |_|
   {
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
     {
@@ -71,7 +72,7 @@ pub fn test(tx: Sender<common::Msg>
     let _ = term.dispatch(vec![path_gimg_backend.string().as_str(), "test"]
       , move |_|
       {
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
       }
     );
   });

@@ -23,6 +23,7 @@ use crate::frame;
 use crate::common;
 use crate::common::WidgetExtExtra;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::lib::scaling;
 
@@ -134,7 +135,7 @@ pub fn icon(tx: Sender<common::Msg>
     {
       let label = e.text(e.value()).unwrap_or(String::new());
       e.set_label(label.as_str());
-      clone_tx.send(msg_curr);
+      clone_tx.send_awake(msg_curr);
       if let Ok(mut lock)  = ICON_FRAME.lock()
       {
         *lock = lock.from_str(label.as_str());
@@ -357,7 +358,7 @@ pub fn icon(tx: Sender<common::Msg>
         *lock = clone_input_search.value();
       } // if
 
-      tx.send(common::Msg::WindDeactivate);
+      tx.send_awake(common::Msg::WindDeactivate);
 
       clone_output_status.set_value("Downloading images from the provided query...");
 
@@ -393,7 +394,7 @@ pub fn icon(tx: Sender<common::Msg>
           }; // if
         } // for
 
-        tx.send(msg_curr);
+        tx.send_awake(msg_curr);
       });
     };
 
@@ -434,7 +435,7 @@ pub fn project(tx: Sender<common::Msg>
   {
     let arc_path_file_icon = ret.arc_path_file_icon.clone();
     let mut output_status = ret.ret_frame_footer.output_status.clone();
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Check if an icon was selected
     let path_file_icon = if let Ok(option_path_file_icon) = arc_path_file_icon.lock()
@@ -445,7 +446,7 @@ pub fn project(tx: Sender<common::Msg>
     else
     {
       output_status.set_value("No icon selected");
-      clone_tx.send(msg_curr);
+      clone_tx.send_awake(msg_curr);
       log!("No Icon selected");
       return;
     };
@@ -460,11 +461,11 @@ pub fn project(tx: Sender<common::Msg>
       if common::gameimage_sync(vec!["install", "icon", &path_file_icon.string()]) != 0
       {
         log!("Could not install icon, use .jpg or .png");
-        clone_tx.send(msg_curr);
+        clone_tx.send_awake(msg_curr);
         return;
       } // if
 
-      clone_tx.send(msg_next);
+      clone_tx.send_awake(msg_next);
     });
   });
 } // }}}

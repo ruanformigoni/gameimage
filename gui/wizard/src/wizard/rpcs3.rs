@@ -20,6 +20,7 @@ use anyhow::anyhow as ah;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::frame;
 use crate::db;
@@ -137,7 +138,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     } // if
 
     // Deactivate window
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Fetch choice
     let str_choice = chooser.value(1).unwrap();
@@ -147,8 +148,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     {
       log!("Failed to install '{}'", str_choice);
     } // else
-    clone_tx.send(common::Msg::WindActivate);
-    clone_tx.send(common::Msg::DrawRpcs3Rom);
+    clone_tx.send_awake(common::Msg::WindActivate);
+    clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
   });
 
   // Erase package
@@ -180,7 +181,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         log!("Could not remove '{}", item);
       }; // else
     } // for
-    clone_tx.send(common::Msg::DrawRpcs3Rom);
+    clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
   });
 } // }}}
 
@@ -225,7 +226,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
     .with_label("Open")
     .with_callback(move |_|
     {
-      tx.send(common::Msg::WindDeactivate);
+      tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
         if common::gameimage_sync(vec!["install", "gui"]) != 0
@@ -233,7 +234,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
           log!("Install gui exited with error");
         } // if
 
-        tx.send(common::Msg::WindActivate);
+        tx.send_awake(common::Msg::WindActivate);
       });
     });
 

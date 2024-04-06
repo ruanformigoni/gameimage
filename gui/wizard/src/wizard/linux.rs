@@ -21,6 +21,7 @@ use anyhow::anyhow as ah;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::log;
 use crate::frame;
 use crate::db;
@@ -58,15 +59,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   // Goto previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawLinuxIcon);
   // Goto next frame
-  let clone_tx = tx.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
-  {
-    clone_tx.send(common::Msg::WindDeactivate);
-    clone_output_status.set_value("Search through installed files...");
-    fltk::app::awake();
-    clone_tx.send(common::Msg::DrawLinuxDefault);
-  });
+  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawLinuxDefault);
 
   // Height to input field
   let height_input_script = ( dimm::height_button_wide() as f32 *1.25 ) as i32;
@@ -288,7 +281,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     } // if
 
     // Draw test
-    clone_tx.send(common::Msg::DrawLinuxTest);
+    clone_tx.send_awake(common::Msg::DrawLinuxTest);
   });
 
 } // default() }}}

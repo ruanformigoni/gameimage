@@ -15,6 +15,7 @@ use crate::frame;
 use crate::common;
 use crate::common::PathBufExt;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::common::VecExt;
 use crate::log;
 use crate::db;
@@ -115,7 +116,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         None => return,
       }; // match
 
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
         if common::gameimage_sync(vec!["select", "rom", selected.as_str()]) != 0
@@ -123,7 +124,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           log!("Could not select rom file '{}'", selected);
         }; // else
 
-        clone_tx.send(common::Msg::DrawRetroarchRom);
+        clone_tx.send_awake(common::Msg::DrawRetroarchRom);
       }); // std::thread
     }); // with_callback
 
@@ -204,7 +205,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     } // if
 
     // Install files
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Get items
     let vec_items = (1..chooser.count()+1).into_iter().map(|e| chooser.value(e).unwrap()).collect::<Vec<String>>();
@@ -216,7 +217,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
         log!("Failed to install one or more cores");
       } // else
       // Redraw window
-      clone_tx.send(common::Msg::DrawRetroarchCore);
+      clone_tx.send_awake(common::Msg::DrawRetroarchCore);
     });
   });
 
@@ -252,7 +253,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
         None => return,
       }; // match
 
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
         if common::gameimage_sync(vec!["select", "core", selected.as_str()]) != 0
@@ -260,7 +261,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           log!("Could not select core file '{}'", selected);
         }; // else
 
-        clone_tx.send(common::Msg::DrawRetroarchCore);
+        clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       }); // std::thread
     }); // with_callback
 
@@ -276,7 +277,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     if vec_indices.len() == 0
     {
       clone_output_status.set_value("No item selected for deletion");
-      clone_tx.send(common::Msg::DrawRetroarchCore);
+      clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       return;
     } // if
 
@@ -289,7 +290,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
       log!("Failed to delete one or more items");
     }; // else
     // Redraw
-    clone_tx.send(common::Msg::DrawRetroarchCore);
+    clone_tx.send_awake(common::Msg::DrawRetroarchCore);
   });
 
   // List of items to install
@@ -319,7 +320,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     .with_callback(move |_|
     {
       // Install files
-      clone_tx.send(common::Msg::WindDeactivate);
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       let clone_frame_list_remote = clone_frame_list_remote.clone();
       std::thread::spawn(move ||
       {
@@ -335,7 +336,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           log!("Failed to execute backend to fetch remote cores");
         } // else
 
-        clone_tx.send(common::Msg::DrawRetroarchCore);
+        clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       });
     });
 } // }}}

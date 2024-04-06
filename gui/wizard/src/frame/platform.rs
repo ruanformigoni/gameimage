@@ -13,6 +13,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::common::WidgetExtExtra;
+use crate::common::FltkSenderExt;
 use crate::log;
 
 // pub fn platform() {{{
@@ -114,16 +115,11 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     // Draw description of selection
     clone_update_buffer(choice.clone());
     // Redraw
-    clone_tx.send(common::Msg::DrawPlatform)
+    clone_tx.send_awake(common::Msg::DrawPlatform);
   });
 
   // Set callback for prev
-  let mut clone_btn_prev = ret_frame_footer.btn_prev.clone();
-  clone_btn_prev.set_callback(move |_|
-  {
-    tx.send(common::Msg::DrawWelcome);
-  });
-
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
 
   // Set callback for next
   let mut clone_btn_next = ret_frame_footer.btn_next.clone();
@@ -146,7 +142,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     clone_output_status.set_value("Fetching list of files to download");
 
     // Disable window
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Fetch files
     std::thread::spawn(move ||
@@ -160,11 +156,12 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
       ]) != 0
       {
         log!("Failed to fetch");
+        clone_tx.send_awake(common::Msg::WindActivate);
         return;
       } // if
 
       // Draw next frame
-      clone_tx.send(common::Msg::DrawFetch);
+      clone_tx.send_awake(common::Msg::DrawFetch);
     });
   });
 }

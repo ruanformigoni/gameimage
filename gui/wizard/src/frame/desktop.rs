@@ -3,6 +3,7 @@ use fltk::app::Sender;
 
 use crate::common;
 use crate::common::PathBufExt;
+use crate::common::FltkSenderExt;
 use crate::log;
 
 // pub fn desktop() {{{
@@ -24,7 +25,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     let arc_path_file_icon = ret.arc_path_file_icon.clone();
     let mut output_status = ret.ret_frame_footer.output_status.clone();
 
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Check if an icon was selected
     let path_file_icon = if let Ok(option_path_file_icon) = arc_path_file_icon.lock()
@@ -35,7 +36,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     else
     {
       output_status.set_value("No icon selected");
-      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send_awake(common::Msg::WindActivate);
       log!("No Icon selected");
       return;
     };
@@ -47,11 +48,11 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
       if common::gameimage_sync(vec!["desktop", &path_file_icon.string()]) != 0
       {
         log!("Failed to execute desktop command on backend");
-        clone_tx.send(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::WindActivate);
         return;
       } // if
 
-      clone_tx.send(common::Msg::DrawName);
+      clone_tx.send_awake(common::Msg::DrawName);
       fltk::app::awake();
     });
 

@@ -21,6 +21,7 @@ mod wizard;
 // }}}
 
 use common::Msg;
+use common::FltkSenderExt;
 use lib::dimm;
 use lib::svg;
 
@@ -334,7 +335,7 @@ fn init(&mut self)
     if fltk::app::event() == fltk::enums::Event::Close
       && dialog::choice2_default("Exit GameImage?", "No", "Yes", "") == Some(1)
     {
-      clone_tx.send(common::Msg::Quit);
+      clone_tx.send_awake(common::Msg::Quit);
     } // if
   };
 
@@ -354,7 +355,7 @@ fn init(&mut self)
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   // self.tx.send(Msg::DrawLinuxDefault);
-  self.tx.send(Msg::DrawWelcome);
+  self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages
