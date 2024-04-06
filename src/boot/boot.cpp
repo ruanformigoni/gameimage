@@ -111,6 +111,25 @@ void db_files_copy(std::string db_entry
   } , ns_db::Mode::READ); // ns_db::from_file
 } // db_files_copy() }}}
 
+// env() {{{
+void env(fs::path const& path_dir_self)
+{
+  // Standard path for env var list
+  fs::path path_file_env = path_dir_self / "gameimage.env.json";
+
+  // Set variables
+  ns_db::from_file(path_file_env
+  , [&](auto&& db)
+  {
+    std::for_each(db["env"].begin(), db["env"].end(), [&](auto&& e)
+    {
+      ns_env::set(e["key"], e["val"], ns_env::Replace::Y);
+      ns_log::write('i', "Set environment variable '", e["key"], "' to '", e["val"], "'");
+    });
+  }
+  , ns_db::Mode::READ);
+} // env() }}}
+
 // boot_linux() {{{
 void boot_linux(fs::path const& path_dir_self, fs::path const& path_file_database)
 {
@@ -333,6 +352,16 @@ void boot(int argc, char** argv)
 
   // Start log
   ns_log::init(argc, argv, path_dir_self / "gameimage.log");
+
+  // Try to set env
+  try
+  {
+    env(path_dir_self);
+  }
+  catch(std::exception const& e)
+  {
+    ns_log::write('e', "Could not set environment: ", e.what());
+  } // catch
 
   // // Adjust environment
   // ns_env::set("LC_ALL", "C", ns_env::Replace::N);

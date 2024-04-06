@@ -34,6 +34,9 @@ concept StreamInsertable = requires(T t, std::ostream& os)
   { os << t } -> std::same_as<std::ostream&>;
 };
 
+template<typename T>
+concept AsString = StringConvertible<T> or StringConstructible<T> or Numeric<T> or StreamInsertable<T>;
+
 } // namespace ns_concept
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

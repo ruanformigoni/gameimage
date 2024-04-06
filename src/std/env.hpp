@@ -74,10 +74,11 @@ inline fs::path file(const char* name)
 
 // set() {{{
 // Sets an environment variable
-inline void set(const char* name, const char* value, Replace replace)
+template<ns_concept::AsString T, ns_concept::AsString U>
+void set(T&& name, U&& value, Replace replace)
 {
   // ns_log::write('d', "ns_env::set ", name, " -> ", value);
-  setenv(name, value, (replace == Replace::Y));
+  setenv(ns_string::to_string(name).c_str(), ns_string::to_string(value).c_str(), (replace == Replace::Y));
 } // set() }}}
 
 // concat() {{{
