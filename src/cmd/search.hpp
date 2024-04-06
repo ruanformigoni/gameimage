@@ -42,8 +42,8 @@ inline std::vector<fs::path> search_files(fs::path path_dir_search
   ns_log::write('i', "Search directory '", path_dir_search.c_str(), "'");
 
   // Create regex
-  std::regex regex_pattern(str_pattern);
-  std::regex regex_exclude(str_exclude);
+  std::regex regex_pattern(str_pattern, std::regex_constants::icase);
+  std::regex regex_exclude(str_exclude, std::regex_constants::icase);
 
   // Find all files that match pattern
   for(auto entry = fs::recursive_directory_iterator(path_dir_search);
