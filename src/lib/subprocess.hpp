@@ -216,6 +216,14 @@ inline void wait(fs::path path_file)
   } // while
 } // wait() }}}
 
+// search_path() {{{
+inline fs::path search_path(std::string query)
+{
+  ns_log::write('d', "PATH: Searching for '", query, "'");
+  std::string search = proc::search_path(query).generic_string();
+  ns_log::write('d', "PATH: Search result '", search, "'");
+  return search;
+} // search_path() }}}
 
 } // namespace ns_subprocess
 
