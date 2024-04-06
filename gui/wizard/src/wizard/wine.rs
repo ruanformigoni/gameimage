@@ -239,8 +239,20 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 
     if ! path_dir_wine_prefix.exists()
     {
-      clone_output_status.set_value("Wine prefix does not exist");
-      log!("Wine prefix does not exist");
+      clone_output_status.set_value("Wine prefix does not exist, creating...");
+      log!("Wine prefix does not exist, creating...");
+      let mut clone_output_status = clone_output_status.clone();
+      tx.send_awake(common::Msg::WindDeactivate);
+      std::thread::spawn(move ||
+      {
+        if common::gameimage_sync(vec!["install", "winetricks", "fontsmooth=rgb"]) != 0
+        {
+          clone_output_status.set_value("Failed to create wine prefix");
+          log!("Failed to create wine prefix");
+        } // else
+
+        clone_tx.send_awake(common::Msg::DrawWineRom);
+      }); // std::thread
       return;
     } // if
 
