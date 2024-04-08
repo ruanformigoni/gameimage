@@ -1,6 +1,5 @@
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::io::prelude::*;
 use downloader::Downloader;
 
 use url as Url;
@@ -9,7 +8,6 @@ use anyhow::anyhow as ah;
 
 use crate::log;
 use crate::common;
-use crate::common::PathBufExt;
 
 // struct SimpleReporterPrivate {{{
 struct SimpleReporterPrivate
@@ -98,26 +96,6 @@ impl downloader::progress::Reporter for SimpleReporter
   }
 } // }}}
 
-// sha() {{{
-pub fn sha(file_sha : PathBuf, file_target: PathBuf) -> anyhow::Result<()>
-{
-  // Read sha
-  let mut vec_sha : Vec<u8> = vec![0;64];
-  let _ = std::fs::File::open(file_sha)?.read_exact(&mut vec_sha);
-  let str_ref_sha = String::from_utf8(vec_sha)?;
-
-  // Verify sha
-  let str_target_sha = sha256::try_digest(&file_target)?;
-  if str_target_sha != str_ref_sha
-  {
-    return Err(ah!("SHA verify failed, expected '{}', got '{}", str_ref_sha, str_target_sha));
-  } // if
-
-  log!("SHA verify successful for {}", file_target.string());
-
-  Ok(())
-} // }}}
-
 // download {{{
 pub fn download<F,G,H>(some_url : Option<Url::Url>
   , path_file_dest : PathBuf
@@ -129,13 +107,10 @@ where
   G: FnMut(f64) + Send + Sync + 'static + Clone,
   H: FnMut() + Send + Sync + 'static + Clone,
 {
-  // Get sha file name
-  let path_file_dest_sha = path_file_dest.append_extension(".sha256sum");
-
   // If sha exists verify
-  if sha(path_file_dest_sha.clone(), path_file_dest.clone()).is_ok()
+  if path_file_dest.exists()
   {
-    log!("File exists, SHA check successful for '{:?}'", path_file_dest);
+    log!("File exists: '{:?}'", path_file_dest);
     f_finish();
     return Ok(());
   } // if
@@ -143,7 +118,6 @@ where
   // Try to remove files if failed
   log!("SHA check failed for '{:?}'", path_file_dest);
   let _ = std::fs::remove_file(path_file_dest.clone());
-  let _ = std::fs::remove_file(path_file_dest_sha.clone());
 
   // Get parent directory of file
   let dir_download = path_file_dest.parent().ok_or(ah!("Failed to acquire parent dir"))?;
@@ -156,19 +130,10 @@ where
 
   // Configure download
   let url = some_url.ok_or(ah!("Invalid url"))?.clone();
-  let url_sha = Url::Url::parse(&format!("{}.sha256sum", &url))?;
   #[cfg(not(feature = "tui"))] // Disable progress bar in terminal
   let dl_url = downloader::Download::new(url.as_str())
     .progress(SimpleReporter::create(f_begin.clone(), f_update.clone()))
     .file_name(&path_file_dest);
-  #[cfg(not(feature = "tui"))] // Disable progress bar in terminal
-  let dl_sha = downloader::Download::new(url_sha.as_str())
-    .progress(SimpleReporter::create(f_begin, f_update))
-    .file_name(&(path_file_dest_sha));
-
-  // Fetch sha
-  log!("Start download sha");
-  let _ = downloader.download(&[dl_sha])?.pop().ok_or(ah!("Download failure"))??;
 
   // Fetch file
   log!("Start download file");
@@ -180,21 +145,8 @@ where
     }
   } // if
 
-  // Re-create the SHA file with the same SHA & correct file name
-  let mut sha256_content = std::fs::read_to_string(&path_file_dest_sha)?
-    .split(' ')
-    .next()
-    .ok_or(ah!("Could not get SHA value from SHA file"))?
-    .to_owned();
-  sha256_content.push(' ');
-  sha256_content.push_str(path_file_dest.string().as_str());
-  std::fs::write(&path_file_dest_sha, sha256_content)?;
-
   // Set downloaded file as executable
   std::fs::set_permissions(path_file_dest.clone(), std::fs::Permissions::from_mode(0o766))?;
-
-  // Check sha
-  sha(path_file_dest_sha.clone(), path_file_dest.clone())?;
 
   // Finishing callback
   f_finish();
