@@ -560,13 +560,16 @@ inline void sha(ns_enum::Platform platform
 // json() {{{
 inline void json(ns_enum::Platform platform
   , fs::path path_file_image
-  , fs::path path_json)
+  , fs::path path_json
+  , std::optional<cpr::Url> const& url_base = std::nullopt
+  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
 {
   // Remove if exists
   fs::remove(path_json);
 
   // Validate input
   path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
+  fs::path path_dir_image = ns_fs::ns_path::dir_exists<true>(path_file_image.parent_path())._ret;
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string(platform));
@@ -574,28 +577,22 @@ inline void json(ns_enum::Platform platform
 
   // Get url and save path to base
   ns_log::write('i', "Writting json for base");
-  auto path_and_url_base = fetchlist_base(platform, path_file_image.parent_path());
-  auto path_file_base = path_and_url_base.path;
-  auto url_base = path_and_url_base.url;
-
   ns_db::from_file(path_json, [&](auto&& db)
   {
-    db("paths") |= path_file_base.c_str();
-    db("urls")  |= url_base.c_str();
+    auto path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
+    db("paths") |= path_and_url_base.path.c_str();
+    db("urls")  |= path_and_url_base.url.c_str();
   }, ns_db::Mode::CREATE);
 
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Get url and save path to dwarfs
   ns_log::write('i', "Writting json for dwarfs");
-  auto path_and_url_dwarfs = fetchlist_dwarfs(platform, path_file_image.parent_path());
-  auto path_file_dwarfs = path_and_url_dwarfs.path;
-  auto url_dwarfs = path_and_url_dwarfs.url;
-
   ns_db::from_file(path_json, [&](auto&& db)
   {
-    db("paths") |= path_file_dwarfs.c_str();
-    db("urls")  |= url_dwarfs.c_str();
+    auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
+    db("paths") |= path_and_url_dwarfs.path.c_str();
+    db("urls")  |= path_and_url_dwarfs.url.c_str();
   }, ns_db::Mode::UPDATE);
 
 } // json() }}}

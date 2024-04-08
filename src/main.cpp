@@ -39,7 +39,8 @@ void fetch(ns_parser::Parser const& parser)
 
   if (  parser.optional("--output-file") && parser.contains("--sha") )
   {
-    ns_fetch::sha(platform, *parser.optional("--output-file")
+    ns_fetch::sha(platform
+      , *parser.optional("--output-file")
       , parser.optional("--url-base")
       , parser.optional("--url-dwarfs")
     );
@@ -48,13 +49,19 @@ void fetch(ns_parser::Parser const& parser)
 
   if ( parser.optional("--output-file") && parser.optional("--json")  )
   {
-    ns_fetch::json(platform, *parser.optional("--output-file"), *parser.optional("--json"));
+    ns_fetch::json(platform
+      , *parser.optional("--output-file")
+      , *parser.optional("--json")
+      , parser.optional("--url-base")
+      , parser.optional("--url-dwarfs")
+    );
     return;
   } // if
 
   if ( parser.optional("--output-file") )
   {
-    ns_fetch::fetch(platform, *parser.optional("--output-file")
+    ns_fetch::fetch(platform
+      , *parser.optional("--output-file")
       , parser.optional("--url-base")
       , parser.optional("--url-dwarfs")
     );
