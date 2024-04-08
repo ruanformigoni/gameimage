@@ -7,7 +7,10 @@
 
 #include <fstream>
 #include <filesystem>
-#include <sha256.h>
+#include <cryptopp/files.h> // Include for SHA256 and SHA512
+#include <cryptopp/sha.h> // Include for SHA256 and SHA512
+#include <cryptopp/filters.h> // Include for StringSink and HashFilter
+#include <cryptopp/hex.h> // Include for HexEncoder
 
 #include "../common.hpp"
 
@@ -16,8 +19,14 @@ namespace fs = std::filesystem;
 namespace ns_sha
 {
 
-// check_256sum() {{{
-inline bool check_256sum(fs::path path_file_src, fs::path path_file_sha)
+enum class SHA_TYPE
+{
+  SHA256,
+  SHA512
+};
+
+// check_sha() {{{
+inline bool check_sha(fs::path path_file_src, fs::path path_file_sha, SHA_TYPE sha_type)
 {
   std::ifstream file_src(path_file_src, std::ifstream::binary);
   std::ifstream file_sha(path_file_sha, std::ifstream::in);
@@ -27,30 +36,37 @@ inline bool check_256sum(fs::path path_file_src, fs::path path_file_sha)
 
   ns_log::write('i', "Calculating SHA for: ", path_file_src);
 
-  SHA256 sha256;
-  char buffer[16384];
-  while (file_src.read(buffer, sizeof(buffer)) || file_src.gcount())
+  std::string sha_calculated;
+
+  // Calculated SHA
+  if ( sha_type == SHA_TYPE::SHA256 )
   {
-    sha256.add(buffer, file_src.gcount());
-  } // while
-  std::string sha256_calculated = sha256.getHash();
-
-
-  std::string sha256_reference;
-
-  std::getline(file_sha, sha256_reference);
-
-  if ( sha256_reference.find(' ') != std::string::npos )
+    CryptoPP::SHA256 hash;
+    CryptoPP::FileSource(file_src, true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(sha_calculated))));
+  } // if
+  else
   {
-    sha256_reference.erase(sha256_reference.find(' '));
+    CryptoPP::SHA512 hash;
+    CryptoPP::FileSource(file_src, true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(sha_calculated))));
+  } // else
+
+  // Reference SHA
+  std::string sha_reference;
+  std::getline(file_sha, sha_reference);
+  if ( sha_reference.find(' ') != std::string::npos )
+  {
+    sha_reference.erase(sha_reference.find(' '));
   } // if
 
-  ns_log::write('i', "Calculated SHA for: ", path_file_src);
-  ns_log::write('i', "Generated SHA: ", sha256_calculated);
-  ns_log::write('i', "Reference SHA: ", sha256_reference);
+  // Normalize to uppercase
+  sha_calculated = ns_string::to_upper(sha_calculated);
+  sha_reference = ns_string::to_upper(sha_reference);
 
-  return sha256_calculated == sha256_reference;
-} // check_256sum() }}}
+  ns_log::write('i', "SHA Calculated: ", sha_calculated);
+  ns_log::write('i', "SHA Reference : ", sha_reference);
+
+  return sha_calculated == sha_reference;
+} // check_sha() }}}
   
 } // namespace ns_sha
 
