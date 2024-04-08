@@ -151,6 +151,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
         .with_size_of(&btn_menu)
         .above_of(&btn_menu, dimm::border())
         .with_label("Insert the url for the custom wine tarball")
+        .with_align(Align::Top | Align::Left)
         .with_callback(|e|
         {
           match URL.lock()
