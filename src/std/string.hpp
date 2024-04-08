@@ -54,15 +54,22 @@ inline std::string to_string(T&& t)
 } // to_string() }}}
 
 // to_lower() {{{
-template<ns_concept::StreamInsertable T>
+template<ns_concept::AsString T>
 std::string to_lower(T&& t)
 {
-  std::stringstream ss;
-  ss << t;
-  std::string ret = ss.str();
+  std::string ret = to_string(t);
   std::ranges::for_each(ret, [](auto& c){ c = std::tolower(c); });
   return ret;
 } // to_lower() }}}
+
+// to_upper() {{{
+template<ns_concept::AsString T>
+std::string to_upper(T&& t)
+{
+  std::string ret = to_string(t);
+  std::ranges::for_each(ret, [](auto& c){ c = std::toupper(c); });
+  return ret;
+} // to_upper() }}}
 
 // from_container() {{{
 template<typename T>
