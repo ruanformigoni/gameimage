@@ -304,10 +304,12 @@ inline void tarball_extract_flatimage(fs::path const& path_file_tarball, fs::pat
 } // tarball_extract_flatimage() }}}
 
 // dwarfs_create() {{{
-inline void dwarfs_create(fs::path const& path_dir_src, std::string path_file_target)
+inline void dwarfs_create(fs::path path_file_image, fs::path const& path_dir_src, std::string path_file_target)
 {
   // Compress
-  ns_subprocess::sync(ns_subprocess::search_path("mkdwarfs")
+  ns_subprocess::sync(path_file_image
+    , "fim-exec"
+    , "mkdwarfs"
     , "-f"
     , "-i"
     , path_dir_src
@@ -400,6 +402,7 @@ decltype(auto) fetch_base(ns_enum::Platform platform
 // fetch_dwarfs() {{{
 decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   , std::optional<cpr::Url> const& url
+  , fs::path path_file_image
   , fs::path path_dir_dst)
 {
   std::string str_platform = ns_enum::to_string_lower(platform);
@@ -451,7 +454,7 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   } // else
 
   // Create dwarfs filesystem
-  dwarfs_create(str_platform, str_platform + ".dwarfs");
+  dwarfs_create(path_file_image, str_platform, str_platform + ".dwarfs");
 
   return path_and_url_dwarfs;
 } // fetch_dwarfs() }}}
@@ -514,7 +517,7 @@ inline void fetch(ns_enum::Platform platform
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Fetch dwarfs file
-  auto ret_fetch_dwarfs = fetch_dwarfs(platform, url_dwarfs, path_dir_image);
+  auto ret_fetch_dwarfs = fetch_dwarfs( platform, url_dwarfs, path_file_image, path_dir_image);
 
   // Set file name to platform + dwarfs
   ret_fetch_dwarfs.path.remove_filename();
