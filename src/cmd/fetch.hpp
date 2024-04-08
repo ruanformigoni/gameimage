@@ -95,7 +95,7 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 } // }}}
 
 // check_file_from_sha() {{{
-inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url const& url)
+inline void check_file_from_sha(fs::path const& path_file_src, cpr::Url const& url)
 {
   ns_sha::SHA_TYPE sha_type;
 
@@ -104,7 +104,7 @@ inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url con
   {
     ns_log::write('i', "SHA256: Trying to find in url");
     // SHA file name is file name + sha256sum
-    path_file_sha = path_file_to_check.string() + ".sha256sum";
+    path_file_sha = path_file_src.string() + ".sha256sum";
     // Fetch SHA file
     fetch_file_from_url(path_file_sha, url.str() + ".sha256sum");
     ns_log::write('i', "SHA256 found in url");
@@ -114,7 +114,7 @@ inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url con
   {
     ns_log::write('i', "SHA512: Trying to find in url");
     // SHA file name is file name + sha512sum
-    path_file_sha = path_file_to_check.string() + ".sha512sum";
+    path_file_sha = path_file_src.string() + ".sha512sum";
     // Fetch SHA file
     fetch_file_from_url(path_file_sha, url.str() + ".sha512sum");
     ns_log::write('i', "SHA512 found in url");
@@ -122,19 +122,64 @@ inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url con
   } // catch
 
   // Check SHA
-  if ( not ns_sha::check_sha(path_file_to_check, path_file_sha, sha_type))
+  if ( not ns_sha::check_sha(path_file_src, path_file_sha, sha_type))
   {
-    "SHA failed for {}"_throw(path_file_to_check);
+    "SHA failed for {}"_throw(path_file_src);
   } // if
-  ns_log::write('i', "SHA passed for ", path_file_to_check);
+  ns_log::write('i', "SHA passed for ", path_file_src);
 } // }}}
 
-// fetch_file_from_url_on_failed_sha() {{{
-inline void fetch_file_from_url_on_failed_sha(fs::path const& path_file, cpr::Url const& url)
+// check_file_from_size() {{{
+decltype(auto) check_file_from_size(fs::path path_file_src, cpr::Url url)
+{
+  uintmax_t size_reference = fs::file_size(path_file_src);
+  uintmax_t size_calculated = 0;
+
+  ns_log::write('i', "SIZE: Reference is ", size_reference);
+
+  // Get size of file to download
+  cpr::Response response_head = cpr::Head(url);
+  if ( response_head.status_code != 200 )
+  {
+    "Could not fetch remote size to compare local size with"_throw();
+  } // if
+
+  auto it = response_head.header.find("Content-Length");
+  if (it == response_head.header.end())
+  {
+    "Could not find field 'Content-Length' in response"_throw();
+  }
+
+  size_calculated = std::stoi(it->second);
+  ns_log::write('i', "SIZE: Calculated is ", size_calculated);
+
+  if ( size_reference != size_calculated )
+  {
+    "Size reference differs from size_calculated"_throw();
+  } // if
+} // check_file_from_size() }}}
+
+// check_file() {{{
+decltype(auto) check_file(fs::path path_file_src, cpr::Url url)
+{
+  // Try by SHA
+  try
+  {
+    check_file_from_sha(path_file_src, url);
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_log::write('e', "Could not verify with SHA: ", e.what());
+    check_file_from_size(path_file_src, url);
+  } // catch
+} // check_file() }}}
+
+// fetch_file_from_url_on_failed_check() {{{
+inline void fetch_file_from_url_on_failed_check(fs::path const& path_file, cpr::Url const& url)
 {
   try
   {
-    check_file_from_sha(path_file, url);
+    check_file(path_file, url);
   }
   // Re-download if SHA failed, and json write is disabled
   catch(std::exception const& e)
@@ -347,7 +392,7 @@ decltype(auto) fetch_base(ns_enum::Platform platform
   // Resolve custom url or use default from fetchlist
   fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url, path_dir_dst);
   // Try to download
-  fetch_file_from_url_on_failed_sha(path_and_url_base.path, path_and_url_base.url);
+  fetch_file_from_url_on_failed_check(path_and_url_base.path, path_and_url_base.url);
   // Return path to downloaded file & url
   return path_and_url_base;
 } // fetch_base() }}}
@@ -362,7 +407,7 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url, path_dir_dst);
 
   // Fetch from url to target directory path
-  fetch_file_from_url_on_failed_sha(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
+  fetch_file_from_url_on_failed_check(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
 
   // If is a dwarfs file, then it is ok to finish
   if ( path_and_url_dwarfs.path.extension() == ".dwarfs" )
@@ -500,7 +545,7 @@ inline void sha(ns_enum::Platform platform
   auto path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
 
   // Check sha for base
-  check_file_from_sha(path_and_url_base.path, path_and_url_base.url);
+  check_file(path_and_url_base.path, path_and_url_base.url);
 
   // Linux does not have a separate dwarfs file
   if ( platform == ns_enum::Platform::LINUX ) { return; }
@@ -509,7 +554,7 @@ inline void sha(ns_enum::Platform platform
   auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
 
   // Check sha for dwarfs
-  check_file_from_sha(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
+  check_file(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
 } // sha() }}}
 
 // json() {{{
