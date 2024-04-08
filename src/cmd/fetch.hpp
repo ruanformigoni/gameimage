@@ -264,13 +264,11 @@ inline void merge_base_and_dwarfs(std::string str_platform
   ns_subprocess::sync(path_file_image, "fim-dwarfs-add", path_file_dwarfs, "/fim/mount/{}"_fmt(str_platform));
 } // merge_base_and_dwarfs() }}}
 
-// fetch_base() {{{
-decltype(auto) fetch_base(ns_enum::Platform platform
+// url_resolve_base() {{{
+decltype(auto) url_resolve_base(ns_enum::Platform platform
   , std::optional<cpr::Url> const& url
   , fs::path path_dir_dst)
 {
-  ns_log::write('i', "Downloading file: '", path_dir_dst);
-
   fetchlist_base_ret_t path_and_url_base;
 
   // Fetch from custom url
@@ -286,24 +284,16 @@ decltype(auto) fetch_base(ns_enum::Platform platform
     ns_log::write('i', "Download url: '", path_and_url_base.url.c_str());
   } // else
 
-  fetch_file_from_url_on_failed_sha(path_and_url_base.path, path_and_url_base.url);
-
   return path_and_url_base;
-} // fetch_base() }}}
+} // function: url_resolve_base
 
-// fetch_dwarfs() {{{
-decltype(auto) fetch_dwarfs(ns_enum::Platform platform
+// url_resolve_base() }}}
+
+// url_resolve_dwarfs() {{{
+decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform
   , std::optional<cpr::Url> const& url
   , fs::path path_dir_dst)
 {
-  enum class FileType
-  {
-    Dwarfs,
-    Tarball,
-  };
-
-  FileType ft;
-
   std::string str_platform = ns_enum::to_string_lower(platform);
 
   fetchlist_dwarfs_ret_t path_and_url_dwarfs;
@@ -313,12 +303,10 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   {
     if ( std::string{url->c_str()}.ends_with(".tar.xz") ) 
     {
-      ft = FileType::Tarball;
-      path_and_url_dwarfs = {path_dir_dst / "{}.tar.xz"_fmt(str_platform) , *url};
+      path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs.tar.xz"_fmt(str_platform) , *url};
     } // if
     else if ( std::string{url->c_str()}.ends_with(".dwarfs") ) 
     {
-      ft = FileType::Dwarfs;
       path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs"_fmt(str_platform) , *url};
     } // else if
     else
@@ -328,17 +316,45 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   } // if
   else
   {
-    ft = FileType::Dwarfs;
     path_and_url_dwarfs = fetchlist_dwarfs(platform, path_dir_dst);
   } // else
+
+  return path_and_url_dwarfs;
+} // url_resolve_dwarfs() }}}
+
+// fetch_base() {{{
+decltype(auto) fetch_base(ns_enum::Platform platform
+  , std::optional<cpr::Url> const& url
+  , fs::path path_dir_dst)
+{
+  ns_log::write('i', "Downloading file: '", path_dir_dst);
+  // Resolve custom url or use default from fetchlist
+  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url, path_dir_dst);
+  // Try to download
+  fetch_file_from_url_on_failed_sha(path_and_url_base.path, path_and_url_base.url);
+  // Return path to downloaded file & url
+  return path_and_url_base;
+} // fetch_base() }}}
+
+// fetch_dwarfs() {{{
+decltype(auto) fetch_dwarfs(ns_enum::Platform platform
+  , std::optional<cpr::Url> const& url
+  , fs::path path_dir_dst)
+{
+  std::string str_platform = ns_enum::to_string_lower(platform);
+
+  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url, path_dir_dst);
 
   // Fetch from url to target directory path
   fetch_file_from_url_on_failed_sha(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
 
   // If is a dwarfs file, then it is ok to finish
-  if ( ft == FileType::Dwarfs ) { return path_and_url_dwarfs; }
+  if ( path_and_url_dwarfs.path.extension() == ".dwarfs" )
+  {
+    return path_and_url_dwarfs;
+  } // if
 
-  // It is a tarball, requires to create the dwarfs file
+  // It may be a compressed file, requires to create the dwarfs file
   uint32_t components_to_strip{0};
 
   // Check if tarball contains the required files
@@ -450,10 +466,14 @@ inline void fetch(ns_enum::Platform platform
 } // fetch() }}}
 
 // sha() {{{
-inline void sha(ns_enum::Platform platform, fs::path path_file_image)
+inline void sha(ns_enum::Platform platform
+  , fs::path path_file_image
+  , std::optional<cpr::Url> const& url_base = std::nullopt
+  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
 {
   // Validate input
   path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
+  fs::path path_dir_image = ns_fs::ns_path::dir_exists<true>(path_file_image.parent_path())._ret;
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string(platform));
@@ -461,7 +481,7 @@ inline void sha(ns_enum::Platform platform, fs::path path_file_image)
   ns_log::write('i', "Only checking SHA");
 
   // Get base
-  auto path_and_url_base = fetchlist_base(platform, path_file_image.parent_path());
+  auto path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
 
   // Check sha for base
   check_file_from_sha(path_and_url_base.path, path_and_url_base.url);
@@ -470,7 +490,7 @@ inline void sha(ns_enum::Platform platform, fs::path path_file_image)
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Get dwarfs
-  auto path_and_url_dwarfs = fetchlist_dwarfs(platform, path_file_image.parent_path());
+  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
 
   // Check sha for dwarfs
   check_file_from_sha(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
