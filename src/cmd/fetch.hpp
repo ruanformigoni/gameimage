@@ -97,19 +97,35 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 // check_file_from_sha() {{{
 inline void check_file_from_sha(fs::path const& path_file_to_check, cpr::Url const& url)
 {
-  // SHA file name is file name + sha256sum
-  fs::path path_file_sha256sum = path_file_to_check.string() + ".sha256sum";
+  ns_sha::SHA_TYPE sha_type;
 
-  // Fetch SHA file if not exists
-  // SHA url is url + sha256sum
-  fetch_file_from_url(path_file_sha256sum, url.str() + ".sha256sum");
+  fs::path path_file_sha;
+  try
+  {
+    ns_log::write('i', "SHA256: Trying to find in url");
+    // SHA file name is file name + sha256sum
+    path_file_sha = path_file_to_check.string() + ".sha256sum";
+    // Fetch SHA file
+    fetch_file_from_url(path_file_sha, url.str() + ".sha256sum");
+    ns_log::write('i', "SHA256 found in url");
+    sha_type = ns_sha::SHA_TYPE::SHA256;
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_log::write('i', "SHA512: Trying to find in url");
+    // SHA file name is file name + sha512sum
+    path_file_sha = path_file_to_check.string() + ".sha512sum";
+    // Fetch SHA file
+    fetch_file_from_url(path_file_sha, url.str() + ".sha512sum");
+    ns_log::write('i', "SHA512 found in url");
+    sha_type = ns_sha::SHA_TYPE::SHA512;
+  } // catch
 
   // Check SHA
-  if ( not ns_sha::check_256sum(path_file_to_check, path_file_sha256sum))
+  if ( not ns_sha::check_sha(path_file_to_check, path_file_sha, sha_type))
   {
     "SHA failed for {}"_throw(path_file_to_check);
   } // if
-
   ns_log::write('i', "SHA passed for ", path_file_to_check);
 } // }}}
 
