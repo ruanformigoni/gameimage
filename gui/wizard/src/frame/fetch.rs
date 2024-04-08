@@ -49,40 +49,31 @@ struct Data
   btn_fetch : Button,
 } // struct }}}
 
-// fn fetch_files() {{{
-fn fetch_files(vec_data : Vec<Data>
-  , mut output : Output) -> anyhow::Result<()>
+// fn verify_with_backend() {{{
+fn verify_with_backend(mut output : Output) -> anyhow::Result<()>
 {
   // Get platform
   let str_platform = env::var("GIMG_PLATFORM")?.to_lowercase();
 
-  // Verify SHA for each file
-  for data in vec_data.clone()
-  {
-    // Create path to SHA file
-    let mut path_file_sha : String = data.file_dest
-      .to_str()
-      .ok_or(ah!("Failed to convert file_dest to string"))?
-      .into();
-    path_file_sha.push_str(".sha256sum");
-    // Use download modules to verify SHA
-    if let Err(e) = download::sha(PathBuf::from(path_file_sha), data.file_dest)
-    {
-      output.set_value("SHA verify failed, download the files before proceeding");
-      return Err(anyhow::anyhow!(e.to_string()));
-    } // if
-  } // for
-
   // Run backend to merge files
   output.set_value("Validating and extracting...");
 
-  if common::gameimage_sync(vec![
+  let arg_output_file = format!("--output-file={}.flatimage", str_platform);
+  let arg_url_dwarfs;
+  let mut args = vec![
       "fetch"
     , "--platform"
     , &str_platform
-    , "--output-file"
-    , &format!("{}.flatimage", str_platform)
-  ]) != 0
+    , &arg_output_file
+  ];
+
+  if let Ok(url) = env::var("GIMG_FETCH_URL_DWARFS")
+  {
+    arg_url_dwarfs = format!("--url-dwarfs={}", url);
+    args.push(&arg_url_dwarfs);
+  } // if
+
+  if common::gameimage_sync(args) != 0
   {
     log!("Failed to fetch file list");
     return Err(ah!("Failed to fetch file list"));
@@ -263,7 +254,6 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     });
   } // for
 
-
   // Set callback to btn next
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
@@ -271,11 +261,10 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     // Disable GUI
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
-    let clone_vec_fetch = vec_fetch.clone();
     let clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
     {
-      if fetch_files(clone_vec_fetch.clone(), clone_output_status.clone()).is_ok()
+      if verify_with_backend(clone_output_status.clone()).is_ok()
       {
         if let Err(e) = set_image_path()
         {

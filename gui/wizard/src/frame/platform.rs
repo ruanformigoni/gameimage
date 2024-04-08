@@ -1,4 +1,5 @@
 use std::env;
+use std::sync::Mutex;
 
 // Gui
 use fltk::prelude::*;
@@ -16,9 +17,57 @@ use crate::common::WidgetExtExtra;
 use crate::common::FltkSenderExt;
 use crate::log;
 
+// enum Platform {{{
+#[derive(PartialEq)]
+enum Platform
+{
+  Linux,
+  Wine,
+  WineUrl,
+  Retroarch,
+  Pcsx2,
+  Rcps3,
+} // }}}
+
+// impl Platform {{{
+impl Platform
+{
+  fn as_str(&self) -> &'static str
+  {
+    match self
+    {
+      Platform::Linux => "linux",
+      Platform::Wine | Platform::WineUrl => "wine",
+      Platform::Retroarch => "retroarch",
+      Platform::Pcsx2 => "pcsx2",
+      Platform::Rcps3 => "rpcs3",
+    } // match
+  } // as_str
+
+  fn from_str(&self, src : &str) -> Option<Platform>
+  {
+    match src
+    {
+      "linux"       => Some(Platform::Linux),
+      "wine"        => Some(Platform::Wine),
+      "wine_url" => Some(Platform::WineUrl),
+      "retroarch"   => Some(Platform::Retroarch),
+      "pcsx2"       => Some(Platform::Pcsx2),
+      "rpcs3"       => Some(Platform::Rcps3),
+      _             => None,
+    } // match
+  } // as_str
+} // impl IconFrame }}}
+
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
+  // Keep track of which frame to draw (search web or local)
+  static PLATFORM : once_cell::sync::Lazy<Mutex<Platform>> = once_cell::sync::Lazy::new(|| Mutex::new(Platform::Linux));
+
+  // Remember custom url field
+  static URL : once_cell::sync::Lazy<Mutex<Option<String>>> = once_cell::sync::Lazy::new(|| Mutex::new(None));
+
   // Enter the build directory
   if let Err(e) = common::dir_build()
   {
@@ -36,7 +85,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     .bottom_of(&frame_content, - dimm::border())
     .center_x(&frame_content)
     .with_focus(false);
-  btn_menu.add_choice("linux|wine|retroarch|pcsx2|rpcs3|ryujinx");
+  btn_menu.add_choice("linux|wine|wine_url|retroarch|pcsx2|rpcs3|ryujinx");
 
   // Create callback with descriptions
   let buffer = TextBuffer::default();
@@ -67,9 +116,9 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   };
 
   // Check if variable is already set
-  if let Some(env_platform) = env::var("GIMG_PLATFORM").ok()
+  if let Ok(lock) = PLATFORM.lock()
   {
-    if env_platform.as_str() == "wine"
+    if *lock == Platform::Wine
     {
       btn_menu.set_width(frame_text.w() - dimm::border() - dimm::width_button_wide()*2);
       let mut btn_wine_dist = MenuButton::default()
@@ -94,12 +143,35 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
         std::env::set_var("GIMG_WINE_DIST", "default");
         btn_wine_dist.set_label("default");
       } // else
-    }
+    } // if
+    else if *lock == Platform::WineUrl
+    {
+      frame_text.set_size(frame_text.w(), frame_text.h() - dimm::height_button_wide() - dimm::height_text() - dimm::border());
+      let _btn_wine_dist = fltk::input::Input::default()
+        .with_size_of(&btn_menu)
+        .above_of(&btn_menu, dimm::border())
+        .with_label("Insert the url for the custom wine tarball")
+        .with_callback(|e|
+        {
+          match URL.lock()
+          {
+            Ok(mut guard) => *guard = Some(e.value()),
+            Err(e) => log!("Could not lock input url field: {}", e),
+          };
+        });
+    } // else if
+
+    // Reset URL
+    if *lock != Platform::WineUrl && let Ok(mut guard) = URL.lock()
+    {
+      *guard = None;
+      env::remove_var("GIMG_FETCH_URL_DWARFS");
+    } // if
     // Update menu
-    btn_menu.set_label(env_platform.as_str());
+    btn_menu.set_label(lock.as_str());
     // Update description box
-    f_update_buffer(env_platform);
-  } // if
+    f_update_buffer(lock.as_str().into());
+  }
 
   // Set callback to dropdown menu selection
   let mut clone_update_buffer = f_update_buffer.clone();
@@ -110,8 +182,16 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     let choice = e.choice().unwrap_or(String::from("None"));
     // Set as label
     e.set_label(&choice);
-    // Set as env var for later use
-    env::set_var("GIMG_PLATFORM", &choice);
+    // Update platform
+    if let Ok(mut guard) = PLATFORM.lock() && let Some(platform) = guard.from_str(&choice)
+    {
+      *guard = platform;
+      env::set_var("GIMG_PLATFORM", guard.as_str());
+    } // if
+    else
+    {
+      log!("Could not update GIMG_PLATFORM");
+    } // else
     // Draw description of selection
     clone_update_buffer(choice.clone());
     // Redraw
@@ -127,14 +207,14 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   clone_btn_next.set_callback(move |_|
   {
-    let str_platform = if let Ok(str_platform) = env::var("GIMG_PLATFORM")
-      && btn_menu.label() == str_platform
+    // Get selected platform
+    let str_platform = if let Ok(guard) = PLATFORM.lock()
     {
-      str_platform
+      guard.as_str()
     } // if
     else
     {
-      clone_output_status.set_value("Please select a platform to proceed");
+      clone_output_status.set_value("Could not determine chosen platform");
       return;
     }; // else
 
@@ -147,13 +227,30 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     // Fetch files
     std::thread::spawn(move ||
     {
-      // Ask back-end for the files to download for the selected platform
-      if common::gameimage_sync(vec![
+      // Args for gameimage_sync
+      let arg_output_file = format!("--output-file={}.flatimage", str_platform);
+      let arg_platform = format!("--platform={}", str_platform);
+      let arg_url_dwarfs;
+      let mut args = vec![
             "fetch"
-          , format!("--output-file={}.flatimage", str_platform).as_str()
-          , format!("--platform={}", str_platform).as_str()
+          , arg_output_file.as_str()
+          , arg_platform.as_str()
           , "--json=gameimage.fetch.json"
-      ]) != 0
+      ];
+
+      if let Ok(guard) = URL.lock() && let Some(url) = guard.clone()
+      {
+        arg_url_dwarfs = format!("--url-dwarfs={}", url);
+        args.push(arg_url_dwarfs.as_str());
+        env::set_var("GIMG_FETCH_URL_DWARFS", url);
+      } // match
+      else
+      {
+        log!("Failed to append --url-dwarfs for custom url");
+      } // else
+
+      // Ask back-end for the files to download for the selected platform
+      if common::gameimage_sync(args) != 0
       {
         log!("Failed to fetch");
         clone_tx.send_awake(common::Msg::WindActivate);
