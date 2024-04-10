@@ -47,6 +47,7 @@ inline Ipc::Ipc(fs::path path_file)
   // Use a unique key for the message queue.
   if(m_key = ftok(identifier.c_str(), 65); m_key == -1 )
   {
+    perror("Could not generate token for message queue");
     "Could not generate key for message queue with identifier '{}': {}"_throw(identifier, strerror(errno));
   } // if
   ns_log::write('i', "Generated message_queue key: ", m_key);
@@ -54,6 +55,7 @@ inline Ipc::Ipc(fs::path path_file)
   // Connect to the message queue
   if (m_message_queue_id = msgget(m_key, 0666 | IPC_CREAT); m_message_queue_id == -1 )
   {
+    perror("Could not create message queue");
     "msgget failed, could not create message queue for identifier '{}': {}"_throw(identifier, strerror(errno));
   } // if
   ns_log::write('i', "Message queue id: ", m_message_queue_id);
@@ -63,7 +65,11 @@ inline Ipc::Ipc(fs::path path_file)
 
 inline Ipc::~Ipc()
 {
-  msgctl(m_message_queue_id, IPC_RMID, NULL);
+  if ( msgctl(m_message_queue_id, IPC_RMID, NULL) == -1 )
+  {
+    ns_log::write('i', "Could not remove the message queue");
+    perror("Could not remove message queue");
+  } // if
 } // Ipc::~Ipc
 
 template<ns_concept::AsString T>
@@ -75,7 +81,10 @@ void Ipc::send(T&& t)
   // Ensure null termination
   m_buffer.message_text[sizeof(m_buffer.message_text) - 1] = '\0';
   // Send message
-  msgsnd(m_message_queue_id, &m_buffer, sizeof(m_buffer), 0);
+  if ( msgsnd(m_message_queue_id, &m_buffer, sizeof(m_buffer), 0) == -1 )
+  {
+    perror("Failure to send message");
+  } // if
 } // Ipc::send
 
 } // namespace ns_ipc
