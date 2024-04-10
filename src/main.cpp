@@ -64,6 +64,7 @@ void fetch(ns_parser::Parser const& parser)
       , *parser.optional("--output-file")
       , parser.optional("--url-base")
       , parser.optional("--url-dwarfs")
+      , parser.optional("--only-file")
     );
     return;
   } // else
