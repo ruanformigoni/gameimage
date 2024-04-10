@@ -322,8 +322,6 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
       clone_tx.send_awake(common::Msg::DrawCreator);
     });
-
-    // Export name for expected image path
   });
 }
 // }}}
