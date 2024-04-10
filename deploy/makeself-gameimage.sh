@@ -148,18 +148,6 @@ cd "$BUILD_DIR"
   :cp -r "$DIR_SCRIPT/usr" /tmp/gameimage
   :cp -r "$DIR_SCRIPT/etc" /tmp/gameimage
   :
-  :mkdir -p /tmp/gameimage/etc/ssl
-  :
-  :# Copy SSL conf is exists
-  :if [ -f /etc/ssl/openssl.cnf ]; then
-  :   cp /etc/ssl/openssl.cnf /tmp/gameimage/etc/ssl/openssl.cnf
-  :fi
-  :
-  :# Copy certs
-  :if [ -d /etc/ssl/certs ]; then
-  :  cp -r /etc/ssl/certs /tmp/gameimage/etc/ssl
-  :fi
-  :
   :export GIMG_BACKEND="$DIR_BIN/gameimage-cli"
   :
   :# Start application
