@@ -23,6 +23,7 @@ use crate::frame;
 use crate::lib;
 use crate::common;
 use crate::common::FltkSenderExt;
+use crate::common::WidgetExtExtra;
 use crate::common::PathBufExt;
 use crate::log;
 use crate::db;
@@ -53,8 +54,8 @@ struct Data
   btn_fetch : Button,
 } // struct }}}
 
-// fn verify_with_backend() {{{
-fn verify_with_backend(mut output : Output) -> anyhow::Result<()>
+// fn verify_and_configure() {{{
+fn verify_and_configure(mut output : Output) -> anyhow::Result<()>
 {
   // Get platform
   let str_platform = env::var("GIMG_PLATFORM")?.to_lowercase();
@@ -77,10 +78,22 @@ fn verify_with_backend(mut output : Output) -> anyhow::Result<()>
     args.push(&arg_url_dwarfs);
   } // if
 
-  if common::gameimage_sync(args) != 0
+  args.push("--sha");
+
+  // Verify sha
+  if common::gameimage_sync(args.clone()) != 0
   {
-    log!("Failed to fetch file list");
-    return Err(ah!("Failed to fetch file list"));
+    log!("Failed to verify files with backend");
+    return Err(ah!("Failed to verify files with backend"));
+  } // if
+
+  let _ = args.pop();
+
+  // Process downloaded files
+  if common::gameimage_sync(args.clone()) != 0
+  {
+    log!("Failed to configure downloaded files");
+    return Err(ah!("Failed to configure downloaded files"));
   } // if
 
   Ok(())
@@ -181,7 +194,8 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let btn_fetch = Button::default()
       .right_of(&prog, dimm::border())
       .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .with_label("Fetch");
+      .with_label("Fetch")
+      .with_focus(false);
 
     // Update base widget for positioning
     base = btn_fetch.as_base_widget();
@@ -191,11 +205,11 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   } // for
 
   // Function to fetch a file
+  let clone_tx = tx.clone();
   let f_fetch = move |data : Data|
   {
-    // Disable button while download is active
-    let mut btn = data.btn_fetch.clone();
-    btn.deactivate();
+    // Disable GUI
+    clone_tx.send(common::Msg::WindDeactivate);
 
     #[derive(PartialEq)]
     enum StateBackend { RUN, END, }
@@ -252,7 +266,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       let str_platform = match env::var("GIMG_PLATFORM")
       {
         Ok(var) => var.to_lowercase(),
-        Err(e) => { log!("Could not read variable GIMG_PLATFORM: {}", e); return; },
+        Err(e) =>
+        {
+          clone_tx.send(common::Msg::WindActivate);
+          log!("Could not read variable GIMG_PLATFORM: {}", e);
+          return;
+        },
       };
 
       let arg_output_file = format!("--output-file={}.flatimage", str_platform);
@@ -282,8 +301,10 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       match clone_state_backend.lock()
       {
         Ok(mut guard) => *guard = StateBackend::END,
-        Err(e) => { log!("Could not lock state variable: {}", e); return; },
+        Err(e) => log!("Could not lock state variable: {}", e),
       };
+
+      clone_tx.send(common::Msg::WindActivate);
     });
   };
 
@@ -308,18 +329,20 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
     {
-      if verify_with_backend(clone_output_status.clone()).is_ok()
+      // Draw package creator
+      if verify_and_configure(clone_output_status.clone()).is_err()
       {
-        if let Err(e) = set_image_path()
-        {
-          log!("Could not set image path for GIMG_IMAGE with error {}", e);
-        } // if
-        // Draw package creator
-        clone_tx.send_awake(common::Msg::DrawCreator);
+        log!("Failed to verify and configure downloaded files");
+        clone_tx.send_awake(common::Msg::WindActivate);
+        return;
       } // if
 
-      // Re-enable GUI
-      clone_tx.send_awake(common::Msg::WindActivate);
+      if let Err(e) = set_image_path()
+      {
+        log!("Could not set image path for GIMG_IMAGE with error {}", e);
+      } // if
+
+      clone_tx.send_awake(common::Msg::DrawCreator);
     });
 
     // Export name for expected image path
