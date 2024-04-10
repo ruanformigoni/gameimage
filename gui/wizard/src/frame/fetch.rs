@@ -16,11 +16,12 @@ use anyhow::anyhow as ah;
 
 use crate::dimm;
 use crate::frame;
+use crate::lib;
 use crate::common;
 use crate::common::FltkSenderExt;
+use crate::common::PathBufExt;
 use crate::log;
 use crate::db;
-use crate::lib::download;
 
 // fn url_basename() {{{
 fn url_basename(url : Url::Url) -> anyhow::Result<String>
@@ -192,54 +193,67 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     // Disable button while download is active
     let mut btn = data.btn_fetch.clone();
     btn.deactivate();
-    // Clone data into new thread, that keeps downloading after callback ends
+
+    // Spawn thread to read progress from the backend
     let clone_data = data.clone();
-    let mut clone_e_beg = btn.clone();
-    let mut clone_e_prog = btn.clone();
-    let mut clone_e_ok = btn.clone();
-    let mut clone_e = btn.clone();
-    let mut clone_prog_prog = clone_data.prog.clone();
-    let mut clone_prog_finish = clone_data.prog.clone();
     std::thread::spawn(move ||
     {
-      let vec_animation_chars = vec!["=", "==", "===", "===="];
-      let result = download::download(clone_data.some_url
-        , clone_data.file_dest
-        // on_start
-        , move ||
-        {
-          clone_e_beg.deactivate();
-          clone_e_beg.set_color(Color::DarkGreen);
-          clone_e_beg.set_label("=");
-        }
-        // on_progress
-        , move |f64_progress|
-        {
-          let len = clone_e_prog.label().chars().count()%vec_animation_chars.len();
-          clone_e_prog.set_label( vec_animation_chars[len] );
-          clone_prog_prog.set_value(f64_progress);
-          fltk::app::awake();
-        }
-        // on_finish
-        , move ||
-        {
-          clone_e_ok.set_label("Done");
-          clone_e_ok.set_color(Color::DarkGreen);
-        }
-      );
-      log!("Download result: {:?}", result);
-      if result.is_err()
+      let mut btn_fetch = clone_data.btn_fetch.clone();
+
+      let ipc = match lib::ipc::Ipc::new(clone_data.file_dest)
       {
-        clone_e.set_label("Retry");
-        clone_e.set_color(Color::DarkRed);
-        clone_e.activate();
+        Ok(ipc) => ipc,
+        Err(e) => { btn_fetch.activate(); log!("Could not create ipc instance: {}", e); return; },
+      }; // match
+
+      while let Ok(msg) = ipc.recv()
+      {
+        let progress = match msg.parse::<f64>()
+        {
+          Ok(progress) => progress,
+          Err(e) => { btn_fetch.activate(); log!("Could not convert progress to float: {}", e); return; },
+        }; // match
+        log!("Progress: {}", progress);
+        clone_data.prog.clone().set_value(progress);
+      } // while
+
+      btn_fetch.activate();
+    });
+
+    // Start backend to download file
+    let clone_data = data.clone();
+    std::thread::spawn(move ||
+    {
+      // Get platform
+      let str_platform = match env::var("GIMG_PLATFORM")
+      {
+        Ok(var) => var.to_lowercase(),
+        Err(e) => { log!("Could not read variable GIMG_PLATFORM: {}", e); return; },
+      };
+
+      let arg_output_file = format!("--output-file={}.flatimage", str_platform);
+      let arg_only_file = format!("--only-file={}", clone_data.file_dest.string());
+      let arg_url_dwarfs;
+      let mut args = vec![
+          "fetch"
+        , "--platform"
+        , &str_platform
+        , &arg_output_file
+        , &arg_only_file
+      ];
+
+      if let Ok(url) = env::var("GIMG_FETCH_URL_DWARFS")
+      {
+        arg_url_dwarfs = format!("--url-dwarfs={}", url);
+        args.push(&arg_url_dwarfs);
       } // if
-      else
+
+      log!("Args to gameimage: {:?}", args);
+
+      if common::gameimage_sync(args) != 0
       {
-        clone_e.deactivate();
-        clone_prog_finish.set_value(100.0);
-      } // else
-      fltk::app::awake();
+        log!("Failed to fetch file list");
+      } // if
     });
   };
 
