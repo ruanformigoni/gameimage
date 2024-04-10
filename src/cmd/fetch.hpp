@@ -548,7 +548,7 @@ inline void fetch(ns_enum::Platform platform
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Verify & configure dwarfs
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image, url_base);
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image, url_dwarfs);
   build_dwarfs(platform, path_and_url_dwarfs, path_file_image);
 
   // Merge base and dwarfs
