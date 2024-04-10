@@ -27,7 +27,6 @@ use crate::common::FltkSenderExt;
 use crate::common::WidgetExtExtra;
 use crate::common::PathBufExt;
 use crate::log;
-use crate::db;
 
 macro_rules! log_return
 {
