@@ -44,7 +44,6 @@ fn set_image_path() -> anyhow::Result<()>
 #[derive(Clone)]
 struct Data
 {
-  some_url  : Option<Url::Url>,
   file_dest : PathBuf,
   prog      : Progress,
   btn_fetch : Button,
@@ -184,7 +183,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     base = btn_fetch.as_base_widget();
 
     // Save in data to create callback afterwards
-    vec_fetch.push(Data{some_url: Some(url), file_dest, prog, btn_fetch});
+    vec_fetch.push(Data{file_dest, prog, btn_fetch});
   } // for
 
   // Function to fetch a file
