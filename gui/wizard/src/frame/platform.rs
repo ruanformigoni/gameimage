@@ -16,6 +16,7 @@ use crate::common;
 use crate::common::WidgetExtExtra;
 use crate::common::FltkSenderExt;
 use crate::log;
+use crate::gameimage;
 
 // enum Platform {{{
 #[derive(PartialEq, Clone)]
@@ -166,7 +167,10 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     if *lock != Some(Platform::WineUrl) && let Ok(mut guard) = URL.lock()
     {
       *guard = None;
-      env::remove_var("GIMG_FETCH_URL_DWARFS");
+      if let Err(e) = gameimage::fetch::url_clear()
+      {
+        log!("Could not clear custom url: {}", e);
+      } // if
     } // if
 
     if let Some(platform) = lock.clone()
@@ -207,7 +211,33 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
 
   // Set callback for next
-  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawFetch);
+  let mut clone_btn_next = ret_frame_footer.btn_next.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_tx = tx.clone();
+  clone_btn_next.set_callback(move |_|
+  {
+    // Fetch files
+    clone_output_status.set_value("Fetching list of files to download");
+
+    // Disable window
+    clone_tx.send_awake(common::Msg::WindDeactivate);
+
+    // Set custom url if it was passed
+    if let Ok(guard) = URL.lock() && let Some(url) = guard.clone()
+    {
+      if let Err(e) = gameimage::fetch::set_url_dwarfs(&url)
+      {
+        log!("Exit backend with error: {}", e);
+      } // if
+    } // match
+    else
+    {
+      log!("Could not set custom url");
+    } // else
+
+    // Disable window
+    clone_tx.send_awake(common::Msg::DrawFetch);
+  });
 }
 // }}}
 

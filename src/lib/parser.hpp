@@ -131,11 +131,17 @@ class Fetch final : public Parser
       // Set custom base url
       m_parser->add_argument("--url-base")
         .action([&](std::string const& s){ m_map_option_value["--url-base"]=s; })
-        .help("Custom url for the base");
+        .help("Set custom url for the base");
       // Set custom dwarfs url
       m_parser->add_argument("--url-dwarfs")
         .action([&](std::string const& s){ m_map_option_value["--url-dwarfs"]=s; })
-        .help("Custom url to for dwarfs");
+        .help("Set custom url to for dwarfs");
+      // Clear custom urls url
+      m_parser->add_argument("--url-clear")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--url-clear"]=s; })
+        .help("Clear custom urls");
       // Set platform
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })

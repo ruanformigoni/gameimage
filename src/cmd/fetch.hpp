@@ -26,6 +26,13 @@ namespace ns_fetch
 
 namespace fs = std::filesystem;
 
+// enum class UrlType {{{
+enum class UrlType
+{
+  DWARFS,
+  BASE,
+}; // }}}
+
 // anonymous namespace
 namespace
 {
@@ -347,15 +354,29 @@ inline void merge_base_and_dwarfs(std::string str_platform
   ns_subprocess::sync(path_file_image, "fim-dwarfs-add", path_file_dwarfs, "/fim/mount/{}"_fmt(str_platform));
 } // merge_base_and_dwarfs() }}}
 
+// url_get() {{{
+inline std::optional<std::string> url_get(ns_enum::Platform platform, UrlType url_type)
+{
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
+  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
+
+  // Log
+  ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
+  ns_log::write('i', "image: ", path_file_image);
+
+  // Get url and save path to base
+  return ns_common::catch_to_optional([&]{ return ns_db::query(path_file_json, ns_enum::to_string_lower(url_type)); });
+} // url_get() }}}
+
 // url_resolve_base() {{{
-decltype(auto) url_resolve_base(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url
-  , fs::path path_dir_dst)
+decltype(auto) url_resolve_base(ns_enum::Platform platform, fs::path path_dir_dst)
 {
   fetchlist_base_ret_t path_and_url_base;
 
   // Fetch from custom url
-  if ( url.has_value() )
+  if ( auto url = url_get(platform, UrlType::BASE); url.has_value() )
   {
     ns_log::write('i', "Download url: '", url->c_str());
     path_and_url_base = { path_dir_dst / "{}.tar.xz"_fmt(ns_enum::to_string_lower(platform)), *url };
@@ -368,21 +389,17 @@ decltype(auto) url_resolve_base(ns_enum::Platform platform
   } // else
 
   return path_and_url_base;
-} // function: url_resolve_base
-
-// url_resolve_base() }}}
+} // url_resolve_base() }}}
 
 // url_resolve_dwarfs() {{{
-decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url
-  , fs::path path_dir_dst)
+decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform, fs::path path_dir_dst)
 {
   std::string str_platform = ns_enum::to_string_lower(platform);
 
   fetchlist_dwarfs_ret_t path_and_url_dwarfs;
 
   // Custom URL
-  if ( url.has_value() )
+  if ( auto url = url_get(platform, UrlType::DWARFS); url.has_value() )
   {
     if ( std::string{url->c_str()}.ends_with(".tar.xz") )
     {
@@ -396,10 +413,12 @@ decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform
     {
       throw std::runtime_error("Unsupported file type for download");
     } // else
+    ns_log::write('i', "Download url (custom): '", url->c_str());
   } // if
   else
   {
     path_and_url_dwarfs = fetchlist_dwarfs(platform, path_dir_dst);
+    ns_log::write('i', "Download url (fetchlist): '", path_and_url_dwarfs.url.c_str());
   } // else
 
   return path_and_url_dwarfs;
@@ -413,11 +432,35 @@ void fetch_base(fetchlist_base_ret_t path_and_url)
   fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
 } // fetch_base() }}}
 
+// fetch_base() {{{
+inline fetchlist_base_ret_t fetch_base(ns_enum::Platform platform, fs::path path_dir_image)
+{
+  // Resolve custom url
+  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
+
+  // Fetch base
+  fetch_base(path_and_url_base);
+
+  return path_and_url_base;
+} // fetch() }}}
+
 // fetch_dwarfs() {{{
 void fetch_dwarfs(fetchlist_dwarfs_ret_t path_and_url)
 {
   fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
 } // fetch_dwarfs() }}}
+
+// fetch_dwarfs() {{{
+inline fetchlist_dwarfs_ret_t fetch_dwarfs(ns_enum::Platform platform, fs::path path_dir_image)
+{
+  // Resolve custom url
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
+
+  // Fetch dwarfs
+  fetch_dwarfs(path_and_url_dwarfs);
+
+  return path_and_url_dwarfs;
+} // fetch() }}}
 
 // build_dwarfs() {{{
 decltype(auto) build_dwarfs(ns_enum::Platform platform
@@ -501,39 +544,8 @@ inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
   return vector_cores;
 } // get_files_by_platform() }}}
 
-// fetch_base() {{{
-inline fetchlist_base_ret_t fetch_base(ns_enum::Platform platform
-  , fs::path path_dir_image
-  , std::optional<cpr::Url> const& url_base = std::nullopt)
-{
-  // Resolve custom url
-  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
-
-  // Fetch base
-  fetch_base(path_and_url_base);
-
-  return path_and_url_base;
-} // fetch() }}}
-
-// fetch_dwarfs() {{{
-inline fetchlist_dwarfs_ret_t fetch_dwarfs(ns_enum::Platform platform
-  , fs::path path_dir_image
-  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
-{
-  // Resolve custom url
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
-
-  // Fetch dwarfs
-  fetch_dwarfs(path_and_url_dwarfs);
-
-  return path_and_url_dwarfs;
-} // fetch() }}}
-
 // fetch() {{{
-inline void fetch(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url_base = std::nullopt
-  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt
-  , std::optional<fs::path> const& only_file = std::nullopt)
+inline void fetch(ns_enum::Platform platform, std::optional<fs::path> const& only_file = std::nullopt)
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
@@ -541,25 +553,25 @@ inline void fetch(ns_enum::Platform platform
 
   if ( only_file and (only_file->string().ends_with(".dwarfs") or only_file->string().ends_with(".dwarfs.tar.xz")))
   {
-    fetch_dwarfs(platform, path_dir_image, url_dwarfs);
+    fetch_dwarfs(platform, path_dir_image);
     return;
   } // else if
 
   if ( only_file and only_file->string().ends_with(".tar.xz"))
   {
-    fetch_base(platform, path_dir_image, url_base);
+    fetch_base(platform, path_dir_image);
     return;
   } // if
 
   // Verify & configure base
-  fetchlist_base_ret_t path_and_url_base = fetch_base(platform, path_dir_image, url_base);
+  fetchlist_base_ret_t path_and_url_base = fetch_base(platform, path_dir_image);
   tarball_extract_flatimage(path_and_url_base.path, path_file_image);
 
   // No dwarfs for linux
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Verify & configure dwarfs
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image, url_dwarfs);
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image);
   build_dwarfs(platform, path_and_url_dwarfs, path_file_image);
 
   // Remove .dwarfs.tar.xz to get built dwarfs file path
@@ -575,9 +587,7 @@ inline void fetch(ns_enum::Platform platform
 } // fetch() }}}
 
 // sha() {{{
-inline void sha(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url_base = std::nullopt
-  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
+inline void sha(ns_enum::Platform platform)
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
@@ -589,7 +599,7 @@ inline void sha(ns_enum::Platform platform
   ns_log::write('i', "Only checking SHA");
 
   // Get base
-  auto path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
+  auto path_and_url_base = url_resolve_base(platform, path_dir_image);
 
   // Check sha for base
   check_file(path_and_url_base.path, path_and_url_base.url);
@@ -598,7 +608,7 @@ inline void sha(ns_enum::Platform platform
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Get dwarfs
-  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
+  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
 
   // Check sha for dwarfs
   check_file(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
@@ -630,24 +640,61 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
   {
     case IpcQuery::FILES:
     {
-      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, std::nullopt, path_dir_image);
+      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
       ipc.send(path_and_url_base.path);
       if ( platform == ns_enum::Platform::LINUX ) { return; }
-      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, std::nullopt, path_dir_image);
+      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
       ipc.send(path_and_url_dwarfs.path);
     } // case
     break;
     case IpcQuery::URLS:
     {
-      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, std::nullopt, path_dir_image);
+      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
       ipc.send(path_and_url_base.url);
       if ( platform == ns_enum::Platform::LINUX ) { return; }
-      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, std::nullopt, path_dir_image);
+      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
       ipc.send(path_and_url_dwarfs.url);
     } // case
     break;
   } // switch
 } // ipc() }}}
+
+// url_set() {{{
+inline void url_set(ns_enum::Platform platform
+  , std::optional<std::string> opt_str_url
+  , UrlType url_type
+)
+{
+  if ( not opt_str_url.has_value() )
+  {
+    "No url was provided"_throw();
+  } // if
+
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
+  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
+
+  // Log
+  ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
+  ns_log::write('i', "image: ", path_file_image);
+
+  // Get url and save path to base
+  ns_db::from_file(path_file_json, [&](auto&& db)
+  {
+    db(ns_enum::to_string_lower(url_type)) = *opt_str_url;
+  }, ns_db::Mode::CREATE);
+} // url_set() }}}
+
+// url_clear() {{{
+inline void url_clear(ns_enum::Platform platform)
+{
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
+  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
+  fs::remove(path_file_json);
+} // url_clear() }}}
 
 } // namespace ns_fetch
 
