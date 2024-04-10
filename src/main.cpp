@@ -37,20 +37,18 @@ void fetch(ns_parser::Parser const& parser)
 {
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
 
-  if (  parser.optional("--output-file") && parser.contains("--sha") )
+  if ( parser.contains("--sha") )
   {
     ns_fetch::sha(platform
-      , *parser.optional("--output-file")
       , parser.optional("--url-base")
       , parser.optional("--url-dwarfs")
     );
     return;
   } // if
 
-  if ( parser.optional("--output-file") && parser.optional("--json")  )
+  if ( parser.optional("--json")  )
   {
     ns_fetch::json(platform
-      , *parser.optional("--output-file")
       , *parser.optional("--json")
       , parser.optional("--url-base")
       , parser.optional("--url-dwarfs")
@@ -58,18 +56,11 @@ void fetch(ns_parser::Parser const& parser)
     return;
   } // if
 
-  if ( parser.optional("--output-file") )
-  {
-    ns_fetch::fetch(platform
-      , *parser.optional("--output-file")
-      , parser.optional("--url-base")
-      , parser.optional("--url-dwarfs")
-      , parser.optional("--only-file")
-    );
-    return;
-  } // else
-
-  "Missing arguments for fetch phase"_throw();
+  ns_fetch::fetch(platform
+    , parser.optional("--url-base")
+    , parser.optional("--url-dwarfs")
+    , parser.optional("--only-file")
+  );
 } // fetch() }}}
 
 // init() {{{

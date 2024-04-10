@@ -140,10 +140,6 @@ class Fetch final : public Parser
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
         .help("Specity the platform to download the flatimage");
-      // Set output file
-      m_parser->add_argument("--output-file")
-        .action([&](std::string const& s){ m_map_option_value["--output-file"]=s; })
-        .help("Specity the output file name for the flatimage");
       // Only download base file
       m_parser->add_argument("--only-file")
         .action([&](std::string const& s){ m_map_option_value["--only-file"]=s; })
