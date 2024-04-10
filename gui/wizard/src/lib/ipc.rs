@@ -24,22 +24,16 @@ impl Ipc
 {
 
 // pub fn new() {{{
-pub fn new(path : std::path::PathBuf) -> anyhow::Result<Ipc>
+pub fn new<F>(path : std::path::PathBuf, mut f_wait : F) -> anyhow::Result<Ipc>
+where F: FnMut() + 'static + Send + Sync
 {
-  let mut time_elapsed = std::time::Duration::from_secs(0);
-  let time_limit = std::time::Duration::from_secs(120);
+  // Wait for start condition
+  f_wait();
 
-  // Wait for file to exist if it does not
-  while ! path.exists() && time_elapsed < time_limit
-  {
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    time_elapsed += std::time::Duration::from_millis(100);
-  } // while
-  
-  // If ran into timeout, then fail
+  // Error out if file not exists
   if ! path.exists()
   {
-    return Err(ah!("Timeout reached to create ipc communication"));
+    return Err(ah!("File to create ipc communication does not exist"));
   } // if
 
   // Wait for backend to create fifo

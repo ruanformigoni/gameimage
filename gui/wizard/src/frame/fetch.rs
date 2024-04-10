@@ -1,5 +1,9 @@
-use std::env;
-use std::path::PathBuf;
+use std::
+{
+  env,
+  path::PathBuf,
+  sync::{Arc,Mutex},
+};
 
 // Gui
 use fltk::prelude::*;
@@ -193,13 +197,33 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let mut btn = data.btn_fetch.clone();
     btn.deactivate();
 
+    #[derive(PartialEq)]
+    enum StateBackend { RUN, END, }
+
+    let state_backend = Arc::new(Mutex::new(StateBackend::RUN));
+
     // Spawn thread to read progress from the backend
     let clone_data = data.clone();
+    let clone_state_backend = state_backend.clone();
     std::thread::spawn(move ||
     {
-      let mut btn_fetch = clone_data.btn_fetch.clone();
+      let path_file_dst = clone_data.file_dest.clone();
+      let f_wait = move ||
+      {
+        while ! path_file_dst.exists()
+        {
+          // Set guard
+          match clone_state_backend.lock()
+          {
+            Ok(guard) => if *guard == StateBackend::END { break },
+            Err(e) => { log!("Could not get state of backend: {}", e); break; },
+          };
+          std::thread::sleep(std::time::Duration::from_millis(100));
+        } // while
+      };
 
-      let ipc = match lib::ipc::Ipc::new(clone_data.file_dest)
+      let mut btn_fetch = clone_data.btn_fetch.clone();
+      let ipc = match lib::ipc::Ipc::new(clone_data.file_dest, f_wait)
       {
         Ok(ipc) => ipc,
         Err(e) => { btn_fetch.activate(); log!("Could not create ipc instance: {}", e); return; },
@@ -221,6 +245,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
     // Start backend to download file
     let clone_data = data.clone();
+    let clone_state_backend = state_backend.clone();
     std::thread::spawn(move ||
     {
       // Get platform
@@ -253,6 +278,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       {
         log!("Failed to fetch file list");
       } // if
+
+      match clone_state_backend.lock()
+      {
+        Ok(mut guard) => *guard = StateBackend::END,
+        Err(e) => { log!("Could not lock state variable: {}", e); return; },
+      };
     });
   };
 
