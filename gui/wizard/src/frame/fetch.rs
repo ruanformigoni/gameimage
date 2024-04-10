@@ -206,6 +206,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
   // Function to fetch a file
   let clone_tx = tx.clone();
+  let clone_output_status = ret_frame_footer.output_status.clone();
   let f_fetch = move |data : Data|
   {
     // Disable GUI
@@ -236,11 +237,10 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         } // while
       };
 
-      let mut btn_fetch = clone_data.btn_fetch.clone();
       let ipc = match lib::ipc::Ipc::new(clone_data.file_dest, f_wait)
       {
         Ok(ipc) => ipc,
-        Err(e) => { btn_fetch.activate(); log!("Could not create ipc instance: {}", e); return; },
+        Err(e) => { log!("Could not create ipc instance: {}", e); return; },
       }; // match
 
       while let Ok(msg) = ipc.recv()
@@ -248,18 +248,17 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         let progress = match msg.parse::<f64>()
         {
           Ok(progress) => progress,
-          Err(e) => { btn_fetch.activate(); log!("Could not convert progress to float: {}", e); return; },
+          Err(e) => { log!("Could not convert progress to float: {}", e); return; },
         }; // match
         log!("Progress: {}", progress);
         clone_data.prog.clone().set_value(progress);
       } // while
-
-      btn_fetch.activate();
     });
 
     // Start backend to download file
     let clone_data = data.clone();
     let clone_state_backend = state_backend.clone();
+    let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
       // Get platform
@@ -270,6 +269,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         {
           clone_tx.send(common::Msg::WindActivate);
           log!("Could not read variable GIMG_PLATFORM: {}", e);
+          clone_output_status.set_value("Could not read variable GIMG_PLATFORM");
           return;
         },
       };
@@ -305,6 +305,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       };
 
       clone_tx.send(common::Msg::WindActivate);
+      clone_output_status.set_value("Download finished");
     });
   };
 
@@ -312,10 +313,10 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   for data in vec_fetch.clone()
   {
     let clone_data = data.clone();
-    let mut clone_btn_fetch = clone_data.btn_fetch.clone();
-    clone_btn_fetch.set_callback(move |_|
+    let clone_f_fetch = f_fetch.clone();
+    clone_data.btn_fetch.clone().set_callback(move |_|
     {
-      f_fetch(clone_data.clone());
+      clone_f_fetch(clone_data.clone());
     });
   } // for
 
@@ -326,13 +327,14 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     // Disable GUI
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
-    let clone_output_status = ret_frame_footer.output_status.clone();
+    let mut clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
     {
       // Draw package creator
       if verify_and_configure(clone_output_status.clone()).is_err()
       {
         log!("Failed to verify and configure downloaded files");
+        clone_output_status.set_value("Download the required files to proceed");
         clone_tx.send_awake(common::Msg::WindActivate);
         return;
       } // if
