@@ -59,45 +59,16 @@ struct Data
   btn_fetch : Button,
 } // struct }}}
 
-// fn verify_and_configure() {{{
-fn verify_and_configure(mut output : Output) -> anyhow::Result<()>
+// fn backend_validate_and_configure() {{{
+fn backend_validate_and_configure(mut output : Output) -> anyhow::Result<()>
 {
-  // Get platform
-  let str_platform = env::var("GIMG_PLATFORM")?.to_lowercase();
-
-  // Run backend to merge files
   output.set_value("Validating and extracting...");
 
-  let arg_url_dwarfs;
-  let mut args = vec![
-      "fetch"
-    , "--platform"
-    , &str_platform
-  ];
+  // Run backend to merge files
+  gameimage::fetch::validate()?;
 
-  if let Ok(url) = env::var("GIMG_FETCH_URL_DWARFS")
-  {
-    arg_url_dwarfs = format!("--url-dwarfs={}", url);
-    args.push(&arg_url_dwarfs);
-  } // if
-
-  args.push("--sha");
-
-  // Verify sha
-  if common::gameimage_sync(args.clone()) != 0
-  {
-    log!("Failed to verify files with backend");
-    return Err(ah!("Failed to verify files with backend"));
-  } // if
-
-  let _ = args.pop();
-
-  // Process downloaded files
-  if common::gameimage_sync(args.clone()) != 0
-  {
-    log!("Failed to configure downloaded files");
-    return Err(ah!("Failed to configure downloaded files"));
-  } // if
+  // Use backend to configure downloaded files
+  gameimage::fetch::configure()?;
 
   Ok(())
 }
@@ -336,7 +307,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     std::thread::spawn(move ||
     {
       // Draw package creator
-      if verify_and_configure(clone_output_status.clone()).is_err()
+      if backend_validate_and_configure(clone_output_status.clone()).is_err()
       {
         log!("Failed to verify and configure downloaded files");
         clone_output_status.set_value("Download the required files to proceed");
