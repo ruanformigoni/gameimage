@@ -12,8 +12,7 @@
 #include "../common.hpp"
 #include "../enum.hpp"
 
-#include "../std/fifo.hpp"
-
+#include "../lib/ipc.hpp"
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
@@ -31,44 +30,6 @@ namespace fs = std::filesystem;
 namespace
 {
 
-// struct DataDownload {{{
-struct DataDownload
-{
-  fs::path path_file;
-}; // }}}
-
-// dispatch_progress() {{{
-inline void dispatch_progress(fs::path const& path_fifo, std::string const& data)
-{
-  // Create fifo
-  fifo::create(path_fifo.c_str());
-  // Push data to fifo
-  fifo::push(path_fifo.c_str(), fmt::format("{}\n", data));
-  // Print percentage
-  ns_log::write('i', "Download progress ", path_fifo.filename().string(), ": ", data, "%");
-} // }}}
-
-// fetch_callback() {{{
-// Progress callback function
-inline bool fetch_callback(cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t userdata)
-{
-  static std::chrono::steady_clock::time_point prev = std::chrono::steady_clock::now();
-  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  std::chrono::milliseconds timeDiff = duration_cast<std::chrono::milliseconds>(now - prev);
-
-  // Create fifo with file basename
-  DataDownload* data = reinterpret_cast<DataDownload*>(userdata);
-
-	if (downloadTotal > 0 && timeDiff.count() >= 2000)
-	{
-    prev = now;
-    // Update progress
-    int percentage = static_cast<int>((downloadNow * 100) / downloadTotal);
-    dispatch_progress(data->path_file, std::to_string(percentage));
-	}
-	return true; // Return false to cancel the download
-} // }}}
-
 // fetch_file_from_url() {{{
 inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 {
@@ -77,18 +38,46 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
   auto ofile = std::ofstream{path_file, std::ios::binary};
   // Open file error
   if ( ! ofile.good() ) { "Failed to open file '{}' for writing"_throw(path_file); }
-  // Access data from callback
-  fs::path path_fifo_progress(fmt::format("/tmp/gameimage/fifo/fetch.progress.{}", path_file.filename().string()));
-  DataDownload data { .path_file = path_fifo_progress };
+  // IPC
+  std::unique_ptr<ns_ipc::Ipc> ptr_ipc = nullptr;
+  try
+  {
+    ptr_ipc = std::make_unique<ns_ipc::Ipc>(path_file);
+  }
+  catch(std::exception const& e)
+  {
+    ns_log::write('e', e.what());
+    ns_log::write('e', "Could not initialize message ipc for ", path_file);
+  } // catch
+  // fetch_callback
+  auto fetch_callback = [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t)
+  {
+    static std::chrono::steady_clock::time_point prev = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    std::chrono::milliseconds timeDiff = duration_cast<std::chrono::milliseconds>(now - prev);
+
+    if (downloadTotal > 0 && timeDiff.count() >= 2000)
+    {
+      prev = now;
+      // Update progress
+      int percentage = static_cast<int>((downloadNow * 100) / downloadTotal);
+      // Send progress to watching processes
+      if ( ptr_ipc != nullptr ){  ptr_ipc->send(percentage); }
+      // Log
+      ns_log::write('i', "Download progress: ", percentage, "%");
+    }
+    return true; // Return false to cancel the download
+  }; //
   // Fetch file
-  cpr::Response r = cpr::Download(ofile, url, cpr::ProgressCallback{fetch_callback, reinterpret_cast<intptr_t>(&data)});
+  cpr::Response r = cpr::Download(ofile, url, cpr::ProgressCallback{fetch_callback, reinterpret_cast<intptr_t>(&ofile)});
   // Check for success
   if ( r.status_code != 200 )
   {
     "Failure to fetch file '{}' with code '{}'"_throw(path_file, r.status_code);
   }
   // Set to progress 100%
-  dispatch_progress(path_fifo_progress, "100");
+  if ( ptr_ipc != nullptr ){  ptr_ipc->send(100); }
+  ns_log::write('i', "Download progress: 100%");
   // Make file executable
   using std::filesystem::perms;
   fs::permissions(path_file, perms::owner_all | perms::group_all | perms::others_read);
@@ -364,11 +353,11 @@ decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform
   // Custom URL
   if ( url.has_value() )
   {
-    if ( std::string{url->c_str()}.ends_with(".tar.xz") ) 
+    if ( std::string{url->c_str()}.ends_with(".tar.xz") )
     {
       path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs.tar.xz"_fmt(str_platform) , *url};
     } // if
-    else if ( std::string{url->c_str()}.ends_with(".dwarfs") ) 
+    else if ( std::string{url->c_str()}.ends_with(".dwarfs") )
     {
       path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs"_fmt(str_platform) , *url};
     } // else if
@@ -495,7 +484,9 @@ inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
 inline void fetch(ns_enum::Platform platform
     , fs::path path_file_image
     , std::optional<cpr::Url> const& url_base = std::nullopt
-    , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
+    , std::optional<cpr::Url> const& url_dwarfs = std::nullopt
+    , std::optional<fs::path> const& only_file = std::nullopt
+  )
 {
   std::string str_platform = ns_enum::to_string_lower(platform);
 
@@ -507,26 +498,42 @@ inline void fetch(ns_enum::Platform platform
   ns_log::write('i', "platform: ", str_platform);
   ns_log::write('i', "image: ", path_file_image);
 
-  // Fetch base
-  auto ret_fetch_base = fetch_base(platform, url_base, path_dir_image);
+  // Resolve custom url
+  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
 
-  // Extract base
-  tarball_extract_flatimage(ret_fetch_base.path, path_file_image);
+  bool is_fetch_base   = only_file and *only_file ==  path_and_url_base.path;
+  bool is_fetch_dwarfs = only_file and *only_file ==  path_and_url_dwarfs.path;
+
+  if ( is_fetch_base )
+  {
+    // Fetch base
+    auto ret_fetch_base = fetch_base(platform, url_base, path_dir_image);
+    // Extract base
+    tarball_extract_flatimage(ret_fetch_base.path, path_file_image);
+  } // if
 
   // No need to merge anything, just use the tarball
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Fetch dwarfs file
-  auto ret_fetch_dwarfs = fetch_dwarfs( platform, url_dwarfs, path_file_image, path_dir_image);
+  fetchlist_dwarfs_ret_t ret_fetch_dwarfs;
 
-  // Set file name to platform + dwarfs
-  ret_fetch_dwarfs.path.remove_filename();
-  ret_fetch_dwarfs.path /= str_platform + ".dwarfs";
+  if ( is_fetch_dwarfs )
+  {
+    ret_fetch_dwarfs = fetch_dwarfs(platform, url_dwarfs, path_file_image, path_dir_image);
+    // Set file name to platform + dwarfs
+    ret_fetch_dwarfs.path.remove_filename();
+    ret_fetch_dwarfs.path /= str_platform + ".dwarfs";
+  } // if
 
   // Merge base and dwarfs
-  merge_base_and_dwarfs(ns_enum::to_string_lower(platform)
-    , path_file_image
-    , ret_fetch_dwarfs.path);
+  if ( not is_fetch_base and not is_fetch_dwarfs )
+  {
+    merge_base_and_dwarfs(ns_enum::to_string_lower(platform)
+      , path_file_image
+      , ret_fetch_dwarfs.path);
+  } // if
 } // fetch() }}}
 
 // sha() {{{
