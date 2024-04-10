@@ -233,12 +233,10 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     std::thread::spawn(move ||
     {
       // Args for gameimage_sync
-      let arg_output_file = format!("--output-file={}.flatimage", str_platform);
       let arg_platform = format!("--platform={}", str_platform);
       let arg_url_dwarfs;
       let mut args = vec![
             "fetch"
-          , arg_output_file.as_str()
           , arg_platform.as_str()
           , "--json=gameimage.fetch.json"
       ];

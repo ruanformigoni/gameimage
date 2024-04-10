@@ -63,13 +63,11 @@ fn verify_and_configure(mut output : Output) -> anyhow::Result<()>
   // Run backend to merge files
   output.set_value("Validating and extracting...");
 
-  let arg_output_file = format!("--output-file={}.flatimage", str_platform);
   let arg_url_dwarfs;
   let mut args = vec![
       "fetch"
     , "--platform"
     , &str_platform
-    , &arg_output_file
   ];
 
   if let Ok(url) = env::var("GIMG_FETCH_URL_DWARFS")
@@ -274,14 +272,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         },
       };
 
-      let arg_output_file = format!("--output-file={}.flatimage", str_platform);
       let arg_only_file = format!("--only-file={}", clone_data.file_dest.string());
       let arg_url_dwarfs;
       let mut args = vec![
           "fetch"
         , "--platform"
         , &str_platform
-        , &arg_output_file
         , &arg_only_file
       ];
 

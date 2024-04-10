@@ -30,6 +30,17 @@ namespace fs = std::filesystem;
 namespace
 {
 
+// get_path_file_image() {{{
+decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
+{
+  // Get self dir
+  fs::path path_dir_current = fs::current_path();
+  // Check if exists
+  if ( not fs::exists(path_dir_current) ) { "dir current does not exist"_throw(); }
+  // Create image path
+  return path_dir_current / ( ns_enum::to_string_lower(platform) + ".flatimage" );
+} // }}}
+
 // fetch_file_from_url() {{{
 inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 {
@@ -513,20 +524,13 @@ inline fetchlist_dwarfs_ret_t fetch_dwarfs(ns_enum::Platform platform
 
 // fetch() {{{
 inline void fetch(ns_enum::Platform platform
-  , fs::path path_file_image
   , std::optional<cpr::Url> const& url_base = std::nullopt
   , std::optional<cpr::Url> const& url_dwarfs = std::nullopt
   , std::optional<fs::path> const& only_file = std::nullopt)
 {
-  std::string str_platform = ns_enum::to_string_lower(platform);
-
-  // Validate input
-  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
-  fs::path path_dir_image = ns_fs::ns_path::dir_exists<true>(path_file_image.parent_path())._ret;
-
-  // Log
-  ns_log::write('i', "platform: ", str_platform);
-  ns_log::write('i', "image: ", path_file_image);
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
 
   if ( only_file and (only_file->string().ends_with(".dwarfs") or only_file->string().ends_with(".dwarfs.tar.xz")))
   {
@@ -565,13 +569,12 @@ inline void fetch(ns_enum::Platform platform
 
 // sha() {{{
 inline void sha(ns_enum::Platform platform
-  , fs::path path_file_image
   , std::optional<cpr::Url> const& url_base = std::nullopt
   , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
 {
-  // Validate input
-  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
-  fs::path path_dir_image = ns_fs::ns_path::dir_exists<true>(path_file_image.parent_path())._ret;
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
@@ -596,7 +599,6 @@ inline void sha(ns_enum::Platform platform
 
 // json() {{{
 inline void json(ns_enum::Platform platform
-  , fs::path path_file_image
   , fs::path path_json
   , std::optional<cpr::Url> const& url_base = std::nullopt
   , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
@@ -604,9 +606,9 @@ inline void json(ns_enum::Platform platform
   // Remove if exists
   fs::remove(path_json);
 
-  // Validate input
-  path_file_image = ns_fs::ns_path::dir_parent_exists<true>(path_file_image)._ret;
-  fs::path path_dir_image = ns_fs::ns_path::dir_exists<true>(path_file_image.parent_path())._ret;
+  // Create image path
+  fs::path path_file_image = get_path_file_image(platform);
+  fs::path path_dir_image = path_file_image.parent_path();
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
