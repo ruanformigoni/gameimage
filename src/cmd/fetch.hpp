@@ -388,37 +388,28 @@ decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform
 } // url_resolve_dwarfs() }}}
 
 // fetch_base() {{{
-decltype(auto) fetch_base(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url
-  , fs::path path_dir_dst)
+void fetch_base(fetchlist_base_ret_t path_and_url)
 {
-  ns_log::write('i', "Downloading file: '", path_dir_dst);
-  // Resolve custom url or use default from fetchlist
-  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url, path_dir_dst);
+  ns_log::write('i', "Downloading file: '", path_and_url.path);
   // Try to download
-  fetch_file_from_url_on_failed_check(path_and_url_base.path, path_and_url_base.url);
-  // Return path to downloaded file & url
-  return path_and_url_base;
+  fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
 } // fetch_base() }}}
 
 // fetch_dwarfs() {{{
-decltype(auto) fetch_dwarfs(ns_enum::Platform platform
-  , std::optional<cpr::Url> const& url
-  , fs::path path_file_image
-  , fs::path path_dir_dst)
+void fetch_dwarfs(fetchlist_dwarfs_ret_t path_and_url)
 {
-  std::string str_platform = ns_enum::to_string_lower(platform);
+  fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
+} // fetch_dwarfs() }}}
 
-  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url, path_dir_dst);
-
-  // Fetch from url to target directory path
-  fetch_file_from_url_on_failed_check(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
+// build_dwarfs() {{{
+decltype(auto) build_dwarfs(ns_enum::Platform platform
+  , fetchlist_dwarfs_ret_t path_and_url
+  , fs::path path_file_image)
+{
+  std::string str_platform = ns_enum::to_string(platform);
 
   // If is a dwarfs file, then it is ok to finish
-  if ( path_and_url_dwarfs.path.extension() == ".dwarfs" )
-  {
-    return path_and_url_dwarfs;
-  } // if
+  if ( path_and_url.path.extension() == ".dwarfs" ) { return; } // if
 
   // It may be a compressed file, requires to create the dwarfs file
   uint32_t components_to_strip{0};
@@ -426,10 +417,10 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   // Check if tarball contains the required files
   if ( platform == ns_enum::Platform::WINE )
   {
-    auto opt_path_parent = ns_tar::find(path_and_url_dwarfs.path, "bin/wine");
+    auto opt_path_parent = ns_tar::find(path_and_url.path, "bin/wine");
     if ( not opt_path_parent.has_value() )
     {
-      "Could not find '{}' inside tarball '{}'"_throw("bin/wine", path_and_url_dwarfs.path);
+      "Could not find '{}' inside tarball '{}'"_throw("bin/wine", path_and_url.path);
     } // if
     components_to_strip = std::distance(opt_path_parent->begin(), opt_path_parent->end());
     ns_log::write('i', "Components to strip: ", components_to_strip);
@@ -440,7 +431,7 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
   } // else
 
   // Extract tarball to "platform" directory
-  ns_tar::extract(path_and_url_dwarfs.path, ns_tar::Opts{components_to_strip, std::nullopt, str_platform});
+  ns_tar::extract(path_and_url.path, ns_tar::Opts{components_to_strip, std::nullopt, str_platform});
 
   // Fetch runner script
   if ( platform == ns_enum::Platform::WINE )
@@ -457,9 +448,8 @@ decltype(auto) fetch_dwarfs(ns_enum::Platform platform
 
   // Create dwarfs filesystem
   dwarfs_create(path_file_image, str_platform, str_platform + ".dwarfs");
-
-  return path_and_url_dwarfs;
-} // fetch_dwarfs() }}}
+  
+} // build_dwarfs() }}}
 
 } // anonymous namespace
 
@@ -493,13 +483,40 @@ inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
   return vector_cores;
 } // get_files_by_platform() }}}
 
+// fetch_base() {{{
+inline fetchlist_base_ret_t fetch_base(ns_enum::Platform platform
+  , fs::path path_dir_image
+  , std::optional<cpr::Url> const& url_base = std::nullopt)
+{
+  // Resolve custom url
+  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
+
+  // Fetch base
+  fetch_base(path_and_url_base);
+
+  return path_and_url_base;
+} // fetch() }}}
+
+// fetch_dwarfs() {{{
+inline fetchlist_dwarfs_ret_t fetch_dwarfs(ns_enum::Platform platform
+  , fs::path path_dir_image
+  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
+{
+  // Resolve custom url
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
+
+  // Fetch dwarfs
+  fetch_dwarfs(path_and_url_dwarfs);
+
+  return path_and_url_dwarfs;
+} // fetch() }}}
+
 // fetch() {{{
 inline void fetch(ns_enum::Platform platform
-    , fs::path path_file_image
-    , std::optional<cpr::Url> const& url_base = std::nullopt
-    , std::optional<cpr::Url> const& url_dwarfs = std::nullopt
-    , std::optional<fs::path> const& only_file = std::nullopt
-  )
+  , fs::path path_file_image
+  , std::optional<cpr::Url> const& url_base = std::nullopt
+  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt
+  , std::optional<fs::path> const& only_file = std::nullopt)
 {
   std::string str_platform = ns_enum::to_string_lower(platform);
 
@@ -511,42 +528,33 @@ inline void fetch(ns_enum::Platform platform
   ns_log::write('i', "platform: ", str_platform);
   ns_log::write('i', "image: ", path_file_image);
 
-  // Resolve custom url
-  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
-
-  bool is_fetch_base   = only_file and *only_file ==  path_and_url_base.path;
-  bool is_fetch_dwarfs = only_file and *only_file ==  path_and_url_dwarfs.path;
-
-  if ( is_fetch_base )
+  if ( only_file and (only_file->string().ends_with(".dwarfs") or only_file->string().ends_with(".dwarfs.tar.xz")))
   {
-    // Fetch base
-    auto ret_fetch_base = fetch_base(platform, url_base, path_dir_image);
-    // Extract base
-    tarball_extract_flatimage(ret_fetch_base.path, path_file_image);
+    fetch_dwarfs(platform, path_dir_image, url_dwarfs);
+    return;
+  } // else if
+
+  if ( only_file and only_file->string().ends_with(".tar.xz"))
+  {
+    fetch_base(platform, path_dir_image, url_base);
+    return;
   } // if
 
-  // No need to merge anything, just use the tarball
+  // Verify & configure base
+  fetchlist_base_ret_t path_and_url_base = fetch_base(platform, path_dir_image, url_base);
+  tarball_extract_flatimage(path_and_url_base.path, path_file_image);
+
+  // No dwarfs for linux
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
-  // Fetch dwarfs file
-  fetchlist_dwarfs_ret_t ret_fetch_dwarfs;
-
-  if ( is_fetch_dwarfs )
-  {
-    ret_fetch_dwarfs = fetch_dwarfs(platform, url_dwarfs, path_file_image, path_dir_image);
-    // Set file name to platform + dwarfs
-    ret_fetch_dwarfs.path.remove_filename();
-    ret_fetch_dwarfs.path /= str_platform + ".dwarfs";
-  } // if
+  // Verify & configure dwarfs
+  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image, url_base);
+  build_dwarfs(platform, path_and_url_dwarfs, path_file_image);
 
   // Merge base and dwarfs
-  if ( not is_fetch_base and not is_fetch_dwarfs )
-  {
-    merge_base_and_dwarfs(ns_enum::to_string_lower(platform)
-      , path_file_image
-      , ret_fetch_dwarfs.path);
-  } // if
+  merge_base_and_dwarfs(ns_enum::to_string_lower(platform)
+    , path_file_image
+    , path_and_url_dwarfs.path);
 } // fetch() }}}
 
 // sha() {{{
