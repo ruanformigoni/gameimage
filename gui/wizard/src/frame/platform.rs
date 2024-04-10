@@ -207,63 +207,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
 
   // Set callback for next
-  let mut clone_btn_next = ret_frame_footer.btn_next.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
-  let clone_tx = tx.clone();
-  clone_btn_next.set_callback(move |_|
-  {
-    // Get selected platform
-    let str_platform = if let Ok(guard) = PLATFORM.lock() && let Some(platform) = guard.clone()
-    {
-      platform.as_str()
-    } // if
-    else
-    {
-      clone_output_status.set_value("Could not determine chosen platform");
-      return;
-    }; // else
-
-    // Fetch files
-    clone_output_status.set_value("Fetching list of files to download");
-
-    // Disable window
-    clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    // Fetch files
-    std::thread::spawn(move ||
-    {
-      // Args for gameimage_sync
-      let arg_platform = format!("--platform={}", str_platform);
-      let arg_url_dwarfs;
-      let mut args = vec![
-            "fetch"
-          , arg_platform.as_str()
-          , "--json=gameimage.fetch.json"
-      ];
-
-      if let Ok(guard) = URL.lock() && let Some(url) = guard.clone()
-      {
-        arg_url_dwarfs = format!("--url-dwarfs={}", url);
-        args.push(arg_url_dwarfs.as_str());
-        env::set_var("GIMG_FETCH_URL_DWARFS", url);
-      } // match
-      else
-      {
-        log!("Failed to append --url-dwarfs for custom url");
-      } // else
-
-      // Ask back-end for the files to download for the selected platform
-      if common::gameimage_sync(args) != 0
-      {
-        log!("Failed to fetch");
-        clone_tx.send_awake(common::Msg::WindActivate);
-        return;
-      } // if
-
-      // Draw next frame
-      clone_tx.send_awake(common::Msg::DrawFetch);
-    });
-  });
+  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawFetch);
 }
 // }}}
 

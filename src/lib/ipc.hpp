@@ -43,6 +43,7 @@ class Ipc
 inline Ipc::Ipc(fs::path path_file)
 {
   std::string identifier = ns_string::to_string(path_file);
+  ns_log::write('i', "key identifier: ", identifier);
 
   // Use a unique key for the message queue.
   if(m_key = ftok(identifier.c_str(), 65); m_key == -1 )

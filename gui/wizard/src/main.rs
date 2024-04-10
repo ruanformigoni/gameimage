@@ -18,6 +18,7 @@ mod frame;
 mod lib;
 mod db;
 mod wizard;
+mod gameimage;
 // }}}
 
 use common::Msg;
