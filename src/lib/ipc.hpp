@@ -26,6 +26,7 @@ struct message_buffer
   char message_text[1024];
 };
 
+// class Ipc {{{
 class Ipc
 {
   private:
@@ -38,8 +39,9 @@ class Ipc
     template<ns_concept::AsString T>
     void send(T&& t);
 
-}; // class
+}; // class Ipc }}}
 
+// Ipc::Ipc() {{{
 inline Ipc::Ipc(fs::path path_file)
 {
   std::string identifier = ns_string::to_string(path_file);
@@ -62,8 +64,9 @@ inline Ipc::Ipc(fs::path path_file)
   ns_log::write('i', "Message queue id: ", m_message_queue_id);
 
   m_buffer.message_type = 1;
-} // Ipc::Ipc
+} // Ipc::Ipc() }}}
 
+// Ipc::~Ipc() {{{
 inline Ipc::~Ipc()
 {
   if ( msgctl(m_message_queue_id, IPC_RMID, NULL) == -1 )
@@ -71,8 +74,9 @@ inline Ipc::~Ipc()
     ns_log::write('i', "Could not remove the message queue");
     perror("Could not remove message queue");
   } // if
-} // Ipc::~Ipc
+} // Ipc::~Ipc() }}}
 
+// Ipc::send() {{{
 template<ns_concept::AsString T>
 void Ipc::send(T&& t)
 {
@@ -86,7 +90,7 @@ void Ipc::send(T&& t)
   {
     perror("Failure to send message");
   } // if
-} // Ipc::send
+} // Ipc::send() }}}
 
 } // namespace ns_ipc
 
