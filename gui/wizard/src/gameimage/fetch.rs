@@ -50,4 +50,37 @@ pub fn query_files() -> anyhow::Result<Vec<String>>
   Ok(query("files")?)
 } // query_files() }}}
 
+// validate() {{{
+pub fn validate() -> anyhow::Result<i32>
+{
+  let platform = gameimage::gameimage::platform()?;
+
+  let rc = gameimage::gameimage::gameimage_sync(vec!
+  [
+    "fetch"
+    , "--platform", &platform
+    , "--sha"
+  ]);
+
+  if rc == 0 { return Ok(rc); }
+
+  Err(ah!("Exit with error code {}", rc))
+} // validate() }}}
+
+// configure() {{{
+pub fn configure() -> anyhow::Result<i32>
+{
+  let platform = gameimage::gameimage::platform()?;
+
+  let rc = gameimage::gameimage::gameimage_sync(vec!
+  [
+    "fetch"
+    , "--platform", &platform
+  ]);
+
+  if rc == 0 { return Ok(rc); }
+
+  Err(ah!("Exit with error code {}", rc))
+} // configure() }}}
+
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
