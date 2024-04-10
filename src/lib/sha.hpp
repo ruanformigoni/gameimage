@@ -26,7 +26,7 @@ enum class SHA_TYPE
 };
 
 // check_sha() {{{
-inline bool check_sha(fs::path path_file_src, fs::path path_file_sha, SHA_TYPE sha_type)
+inline bool check_sha(fs::path path_file_src, fs::path path_file_sha, SHA_TYPE sha_type = SHA_TYPE::SHA256)
 {
   std::ifstream file_src(path_file_src, std::ifstream::binary);
   std::ifstream file_sha(path_file_sha, std::ifstream::in);
@@ -67,6 +67,34 @@ inline bool check_sha(fs::path path_file_src, fs::path path_file_sha, SHA_TYPE s
 
   return sha_calculated == sha_reference;
 } // check_sha() }}}
+
+// digest() {{{
+template<ns_concept::AsString T>
+inline std::string digest(T&& t, SHA_TYPE sha_type = SHA_TYPE::SHA256)
+{
+  std::string sha_calculated;
+
+  // Calculated SHA
+  if ( sha_type == SHA_TYPE::SHA256 )
+  {
+    CryptoPP::SHA256 hash;
+    CryptoPP::StringSource(t, true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(sha_calculated))));
+  } // if
+  else
+  {
+    CryptoPP::SHA512 hash;
+    CryptoPP::StringSource(t, true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(sha_calculated))));
+  } // else
+
+  // Reference SHA
+
+  // Normalize to uppercase
+  sha_calculated = ns_string::to_upper(sha_calculated);
+
+  ns_log::write('i', "SHA Calculated: ", sha_calculated);
+
+  return sha_calculated;
+} // digest() }}}
   
 } // namespace ns_sha
 
