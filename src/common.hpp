@@ -115,6 +115,23 @@ constexpr bool check_and(T&& t, Args&&... flags)
   return static_cast<int>(t) & ( static_cast<int>(flags) & ... );
 } // check_and() }}}
 
+// catch_to_optional() {{{
+template<typename F, typename... Args>
+auto catch_to_optional(F&& f, Args&&... args) -> std::optional<decltype(f(args...))>
+{
+  try
+  {
+    auto val = make_optional(f(std::forward<Args>(args)...));
+    ns_log::write('i', "Optional: ", *val);
+    return val;
+  } // try
+  catch(std::exception const& e)
+  {
+    ns_log::write('i', "Optional (caught): ", e.what());
+    return std::nullopt;
+  } // catch
+} // catch_to_optional() }}}
+
 } // namespace ns_common}}}
 
 

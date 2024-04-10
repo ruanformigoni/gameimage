@@ -37,12 +37,27 @@ void fetch(ns_parser::Parser const& parser)
 {
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
 
+  if ( parser.optional("--url-base") )
+  {
+    ns_fetch::url_set(platform, parser.optional("--url-base"), ns_fetch::UrlType::BASE);
+    return;
+  } // if
+
+  if ( parser.optional("--url-dwarfs") )
+  {
+    ns_fetch::url_set(platform, parser.optional("--url-dwarfs"), ns_fetch::UrlType::DWARFS);
+    return;
+  } // if
+
+  if ( parser.contains("--url-clear") )
+  {
+    ns_fetch::url_clear(platform);
+    return;
+  } // if
+
   if ( parser.contains("--sha") )
   {
-    ns_fetch::sha(platform
-      , parser.optional("--url-base")
-      , parser.optional("--url-dwarfs")
-    );
+    ns_fetch::sha(platform);
     return;
   } // if
 
@@ -52,11 +67,7 @@ void fetch(ns_parser::Parser const& parser)
     return;
   } // if
 
-  ns_fetch::fetch(platform
-    , parser.optional("--url-base")
-    , parser.optional("--url-dwarfs")
-    , parser.optional("--only-file")
-  );
+  ns_fetch::fetch(platform, parser.optional("--only-file"));
 } // fetch() }}}
 
 // init() {{{

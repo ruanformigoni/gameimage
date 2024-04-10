@@ -31,7 +31,7 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
 {
   dir_build()?;
 
-  let path_binary_gameimage = std::path::PathBuf::from(env::var("GIMG_BACKEND")?);
+  let path_binary_gameimage = binary()?;
 
   let handle = std::process::Command::new(path_binary_gameimage)
     .env_remove("LD_PRELOAD")
