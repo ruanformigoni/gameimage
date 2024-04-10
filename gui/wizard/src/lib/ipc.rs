@@ -59,7 +59,9 @@ pub fn new(path : std::path::PathBuf) -> anyhow::Result<Ipc>
   {
     -1 =>
     {
+      let cstr_msg_err = CString::new("Failed to get key from message queue").unwrap_or_default();
       log!("Failed to get key from message queue: {}", errno::errno());
+      unsafe { libc::perror(cstr_msg_err.as_ptr()); }
       return Err(ah!("Failed to get key from message queue: {}", errno::errno()));
     },
     key => key,
@@ -70,7 +72,9 @@ pub fn new(path : std::path::PathBuf) -> anyhow::Result<Ipc>
   {
     -1 =>
     {
+      let cstr_msg_err = CString::new("Failed to get message queue from key").unwrap_or_default();
       log!("Failed to get message queue from key: {}", errno::errno());
+      unsafe { libc::perror(cstr_msg_err.as_ptr()); }
       return Err(ah!("Failed to get message queue from key: {}", errno::errno()));
     },
     msgid => msgid,
@@ -93,7 +97,13 @@ pub fn recv(&self) -> anyhow::Result<String>
       0,
       libc::MSG_NOERROR,)
     {
-      -1 => { log!("Could not recover message"); return Err(ah!("Could not recover message")); },
+      -1 =>
+      {
+        let cstr_msg_err = CString::new("Could not recover message").unwrap_or_default();
+        log!("Could not recover message");
+        libc::perror(cstr_msg_err.as_ptr());
+        return Err(ah!("Could not recover message"));
+      },
       rc => rc,
     }
   };
