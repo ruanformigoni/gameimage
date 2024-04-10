@@ -11,7 +11,7 @@ use crate::common::PathBufExt;
 struct MsgBuf
 {
   mtype: libc::c_long,
-  mtext: [libc::c_char; 10240],
+  mtext: [libc::c_char; 1024],
 } // struct MsgBuf }}}
 
 // pub struct Ipc {{{
@@ -93,7 +93,7 @@ pub fn recv(&self) -> anyhow::Result<String>
   {
     match libc::msgrcv(self.msgid,
       &mut buf as *mut MsgBuf as *mut libc::c_void,
-      std::mem::size_of::<[libc::c_char; 10240]>() as libc::size_t,
+      std::mem::size_of::<[libc::c_char; 1024]>() as libc::size_t,
       0,
       libc::MSG_NOERROR,)
     {
