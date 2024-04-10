@@ -161,6 +161,19 @@ decltype(auto) check_file(fs::path path_file_src, cpr::Url url)
     ns_log::write('e', "Could not verify with SHA: ", e.what());
     check_file_from_size(path_file_src, url);
   } // catch
+
+  // Send progress through IPC
+  try
+  {
+    ns_ipc::Ipc ipc(path_file_src);
+    ipc.send(100);
+  }
+  catch(std::exception const& e)
+  {
+    ns_log::write('e', e.what());
+    ns_log::write('e', "Could not initialize message ipc for ", path_file_src);
+  } // catch
+
 } // check_file() }}}
 
 // fetch_file_from_url_on_failed_check() {{{
