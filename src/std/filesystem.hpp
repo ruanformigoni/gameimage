@@ -114,19 +114,26 @@ Ret<fs::path> canonical(fs::path const& path)
   return Ret(ret, true, "");
 } // function: canonical }}}
 
-// dir_self() {{{
+// file_self() {{{
 template<bool _throw> 
-Ret<fs::path> dir_self()
+Ret<fs::path> file_self()
 {
   boost::dll::fs::error_code err;
-  fs::path path_dir_self = boost::dll::program_location(err).parent_path().c_str();
+  fs::path path_file_self = boost::dll::program_location(err).c_str();
 
   if ( err )
   {
     return should_throw<_throw, fs::path>("Failed to fetch location of self");
   } // if
 
-  return Ret(canonical<_throw>(path_dir_self)._ret, true, "");
+  return Ret(canonical<_throw>(path_file_self)._ret, true, "");
+} // file_self() }}}
+
+// dir_self() {{{
+template<bool _throw> 
+Ret<fs::path> dir_self()
+{
+  return file_self<_throw>();
 } // dir_self() }}}
 
 // file_exists() {{{
