@@ -140,7 +140,7 @@ class Fetch final : public Parser
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
         .help("Specity the platform to download the flatimage");
-      // Only download base file
+      // Only download provided file
       m_parser->add_argument("--only-file")
         .action([&](std::string const& s){ m_map_option_value["--only-file"]=s; })
         .help("Only downloads the specified file");
@@ -150,10 +150,10 @@ class Fetch final : public Parser
         .implicit_value(true)
         .action([&](std::string const& s){ m_map_option_value["--sha"]=s; })
         .help("Do not download, only check SHA");
-      // Only write json, do not download
-      m_parser->add_argument("--json")
-        .action([&](std::string const& s){ m_map_option_value["--json"]=s; })
-        .help("Do not download, save fetch list to json instead");
+      // Query data with ipc
+      m_parser->add_argument("--ipc")
+        .action([&](std::string const& s){ m_map_option_value["--ipc"]=s; })
+        .help("Query information through ipc (message queues)");
     } // Fetch
 }; // class: Fetch }}}
 

@@ -18,6 +18,7 @@ use fltk::{
 use url as Url;
 use anyhow::anyhow as ah;
 
+use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::lib;
@@ -27,6 +28,11 @@ use crate::common::WidgetExtExtra;
 use crate::common::PathBufExt;
 use crate::log;
 use crate::db;
+
+macro_rules! log_return
+{
+  ($($arg:tt)*) => { { log!($($arg)*); return; } }
+} // log_return
 
 // fn url_basename() {{{
 fn url_basename(url : Url::Url) -> anyhow::Result<String>
@@ -139,15 +145,19 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   // Populate 'vec_fetch' with links and download paths
   let mut base = frame_content.as_base_widget();
 
-  let result_pairs_values = db::fetch::get();
-
-  if result_pairs_values.is_err()
+  let vec_files = match gameimage::fetch::query_files()
   {
-    log!("Could not fetch file list, '{}'", result_pairs_values.unwrap_err().to_string());
-    return;
-  } // if
+    Ok(vec_files) => vec_files,
+    Err(e) => log_return!("Could not fetch url list from backend: {}", e),
+  };
 
-  for (entry_path, entry_url) in result_pairs_values.unwrap()
+  let vec_urls = match gameimage::fetch::query_urls()
+  {
+    Ok(vec_urls) => vec_urls,
+    Err(e) => log_return!("Could not fetch file list from backend: {}", e),
+  };
+
+  for (entry_path, entry_url) in std::iter::zip(vec_files, vec_urls)
   {
     // Get full path to save the file into
     let file_dest = std::path::Path::new(&entry_path).to_path_buf();

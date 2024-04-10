@@ -30,6 +30,13 @@ namespace fs = std::filesystem;
 namespace
 {
 
+// enum class IpcQuery {{{
+enum class IpcQuery
+{
+  FILES,
+  URLS,
+}; // }}}
+
 // get_path_file_image() {{{
 decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 {
@@ -597,44 +604,50 @@ inline void sha(ns_enum::Platform platform
   check_file(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
 } // sha() }}}
 
-// json() {{{
-inline void json(ns_enum::Platform platform
-  , fs::path path_json
-  , std::optional<cpr::Url> const& url_base = std::nullopt
-  , std::optional<cpr::Url> const& url_dwarfs = std::nullopt)
+// ipc() {{{
+inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
 {
-  // Remove if exists
-  fs::remove(path_json);
+  // Use self as IPC reference
+  fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
 
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
   fs::path path_dir_image = path_file_image.parent_path();
 
-  // Log
-  ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
-  ns_log::write('i', "image: ", path_file_image);
-
-  // Get url and save path to base
-  ns_log::write('i', "Writting json for base");
-  ns_db::from_file(path_json, [&](auto&& db)
+  if ( not query.has_value() )
   {
-    auto path_and_url_base = url_resolve_base(platform, url_base, path_dir_image);
-    db("paths") |= path_and_url_base.path.c_str();
-    db("urls")  |= path_and_url_base.url.c_str();
-  }, ns_db::Mode::CREATE);
+    "No query provided for IPC"_throw();
+  } // if
 
-  if ( platform == ns_enum::Platform::LINUX ) { return; }
+  // Get query
+  IpcQuery ipc_query = ns_enum::from_string<IpcQuery>(ns_string::to_upper(*query));
 
-  // Get url and save path to dwarfs
-  ns_log::write('i', "Writting json for dwarfs");
-  ns_db::from_file(path_json, [&](auto&& db)
+  // Start IPC
+  ns_ipc::Ipc ipc(path_file_ipc);
+  ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
+
+  switch (ipc_query)
   {
-    auto path_and_url_dwarfs = url_resolve_dwarfs(platform, url_dwarfs, path_dir_image);
-    db("paths") |= path_and_url_dwarfs.path.c_str();
-    db("urls")  |= path_and_url_dwarfs.url.c_str();
-  }, ns_db::Mode::UPDATE);
-
-} // json() }}}
+    case IpcQuery::FILES:
+    {
+      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, std::nullopt, path_dir_image);
+      ipc.send(path_and_url_base.path);
+      if ( platform == ns_enum::Platform::LINUX ) { return; }
+      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, std::nullopt, path_dir_image);
+      ipc.send(path_and_url_dwarfs.path);
+    } // case
+    break;
+    case IpcQuery::URLS:
+    {
+      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, std::nullopt, path_dir_image);
+      ipc.send(path_and_url_base.url);
+      if ( platform == ns_enum::Platform::LINUX ) { return; }
+      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, std::nullopt, path_dir_image);
+      ipc.send(path_and_url_dwarfs.url);
+    } // case
+    break;
+  } // switch
+} // ipc() }}}
 
 } // namespace ns_fetch
 

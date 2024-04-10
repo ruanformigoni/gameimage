@@ -46,13 +46,9 @@ void fetch(ns_parser::Parser const& parser)
     return;
   } // if
 
-  if ( parser.optional("--json")  )
+  if ( parser.optional("--ipc")  )
   {
-    ns_fetch::json(platform
-      , *parser.optional("--json")
-      , parser.optional("--url-base")
-      , parser.optional("--url-dwarfs")
-    );
+    ns_fetch::ipc(platform , parser.optional("--ipc"));
     return;
   } // if
 
