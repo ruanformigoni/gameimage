@@ -18,7 +18,7 @@ use crate::common::FltkSenderExt;
 use crate::log;
 
 // enum Platform {{{
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum Platform
 {
   Linux,
@@ -36,25 +36,25 @@ impl Platform
   {
     match self
     {
-      Platform::Linux => "linux",
+      Platform::Linux                    => "linux",
       Platform::Wine | Platform::WineUrl => "wine",
-      Platform::Retroarch => "retroarch",
-      Platform::Pcsx2 => "pcsx2",
-      Platform::Rcps3 => "rpcs3",
+      Platform::Retroarch                => "retroarch",
+      Platform::Pcsx2                    => "pcsx2",
+      Platform::Rcps3                    => "rpcs3",
     } // match
   } // as_str
 
-  fn from_str(&self, src : &str) -> Option<Platform>
+  fn from_str(src : &str) -> Option<Platform>
   {
     match src
     {
-      "linux"       => Some(Platform::Linux),
-      "wine"        => Some(Platform::Wine),
-      "wine_url" => Some(Platform::WineUrl),
-      "retroarch"   => Some(Platform::Retroarch),
-      "pcsx2"       => Some(Platform::Pcsx2),
-      "rpcs3"       => Some(Platform::Rcps3),
-      _             => None,
+      "linux"     => Some(Platform::Linux),
+      "wine"      => Some(Platform::Wine),
+      "wine_url"  => Some(Platform::WineUrl),
+      "retroarch" => Some(Platform::Retroarch),
+      "pcsx2"     => Some(Platform::Pcsx2),
+      "rpcs3"     => Some(Platform::Rcps3),
+      _           => None,
     } // match
   } // as_str
 } // impl IconFrame }}}
@@ -63,7 +63,7 @@ impl Platform
 pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
   // Keep track of which frame to draw (search web or local)
-  static PLATFORM : once_cell::sync::Lazy<Mutex<Platform>> = once_cell::sync::Lazy::new(|| Mutex::new(Platform::Linux));
+  static PLATFORM : once_cell::sync::Lazy<Mutex<Option<Platform>>> = once_cell::sync::Lazy::new(|| Mutex::new(None));
 
   // Remember custom url field
   static URL : once_cell::sync::Lazy<Mutex<Option<String>>> = once_cell::sync::Lazy::new(|| Mutex::new(None));
@@ -118,7 +118,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   // Check if variable is already set
   if let Ok(lock) = PLATFORM.lock()
   {
-    if *lock == Platform::Wine
+    if *lock == Some(Platform::Wine)
     {
       btn_menu.set_width(frame_text.w() - dimm::border() - dimm::width_button_wide()*2);
       let mut btn_wine_dist = MenuButton::default()
@@ -144,7 +144,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
         btn_wine_dist.set_label("default");
       } // else
     } // if
-    else if *lock == Platform::WineUrl
+    else if *lock == Some(Platform::WineUrl)
     {
       frame_text.set_size(frame_text.w(), frame_text.h() - dimm::height_button_wide() - dimm::height_text() - dimm::border());
       let _btn_wine_dist = fltk::input::Input::default()
@@ -163,15 +163,19 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     } // else if
 
     // Reset URL
-    if *lock != Platform::WineUrl && let Ok(mut guard) = URL.lock()
+    if *lock != Some(Platform::WineUrl) && let Ok(mut guard) = URL.lock()
     {
       *guard = None;
       env::remove_var("GIMG_FETCH_URL_DWARFS");
     } // if
-    // Update menu
-    btn_menu.set_label(lock.as_str());
-    // Update description box
-    f_update_buffer(lock.as_str().into());
+
+    if let Some(platform) = lock.clone()
+    {
+      // Update menu
+      btn_menu.set_label(platform.as_str());
+      // Update description box
+      f_update_buffer(platform.as_str().into());
+    } // if
   }
 
   // Set callback to dropdown menu selection
@@ -184,10 +188,10 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     // Set as label
     e.set_label(&choice);
     // Update platform
-    if let Ok(mut guard) = PLATFORM.lock() && let Some(platform) = guard.from_str(&choice)
+    if let Ok(mut guard) = PLATFORM.lock() && let Some(platform) = Platform::from_str(&choice)
     {
-      *guard = platform;
-      env::set_var("GIMG_PLATFORM", guard.as_str());
+      *guard = Some(platform.clone());
+      env::set_var("GIMG_PLATFORM", platform.as_str());
     } // if
     else
     {
@@ -209,9 +213,9 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   clone_btn_next.set_callback(move |_|
   {
     // Get selected platform
-    let str_platform = if let Ok(guard) = PLATFORM.lock()
+    let str_platform = if let Ok(guard) = PLATFORM.lock() && let Some(platform) = guard.clone()
     {
-      guard.as_str()
+      platform.as_str()
     } // if
     else
     {
