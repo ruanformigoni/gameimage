@@ -33,8 +33,9 @@ class Ipc
     key_t m_key;
     int m_message_queue_id;
     message_buffer m_buffer;
+    bool m_keep_open;
   public:
-    Ipc(fs::path path_file);
+    Ipc(fs::path path_file, bool keep_open = false);
     ~Ipc();
     template<ns_concept::AsString T>
     void send(T&& t);
@@ -42,7 +43,7 @@ class Ipc
 }; // class Ipc }}}
 
 // Ipc::Ipc() {{{
-inline Ipc::Ipc(fs::path path_file)
+inline Ipc::Ipc(fs::path path_file, bool keep_open)
 {
   std::string identifier = ns_string::to_string(path_file);
   ns_log::write('i', "key identifier: ", identifier);
@@ -63,13 +64,26 @@ inline Ipc::Ipc(fs::path path_file)
   } // if
   ns_log::write('i', "Message queue id: ", m_message_queue_id);
 
+  m_keep_open = keep_open;
   m_buffer.message_type = 1;
 } // Ipc::Ipc() }}}
 
 // Ipc::~Ipc() {{{
 inline Ipc::~Ipc()
 {
-  send("IPC_QUIT");
+  // Let the frontend handle it
+  if ( m_keep_open )
+  {
+    send("IPC_QUIT");
+    return;
+  } // if
+
+  // Close
+  if ( msgctl(m_message_queue_id, IPC_RMID, NULL) == -1 )
+  {
+    ns_log::write('i', "Could not remove the message queue");
+    perror("Could not remove message queue");
+  } // if
 } // Ipc::~Ipc() }}}
 
 // Ipc::send() {{{

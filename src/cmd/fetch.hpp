@@ -625,7 +625,7 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
   fs::path path_dir_image = path_file_image.parent_path();
 
   // Open IPC
-  ns_ipc::Ipc ipc(path_file_ipc);
+  ns_ipc::Ipc ipc(path_file_ipc, true);
   ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
 
   if ( not query.has_value() )
