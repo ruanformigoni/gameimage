@@ -69,11 +69,7 @@ inline Ipc::Ipc(fs::path path_file)
 // Ipc::~Ipc() {{{
 inline Ipc::~Ipc()
 {
-  if ( msgctl(m_message_queue_id, IPC_RMID, NULL) == -1 )
-  {
-    ns_log::write('i', "Could not remove the message queue");
-    perror("Could not remove message queue");
-  } // if
+  send("IPC_QUIT");
 } // Ipc::~Ipc() }}}
 
 // Ipc::send() {{{

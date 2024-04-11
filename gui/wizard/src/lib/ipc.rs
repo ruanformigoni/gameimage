@@ -20,6 +20,23 @@ pub struct Ipc
   msgid : i32,
 } // struct Ipc }}}
 
+// impl Drop for Ipc {{{
+impl Drop for Ipc
+{
+  fn drop(&mut self)
+  {
+    unsafe
+    {
+      let rc = libc::msgctl(self.msgid, libc::IPC_RMID, std::ptr::null_mut());
+      // Success
+      if rc == 0 { log!("Successfully closed the message queue {}", self.msgid); return; }
+      // Fail
+      log!("Could not remove the message queue");
+      libc::perror(CString::new("Could not remove message queue").unwrap_or_default().as_ptr());
+    } // unsafe
+  } // drop
+} // Drop }}}
+
 impl Ipc
 {
 
@@ -104,6 +121,8 @@ pub fn recv(&self) -> anyhow::Result<String>
 
   let c_str: &CStr = unsafe { CStr::from_ptr(buf.mtext.as_ptr()) };
   let str_slice: &str = c_str.to_str().unwrap_or("");
+
+  if str_slice == "IPC_QUIT" { return Err(ah!("Quit IPC with signal")); } // if
 
   Ok(str_slice.to_owned())
 } // }}}
