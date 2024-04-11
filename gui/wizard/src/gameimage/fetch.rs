@@ -16,6 +16,13 @@ fn query(str_query : &str) -> anyhow::Result<Vec<String>>
   let binary = gameimage::gameimage::binary()?;
   let platform = gameimage::gameimage::platform()?;
 
+  let ipc = match lib::ipc::Ipc::new(binary, || {})
+  {
+    Ok(ipc) => ipc,
+    Err(e) => { log_return!("Could not create ipc instance: {}", e); },
+  }; // match
+  log!("Started search ipc");
+
   let _ = gameimage::gameimage::gameimage_async(vec!
   [
     "fetch"
@@ -23,13 +30,6 @@ fn query(str_query : &str) -> anyhow::Result<Vec<String>>
     , "--ipc", &str_query
   ]);
   log!("Started backend");
-
-  let ipc = match lib::ipc::Ipc::new(binary, || {})
-  {
-    Ok(ipc) => ipc,
-    Err(e) => { log_return!("Could not create ipc instance: {}", e); },
-  }; // match
-  log!("Started search ipc");
 
   let mut vec = vec![];
   while let Ok(msg) = ipc.recv()

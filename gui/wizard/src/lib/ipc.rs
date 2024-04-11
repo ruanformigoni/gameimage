@@ -40,10 +40,42 @@ impl Drop for Ipc
 impl Ipc
 {
 
+// fn close() {{{
+fn close(path : &std::path::PathBuf)
+{
+  // Wait for backend to create fifo
+  let cstr_path = match CString::new(path.string().clone())
+  {
+    Ok(cstr) => cstr,
+    Err(e) => { log!("Could not create C string: {}", e); return; },
+  }; // match
+
+  let key = match unsafe { libc::ftok(cstr_path.as_ptr(), 65) }
+  {
+    -1 => { log!("Failed to get key to check message queue: {}", errno::errno()); return; },
+    key => key,
+  };
+
+  let msgid = match unsafe { libc::msgget(key, 0o666) }
+  {
+    -1 => { log!("Message queue does not yet exist, no need to close: {}", errno::errno()); return; },
+    msgid => msgid,
+  };
+
+  match unsafe { libc::msgctl(msgid, libc::IPC_RMID, std::ptr::null_mut()) }
+  {
+    -1 => log!("Could not close existing message queue"),
+    _ => log!("Closed existing message queue"),
+  } // match
+} // close }}}
+
 // pub fn new() {{{
 pub fn new<F>(path : std::path::PathBuf, mut f_wait : F) -> anyhow::Result<Ipc>
 where F: FnMut() + 'static + Send + Sync
 {
+  // Close existing queue
+  Ipc::close(&path);
+
   // Wait for start condition
   f_wait();
 

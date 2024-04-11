@@ -15,18 +15,18 @@ fn search(str_type : &str, use_remote : bool) -> anyhow::Result<Vec<std::path::P
 {
   let binary = gameimage::gameimage::binary()?;
 
-  let mut args = vec! [ "search" , "--ipc" ];
-  if use_remote { args.push("--remote"); }
-  args.push(str_type);
-  let _ = gameimage::gameimage::gameimage_async(args);
-  log!("Started backend");
-
   let ipc = match lib::ipc::Ipc::new(binary, || {})
   {
     Ok(ipc) => ipc,
     Err(e) => { log_return!("Could not create ipc instance: {}", e); },
   }; // match
   log!("Started search ipc");
+
+  let mut args = vec! [ "search" , "--ipc" ];
+  if use_remote { args.push("--remote"); }
+  args.push(str_type);
+  let _ = gameimage::gameimage::gameimage_async(args);
+  log!("Started backend");
 
   let mut vec : Vec<std::path::PathBuf> = vec![];
   while let Ok(msg) = ipc.recv()
