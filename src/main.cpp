@@ -139,11 +139,11 @@ void search(ns_parser::Parser const& parser)
 {
   if ( parser.contains("--remote") ) 
   {
-    ns_search::search_remote(parser.optional("query"), parser.optional("--json"));
+    ns_search::search_remote(parser.optional("query"), parser.contains("--ipc"));
     return;
   } // if
 
-  ns_search::search_local(parser.optional("query"), parser.optional("--json"));
+  ns_search::search_local(parser.optional("query"), parser.contains("--ipc"));
 } // search() }}}
 
 // select() {{{

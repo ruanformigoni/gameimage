@@ -17,6 +17,7 @@
 
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
+#include "../lib/ipc.hpp"
 
 namespace ns_search
 {
@@ -73,7 +74,6 @@ inline std::vector<fs::path> search_files(fs::path path_dir_search
     if ( fs::is_regular_file(path_file_entry) && std::regex_match(name_file, regex_pattern))
     {
       fs::path path_file_found = fs::relative(path_file_entry, path_dir_search.parent_path());
-      ns_log::write('i', "Found :: ", path_file_found);
       ret.push_back(path_file_found);
     } // if
   } // for
@@ -88,7 +88,6 @@ inline std::vector<fs::path> search_dirs(fs::path const& path_dir_search)
   for(fs::path path_file_found : fs::directory_iterator(path_dir_search))
   {
     path_file_found = fs::relative(path_file_found, path_dir_search.parent_path());
-    ns_log::write('i', "Found :: ", path_file_found);
     ret.push_back(path_file_found);
   } // for
   return ret;
@@ -100,33 +99,40 @@ inline std::vector<std::string> search_remote(fs::path const& path_dir_fetch)
   std::vector<std::string> ret;
   for( auto i : ns_fetch::cores_list(path_dir_fetch) )
   {
-    ns_log::write('i', "Found :: ", i.core);
     ret.push_back(i.core);
   } // for
   return ret;
 } // search_remote() }}}
 
-// paths_to_json() {{{
-auto paths_to_json(Op op, auto&& opt_path_file_json, auto&& vec_paths)
+// send() {{{
+auto send(auto&& vec_paths, std::unique_ptr<ns_ipc::Ipc> const& ipc)
 {
-  // Check if should write to json
-  if ( ! opt_path_file_json.has_value() ) { return; } // if
-
-  // Open file list
-  ns_db::from_file(*opt_path_file_json, [&]<typename T>(T&& db)
+  if ( ipc != nullptr )
   {
-    db(ns_enum::to_string_lower(op)) = vec_paths;
-  }, ns_db::Mode::CREATE);
-} // paths_to_json() }}}
+    std::ranges::for_each(vec_paths, [&](auto&& e){ ipc->send(e); });
+    return;
+  } // if
+
+  std::ranges::for_each(vec_paths, [&](auto&& e){ ns_log::write('i', "Found: ", e); });
+} // send() }}}
 
 } // anonymous namespace
 
 // search_remote() {{{
-inline void search_remote(std::optional<std::string> opt_query, std::optional<fs::path> opt_path_file_json)
+inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
 {
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
   std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  std::unique_ptr<ns_ipc::Ipc> ipc;
+
+  if ( use_ipc )
+  {
+    // Use self as IPC reference
+    fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
+    // Create ipc
+    ipc = std::make_unique<ns_ipc::Ipc>(path_file_ipc, true);
+  } // if
 
   // Retrieve operation selected by user
   Op op;
@@ -139,7 +145,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
 
   // Fetch query
   "Invalid operation for search\n"_try([&]
-  { 
+  {
     op = ns_enum::from_string<Op>(*opt_query);
   });
 
@@ -149,7 +155,7 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
-    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_remote(path_dir_project));
+    case ns_enum::Platform::RETROARCH: send(search_remote(path_dir_project), ipc);
     break;
     case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
@@ -161,11 +167,20 @@ inline void search_remote(std::optional<std::string> opt_query, std::optional<fs
 } // search_remote() }}}
 
 // search_local() {{{
-inline void search_local(std::optional<std::string> opt_query, std::optional<fs::path> opt_path_file_json)
+inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
 {
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
   std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  std::unique_ptr<ns_ipc::Ipc> ipc;
+
+  if ( use_ipc )
+  {
+    // Use self as IPC reference
+    fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
+    // Create ipc
+    ipc = std::make_unique<ns_ipc::Ipc>(path_file_ipc, true);
+  } // if
 
   // Retrieve operation selected by user
   Op op;
@@ -178,7 +193,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
 
   // Fetch query
   "Invalid operation for search\n"_try([&]
-  { 
+  {
     op = ns_enum::from_string<Op>(*opt_query);
   });
 
@@ -197,7 +212,7 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
       // Get files iterator
       auto it_files = search_files(path_dir_search, R"(.*\.sh)", "");
       // Save files to json
-      paths_to_json(op, opt_path_file_json, it_files);
+      send(it_files, ipc);
     } // case
     break;
     case ns_enum::Platform::WINE:
@@ -212,13 +227,13 @@ inline void search_local(std::optional<std::string> opt_query, std::optional<fs:
       std::vector<fs::path> paths_file_matches;
       std::ranges::for_each(it_files, [&](fs::path const& e){ paths_file_matches.push_back(fs::path("wine") / e); });
       // Save files to json
-      paths_to_json(op, opt_path_file_json, paths_file_matches);
+      send(paths_file_matches, ipc);
     } // case
     break;
-    case ns_enum::Platform::RETROARCH: paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
-    case ns_enum::Platform::PCSX2    : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
-    case ns_enum::Platform::RPCS3    : paths_to_json(op, opt_path_file_json, search_dirs(path_dir_search)); break;
-    case ns_enum::Platform::RYUJINX     : paths_to_json(op, opt_path_file_json, search_files(path_dir_search, R"(.*)", "")); break;
+    case ns_enum::Platform::RETROARCH: send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
+    case ns_enum::Platform::PCSX2    : send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
+    case ns_enum::Platform::RPCS3    : send(search_dirs(path_dir_search), ipc);               break;
+    case ns_enum::Platform::RYUJINX  : send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
   } // switch
 
 } // search_local() }}}

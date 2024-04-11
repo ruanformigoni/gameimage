@@ -264,11 +264,12 @@ class Search final : public Parser
         .action([&](std::string const& s){ m_map_option_value["--remote"]=s; })
         .help("Search for core on remote");
 
-      // Write json with search results
-      m_parser->add_argument("--json")
-        .nargs(1)
-        .action([&](std::string const& s){ m_map_option_value["--json"]=s; })
-        .help("Save search results to json");
+      // Sends data with ipc instead of printing to stdout
+      m_parser->add_argument("--ipc")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--ipc"]=s; })
+        .help("Sends data with Ipc, with the current binary path use to form key");
 
       // Set args
       auto&& arg_query = m_parser->add_argument("query");
