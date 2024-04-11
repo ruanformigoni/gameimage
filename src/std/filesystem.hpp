@@ -133,7 +133,7 @@ Ret<fs::path> file_self()
 template<bool _throw> 
 Ret<fs::path> dir_self()
 {
-  return file_self<_throw>();
+  return Ret(file_self<_throw>()._ret.parent_path(), true, "");
 } // dir_self() }}}
 
 // file_exists() {{{
