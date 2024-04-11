@@ -19,6 +19,7 @@ use crate::common::FltkSenderExt;
 use crate::common::VecExt;
 use crate::log;
 use crate::db;
+use crate::gameimage;
 use crate::lib::svg;
 
 // pub fn name() {{{
@@ -282,7 +283,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   frame_list_remote.set_text_size(dimm::height_text());
 
   // Insert remote items in list
-  if let Ok(vec_items) = wizard::install::fetch_items("core".to_string(), true)
+  if let Ok(vec_items) = gameimage::search::search_remote("core")
   {
     vec_items.iter().for_each(|item| frame_list_remote.add(&item.string()) );
   } // if
