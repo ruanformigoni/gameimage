@@ -624,6 +624,10 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
   fs::path path_file_image = get_path_file_image(platform);
   fs::path path_dir_image = path_file_image.parent_path();
 
+  // Open IPC
+  ns_ipc::Ipc ipc(path_file_ipc);
+  ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
+
   if ( not query.has_value() )
   {
     "No query provided for IPC"_throw();
@@ -631,10 +635,6 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
 
   // Get query
   IpcQuery ipc_query = ns_enum::from_string<IpcQuery>(ns_string::to_upper(*query));
-
-  // Start IPC
-  ns_ipc::Ipc ipc(path_file_ipc);
-  ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
 
   switch (ipc_query)
   {
