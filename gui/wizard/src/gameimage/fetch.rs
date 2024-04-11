@@ -87,12 +87,6 @@ fn set_url(str_type : &str, str_url : &str) -> anyhow::Result<i32>
   Ok(rc)
 } // set_url() }}}
 
-// set_url_base() {{{
-pub fn set_url_base(str_url : &str) -> anyhow::Result<i32>
-{
-  Ok(set_url("--url-base", str_url)?)
-} // set_url_base() }}}
-
 // set_url_dwarfs() {{{
 pub fn set_url_dwarfs(str_url : &str) -> anyhow::Result<i32>
 {
