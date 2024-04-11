@@ -86,7 +86,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     .bottom_of(&frame_content, - dimm::border())
     .center_x(&frame_content)
     .with_focus(false);
-  btn_menu.add_choice("linux|wine|wine_url|retroarch|pcsx2|rpcs3|ryujinx");
+  btn_menu.add_choice("linux|wine|wine_url|retroarch|pcsx2|rpcs3");
 
   // Create callback with descriptions
   let buffer = TextBuffer::default();
