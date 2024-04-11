@@ -253,19 +253,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       };
 
       let arg_only_file = format!("--only-file={}", clone_data.file_dest.string());
-      let arg_url_dwarfs;
-      let mut args = vec![
+      let args = vec![
           "fetch"
         , "--platform"
         , &str_platform
         , &arg_only_file
       ];
-
-      if let Ok(url) = env::var("GIMG_FETCH_URL_DWARFS")
-      {
-        arg_url_dwarfs = format!("--url-dwarfs={}", url);
-        args.push(&arg_url_dwarfs);
-      } // if
 
       log!("Args to gameimage: {:?}", args);
 
