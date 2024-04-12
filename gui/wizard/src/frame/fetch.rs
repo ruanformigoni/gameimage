@@ -27,11 +27,7 @@ use crate::lib;
 use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
-
-macro_rules! log_return
-{
-  ($($arg:tt)*) => { { log!($($arg)*); return; } }
-} // log_return
+use crate::log_return_void;
 
 // fn url_basename() {{{
 fn url_basename(url : Url::Url) -> anyhow::Result<String>
@@ -118,13 +114,13 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   let vec_files = match gameimage::fetch::query_files()
   {
     Ok(vec_files) => vec_files,
-    Err(e) => log_return!("Could not fetch url list from backend: {}", e),
+    Err(e) => log_return_void!("Could not fetch url list from backend: {}", e),
   };
 
   let vec_urls = match gameimage::fetch::query_urls()
   {
     Ok(vec_urls) => vec_urls,
-    Err(e) => log_return!("Could not fetch file list from backend: {}", e),
+    Err(e) => log_return_void!("Could not fetch file list from backend: {}", e),
   };
 
   for (entry_path, entry_url) in std::iter::zip(vec_files, vec_urls)
@@ -239,11 +235,20 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
+      // Enable progress bar
+      clone_data.prog.clone().activate();
+      let mut clone_btn_fetch = clone_data.btn_fetch.clone();
+
+      // Change fetch button
+      clone_btn_fetch.set_color(Color::Green);
+      clone_btn_fetch.set_label("...");
+
       let path_file_dst = clone_data.file_dest.clone();
+      let mut is_success = true;
       match gameimage::fetch::fetch(Some(path_file_dst.clone()))
       {
         Ok(_) => log!("Successfully fetched file {}", path_file_dst.string()),
-        Err(e) => log!("Failed to fetch file '{}' with error '{}'", path_file_dst.string(), e),
+        Err(e) => { log!("Failed to fetch file '{}' with error '{}'", path_file_dst.string(), e); is_success = false; },
       }; // match
 
       match clone_state_backend.lock()
@@ -251,6 +256,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
         Ok(mut guard) => *guard = StateBackend::END,
         Err(e) => log!("Could not lock state variable: {}", e),
       };
+
+      match is_success
+      {
+        true => clone_btn_fetch.set_label("Done"),
+        false => { clone_btn_fetch.set_label("Failure"); clone_btn_fetch.set_color(Color::Red); },
+      }; // match
 
       clone_tx.send(common::Msg::WindActivate);
       clone_output_status.set_value("Operation finished");
@@ -281,10 +292,9 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       // Draw package creator
       if backend_validate_and_configure(clone_output_status.clone()).is_err()
       {
-        log!("Failed to verify and configure downloaded files");
-        clone_output_status.set_value("Download the required files to proceed");
         clone_tx.send_awake(common::Msg::WindActivate);
-        return;
+        clone_output_status.set_value("Download the required files to proceed");
+        log_return_void!("Failed to verify and configure downloaded files");
       } // if
 
       if let Err(e) = set_image_path()
