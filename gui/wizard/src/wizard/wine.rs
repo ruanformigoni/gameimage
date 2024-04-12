@@ -23,6 +23,7 @@ use shared::fltk::SenderExt;
 use shared::dimm;
 
 use crate::log;
+use crate::log_return_void;
 use crate::db;
 use crate::common;
 use shared::std::PathBufExt;
@@ -244,10 +245,10 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "winetricks", "fontsmooth=rgb"]) != 0
+        match gameimage::install::winetricks(vec!["fontsmooth=rgb".into()])
         {
-          clone_output_status.set_value("Failed to create wine prefix");
-          log!("Failed to create wine prefix");
+          Ok(_) => log!("Created wine prefix"),
+          Err(e) => { clone_output_status.set_value("Failed to create wine prefix"); log!("{}", e); },
         } // else
 
         clone_tx.send_awake(common::Msg::DrawWineRom);
@@ -292,7 +293,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       std::thread::spawn(move ||
       {
         let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-        if common::gameimage_sync(slices) != 0
+        if gameimage::gameimage::gameimage_sync(slices) != 0
         {
           log!("Command exited with non-zero status");
         } // else
@@ -337,9 +338,10 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "winetricks", &clone_value]) != 0
+        match gameimage::install::winetricks(vec![clone_value])
         {
-          log!("Command exited with non zero status");
+          Ok(_) => log!("winetricks command execute successfully"),
+          Err(e) => log!("winetricks command returned error: {}", e),
         } // else
 
         clone_tx.send_awake(common::Msg::WindActivate);
@@ -361,9 +363,10 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       let clone_value = value.clone();
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "wine", &clone_value]) != 0
+        match gameimage::install::wine(vec![clone_value])
         {
-          log!("Command exited with non zero status");
+          Ok(_) => log!("wine command exited successfully"),
+          Err(e) => log!("wine command returned error: {}", e),
         } // else
 
         clone_tx.send_awake(common::Msg::WindActivate);
@@ -494,20 +497,18 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           std::thread::spawn(move ||
           {
             // Set the selected binary as default
-            if common::gameimage_sync(vec!["select", "rom", &clone_item.string()]) != 0
+            match gameimage::select::select("rom", &clone_item)
             {
-              log!("Could not change default executable for test");
-              clone_tx.send_awake(common::Msg::WindActivate);
-              return;
+              Ok(_) => log!("Rom selected successfully"),
+              Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
             } // else
 
             // Test the selected binary
-            if common::gameimage_sync(vec!["test"]) != 0
+            match gameimage::test::test()
             {
-              log!("Could not test selected executable");
-              clone_tx.send_awake(common::Msg::WindActivate);
-              return;
-            } // else
+              Ok(_) => log!("Test finished without errors"),
+              Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+            } // match
 
             clone_tx.send_awake(common::Msg::WindActivate);
           });
@@ -553,10 +554,11 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "wine", &str_choice ]) != 0
+        match gameimage::install::wine(vec![str_choice])
         {
-          log!("Could not execute selected file");
-        }; // else
+          Ok(_) => log!("wine command exited successfully"),
+          Err(e) => log!("could not execute selected file: {}", e),
+        } // else
 
         clone_tx.send_awake(common::Msg::DrawWineRom);
       });
@@ -583,11 +585,11 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     }; // if
 
     // Set the selected binary as default
-    if common::gameimage_sync(vec!["select", "rom", &path_file_default.string()]) != 0
+    match gameimage::select::select("rom", &path_file_default)
     {
-      log!("Could not select rom {}", path_file_default.string());
-      return;
-    } // if
+      Ok(_) => log!("Rom selected successfully"),
+      Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+    } // else
 
     clone_tx.send_awake(common::Msg::DrawWineCompress);
   });

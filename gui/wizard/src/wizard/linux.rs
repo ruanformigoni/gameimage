@@ -21,7 +21,6 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::dimm;
 
-use anyhow::anyhow as ah;
 use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
@@ -176,18 +175,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   }); // set_callback
 } // }}}
 
-// select_rom() {{{
-fn select_rom(path_file_rom : PathBuf) -> anyhow::Result<()>
-{
-  // Set the selected binary as default
-  if common::gameimage_sync(vec!["select", "rom", &path_file_rom.string()]) != 0
-  {
-    return Err(ah!(format!("Could not select rom {}", path_file_rom.string())));
-  } // if
-
-  Ok(())
-} // select_rom() }}}
-
 // default() {{{
 pub fn default(tx: Sender<common::Msg>, title: &str)
 {
@@ -261,7 +248,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     }; // match
 
     // Select rom
-    if let Err(e) = select_rom(path_file_rom)
+    if let Err(e) = gameimage::select::select("rom", &path_file_rom)
     {
       log!("Could not select rom with error: {}", e);
     } // if

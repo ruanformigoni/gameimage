@@ -109,10 +109,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     let str_choice = chooser.value(1).unwrap();
 
     // Install directory with backend
-    if common::gameimage_sync(vec!["install", "rom", &str_choice]) != 0
+    match gameimage::install::install("rom", vec![str_choice])
     {
-      log!("Failed to install '{}'", str_choice);
-    } // else
+      Ok(_) => log!("Successfully installed rom"),
+      Err(e) => log!("Failed to install rom: {}", e),
+    } // match
+
     clone_tx.send_awake(common::Msg::WindActivate);
     clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
   });
@@ -139,13 +141,13 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // Get items
     let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ frame_list.text(e).unwrap() }).collect();
 
-    for item in vec_items
+    // Run backend
+    match gameimage::install::remove("rom", vec_items)
     {
-      if common::gameimage_sync(vec!["install", "--remove", "rom", &item]) != 0
-      {
-        log!("Could not remove '{}", item);
-      }; // else
-    } // for
+      Ok(_) => log!("Removed rom(s) successfully"),
+      Err(e) => log!("Could not remove rom(s): '{}'", e),
+    } // match
+
     clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
   });
 } // }}}
@@ -194,10 +196,11 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
       tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "gui"]) != 0
+        match gameimage::install::gui()
         {
-          log!("Install gui exited with error");
-        } // if
+          Ok(_) => log!("Gui exited successfully"),
+          Err(e) => log!("Install gui exited with error: {}", e),
+        }; // match
 
         tx.send_awake(common::Msg::WindActivate);
       });

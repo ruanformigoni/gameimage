@@ -4,8 +4,9 @@ use fltk::app::Sender;
 use shared::fltk::SenderExt;
 
 use crate::common;
-use shared::std::PathBufExt;
 use crate::log;
+use crate::log_return_void;
+use crate::gameimage;
 
 // pub fn desktop() {{{
 pub fn desktop(tx: Sender<common::Msg>, title: &str)
@@ -46,12 +47,11 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     {
       // Set as desktop entry icon for image
       // Wait for message & check return value
-      if common::gameimage_sync(vec!["desktop", &path_file_icon.string()]) != 0
+      match gameimage::desktop::desktop(&path_file_icon)
       {
-        log!("Failed to execute desktop command on backend");
-        clone_tx.send_awake(common::Msg::WindActivate);
-        return;
-      } // if
+        Ok(()) => log!("Finished desktop configuration"),
+        Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+      } // match
 
       clone_tx.send_awake(common::Msg::DrawName);
       fltk::app::awake();
