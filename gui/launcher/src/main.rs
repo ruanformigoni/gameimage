@@ -46,7 +46,7 @@ pub fn new() -> Self
   app::set_font_size(dimm::height_text());
   let mut wind = Window::default()
     .with_label("GameImage")
-    .with_size(dimm::width(), dimm::height())
+    .with_size(dimm::width_launcher(), dimm::height_launcher())
     .center_screen();
 
   // Window icon
@@ -116,7 +116,7 @@ fn init(&mut self)
   } // if
   else
   {
-    frame::fail::new(dimm::width(), dimm::height(), dimm::border());
+    frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border());
   } // else
 
   self.wind.make_resizable(false);

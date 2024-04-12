@@ -1,7 +1,9 @@
 use crate::scaling;
 
-pub const HEIGHT : i32 = 500;
-pub const WIDTH  : i32 = 500;
+pub const HEIGHT_WIZARD : i32 = 500;
+pub const WIDTH_WIZARD  : i32 = 500;
+pub const HEIGHT_LAUNCHER : i32 = 450;
+pub const WIDTH_LAUNCHER  : i32 = 300;
 pub const BORDER : i32 = 10;
 
 pub const HEIGHT_BUTTON_WIDE : i32 = 30;
@@ -12,7 +14,7 @@ pub const WIDTH_BUTTON_REC  : i32 = WIDTH_BUTTON_WIDE/2;
 
 pub const HEIGHT_TEXT : i32 = 14;
 
-pub const HEIGHT_STATUS : i32 = (HEIGHT as f64 * 0.05) as i32;
+pub const HEIGHT_STATUS : i32 = (HEIGHT_WIZARD as f64 * 0.05) as i32;
 
 pub const HEIGHT_SEP : i32 = 2;
 
@@ -21,7 +23,7 @@ pub const HEIGHT_FOOTER : i32 = HEIGHT_BUTTON_WIDE + BORDER*2 + HEIGHT_STATUS;
 
 pub const HEIGHT_BAR : i32 = HEIGHT_BUTTON_WIDE + BORDER;
 
-pub const POSY_FOOTER : i32 = HEIGHT - HEIGHT_FOOTER;
+pub const POSY_FOOTER : i32 = HEIGHT_WIZARD - HEIGHT_FOOTER;
 
 macro_rules! function_scale
 {
@@ -34,8 +36,10 @@ macro_rules! function_scale
   }
 }
 
-function_scale!(height, HEIGHT);
-function_scale!(width, WIDTH);
+function_scale!(height_wizard, HEIGHT_WIZARD);
+function_scale!(width_wizard, WIDTH_WIZARD);
+function_scale!(height_launcher, HEIGHT_LAUNCHER);
+function_scale!(width_launcher, WIDTH_LAUNCHER);
 function_scale!(border, BORDER);
 
 function_scale!(height_button_wide, HEIGHT_BUTTON_WIDE);

@@ -29,19 +29,19 @@ pub struct RetFrameCover
 // fn: new {{{
 pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
 {
-  let mut frame_base = Frame::default().with_size(dimm::width(), dimm::height());
+  let mut frame_base = Frame::default().with_size(dimm::width_launcher(), dimm::height_launcher());
   frame_base.set_type(PackType::Vertical);
   frame_base.set_frame(FrameType::FlatBox);
 
   let mut group_content = Group::default()
-    .with_size(dimm::width() - dimm::border()*2, dimm::height() - (dimm::height_button_wide() + dimm::border() * 2) - dimm::border()*2)
+    .with_size(dimm::width_launcher() - dimm::border()*2, dimm::height_launcher() - (dimm::height_button_wide() + dimm::border() * 2) - dimm::border()*2)
     .with_pos(dimm::border(), dimm::border());
   group_content.set_type(PackType::Vertical);
   group_content.set_frame(FrameType::FlatBox);
   group_content.begin();
 
   let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height())
+    .with_size(dimm::width_launcher(), dimm::height_launcher())
     .with_pos(x,y);
   frame.set_type(PackType::Vertical);
   frame.set_frame(FrameType::FlatBox);

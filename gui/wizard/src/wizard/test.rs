@@ -27,7 +27,7 @@ pub fn test(tx: Sender<common::Msg>
   , msg_next: common::Msg)
 {
   let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height());
+    .with_size(dimm::width_wizard(), dimm::height_wizard());
   frame.set_frame(FrameType::BorderBox);
   frame.set_type(PackType::Vertical);
 

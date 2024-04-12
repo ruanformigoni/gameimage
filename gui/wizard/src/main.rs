@@ -48,14 +48,14 @@ impl Gui
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind_main = Window::default()
       .with_label("GameImage")
-      .with_size(dimm::width(), dimm::height())
+      .with_size(dimm::width_wizard(), dimm::height_wizard())
       .center_screen();
     wind_main.begin();
     wind_main.end();
 
     let mut wind_log = Window::default()
       .with_label("Logger")
-      .with_size(dimm::width(), dimm::height())
+      .with_size(dimm::width_wizard(), dimm::height_wizard())
       .left_of(&wind_main, 0);
     wind_log.begin();
     wind_log.end();

@@ -33,14 +33,14 @@ pub struct RetFrameFooter
 pub fn frame_header(title: &str) -> RetFrameHeader
 {
   let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height_header())
+    .with_size(dimm::width_wizard(), dimm::height_header())
     .with_pos(0,0);
   frame.set_type(PackType::Vertical);
 
   // Header
   let mut header = Frame::new(dimm::border()
     , dimm::border()
-    , dimm::width()-dimm::border()*2
+    , dimm::width_wizard()-dimm::border()*2
     , dimm::height_button_wide()
     , title);
   header.set_frame(FrameType::NoBox);
@@ -48,12 +48,12 @@ pub fn frame_header(title: &str) -> RetFrameHeader
 
   // Separator
   let mut sep = Frame::default()
-    .with_size(dimm::width() - dimm::border()*2, dimm::height_sep())
+    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_sep())
     .below_of(&header, dimm::border());
   sep.set_frame(FrameType::BorderBox);
 
   let mut frame_content = Frame::default()
-    .with_size(dimm::width(), dimm::height() - dimm::height_header() - dimm::height_footer())
+    .with_size(dimm::width_wizard(), dimm::height_wizard() - dimm::height_header() - dimm::height_footer())
     .below_of(&sep, 0);
   frame_content.set_pos(0, frame_content.y());
 
@@ -64,16 +64,16 @@ pub fn frame_header(title: &str) -> RetFrameHeader
 pub fn frame_footer() -> RetFrameFooter
 {
   let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height_footer())
+    .with_size(dimm::width_wizard(), dimm::height_footer())
     .with_pos(0, dimm::posy_footer());
   // frame.set_color(Color::Green);
   frame.set_type(PackType::Vertical);
 
   // Status bar
   let mut output_status = Output::default()
-    .with_size(dimm::width(), dimm::height_status())
+    .with_size(dimm::width_wizard(), dimm::height_status())
     .with_align(Align::Left)
-    .with_pos(0, dimm::height() - dimm::height_status());
+    .with_pos(0, dimm::height_wizard() - dimm::height_status());
   output_status.set_text_size(dimm::height_text());
   output_status.deactivate();
 
@@ -82,7 +82,7 @@ pub fn frame_footer() -> RetFrameFooter
     .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
     .with_label("Next")
     .above_of(&output_status, dimm::BORDER);
-  btn_next.set_pos(dimm::width() - dimm::WIDTH_BUTTON_WIDE - dimm::BORDER, btn_next.y());
+  btn_next.set_pos(dimm::width_wizard() - dimm::WIDTH_BUTTON_WIDE - dimm::BORDER, btn_next.y());
   btn_next.set_color(Color::Blue);
 
   // Prev
@@ -96,7 +96,7 @@ pub fn frame_footer() -> RetFrameFooter
   // Separator
   let mut sep = Frame::default()
     .above_of(&btn_next, dimm::BORDER)
-    .with_size(dimm::WIDTH - dimm::BORDER*2, dimm::height_sep());
+    .with_size(dimm::width_wizard() - dimm::BORDER*2, dimm::height_sep());
   sep.set_frame(FrameType::BorderBox);
   sep.set_pos(dimm::BORDER, sep.y());
 

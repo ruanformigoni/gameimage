@@ -84,7 +84,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
   // Menu options to select platform
   let mut btn_menu = MenuButton::default()
-    .with_size(dimm::width() - dimm::border()*2, dimm::height_button_wide())
+    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_button_wide())
     .bottom_of(&frame_content, - dimm::border())
     .center_x(&frame_content)
     .with_focus(false);
@@ -93,7 +93,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   // Create callback with descriptions
   let buffer = TextBuffer::default();
   let mut frame_text = TextDisplay::default()
-    .with_size(dimm::width() - dimm::border()*2, frame_content.h() - btn_menu.h() - dimm::border()*2 - dimm::height_text())
+    .with_size(dimm::width_wizard() - dimm::border()*2, frame_content.h() - btn_menu.h() - dimm::border()*2 - dimm::height_text())
     .with_align(Align::Top)
     .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
   frame_text.set_buffer(buffer.clone());

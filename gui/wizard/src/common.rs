@@ -96,8 +96,8 @@ pub fn impl_log(value : &str)
   static TX : OnceLock<Mutex<frame::term::Term>> = OnceLock::new();
 
   let lock = TX.get_or_init(|| Mutex::new(frame::term::Term::new(dimm::border()
-    , dimm::width() - dimm::border()*2
-    , dimm::height() - dimm::border()*2
+    , dimm::width_wizard() - dimm::border()*2
+    , dimm::height_wizard() - dimm::border()*2
     , dimm::border()
     , dimm::border()
   )));

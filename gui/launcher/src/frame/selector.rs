@@ -30,7 +30,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   // Main
   //
   let mut frame = Frame::default()
-    .with_size(dimm::width(), dimm::height())
+    .with_size(dimm::width_launcher(), dimm::height_launcher())
     .with_pos(x, y);
   frame.set_type(PackType::Vertical);
   frame.set_frame(FrameType::FlatBox);

@@ -46,7 +46,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   } // else
 
   let mut input_dir = FileInput::default()
-    .with_size(dimm::WIDTH - dimm::BORDER*2, dimm::HEIGHT_BUTTON_WIDE + dimm::HEIGHT_TEXT)
+    .with_size(dimm::width_wizard() - dimm::BORDER*2, dimm::HEIGHT_BUTTON_WIDE + dimm::HEIGHT_TEXT)
     .above_of(&frame_footer, dimm::border())
     .with_align(Align::Top | Align::Left)
     .with_label("Select The Directory for GameImage's Temporary Files");
