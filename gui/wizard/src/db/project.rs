@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::global;
 use crate::common;
-use crate::common::PathBufExt;
+use shared::std::PathBufExt;
 use crate::log;
 
 pub enum EntryName

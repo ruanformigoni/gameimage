@@ -8,13 +8,13 @@ use fltk::{
   text,
 };
 
+use shared::fltk::WidgetExtExtra;
 
 use crate::dimm;
 use crate::frame;
 use crate::log;
 use crate::common;
-use crate::common::OsStrExt;
-use crate::common::WidgetExtExtra;
+use shared::std::OsStrExt;
 
 // pub fn finish() {{{
 pub fn finish(tx: Sender<common::Msg>, title: &str)

@@ -8,7 +8,8 @@ use fltk::{
   frame::Frame,
 };
 
-use crate::dimm;
+use shared::dimm;
+
 use crate::common;
 use crate::svg;
 use common::Msg;
@@ -85,7 +86,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
   btn_home.set_frame(FrameType::BorderBox);
   btn_home.set_label_size(dimm::height_text()*2);
-  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home().as_str()).unwrap()));
+  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home(1.0).as_str()).unwrap()));
   btn_home.emit(tx, Msg::DrawCover);
 
 

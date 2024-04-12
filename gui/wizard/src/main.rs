@@ -12,6 +12,10 @@ use fltk::{
 };
 use fltk_theme::{ColorTheme, color_themes};
 
+use shared::dimm;
+use shared::svg;
+use shared::fltk::SenderExt;
+
 // Modules {{{
 mod common;
 mod frame;
@@ -22,9 +26,6 @@ mod gameimage;
 // }}}
 
 use common::Msg;
-use common::FltkSenderExt;
-use lib::dimm;
-use lib::svg;
 
 // struct: Gui {{{
 #[derive(Debug)]

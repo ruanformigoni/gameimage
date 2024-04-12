@@ -10,12 +10,13 @@ use fltk::
   prelude::*,
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::dimm;
+
 use crate::common;
-use crate::common::WidgetExtExtra;
 use crate::log;
 use crate::frame;
 use crate::wizard;
-use crate::lib::dimm;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

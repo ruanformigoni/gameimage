@@ -5,7 +5,7 @@ use fltk::{
   frame::Frame,
 };
 
-use crate::dimm;
+use shared::dimm;
 
 pub struct RetFrameBase
 {

@@ -1,4 +1,4 @@
-use crate::lib::scaling;
+use crate::scaling;
 
 pub const HEIGHT : i32 = 500;
 pub const WIDTH  : i32 = 500;
@@ -18,6 +18,8 @@ pub const HEIGHT_SEP : i32 = 2;
 
 pub const HEIGHT_HEADER : i32 = HEIGHT_BUTTON_WIDE + BORDER*2 + HEIGHT_SEP;
 pub const HEIGHT_FOOTER : i32 = HEIGHT_BUTTON_WIDE + BORDER*2 + HEIGHT_STATUS;
+
+pub const HEIGHT_BAR : i32 = HEIGHT_BUTTON_WIDE + BORDER;
 
 pub const POSY_FOOTER : i32 = HEIGHT - HEIGHT_FOOTER;
 
@@ -52,6 +54,8 @@ function_scale!(height_header, HEIGHT_HEADER);
 function_scale!(height_footer, HEIGHT_FOOTER);
 
 function_scale!(posy_footer, POSY_FOOTER);
+
+function_scale!(bar, HEIGHT_BAR);
 
 pub fn width_checkbutton() -> i32 { 20 }
 

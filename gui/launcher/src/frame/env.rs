@@ -12,7 +12,8 @@ use fltk::{
   group::Group,
 };
 
-use crate::dimm;
+use shared::dimm;
+
 use crate::svg;
 use crate::db;
 use crate::common::Msg;
@@ -94,7 +95,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
     let mut btn_del = Button::default()
       .with_size(dimm::width_button_rec(), dimm::height_button_rec())
       .right_of(&btn_key, dimm::border());
-    btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del().as_str()).unwrap()));
+    btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
     btn_del.set_color(Color::Red);
     let clone_key = key.clone();
     let clone_tx = clone_tx.clone();
@@ -202,7 +203,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
   btn_home.set_frame(FrameType::BorderBox);
   btn_home.set_label_size(dimm::height_text()*2);
-  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home().as_str()).unwrap()));
+  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home(1.0).as_str()).unwrap()));
   btn_home.emit(tx, Msg::DrawCover);
 
   // Back to menu
@@ -212,7 +213,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
   btn_back.set_frame(FrameType::BorderBox);
   btn_back.set_label_size(dimm::height_text()*2);
-  btn_back.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_back().as_str()).unwrap()));
+  btn_back.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_back(1.0).as_str()).unwrap()));
   btn_back.emit(tx, Msg::DrawMenu);
 
   RetFrameEnv{ frame }

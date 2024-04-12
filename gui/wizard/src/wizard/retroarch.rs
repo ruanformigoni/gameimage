@@ -9,18 +9,19 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::wizard;
 use crate::frame;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
-use crate::common::VecExt;
+use shared::std::PathBufExt;
+use shared::std::VecExt;
 use crate::log;
 use crate::db;
 use crate::gameimage;
-use crate::lib::svg;
+use shared::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

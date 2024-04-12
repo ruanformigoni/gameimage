@@ -15,19 +15,20 @@ use fltk::{
   enums::{FrameType,Color},
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::log;
 use crate::db;
-use crate::lib::svg;
+use shared::svg;
 
 // fn create_entry() {{{
 fn create_entry(project : db::project::Entry
-  , scroll : &mut common::ScrollList
+  , scroll : &mut shared::fltk::ScrollList
   , width: i32
   , height: i32) -> anyhow::Result<(button::CheckButton, PathBuf)>
 {
@@ -53,7 +54,7 @@ fn create_entry(project : db::project::Entry
       .parent()
       .unwrap()
       .join("icon.creator.resized.png");
-    if let Err(e) = common::image_resize(path_file_resized.clone()
+    if let Err(e) = shared::image::resize(path_file_resized.clone()
       , path_file_icon.clone()
       , frame_icon.w() as u32, frame_icon.h() as u32)
     {
@@ -143,7 +144,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let mut scroll = common::ScrollList::new(
+  let mut scroll = shared::fltk::ScrollList::new(
     frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
     , frame_content.height() - dimm::border()*2
     , frame_content.x() + dimm::border()

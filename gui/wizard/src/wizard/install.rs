@@ -8,16 +8,17 @@ use fltk::{
   enums::{FrameType,Color},
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
-use crate::common::VecExt;
+use shared::std::PathBufExt;
+use shared::std::VecExt;
 use crate::log;
 use crate::gameimage;
-use crate::lib::svg;
+use shared::svg;
 
 // struct Install {{{
 pub struct Install

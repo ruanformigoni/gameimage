@@ -17,12 +17,12 @@ use fltk::{
 };
 
 use anyhow::anyhow as ah;
+use shared::fltk::WidgetExtExtra;
 
 use crate::dimm;
 use crate::common;
-use crate::common::WidgetExtExtra;
 use crate::log;
-use crate::lib::svg;
+use shared::svg;
 
 // struct Term {{{
 #[derive(Clone)]

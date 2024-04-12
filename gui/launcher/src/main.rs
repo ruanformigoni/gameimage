@@ -11,13 +11,14 @@ use fltk::{
   enums::FrameType,
 };
 
-mod dimm;
-mod scaling;
-mod svg;
+use shared::svg;
+
 mod mounts;
 mod frame;
 mod common;
 mod db;
+
+use shared::dimm;
 
 use fltk_theme::{ColorTheme, color_themes};
 
@@ -166,8 +167,8 @@ fn theme()
   // Set starting theme as dark
   ColorTheme::new(color_themes::BLACK_THEME).apply(); // Start with a default dark theme
   // Adjust it a bit
-  app::background(42, 46, 50); 
-  app::foreground(255, 255, 255); 
+  app::background(42, 46, 50);
+  app::foreground(255, 255, 255);
 } // }}}
 
 // fn: main {{{

@@ -10,13 +10,14 @@ use fltk::{
   enums::{Align,FrameType},
 };
 
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::log;
-use crate::lib::svg;
+use shared::svg;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

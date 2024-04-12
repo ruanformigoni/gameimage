@@ -11,13 +11,14 @@ use fltk::{
   enums::Align,
 };
 
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
-use crate::lib::svg;
-use crate::common::PathBufExt;
-use crate::common::FltkSenderExt;
+use shared::svg;
+use shared::std::PathBufExt;
 
 // pub fn welcome() {{{
 pub fn welcome(tx: Sender<common::Msg>, title: &str)

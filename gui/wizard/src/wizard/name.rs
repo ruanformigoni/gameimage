@@ -9,12 +9,13 @@ use fltk::{
   enums::{Align,FrameType},
 };
 
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::FltkSenderExt;
 use crate::log;
-use crate::lib::svg;
+use shared::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>

@@ -17,15 +17,16 @@ use fltk::
   prelude::*,
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+use shared::dimm;
+
 use anyhow::anyhow as ah;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::log;
 use crate::frame;
 use crate::wizard;
-use crate::lib::dimm;
 use crate::gameimage;
 
 // pub fn name() {{{
@@ -206,7 +207,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   }; // match
 
   // Create a scroll list
-  let mut scroll_list = common::ScrollList::new(frame_content.w()
+  let mut scroll_list = shared::fltk::ScrollList::new(frame_content.w()
     , frame_content.h()
     , frame_content.x() + dimm::border()
     , frame_content.y()

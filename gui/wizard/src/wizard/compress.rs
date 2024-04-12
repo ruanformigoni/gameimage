@@ -5,11 +5,12 @@ use std::path::PathBuf;
 use fltk::prelude::*;
 use fltk::app::Sender;
 
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::log;
 
 // pub fn compress() {{{

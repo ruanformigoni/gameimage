@@ -13,16 +13,17 @@ use fltk::
   prelude::*,
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+use shared::dimm;
+
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::log;
 use crate::frame;
 use crate::gameimage;
 use crate::wizard;
-use crate::lib::dimm;
-use crate::lib::svg;
+use shared::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)

@@ -16,16 +16,18 @@ use fltk::{
   enums::{Align,FrameType,Color},
 };
 
+use shared::fltk::WidgetExtExtra;
+
 use anyhow::anyhow as ah;
+
+use shared::fltk::SenderExt;
+use shared::scaling;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::WidgetExtExtra;
-use crate::common::PathBufExt;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::log;
-use crate::lib::scaling;
 
 // resize_draw_image() {{{
 fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
@@ -36,7 +38,7 @@ fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
     .unwrap()
     .join("icon.wizard.resized.png");
 
-  if let Err(e) = common::image_resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32)
+  if let Err(e) = shared::image::resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32)
   {
     log!("Failed to resize image to '{}', with err '{}'", path_icon_resized.string(), e);
   } // if

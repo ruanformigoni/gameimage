@@ -18,16 +18,17 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
+use shared::dimm;
+
 use crate::log;
 use crate::db;
 use crate::common;
-use crate::common::PathBufExt;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 use crate::frame;
 use crate::wizard;
-use crate::lib::svg;
-use crate::lib::dimm;
+use shared::svg;
 use crate::gameimage;
 
 // pub fn name() {{{
@@ -66,7 +67,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Create scrollbar
-  let scroll = common::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
+  let scroll = shared::fltk::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
     , frame_content.h()
     , frame_content.x()
     , frame_content.y());

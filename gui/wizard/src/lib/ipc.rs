@@ -2,9 +2,10 @@ use std::ffi::{CStr, CString};
 
 use anyhow::anyhow as ah;
 
+use shared::std::PathBufExt;
+
 use crate::log;
 use crate::common;
-use crate::common::PathBufExt;
 
 // struct MsgBuf {{{
 #[repr(C)]

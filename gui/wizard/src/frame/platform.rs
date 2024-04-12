@@ -10,11 +10,13 @@ use fltk::{
   enums::{Align,FrameType},
 };
 
+use shared::fltk::WidgetExtExtra;
+
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::common::WidgetExtExtra;
-use crate::common::FltkSenderExt;
 use crate::log;
 use crate::gameimage;
 

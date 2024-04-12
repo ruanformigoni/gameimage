@@ -11,12 +11,13 @@ use fltk::{
   enums::{FrameType,Color},
 };
 
+use shared::fltk::SenderExt;
+
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
-use crate::common::PathBufExt;
-use crate::common::FltkSenderExt;
+use shared::std::PathBufExt;
 
 // pub fn test() {{{
 pub fn test(tx: Sender<common::Msg>

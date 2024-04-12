@@ -17,15 +17,15 @@ use fltk::{
 
 use url as Url;
 use anyhow::anyhow as ah;
+use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
 
 use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::lib;
 use crate::common;
-use crate::common::FltkSenderExt;
-use crate::common::WidgetExtExtra;
-use crate::common::PathBufExt;
+use shared::std::PathBufExt;
 use crate::log;
 
 macro_rules! log_return
