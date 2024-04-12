@@ -1,3 +1,9 @@
 pub mod gameimage;
 pub mod fetch;
 pub mod search;
+pub mod package;
+pub mod desktop;
+pub mod install;
+pub mod select;
+pub mod init;
+pub mod test;

@@ -1,5 +1,7 @@
 use anyhow::anyhow as ah;
 
+use shared::std::PathBufExt;
+
 use crate::log;
 use crate::common;
 use crate::lib;
@@ -92,6 +94,34 @@ pub fn set_url_dwarfs(str_url : &str) -> anyhow::Result<i32>
 {
   Ok(set_url("--url-dwarfs", str_url)?)
 } // set_url_dwarfs() }}}
+
+// fetch() {{{
+pub fn fetch(opt_path_file_dst : Option<std::path::PathBuf>) -> anyhow::Result<i32>
+{
+  let str_platform = gameimage::gameimage::platform()?.to_lowercase();
+
+  let mut args = vec![
+      "fetch"
+    , "--platform"
+    , &str_platform
+  ];
+
+  let str_path_file_dst;
+  if let Some(path_file_dst) = opt_path_file_dst
+  {
+    str_path_file_dst = path_file_dst.string();
+    args.push("--only-file");
+    args.push(&str_path_file_dst);
+  } // if
+
+  match gameimage::gameimage::gameimage_sync(args)
+  {
+    0 => log!("Fetch on backend finished successfully"),
+    rc => { log_return!("Failed to execute fetch on backend with {}", rc); },
+  } // match
+
+  Ok(0)
+} // fetch() }}}
 
 // validate() {{{
 pub fn validate() -> anyhow::Result<i32>

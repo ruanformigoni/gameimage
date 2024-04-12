@@ -22,12 +22,14 @@ use anyhow::anyhow as ah;
 
 use shared::fltk::SenderExt;
 use shared::scaling;
+use shared::std::PathBufExt;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use shared::std::PathBufExt;
 use crate::log;
+use crate::log_return_void;
+use crate::gameimage;
 
 // resize_draw_image() {{{
 fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
@@ -449,8 +451,7 @@ pub fn project(tx: Sender<common::Msg>
     {
       output_status.set_value("No icon selected");
       clone_tx.send_awake(msg_curr);
-      log!("No Icon selected");
-      return;
+      log_return_void!("No Icon selected");
     };
 
     // Set selected icon as icon
@@ -460,12 +461,11 @@ pub fn project(tx: Sender<common::Msg>
       // Try to install icon
       log!("Installing icon...");
 
-      if common::gameimage_sync(vec!["install", "icon", &path_file_icon.string()]) != 0
+      match gameimage::install::icon(&path_file_icon)
       {
-        log!("Could not install icon, use .jpg or .png");
-        clone_tx.send_awake(msg_curr);
-        return;
-      } // if
+        Ok(_) => log!("Successfully installed icon"),
+        Err(e) => { clone_tx.send_awake(msg_curr); log_return_void!("Could not install icon with error: {}", e); },
+      } // match
 
       clone_tx.send_awake(msg_next);
     });

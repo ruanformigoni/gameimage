@@ -10,12 +10,14 @@ use fltk::{
 };
 
 use shared::fltk::SenderExt;
+use shared::svg;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
-use shared::svg;
+use crate::log_return_void;
+use crate::gameimage;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>
@@ -123,26 +125,13 @@ pub fn name(tx: Sender<common::Msg>
 
     // Init project
     clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    let mut clone_output_status = ret_frame_footer.output_status.clone();
     std::thread::spawn(move ||
     {
-      if common::gameimage_sync(vec![
-          "init"
-        , "--dir"
-        , &name
-        , "--platform"
-        , &platform
-        , "--image"
-        , &image
-      ]) != 0
+      match gameimage::init::init(name, platform, image)
       {
-        clone_tx.send_awake(common::Msg::WindActivate);
-        let msg = format!("Could not execute backend");
-        clone_output_status.set_value(&msg);
-        log!("{}", &msg);
-        return;
-      } // if
+        Ok(_) => (),
+        Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+      } // match
 
       // Go to next frame
       clone_tx.send_awake(clone_msg_next);

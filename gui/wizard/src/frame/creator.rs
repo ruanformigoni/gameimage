@@ -17,14 +17,15 @@ use fltk::{
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
+use shared::svg;
+use shared::std::PathBufExt;
 
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use shared::std::PathBufExt;
 use crate::log;
 use crate::db;
-use shared::svg;
+use crate::gameimage;
 
 // fn create_entry() {{{
 fn create_entry(project : db::project::Entry
@@ -276,10 +277,11 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         log!("File: {}", path_file_dwarfs.string());
 
         // Wait for message & check return value
-        if common::gameimage_sync(vec!["package", &path_file_dwarfs.string()]) != 0
+        match gameimage::package::package(&path_file_dwarfs)
         {
-          log!("Could not include {} into the image", path_file_dwarfs.string());
-        } // if
+          Ok(()) => log!("Packaged {}", path_file_dwarfs.string()),
+          Err(e) => log!("Could not include {} into the image: {}", path_file_dwarfs.string(), e),
+        } // match
       } // for
 
       // Refresh

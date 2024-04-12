@@ -15,7 +15,6 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use shared::std::PathBufExt;
-use shared::std::VecExt;
 use crate::log;
 use crate::gameimage;
 use shared::svg;
@@ -102,14 +101,11 @@ pub fn install(tx: Sender<common::Msg>
       (1..count).into_iter().for_each(|idx| { vec_entries.push(chooser.value(idx).unwrap()); });
       std::thread::spawn(move ||
       {
-        for str_choice in vec_entries
+        match gameimage::install::install(&clone_label, vec_entries.clone())
         {
-          // Install with backend
-          if common::gameimage_sync(vec!["install", &clone_label, &str_choice]) != 0
-          {
-            log!("Failed to execute backend");
-          } // if
-        } // for
+          Ok(_) => log!("Files installed"),
+          Err(e) => log!("Failed to install files: {}", e),
+        }; // match
         clone_tx.send_awake(msg_curr);
       });
     });
@@ -147,11 +143,12 @@ pub fn install(tx: Sender<common::Msg>
     {
       // Get items
       let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list.text(e).unwrap() }).collect();
-      // Prepend command
-      if common::gameimage_sync(vec!["install", "--remove", &clone_label].append_strings(vec_items).as_str_slice()) != 0
+      // Run backend
+      match gameimage::install::remove(&clone_label, vec_items.clone())
       {
-        log!("Failed to delete items");
-      } // if
+        Ok(_) => log!("Successfully removed files"),
+        Err(e) => log!("Failed to remove files: {}", e),
+      }; // match
       // Redraw GUI
       clone_tx.send(msg_curr);
     }); // std::thread

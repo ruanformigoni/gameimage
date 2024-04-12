@@ -11,12 +11,14 @@ use fltk::
 };
 
 use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
 use shared::dimm;
 
 use crate::common;
 use crate::log;
 use crate::frame;
 use crate::wizard;
+use crate::gameimage;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
@@ -122,15 +124,16 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
     .with_label("Open")
     .with_callback(move |_|
     {
-      tx.send(common::Msg::WindDeactivate);
+      tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["install", "gui"]) != 0
+        match gameimage::install::gui()
         {
-          log!("Install gui exited with error");
-        } // if
+          Ok(_) => log!("Exited gui successfully"),
+          Err(e) => log!("Exited gui with error code: {}", e),
+        }; // match
 
-        tx.send(common::Msg::WindActivate);
+        tx.send_awake(common::Msg::WindActivate);
       });
     });
 

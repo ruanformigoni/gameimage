@@ -239,33 +239,12 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
-      // Get platform
-      let str_platform = match env::var("GIMG_PLATFORM")
+      let path_file_dst = clone_data.file_dest.clone();
+      match gameimage::fetch::fetch(Some(path_file_dst.clone()))
       {
-        Ok(var) => var.to_lowercase(),
-        Err(e) =>
-        {
-          clone_tx.send(common::Msg::WindActivate);
-          log!("Could not read variable GIMG_PLATFORM: {}", e);
-          clone_output_status.set_value("Could not read variable GIMG_PLATFORM");
-          return;
-        },
-      };
-
-      let arg_only_file = format!("--only-file={}", clone_data.file_dest.string());
-      let args = vec![
-          "fetch"
-        , "--platform"
-        , &str_platform
-        , &arg_only_file
-      ];
-
-      log!("Args to gameimage: {:?}", args);
-
-      if common::gameimage_sync(args) != 0
-      {
-        log!("Failed to fetch file list");
-      } // if
+        Ok(_) => log!("Successfully fetched file {}", path_file_dst.string()),
+        Err(e) => log!("Failed to fetch file '{}' with error '{}'", path_file_dst.string(), e),
+      }; // match
 
       match clone_state_backend.lock()
       {
@@ -274,7 +253,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       };
 
       clone_tx.send(common::Msg::WindActivate);
-      clone_output_status.set_value("Download finished");
+      clone_output_status.set_value("Operation finished");
     });
   };
 

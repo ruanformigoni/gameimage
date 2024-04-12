@@ -17,7 +17,6 @@ use crate::wizard;
 use crate::frame;
 use crate::common;
 use shared::std::PathBufExt;
-use shared::std::VecExt;
 use crate::log;
 use crate::db;
 use crate::gameimage;
@@ -104,18 +103,18 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
       let selected = match clone_frame_list.text(*vec_indices.first().unwrap())
       {
-        Some(item) => item,
+        Some(item) => std::path::PathBuf::from(item),
         None => return,
       }; // match
 
       clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["select", "rom", selected.as_str()]) != 0
+        match gameimage::select::select("rom", &selected)
         {
-          log!("Could not select rom file '{}'", selected);
-        }; // else
-
+          Ok(_) => log!("Selected rom successfully"),
+          Err(e) => log!("Could not select rom file '{}': '{}'", selected.string(), e),
+        } // match
         clone_tx.send_awake(common::Msg::DrawRetroarchRom);
       }); // std::thread
     }); // with_callback
@@ -193,11 +192,11 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     let vec_items = (1..chooser.count()+1).into_iter().map(|e| chooser.value(e).unwrap()).collect::<Vec<String>>();
     std::thread::spawn(move ||
     {
-      // Install cores
-      if common::gameimage_sync(vec!["install", "core"].append_strings(vec_items).as_str_slice()) != 0
+      match gameimage::install::install("core", vec_items)
       {
-        log!("Failed to install one or more cores");
-      } // else
+        Ok(_) => log!("Successfully installed cores"),
+        Err(e) => log!("Failed to install one or more cores: {}", e),
+      }; // match
       // Redraw window
       clone_tx.send_awake(common::Msg::DrawRetroarchCore);
     });
@@ -231,17 +230,18 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
       let selected = match clone_frame_list_installed.text(*vec_indices.first().unwrap())
       {
-        Some(item) => item,
+        Some(item) => std::path::PathBuf::from(item),
         None => return,
       }; // match
 
       clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
-        if common::gameimage_sync(vec!["select", "core", selected.as_str()]) != 0
+        match gameimage::select::select("core", &selected)
         {
-          log!("Could not select core file '{}'", selected);
-        }; // else
+          Ok(_) => log!("Selected core successfully"),
+          Err(e) => log!("Could not select core file '{}': '{}'", selected.string(), e),
+        } // match
 
         clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       }); // std::thread
@@ -267,10 +267,12 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list_installed.text(e).unwrap() }).collect();
 
     // Run backend
-    if common::gameimage_sync(vec!["install", "--remove", "core"].append_strings(vec_items).as_str_slice()) != 0
+    match gameimage::install::remove("core", vec_items)
     {
-      log!("Failed to delete one or more items");
-    }; // else
+      Ok(_) => log!("Removed core successfully"),
+      Err(e) => log!("Could not remove core file(s) '{}'", e),
+    } // match
+
     // Redraw
     clone_tx.send_awake(common::Msg::DrawRetroarchCore);
   });
@@ -313,10 +315,11 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
         let vec_items : Vec<String> = vec_indices.into_iter().map(|e|{ clone_frame_list_remote.text(e).unwrap() }).collect();
 
         // Install with backend
-        if common::gameimage_sync(vec!["install", "--remote", "core"].append_strings(vec_items).as_str_slice()) != 0
+        match gameimage::install::remote("core", vec_items)
         {
-          log!("Failed to execute backend to fetch remote cores");
-        } // else
+          Ok(_) => log!("Remote cores installed successfully"),
+          Err(e) => log!("Failed to install remote cores: {}", e),
+        } // match
 
         clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       });
