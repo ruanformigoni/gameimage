@@ -23,6 +23,6 @@ WORKDIR gameimage
 # Compile
 RUN cd gui/launcher && cargo build --release
 
-# Make dist
+# Move to dist
 RUN mkdir /dist
-RUN cp ./gui/launcher/target/release/launcher /dist/launcher
+RUN cp ./gui/target/release/launcher /dist/launcher

@@ -1,4 +1,6 @@
 build/
+gui/target
+gui/shared/target
 gui/launcher/target
 gui/wizard/target
 src/build
