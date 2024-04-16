@@ -91,6 +91,12 @@ https://github.com/ruanformigoni/gameimage/assets/18180693/2103cd47-728a-4a54-b2
 
 [download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine-multi.mp4)
 
+### Linux
+
+https://github.com/ruanformigoni/gameimage/assets/18180693/bd74f416-0ea2-45be-9382-7beed0d8a682
+
+[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-linux.mp4)
+
 ## FlatImage
 
 The key advantages of flatimage are:
