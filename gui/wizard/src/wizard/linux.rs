@@ -58,8 +58,28 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Goto previous frame
   ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawLinuxIcon);
+
   // Goto next frame
-  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawLinuxDefault);
+  let clone_tx = tx.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  {
+    // Get the items to select from the backend
+    let vec_roms = match gameimage::search::search_local("rom")
+    {
+      Ok(result) => result,
+      Err(e) => { log!("{}", e); vec![] },
+    }; // match
+
+    // Check if is not empty
+    if vec_roms.is_empty()
+    {
+      clone_output_status.set_value("No installed '.sh' file was found");
+      return;
+    } // if
+
+    clone_tx.send(common::Msg::DrawLinuxDefault);
+  });
 
   // Height to input field
   let height_input_script = ( dimm::height_button_wide() as f32 *1.25 ) as i32;
