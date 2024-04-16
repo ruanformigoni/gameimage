@@ -53,6 +53,7 @@ struct Data
   file_dest : PathBuf,
   prog      : Progress,
   btn_fetch : Button,
+  clicked   : Arc<Mutex<bool>>,
 } // struct }}}
 
 // fn backend_validate_and_configure() {{{
@@ -175,7 +176,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     base = btn_fetch.as_base_widget();
 
     // Save in data to create callback afterwards
-    vec_fetch.push(Data{file_dest, prog, btn_fetch});
+    vec_fetch.push(Data{file_dest, prog, btn_fetch, clicked: Arc::new(Mutex::new(false))});
   } // for
 
   // Function to fetch a file
@@ -184,7 +185,7 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   let f_fetch = move |data : Data|
   {
     // Disable GUI
-    clone_tx.send(common::Msg::WindDeactivate);
+    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     #[derive(PartialEq)]
     enum StateBackend { RUN, END, }
@@ -259,13 +260,22 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
       match is_success
       {
-        true => clone_btn_fetch.set_label("Done"),
+        true =>
+        {
+          // Set download as completed
+          clone_btn_fetch.set_label("Done");
+          match clone_data.clicked.lock()
+          {
+            Ok(mut guard) => *guard = true,
+            Err(e) => log!("Could not lock data to mark as completed: {}", e),
+          } // match
+        },
         false => { clone_btn_fetch.set_label("Failure"); clone_btn_fetch.set_color(Color::Red); },
       }; // match
 
-      clone_tx.send(common::Msg::WindActivate);
+      clone_tx.send_awake(common::Msg::WindActivate);
       clone_output_status.set_value("Operation finished");
-    });
+    }); // std::thread
   };
 
 
@@ -281,8 +291,18 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
 
   // Set callback to btn next
   let clone_tx = tx.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  let mut clone_btn_next = ret_frame_footer.btn_next.clone();
+  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_vec_fetch = vec_fetch.clone();
+  clone_btn_next.set_callback(move |_|
   {
+    // Allow proceeding if all files were successfully downloaded
+    if ! clone_vec_fetch.iter().all(|e| { return match e.clicked.lock() { Ok(guard) => *guard, Err(_) => false, }; })
+    {
+      clone_output_status.set_value("Download all files before proceeding");
+      return;
+    } // if
+
     // Disable GUI
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
