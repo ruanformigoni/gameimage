@@ -18,6 +18,26 @@
 
 inline const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
 
+// macros {{{
+#define return_if(cond, ...) \
+  if (cond) { return __VA_ARGS__; }
+
+#define return_if_else(cond, val1, val2) \
+  if (cond) { return val1; } else { return val2; }
+
+#define break_if(cond) \
+  if ( (cond) ) { break; }
+
+#define continue_if(cond) \
+  if ( (cond) ) { continue; }
+
+#define assign_if(cond, var, val) \
+  if ( cond ) { var = val; }
+
+#define assign_or_return(val, cond, ret) \
+  val; if ( not cond ) { return ret; }
+// }}}
+
 // class Exception {{{
 class Exception : public std::exception
 {
@@ -133,6 +153,5 @@ auto catch_to_optional(F&& f, Args&&... args) -> std::optional<decltype(f(args..
 } // catch_to_optional() }}}
 
 } // namespace ns_common}}}
-
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

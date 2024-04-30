@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <algorithm>
 #include <sstream>
 #include <boost/type_index.hpp>
@@ -83,6 +84,23 @@ std::string from_container(T&& t, char sep = ' ')
   } // if
   return ret.str();
 } // from_container() }}}
+
+// split() {{{
+template<ns_concept::AsString T>
+std::vector<std::string> split(T&& t, char delim = ' ')
+{
+  std::vector<std::string> out;
+
+  std::string base = to_string(t);
+  for (auto&& i : std::views::split(base, delim))
+  {
+    auto substring = std::string(i.begin(), i.end());
+    if ( substring.empty() ) { continue; }
+    out.push_back(substring);
+  } // for
+
+  return out;
+} // split() }}}
 
 } // namespace ns_string
 

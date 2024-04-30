@@ -397,13 +397,11 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let frame_list = Frame::default()
     .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
       , frame_content.height() - dimm::border()*2)
-    .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border())
-    .with_frame(FrameType::BorderBox);
+    .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
 
   let mut scroll = group::Scroll::default()
     .with_size(frame_list.w(), frame_list.h())
-    .with_pos(frame_list.x(), frame_list.y())
-    .with_frame(FrameType::BorderBox);
+    .with_pos(frame_list.x(), frame_list.y());
 
   scroll.set_scrollbar_size(dimm::border());
 
@@ -415,6 +413,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let mut parent = scroll.as_base_widget();
   if let Ok(vec_items) = gameimage::search::search_local("rom")
   {
+    let input_args = match db::arg::read()
+    {
+      Ok(input_args) => input_args,
+      Err(e) => { log!("Could not read input args: {}", e); db::arg::Args::default() }
+    }; // match
+
     for item in vec_items
     {
       // Checkbutton
@@ -434,8 +438,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       {
         btn_check = btn_check.top_left_of(&parent, 0);
       } // if
-
-      parent = btn_check.as_base_widget();
 
       // Label with file name
       let mut output = output::Output::default()
@@ -484,6 +486,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         });
 
       let clone_tx = tx.clone();
+      let clone_item = item.clone();
       let _btn_run = button::Button::default()
         .with_focus(false)
         .with_svg(svg::icon_play(1.0).as_str())
@@ -492,7 +495,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         .with_callback(move |_|
         {
           // Execute wine
-          let clone_item = item.clone();
+          let clone_item = clone_item.clone();
           clone_tx.send_awake(common::Msg::WindDeactivate);
           std::thread::spawn(move ||
           {
@@ -513,6 +516,37 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
             clone_tx.send_awake(common::Msg::WindActivate);
           });
         });
+      // Arguments input
+      let clone_item = item.clone();
+      let mut _input = fltk::input::Input::default()
+        .with_size(frame_list.width() - dimm::border(), dimm::height_button_wide())
+        .with_pos(btn_check.x(), btn_check.y() + btn_check.h() + dimm::border() + dimm::height_text())
+        .with_align(Align::TopLeft)
+        .with_label("Executable arguments")
+        .with_callback(move |e|
+      {
+        if e.value().trim().is_empty()
+        {
+          let _ = db::arg::erase(clone_item.clone());
+          return;
+        } // if
+        match db::arg::write(&clone_item, &e.value())
+        {
+          Ok(()) => (),
+          Err(e) => log!("Could not write to db: {}", e),
+        }
+      });
+      if input_args.contains_key(&item)
+      {
+        _input.set_value(input_args[&item].as_str());
+      } // if
+
+      // Entry separator
+      let _sep = fltk::frame::Frame::default()
+        .with_size(frame_list.width(), dimm::height_sep())
+        .below_of(&_input, dimm::border())
+        .with_frame(FrameType::BorderBox);
+      parent = _sep.as_base_widget();
     } // for
   } // if
 
