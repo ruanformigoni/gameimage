@@ -3,12 +3,13 @@ use fltk::{
   app::Sender,
   widget::Widget,
   button::Button,
-  group::{PackType,Scroll},
+  group::PackType,
   enums::{Align,FrameType},
   frame::Frame,
 };
 
 use shared::dimm;
+use shared::fltk::WidgetExtExtra;
 
 use crate::common;
 use crate::svg;
@@ -39,37 +40,27 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   frame_title.set_label_size(dimm::height_text());
 
   // Create scrollbar
-  let mut scroll = Scroll::default()
-    .below_of(&frame_title, dimm::border())
-    .with_size(frame.w() - dimm::border()*2, frame.h() - dimm::bar() - frame_title.h() - dimm::border()*3);
-  scroll.set_scrollbar_size(dimm::width_button_rec() / 4);
-  scroll.set_frame(FrameType::BorderBox);
+  let mut scroll = shared::fltk::ScrollList::new(
+    frame.w() - dimm::border()*2
+    , frame.h() - dimm::bar() - frame_title.h() - dimm::border()*3
+    , frame_title.x()
+    , frame_title.y() + frame_title.h() + dimm::border()
+  );
+  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_border(dimm::border(), dimm::border());
 
   //
   // Layout
   //
-  let mut parent = scroll.as_base_widget();
-  let clone_scroll = scroll.clone();
+  let mut clone_scroll = scroll.clone();
   let mut f_make_entry = move |label : &str|
   {
-    let mut entry = Button::default()
-      .with_size(parent.width(), dimm::height_button_wide());
-    entry.set_type(PackType::Vertical);
-    entry.set_frame(FrameType::BorderBox);
-    entry.set_label_size(dimm::height_text());
-    entry.set_align(Align::Left | Align::Inside);
-    entry.set_label(label);
-    if parent.is_same(&clone_scroll.as_base_widget())
-    {
-      entry.clone().above_of(&parent, -entry.h() - dimm::border());
-      entry.set_pos(entry.x() + dimm::border(), entry.y());
-      entry.set_size(entry.w() - dimm::border()*2, entry.h());
-    } // if
-    else
-    {
-      entry.clone().above_of(&parent, -entry.h() * 2 - dimm::border());
-    } // else
-    parent = entry.as_base_widget().clone();
+    let entry = Button::default()
+      .with_size(clone_scroll.widget_ref().width() - dimm::border()*2, dimm::height_button_wide())
+      .with_frame(FrameType::BorderBox)
+      .with_align(Align::Left | Align::Inside)
+      .with_label(label);
+    clone_scroll.add(&mut entry.as_base_widget());
     entry
   };
 

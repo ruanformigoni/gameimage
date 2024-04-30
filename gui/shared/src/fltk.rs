@@ -229,6 +229,8 @@ impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
 #[derive(Clone)]
 pub struct ScrollList
 {
+  border_x : i32,
+  border_y : i32,
   scroll : fltk::group::Scroll,
   opt_current : Option<fltk::widget::Widget>,
 } // ScrollList
@@ -242,7 +244,7 @@ impl ScrollList
       .with_pos(x, y);
     scroll.set_scrollbar_size(dimm::border());
 
-    ScrollList{scroll: scroll.clone(), opt_current: None}
+    ScrollList{border_x: 0, border_y: 0, scroll: scroll.clone(), opt_current: None}
   } // new()
 
   pub fn begin(&self)
@@ -265,18 +267,24 @@ impl ScrollList
     &self.scroll
   } // widget_ref()
 
-  pub fn add(&mut self, w : &mut fltk::widget::Widget, border : i32)
+  pub fn add(&mut self, w : &mut fltk::widget::Widget)
   {
     let (x, y) = match &self.opt_current
     {
-      Some(current) => ( current.x(), current.y() + current.h() ),
-      None => ( self.scroll.x(), self.scroll.y() ),
+      Some(current) => ( current.x(), current.y() + current.h() + self.border_y ),
+      None => ( self.scroll.x() + self.border_x, self.scroll.y() + dimm::border() ),
     }; // match
 
-    w.set_pos(x, y + border);
+    w.set_pos(x, y);
 
     self.opt_current = Some(w.as_base_widget());
   } // add()
+
+  pub fn set_border(&mut self, x : i32, y : i32)
+  {
+    self.border_x = x;
+    self.border_y = y;
+  } // widget_ref()
 
 } // impl ScrollList }}}
 
