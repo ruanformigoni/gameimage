@@ -6,6 +6,7 @@ pub enum Msg
   DrawCover,
   DrawSelector,
   DrawEnv,
+  DrawExecutables,
   DrawMenu,
   WindActivate,
   WindDeactivate,

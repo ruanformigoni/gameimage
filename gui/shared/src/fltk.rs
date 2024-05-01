@@ -272,7 +272,7 @@ impl ScrollList
     let (x, y) = match &self.opt_current
     {
       Some(current) => ( current.x(), current.y() + current.h() + self.border_y ),
-      None => ( self.scroll.x() + self.border_x, self.scroll.y() + dimm::border() ),
+      None => ( self.scroll.x() + self.border_x, self.scroll.y() + self.border_y ),
     }; // match
 
     w.set_pos(x, y);

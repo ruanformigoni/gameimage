@@ -67,6 +67,9 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   let mut btn_env = f_make_entry("Environment");
   btn_env.emit(tx, Msg::DrawEnv);
 
+  let mut btn_executables = f_make_entry("Executable Configuration");
+  btn_executables.emit(tx, Msg::DrawExecutables);
+
   scroll.end();
 
   // Back to home

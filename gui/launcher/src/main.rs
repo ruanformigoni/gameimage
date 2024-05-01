@@ -86,6 +86,10 @@ fn redraw(&mut self, msg: Msg)
     {
       frame::selector::new(self.tx, 0, 0);
     }
+    Some(Msg::DrawExecutables) =>
+    {
+      frame::executables::new(self.tx, 0, 0);
+    }
     Some(Msg::DrawEnv) =>
     {
       frame::env::new(self.tx, 0, 0);
