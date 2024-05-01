@@ -139,14 +139,13 @@ void env(fs::path const& path_dir_self)
   fs::path path_file_env = path_dir_self / "gameimage.env.json";
 
   // Set variables
-  ns_db::from_file(path_file_env
-  , [&](auto&& db)
+  ns_db::from_file(path_file_env, [&](auto&& db)
   {
-    std::for_each(db["env"].begin(), db["env"].end(), [&](auto&& e)
+    for(auto&& e : db.items())
     {
-      ns_env::set(e["key"], e["val"], ns_env::Replace::Y);
-      ns_log::write('i', "Set environment variable '", e["key"], "' to '", e["val"], "'");
-    });
+      ns_env::set(e.key(), e.value(), ns_env::Replace::Y);
+      ns_log::write('i', "Set environment variable '", e.key(), "' to '", e.value(), "'");
+    }
   }
   , ns_db::Mode::READ);
 } // env() }}}
