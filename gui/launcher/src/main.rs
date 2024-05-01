@@ -16,7 +16,6 @@ use shared::svg;
 mod mounts;
 mod frame;
 mod common;
-mod db;
 
 use shared::dimm;
 

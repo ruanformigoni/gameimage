@@ -15,7 +15,6 @@ use fltk::{
 use shared::dimm;
 
 use crate::svg;
-use crate::db;
 use crate::common::Msg;
 
 pub struct RetFrameEnv
@@ -23,10 +22,24 @@ pub struct RetFrameEnv
   pub frame : Frame,
 } // Ret
 
+// get_path_db_env() {{{
+fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
+  path_db.push("gameimage.env.json");
+
+  Ok(path_db)
+} // get_path_db_env() }}}
 
 // fn: new {{{
 pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
 {
+  let path_file_db = match get_path_db_env()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
   //
   // Main
   //
@@ -57,6 +70,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   let mut parent = scroll.as_base_widget();
   let clone_scroll = scroll.clone();
   let clone_tx = tx.clone();
+  let clone_path_file_db = path_file_db.clone();
   let mut f_make_entry = move |key : String, val : String|
   {
     let mut group = Group::default()
@@ -99,9 +113,10 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
     btn_del.set_color(Color::Red);
     let clone_key = key.clone();
     let clone_tx = clone_tx.clone();
+    let clone_path_file_db = clone_path_file_db.clone();
     btn_del.set_callback(move |_|
     {
-      match db::env::del(clone_key.clone())
+      match shared::db::kv::erase(&clone_path_file_db, clone_key.clone())
       {
         Ok(_) => println!("Erased key '{}'", clone_key),
         Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
@@ -122,9 +137,9 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   };
 
   // Get current database entries
-  if let Ok(entries) = db::env::get()
+  if let Ok(entries) = shared::db::kv::read(&path_file_db)
   {
-    for db::env::Var{ key, val } in entries.env
+    for (key, val) in entries
     {
       f_make_entry(key, val);
     } // for
@@ -178,13 +193,14 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
     let clone_input_key = input_key.clone();
     let clone_input_value = input_value.clone();
     let clone_tx = clone_tx.clone();
+    let clone_path_file_db = path_file_db.clone();
     btn_ok.set_callback(move |_|
     {
       clone_wind.hide();
       let key = clone_input_key.value();
       let value = clone_input_value.value();
       if key.is_empty() { return; }
-      match db::env::set(key.clone(), value.clone())
+      match shared::db::kv::write(&clone_path_file_db, &key.clone(), &value.clone())
       {
         Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
         Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),

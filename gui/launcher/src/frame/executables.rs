@@ -15,10 +15,8 @@ use anyhow::anyhow as ah;
 use shared::dimm;
 use shared::std::PathBufExt;
 use shared::std::OsStrExt;
-use shared::fltk::WidgetExtExtra;
 
 use crate::svg;
-use crate::db;
 use crate::common::Msg;
 
 pub struct RetFrameExecutable
@@ -68,9 +66,24 @@ fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
   Ok(ret)
 } // find_executables() }}}
 
+// get_path_db_args() {{{
+fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
+  path_db.push("gameimage.wine.args.json");
+
+  Ok(path_db)
+} // get_path_db_args() }}}
+
 // fn: new {{{
 pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
 {
+  let path_file_db = match get_path_db_args()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
   //
   // Main
   //
@@ -102,7 +115,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   //
   let mut clone_scroll = scroll.clone();
   // let clone_tx = tx.clone();
-  let mut f_make_entry = move |key : String, val : String|
+  let mut f_make_entry = move |key : String|
   {
     let group = Group::default()
       .with_size(clone_scroll.widget_ref().w(),
@@ -145,9 +158,12 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
       .with_label("Arguments")
       .with_align(Align::TopLeft)
       .below_of(&output_executable, dimm::border() + dimm::height_text());
-    let _ = output_arguments.insert(val.as_str());
     output_arguments.set_frame(FrameType::BorderBox);
     output_arguments.set_text_size(dimm::height_text());
+    if let Ok(db) = shared::db::kv::read(&path_file_db) && db.contains_key(&key)
+    {
+      let _ = output_arguments.insert(&db[&key]);
+    } // if
 
     // Separator
     let mut sep = Frame::default()
@@ -165,7 +181,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   {
     for path in paths
     {
-      f_make_entry(path.string(), "hello".to_string());
+      f_make_entry(path.string());
     } // for
   } // if
   scroll.end();
