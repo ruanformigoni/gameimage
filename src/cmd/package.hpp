@@ -47,14 +47,6 @@ inline void package(fs::path path_file_dwarfs)
     , path_file_dwarfs
     , path_dir_mount);
 
-  // Setup overlayfs
-  std::string str_path_overlayfs = R"("\$FIM_DIR_BINARY"/."\$FIM_BASENAME_BINARY".config/overlays/{})"_fmt(str_stem_dwarfs);
-  ns_subprocess::sync(path_image
-    , "fim-dwarfs-overlayfs"
-    , str_stem_dwarfs
-    , str_path_overlayfs
-  );
-
   // Get path to launcher
   fs::path path_file_launcher = ns_fs::ns_path::dir_self<true>()._ret / "gameimage-launcher";
 
