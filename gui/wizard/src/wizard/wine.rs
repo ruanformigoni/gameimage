@@ -18,6 +18,8 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
+use anyhow::anyhow as ah;
+
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::dimm;
@@ -52,9 +54,44 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
   );
 } // }}}
 
+// get_path_db() {{{
+fn get_path_db() -> anyhow::Result<std::path::PathBuf>
+{
+  let entry = db::global::read()?;
+
+  let path_dir_db = entry
+      .path_dir_build
+      .ok_or(ah!("Could not read build dir to set env"))?
+      .join(entry.project.ok_or(ah!("Could not read project dir to set env"))?);
+
+  Ok(path_dir_db)
+} // get_path_db() }}}
+
+// get_path_db_env() {{{
+fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.env.json");
+  Ok(path_file_db)
+} // get_path_db_env() }}}
+
+// get_path_db_args() {{{
+fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.wine.args.json");
+  Ok(path_file_db)
+} // get_path_db_args() }}}
+
 // pub fn environment() {{{
 pub fn environment(tx: Sender<common::Msg>, title: &str)
 {
+  let path_file_db = match get_path_db_env()
+  {
+    Ok(e) => e,
+    Err(e) => { log!("Could not retrieve path to db file: {}", e); return; }
+  }; // match
+
   //
   // Main
   //
@@ -79,7 +116,8 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   //
   let clone_tx = tx.clone();
   let mut clone_scroll = scroll.clone();
-  let mut f_make_entry = move |key : String, val : String|
+  let clone_path_file_db = path_file_db.clone();
+  let f_make_entry = move |key : String, val : String|
   {
     let group = fltk::group::Group::default()
       .with_size(clone_scroll.widget_ref().w() - dimm::border(), dimm::height_button_wide()*2 + dimm::border() * 3);
@@ -113,7 +151,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
       .with_focus(false)
       .with_callback(move |_|
     {
-      match db::env::del(clone_key.clone())
+      match shared::db::kv::erase(&clone_path_file_db, clone_key.clone())
       {
         Ok(_) => println!("Erased key '{}'", clone_key),
         Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
@@ -133,11 +171,11 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   };
 
   // Get current database entries
-  if let Ok(entries) = db::env::get()
+  if let Ok(entries) = shared::db::kv::read(&path_file_db)
   {
-    for db::env::Var{ key, val } in entries.env
+    for (key, val) in entries
     {
-      f_make_entry(key, val);
+      f_make_entry.clone()(key, val);
     } // for
   } // if
 
@@ -191,13 +229,14 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
     let clone_input_key = input_key.clone();
     let clone_input_value = input_value.clone();
     let clone_tx = clone_tx.clone();
+    let clone_path_file_db = path_file_db.clone();
     btn_ok.set_callback(move |_|
     {
       clone_wind.hide();
       let key = clone_input_key.value();
       let value = clone_input_value.value();
       if key.is_empty() { return; }
-      match db::env::set(key.clone(), value.clone())
+      match shared::db::kv::write(&clone_path_file_db, &key, &value)
       {
         Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
         Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
@@ -386,6 +425,12 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
+  let path_file_db = match get_path_db_args()
+  {
+    Ok(e) => e,
+    Err(e) => { log!("Could not retrieve path to db file: {}", e); return; }
+  }; // match
+
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
@@ -414,10 +459,10 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let mut parent = scroll.as_base_widget();
   if let Ok(vec_items) = gameimage::search::search_local("rom")
   {
-    let input_args = match shared::db::kv::read("gameimage.wine.args.json")
+    let input_args = match shared::db::kv::read(&path_file_db)
     {
       Ok(input_args) => input_args,
-      Err(e) => { log!("Could not read input args: {}", e); db::arg::Args::default() }
+      Err(e) => { log!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
     }; // match
 
     for item in vec_items
@@ -519,6 +564,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         });
       // Arguments input
       let clone_item = item.clone();
+      let clone_path_file_db = path_file_db.clone();
       let mut _input = fltk::input::Input::default()
         .with_size(frame_list.width() - dimm::border(), dimm::height_button_wide())
         .with_pos(btn_check.x(), btn_check.y() + btn_check.h() + dimm::border() + dimm::height_text())
@@ -528,18 +574,18 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       {
         if e.value().trim().is_empty()
         {
-          let _ = db::arg::erase(clone_item.clone());
+          let _ = shared::db::kv::erase(&clone_path_file_db, clone_item.string());
           return;
         } // if
-        match db::arg::write(&clone_item, &e.value())
+        match shared::db::kv::write(&clone_path_file_db, &clone_item.string(), &e.value())
         {
           Ok(()) => (),
           Err(e) => log!("Could not write to db: {}", e),
         }
       });
-      if input_args.contains_key(&item)
+      if input_args.contains_key(&item.string())
       {
-        _input.set_value(input_args[&item].as_str());
+        _input.set_value(input_args[&item.string()].as_str());
       } // if
 
       // Entry separator
