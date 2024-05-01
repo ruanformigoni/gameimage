@@ -8,7 +8,6 @@ use fltk::{
   app::Sender,
   button,
   button::{Button,CheckButton},
-  group,
   frame::Frame,
   output,
   dialog,
@@ -33,13 +32,6 @@ fn create_entry(project : db::project::Entry
   , width: i32
   , height: i32) -> anyhow::Result<(button::CheckButton, PathBuf)>
 {
-  let frame_pack = group::Pack::default()
-    .with_size(width, height)
-    .with_type(group::PackType::Horizontal);
-
-  // Include in scroll list
-  scroll.add(&mut frame_pack.as_base_widget());
-
   //
   // Icon
   //
@@ -47,6 +39,9 @@ fn create_entry(project : db::project::Entry
   let mut frame_icon = Frame::default()
     .with_focus(false)
     .with_size(width_icon, height);
+
+  // Include in scroll list
+  scroll.add(&mut frame_icon.as_base_widget());
 
   if let Ok(path_file_icon) = project.get_path_absolute(db::project::EntryName::PathFileIcon)
   {
@@ -76,7 +71,8 @@ fn create_entry(project : db::project::Entry
   // Info
   //
   let mut frame_info = output::MultilineOutput::default()
-    .with_size(width - width_icon - dimm::width_checkbutton(), height)
+    .with_size(width - width_icon - dimm::width_checkbutton() - dimm::border(), height)
+    .right_of(&frame_icon, 0)
     .with_frame(FrameType::BorderBox)
     .with_color(Color::Background);
   frame_info.set_text_size(dimm::height_text());
@@ -103,10 +99,9 @@ fn create_entry(project : db::project::Entry
   //
   let btn_checkbox = CheckButton::default()
     .with_size(dimm::width_checkbutton(), height)
+    .right_of(&frame_info, 0)
     .with_focus(false)
     .with_frame(FrameType::BorderBox);
-
-  frame_pack.end();
 
   Ok((btn_checkbox , project.get_dir_self()?))
 } // }}}
@@ -151,7 +146,8 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     , frame_content.x() + dimm::border()
     , frame_content.y() + dimm::border()
   );
-  scroll.set_border(0, dimm::border());
+  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_border(dimm::border(), dimm::border());
 
   scroll.begin();
 
