@@ -269,13 +269,26 @@ impl ScrollList
 
   pub fn add(&mut self, w : &mut fltk::widget::Widget)
   {
-    let (x, y) = match &self.opt_current
+    if self.opt_current.is_some()
     {
-      Some(current) => ( current.x(), current.y() + current.h() + self.border_y ),
-      None => ( self.scroll.x() + self.border_x, self.scroll.y() + self.border_y ),
-    }; // match
-
-    w.set_pos(x, y);
+      w.clone().below_of(&self.opt_current.clone().unwrap(), self.border_y);
+    }
+    else
+    {
+      // Create an empty widget to serve as a spacer for x
+      let frame_spacer_x = fltk::frame::Frame::default()
+        .with_size(self.border_x, dimm::border())
+        .with_pos(self.scroll.x(), self.scroll.y());
+        // .with_color(fltk::enums::Color::Red)
+        // .with_frame(fltk::enums::FrameType::BorderBox);
+      // Create an empty widget to serve as a spacer for y
+      let frame_spacer_y = fltk::frame::Frame::default()
+        .with_size(self.scroll.w(), self.border_y)
+        .right_of(&frame_spacer_x, 0);
+        // .with_color(fltk::enums::Color::Blue)
+        // .with_frame(fltk::enums::FrameType::BorderBox);
+      w.clone().below_of(&frame_spacer_y, 0);
+    } // else
 
     self.opt_current = Some(w.as_base_widget());
   } // add()

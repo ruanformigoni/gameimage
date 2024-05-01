@@ -105,11 +105,12 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Create scrollbar
-  let mut scroll = shared::fltk::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
+  let mut scroll = shared::fltk::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*3
     , frame_content.h()
-    , frame_content.x()
+    , frame_content.x() + dimm::border()
     , frame_content.y());
-  scroll.set_border(0, dimm::border());
+  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_border(dimm::border(), dimm::border());
 
   //
   // Create entries
@@ -117,32 +118,28 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   let mut clone_scroll = scroll.clone();
   let clone_path_file_db = path_file_db.clone();
-  let f_make_entry = move |key : String, val : String|
+  let mut f_make_entry = move |key : String, val : String|
   {
-    let group = fltk::group::Group::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border(), dimm::height_button_wide()*2 + dimm::border() * 3);
-
-    group.begin();
-
     // Setup key widget
     let mut output_key = fltk::output::Output::default()
-      .with_size(group.w() - dimm::width_button_rec() - dimm::border()*3, dimm::height_button_wide())
-      .with_align(Align::Left | Align::Inside)
-      .with_pos(group.x() + dimm::border(), group.y());
+      .with_size(clone_scroll.widget_ref().w() - dimm::width_button_rec() - dimm::border()*4, dimm::height_button_wide())
+      .with_align(Align::Left | Align::Inside);
+    clone_scroll.add(&mut output_key.as_base_widget());
     output_key.set_value(key.as_str());
     output_key.set_frame(FrameType::BorderBox);
     output_key.set_text_size(dimm::height_text());
     // Setup val widget
     let mut output_val = fltk::output::Output::default()
-      .with_size(group.w() - dimm::border()*2, dimm::height_button_wide())
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
       .with_align(Align::Left | Align::Inside)
-      .below_of(&output_key, dimm::border())
       .with_frame(FrameType::BorderBox);
+    clone_scroll.add(&mut output_val.as_base_widget());
     output_val.set_value(val.as_str());
     output_val.set_text_size(dimm::height_text());
     // Erase button
     let clone_key = key.clone();
     let clone_tx = clone_tx.clone();
+    let clone_path_file_db = clone_path_file_db.clone();
     let _btn_del = Button::default()
       .with_size(dimm::width_button_rec(), dimm::height_button_rec())
       .right_of(&output_key, dimm::border())
@@ -161,24 +158,22 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
     // Separator
     let mut sep = Frame::default()
       .below_of(&output_val, dimm::border())
-      .with_size(clone_scroll.widget_ref().width() - dimm::border()*2, 2);
+      .with_size(clone_scroll.widget_ref().width() - dimm::border()*3, dimm::height_sep());
     sep.set_frame(FrameType::FlatBox);
     sep.set_color(Color::Black);
-
-    group.end();
-
-    clone_scroll.add(&mut group.as_base_widget());
+    clone_scroll.add(&mut sep.as_base_widget());
   };
 
   // Get current database entries
+  scroll.begin();
   if let Ok(entries) = shared::db::kv::read(&path_file_db)
   {
     for (key, val) in entries
     {
-      f_make_entry.clone()(key, val);
+      println!("Key: {} Val: {}", key, val);
+      f_make_entry(key, val);
     } // for
   } // if
-
   scroll.end();
 
   // Add var button
