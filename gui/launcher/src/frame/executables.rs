@@ -37,10 +37,7 @@ fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
   let mut path_dir_wine = path_dir_boot.clone();
   path_dir_wine.push("wine");
 
-  let mut path_dir_prefix = path_dir_wine.clone();
-  path_dir_prefix.push("drive_c");
-
-  for entry in walkdir::WalkDir::new(path_dir_prefix)
+  for entry in walkdir::WalkDir::new(&path_dir_wine)
     .into_iter()
     .filter_map(|e| e.ok())
   {
@@ -56,7 +53,7 @@ fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
       continue;
     } // if
     // Make path relative
-    match path.strip_prefix(path_dir_wine.clone())
+    match path.strip_prefix(path_dir_boot.clone())
     {
       Ok(e) => ret.push(e.to_path_buf()),
       Err(_) => (),
@@ -152,22 +149,28 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     // btn_use.set_selection_color(Color::Blue);
     // btn_use.set_color(Color::BackGround);
 
-    // Setup output for arguments
-    let mut output_arguments = Output::default()
+    // Setup input for arguments
+    let mut input_arguments = fltk::input::Input::default()
       .with_size(clone_widget.width() - dimm::border()*3, dimm::height_button_wide())
       .with_label("Arguments")
       .with_align(Align::TopLeft)
       .below_of(&output_executable, dimm::border() + dimm::height_text());
-    output_arguments.set_frame(FrameType::BorderBox);
-    output_arguments.set_text_size(dimm::height_text());
+    input_arguments.set_frame(FrameType::BorderBox);
+    input_arguments.set_text_size(dimm::height_text());
     if let Ok(db) = shared::db::kv::read(&path_file_db) && db.contains_key(&key)
     {
-      let _ = output_arguments.insert(&db[&key]);
+      let _ = input_arguments.insert(&db[&key]);
     } // if
+    let clone_output_executable = output_executable.clone();
+    let clone_path_file_db = path_file_db.clone();
+    input_arguments.set_callback(move |e|
+    {
+      let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());
+    });
 
     // Separator
     let mut sep = Frame::default()
-      .below_of(&output_arguments, dimm::border())
+      .below_of(&input_arguments, dimm::border())
       .with_size(clone_widget.width() - dimm::border()*3, dimm::height_sep());
     sep.set_frame(FrameType::FlatBox);
     sep.set_color(Color::Black);
