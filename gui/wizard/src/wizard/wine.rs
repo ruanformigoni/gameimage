@@ -414,7 +414,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let mut parent = scroll.as_base_widget();
   if let Ok(vec_items) = gameimage::search::search_local("rom")
   {
-    let input_args = match db::arg::read()
+    let input_args = match shared::db::kv::read("gameimage.wine.args.json")
     {
       Ok(input_args) => input_args,
       Err(e) => { log!("Could not read input args: {}", e); db::arg::Args::default() }
