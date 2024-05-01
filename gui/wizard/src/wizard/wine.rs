@@ -68,10 +68,11 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Create scrollbar
-  let scroll = shared::fltk::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
+  let mut scroll = shared::fltk::ScrollList::new(frame_content.w() - dimm::width_button_rec() - dimm::border()*2
     , frame_content.h()
     , frame_content.x()
     , frame_content.y());
+  scroll.set_border(0, dimm::border());
 
   //
   // Create entries
@@ -128,7 +129,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
 
     group.end();
 
-    clone_scroll.add(&mut group.as_base_widget(), dimm::border());
+    clone_scroll.add(&mut group.as_base_widget());
   };
 
   // Get current database entries

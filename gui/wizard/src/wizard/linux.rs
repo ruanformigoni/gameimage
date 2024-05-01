@@ -219,6 +219,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     , frame_content.x() + dimm::border()
     , frame_content.y()
   );
+  scroll_list.set_border(0, dimm::border());
 
   // Save items to select
   let arc_items : Arc<Mutex<Vec<(button::RadioButton, PathBuf)>>> = Arc::new(Mutex::new(vec![]));
@@ -231,7 +232,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       .with_size(dimm::width_button_rec(), dimm::height_button_rec())
       .with_focus(false)
       .with_color_selected(fltk::enums::Color::Blue);
-    scroll_list.add(&mut btn_radio.as_base_widget(), dimm::border());
+    scroll_list.add(&mut btn_radio.as_base_widget());
 
     // Rom name
     let mut frame_label = output::Output::default()

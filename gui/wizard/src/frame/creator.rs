@@ -38,7 +38,7 @@ fn create_entry(project : db::project::Entry
     .with_type(group::PackType::Horizontal);
 
   // Include in scroll list
-  scroll.add(&mut frame_pack.as_base_widget(), dimm::border());
+  scroll.add(&mut frame_pack.as_base_widget());
 
   //
   // Icon
@@ -151,6 +151,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     , frame_content.x() + dimm::border()
     , frame_content.y() + dimm::border()
   );
+  scroll.set_border(0, dimm::border());
 
   scroll.begin();
 
