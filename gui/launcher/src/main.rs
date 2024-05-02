@@ -111,11 +111,15 @@ fn init(&mut self)
     // Create initial cover frame
     self.tx.send(common::Msg::DrawCover);
     // Update env
-    let (path_boot, path_root, path_icon, path_icon_grayscale) = vec_entry.first().unwrap();
-    env::set_var("GIMG_LAUNCHER_ROOT", path_root.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_BOOT", path_boot.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_IMG", path_icon.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_IMG_GRAYSCALE", path_icon_grayscale.to_str().unwrap_or(""));
+    let data = vec_entry.first().unwrap();
+    if let Ok(platform) = data.platform.as_ref()
+    {
+      env::set_var("GIMG_PLATFORM", platform.as_str());
+    } // if
+    env::set_var("GIMG_LAUNCHER_ROOT", data.path_root.to_str().unwrap_or(""));
+    env::set_var("GIMG_LAUNCHER_BOOT", data.path_boot.to_str().unwrap_or(""));
+    env::set_var("GIMG_LAUNCHER_IMG", data.path_icon.to_str().unwrap_or(""));
+    env::set_var("GIMG_LAUNCHER_IMG_GRAYSCALE", data.path_icon_grayscale.to_str().unwrap_or(""));
   } // if
   else
   {

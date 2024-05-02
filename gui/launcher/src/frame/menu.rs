@@ -70,8 +70,14 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   let mut btn_env = f_make_entry("Environment");
   btn_env.emit(tx, Msg::DrawEnv);
 
-  let mut btn_executables = f_make_entry("Executable Configuration");
-  btn_executables.emit(tx, Msg::DrawExecutables);
+  // Enable executable list only for wine
+  if let Ok(str_platform) = std::env::var("GIMG_PLATFORM")
+  && let Ok(platform) = common::Platform::from_str(&str_platform)
+  && platform == common::Platform::WINE
+  {
+    let mut btn_executables = f_make_entry("Executable Configuration");
+    btn_executables.emit(tx, Msg::DrawExecutables);
+  }
 
   scroll.end();
 
