@@ -240,15 +240,15 @@ impl ScrollList
 {
   pub fn new(w : i32, h : i32, x : i32, y : i32) -> Self
   {
+    let frame_type = fltk::frame::Frame::default()
+      .with_size(w+2, h+2)
+      .with_pos(x-1, y-1)
+      .with_frame(fltk::enums::FrameType::BorderBox);
+
     let mut scroll = fltk::group::Scroll::default()
       .with_size(w, h)
       .with_pos(x, y);
     scroll.set_scrollbar_size(dimm::border());
-
-    let frame_type = fltk::frame::Frame::default()
-      .with_size(w, h)
-      .with_pos(x, y)
-      .with_frame(fltk::enums::FrameType::BorderBox);
 
     ScrollList{border_x: 0, border_y: 0, scroll: scroll.clone(), frame_type, opt_current: None}
   } // new()
