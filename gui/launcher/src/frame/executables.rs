@@ -7,7 +7,6 @@ use fltk::{
   group::PackType,
   enums::{Align,FrameType,Color},
   frame::Frame,
-  group::Group,
 };
 
 use anyhow::anyhow as ah;
