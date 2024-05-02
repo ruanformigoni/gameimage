@@ -218,6 +218,12 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   clone_btn_next.set_callback(move |_|
   {
+    if let Ok(guard) = PLATFORM.lock() && *guard == None
+    {
+      log!("No platform was selected");
+      return;
+    } // if
+
     // Fetch files
     clone_output_status.set_value("Fetching list of files to download");
 
