@@ -14,6 +14,7 @@ use fltk::{
 
 use shared::dimm;
 use shared::svg;
+use shared::fltk::WidgetExtExtra;
 
 use crate::common;
 use crate::mounts;
@@ -62,6 +63,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   // Set bottom background
   let mut btn_bottom = Button::default()
     .with_size(frame_base.width(), dimm::bar())
+    .with_focus(false)
     .center_x(&frame_base);
   btn_bottom.set_pos(btn_bottom.x(), frame_base.h() - dimm::bar());
   btn_bottom.set_frame(FrameType::NoBox);
@@ -71,7 +73,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   // Button left aligned
   let mut btn_left = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&frame_base, -dimm::height_button_rec());
+    .below_of(&frame_base, -dimm::height_button_rec())
+    .with_focus(false);
   btn_left.set_pos(btn_left.x() + dimm::border(), btn_left.y() - dimm::border());
   btn_left.set_frame(FrameType::BorderBox);
   btn_left.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_list(1.0).as_str()).unwrap()));
@@ -81,6 +84,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   let mut btn_middle = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .below_of(&frame_base, -dimm::height_button_rec())
+    .with_focus(false)
     .center_x(&frame_base);
   btn_middle.set_pos(btn_middle.x(), btn_middle.y() - dimm::border());
   btn_middle.set_frame(FrameType::BorderBox);
@@ -96,7 +100,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   // Button right aligned
   let mut btn_right = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&frame_base, -dimm::height_button_rec());
+    .below_of(&frame_base, -dimm::height_button_rec())
+    .with_focus(false);
   btn_right.set_pos(frame_base.w() - dimm::border() - btn_right.w(), btn_right.y() - dimm::border());
   btn_right.set_color(fltk::enums::Color::Green);
   btn_right.set_frame(FrameType::BorderBox);

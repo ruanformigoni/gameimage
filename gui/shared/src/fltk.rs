@@ -232,6 +232,7 @@ pub struct ScrollList
   border_x : i32,
   border_y : i32,
   scroll : fltk::group::Scroll,
+  frame_type : fltk::frame::Frame,
   opt_current : Option<fltk::widget::Widget>,
 } // ScrollList
 
@@ -244,7 +245,12 @@ impl ScrollList
       .with_pos(x, y);
     scroll.set_scrollbar_size(dimm::border());
 
-    ScrollList{border_x: 0, border_y: 0, scroll: scroll.clone(), opt_current: None}
+    let frame_type = fltk::frame::Frame::default()
+      .with_size(w, h)
+      .with_pos(x, y)
+      .with_frame(fltk::enums::FrameType::BorderBox);
+
+    ScrollList{border_x: 0, border_y: 0, scroll: scroll.clone(), frame_type, opt_current: None}
   } // new()
 
   pub fn begin(&self)
@@ -283,9 +289,9 @@ impl ScrollList
         // .with_frame(fltk::enums::FrameType::BorderBox);
       // Create an empty widget to serve as a spacer for y
       let frame_spacer_y = fltk::frame::Frame::default()
-        .with_size(self.scroll.w(), self.border_y)
+        .with_size(dimm::border(), self.border_y)
         .right_of(&frame_spacer_x, 0);
-        // .with_color(fltk::enums::Color::Blue)
+        // .with_color(fltk::enums::Color::Green)
         // .with_frame(fltk::enums::FrameType::BorderBox);
       w.clone().below_of(&frame_spacer_y, 0);
     } // else
@@ -298,6 +304,11 @@ impl ScrollList
     self.border_x = x;
     self.border_y = y;
   } // widget_ref()
+
+  pub fn set_frame(&mut self, frame_type : fltk::enums::FrameType)
+  {
+    self.frame_type.set_frame(frame_type);
+  } // widget_mut()
 
 } // impl ScrollList }}}
 

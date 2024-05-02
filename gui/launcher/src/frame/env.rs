@@ -13,6 +13,7 @@ use fltk::{
 };
 
 use shared::dimm;
+use shared::fltk::WidgetExtExtra;
 
 use crate::svg;
 use crate::common::Msg;
@@ -108,6 +109,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
     // Erase button
     let mut btn_del = Button::default()
       .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+      .with_focus(false)
       .right_of(&btn_key, dimm::border());
     btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
     btn_del.set_color(Color::Red);
@@ -151,6 +153,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   let mut btn_add = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_align(Align::Inside | Align::Center)
+    .with_focus(false)
     .with_label("+");
   let clone_tx = tx.clone();
   btn_add.set_pos(frame.w() - btn_add.w() - dimm::border(), frame.h() - dimm::bar());
@@ -214,6 +217,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   // Back to home
   let mut btn_home = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .with_focus(false)
     .with_align(Align::Inside | Align::Center)
     .center_x(&frame);
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
@@ -225,6 +229,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   // Back to menu
   let mut btn_back = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .with_focus(false)
     .with_align(Align::Inside | Align::Center);
   btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
   btn_back.set_frame(FrameType::BorderBox);

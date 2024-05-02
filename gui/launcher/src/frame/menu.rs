@@ -46,7 +46,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
     , frame_title.x()
     , frame_title.y() + frame_title.h() + dimm::border()
   );
-  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_frame(FrameType::BorderBox);
+  // scroll.widget_mut().set_color(fltk::enums::Color::Blue);
   scroll.set_border(dimm::border(), dimm::border());
 
   //
@@ -59,7 +60,9 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
       .with_size(clone_scroll.widget_ref().width() - dimm::border()*2, dimm::height_button_wide())
       .with_frame(FrameType::BorderBox)
       .with_align(Align::Left | Align::Inside)
+      .with_focus(false)
       .with_label(label);
+      // .with_color(fltk::enums::Color::Yellow);
     clone_scroll.add(&mut entry.as_base_widget());
     entry
   };
@@ -76,6 +79,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   let mut btn_home = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_align(Align::Inside | Align::Center)
+    .with_focus(false)
     .center_x(&frame);
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
   btn_home.set_frame(FrameType::BorderBox);

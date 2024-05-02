@@ -15,6 +15,7 @@ use anyhow::anyhow as ah;
 use shared::dimm;
 use shared::std::PathBufExt;
 use shared::std::OsStrExt;
+use shared::fltk::WidgetExtExtra;
 
 use crate::svg;
 use crate::common::Msg;
@@ -104,7 +105,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     , frame_title.x()
     , frame_title.y() + frame_title.h() + dimm::border()
   );
-  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_frame(FrameType::BorderBox);
   scroll.set_border(0, dimm::border());
 
   //
@@ -193,6 +194,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   let mut btn_home = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_align(Align::Inside | Align::Center)
+    .with_focus(false)
     .center_x(&frame);
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
   btn_home.set_frame(FrameType::BorderBox);
@@ -203,6 +205,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   // Back to menu
   let mut btn_back = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .with_focus(false)
     .with_align(Align::Inside | Align::Center);
   btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
   btn_back.set_frame(FrameType::BorderBox);

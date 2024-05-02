@@ -11,6 +11,7 @@ use fltk::{
 };
 
 use shared::dimm;
+use shared::fltk::WidgetExtExtra;
 
 use crate::mounts;
 use crate::common;
@@ -57,7 +58,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   let mut f_make_entry = move |label : &str|
   {
     let mut entry = Button::default()
-      .with_size(parent.width(), dimm::height_button_wide());
+      .with_size(parent.width(), dimm::height_button_wide())
+      .with_focus(false);
     entry.set_type(PackType::Vertical);
     entry.set_frame(FrameType::BorderBox);
     entry.set_label_size(dimm::height_text());
@@ -103,7 +105,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   let mut btn_home = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_align(Align::Inside | Align::Center)
-    .center_x(&frame);
+    .center_x(&frame)
+    .with_focus(false);
   btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
   btn_home.set_frame(FrameType::BorderBox);
   btn_home.set_label_size(dimm::height_text()*2);
@@ -113,7 +116,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   // Back to menu
   let mut btn_back = Button::default()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_align(Align::Inside | Align::Center);
+    .with_align(Align::Inside | Align::Center)
+    .with_focus(false);
   btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
   btn_back.set_frame(FrameType::BorderBox);
   btn_back.set_label_size(dimm::height_text()*2);
