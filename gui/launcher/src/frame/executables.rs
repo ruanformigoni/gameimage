@@ -106,7 +106,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     , frame_title.y() + frame_title.h() + dimm::border()
   );
   scroll.set_frame(FrameType::BorderBox);
-  scroll.set_border(0, dimm::border());
+  scroll.set_border(dimm::border(), dimm::border() + dimm::height_text());
 
   //
   // Create entries
@@ -115,30 +115,15 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   // let clone_tx = tx.clone();
   let mut f_make_entry = move |key : String|
   {
-    let group = Group::default()
-      .with_size(clone_scroll.widget_ref().w(),
-        dimm::height_button_wide()*2
-        + dimm::border()*3
-        + dimm::height_text()*2
-        + dimm::height_sep())
-      .with_pos(clone_scroll.widget_ref().x(), clone_scroll.widget_ref().y());
-
-    // Include in scroll list
-    clone_scroll.add(&mut group.as_base_widget());
-
-    let clone_widget = clone_scroll.widget_mut();
-
-    group.begin();
-
     // Setup output for executable path
     let mut output_executable = Output::default()
-      .with_size(clone_widget.width() - dimm::border()*3, dimm::height_button_wide())
-      .with_pos(group.x() + dimm::border(), group.y() + dimm::border() + dimm::height_text())
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
       .with_align(Align::TopLeft)
       .with_label("Executable");
     let _ = output_executable.insert(key.as_str());
     output_executable.set_frame(FrameType::BorderBox);
     output_executable.set_text_size(dimm::height_text());
+    clone_scroll.add(&mut output_executable.as_base_widget());
 
     // // Use button
     // let mut btn_use = fltk::button::ToggleButton::default()
@@ -152,7 +137,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
 
     // Setup input for arguments
     let mut input_arguments = fltk::input::Input::default()
-      .with_size(clone_widget.width() - dimm::border()*3, dimm::height_button_wide())
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
       .with_label("Arguments")
       .with_align(Align::TopLeft)
       .below_of(&output_executable, dimm::border() + dimm::height_text());
@@ -168,15 +153,17 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     {
       let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());
     });
+    clone_scroll.add(&mut input_arguments.as_base_widget());
 
     // Separator
     let mut sep = Frame::default()
       .below_of(&input_arguments, dimm::border())
-      .with_size(clone_widget.width() - dimm::border()*3, dimm::height_sep());
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_sep());
     sep.set_frame(FrameType::FlatBox);
     sep.set_color(Color::Black);
-
-    group.end();
+    clone_scroll.set_border(dimm::border(), dimm::border());
+    clone_scroll.add(&mut sep.as_base_widget());
+    clone_scroll.set_border(dimm::border(), dimm::border() + dimm::height_text());
   };
 
   // Get current database entries
