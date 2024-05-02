@@ -15,6 +15,7 @@ use fltk::{
 use shared::dimm;
 use shared::svg;
 use shared::fltk::WidgetExtExtra;
+use shared::fltk::SenderExt;
 
 use crate::common;
 use crate::mounts;
@@ -120,11 +121,12 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
     {
       println!("Failed to set launcher image");
     } // else
-    // Deactivate window
-    clone_tx.send(common::Msg::WindDeactivate);
+    fltk::app::redraw();
     // Reference to spawned process
     std::thread::spawn(move ||
     {
+      // Deactivate window
+      clone_tx.send_awake(common::Msg::WindDeactivate);
       // Wait for child
       let _ =  std::process::Command::new("sh")
         .args(["-c", "$GIMG_LAUNCHER_BOOT"])
@@ -132,11 +134,9 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
         .stderr(std::process::Stdio::inherit())
         .output();
       // Redraw
-      clone_tx.send(Msg::DrawCover);
-      fltk::app::awake();
+      clone_tx.send_awake(Msg::WindActivate);
+      clone_tx.send_awake(Msg::DrawCover);
     });
-    fltk::app::redraw();
-    fltk::app::awake();
   });
 
   RetFrameCover{ frame, btn_left, btn_right }
