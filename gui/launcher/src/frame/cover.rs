@@ -99,26 +99,16 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   btn_bottom.deactivate();
 
   // Button left aligned
-  let mut btn_left = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&frame_base, -dimm::height_button_rec())
-    .with_focus(false);
-  btn_left.set_pos(btn_left.x() + dimm::border(), btn_left.y() - dimm::border());
-  btn_left.set_frame(FrameType::BorderBox);
-  btn_left.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_list(1.0).as_str()).unwrap()));
+  let mut btn_left = shared::fltk::button::rect::list()
+    .bottom_left_of(&frame, - dimm::border());
   btn_left.emit(tx, Msg::DrawMenu);
 
   // Button in the middle
-  let mut btn_middle = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&frame_base, -dimm::height_button_rec())
-    .with_focus(false)
-    .center_x(&frame_base);
-  btn_middle.set_pos(btn_middle.x(), btn_middle.y() - dimm::border());
-  btn_middle.set_frame(FrameType::BorderBox);
-  btn_middle.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_switch(1.0).as_str()).unwrap()));
+  let mut btn_middle = shared::fltk::button::rect::switch()
+    .bottom_center_of(&frame, - dimm::border());
   btn_middle.emit(tx, Msg::DrawSelector);
   btn_middle.hide();
+
   // Only show switch button in case there is more than one game
   if let Ok(vec_entry) = mounts::mounts() && vec_entry.len() > 1
   {
@@ -126,14 +116,10 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   } // if
 
   // Button right aligned
-  let mut btn_right = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&frame_base, -dimm::height_button_rec())
-    .with_focus(false);
-  btn_right.set_pos(frame_base.w() - dimm::border() - btn_right.w(), btn_right.y() - dimm::border());
-  btn_right.set_color(fltk::enums::Color::Green);
-  btn_right.set_frame(FrameType::BorderBox);
-  btn_right.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_play(1.0).as_str()).unwrap()));
+  let mut btn_right = shared::fltk::button::rect::play()
+    .bottom_right_of(&frame_base, - dimm::border())
+    .with_focus(false)
+    .with_color(fltk::enums::Color::Green);
   let clone_tx = tx.clone();
   let mut clone_frame = frame.clone();
   btn_right.set_callback(move |_|

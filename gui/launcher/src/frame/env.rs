@@ -1,8 +1,6 @@
 use fltk::prelude::*;
 use fltk::{
-  input::Input,
   output::Output,
-  window::Window,
   app::Sender,
   widget::Widget,
   button::Button,
@@ -150,58 +148,22 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   scroll.end();
 
   // Add var button
-  let mut btn_add = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_align(Align::Inside | Align::Center)
+  let mut btn_add = shared::fltk::button::rect::add()
     .with_focus(false)
-    .with_label("+");
+    .with_color(Color::Green)
+    .right_bottom_of(&frame, - dimm::border());
   let clone_tx = tx.clone();
-  btn_add.set_pos(frame.w() - btn_add.w() - dimm::border(), frame.h() - dimm::bar());
-  btn_add.set_frame(FrameType::BorderBox);
-  btn_add.set_label_size(dimm::height_text()*2);
-  btn_add.set_color(Color::Green);
   btn_add.set_callback(move |_|
   {
-    let mut wind = Window::default()
-      .with_size(
-          dimm::width_button_wide() * 4 + dimm::border() * 3
-        , dimm::height_button_wide() * 3 + dimm::border() * 4
-      );
-    wind.begin();
-    let input_key = Input::default()
-      .with_pos(wind.w() - dimm::width_button_wide()*3 - dimm::border(), dimm::border())
-      .with_size(dimm::width_button_wide()*3, dimm::height_button_wide())
-      .with_align(Align::Left);
-    let _label_key = Frame::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .left_of(&input_key, dimm::border())
-      .with_align(Align::Inside | Align::Left)
-      .with_label("Key");
-    let input_value = Input::default()
-      .below_of(&input_key, dimm::border())
-      .with_size(input_key.w(), input_key.h())
-      .with_align(input_key.align());
-    let label_value = Frame::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .left_of(&input_value, dimm::border())
-      .with_align(Align::Inside | Align::Left)
-      .with_label("Value");
-    let mut btn_ok = Button::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .below_of(&label_value, dimm::border())
-      .with_label("OK");
-    btn_ok.set_pos(wind.w() / 2 - btn_ok.w() / 2, btn_ok.y());
-    btn_ok.set_color(Color::Green);
-    let mut clone_wind = wind.clone();
-    let clone_input_key = input_key.clone();
-    let clone_input_value = input_value.clone();
+    let dialog = shared::fltk::dialog::key_value();
+    let clone_dialog = dialog.clone();
     let clone_tx = clone_tx.clone();
     let clone_path_file_db = path_file_db.clone();
-    btn_ok.set_callback(move |_|
+    dialog.btn_ok.clone().set_callback(move |_|
     {
-      clone_wind.hide();
-      let key = clone_input_key.value();
-      let value = clone_input_value.value();
+      clone_dialog.wind.clone().hide();
+      let key = clone_dialog.input_key.value();
+      let value = clone_dialog.input_value.value();
       if key.is_empty() { return; }
       match shared::db::kv::write(&clone_path_file_db, &key.clone(), &value.clone())
       {
@@ -210,32 +172,18 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
       } // if
       clone_tx.send(Msg::DrawEnv);
     });
-    wind.end();
-    wind.show();
+    dialog.wind.clone().show();
   });
 
   // Back to home
-  let mut btn_home = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_focus(false)
-    .with_align(Align::Inside | Align::Center)
-    .center_x(&frame);
-  btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
-  btn_home.set_frame(FrameType::BorderBox);
-  btn_home.set_label_size(dimm::height_text()*2);
-  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home(1.0).as_str()).unwrap()));
-  btn_home.emit(tx, Msg::DrawCover);
+  shared::fltk::button::rect::home()
+    .bottom_center_of(&frame, - dimm::border())
+    .emit(tx, Msg::DrawCover);
 
   // Back to menu
-  let mut btn_back = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_focus(false)
-    .with_align(Align::Inside | Align::Center);
-  btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
-  btn_back.set_frame(FrameType::BorderBox);
-  btn_back.set_label_size(dimm::height_text()*2);
-  btn_back.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_back(1.0).as_str()).unwrap()));
-  btn_back.emit(tx, Msg::DrawMenu);
+  shared::fltk::button::rect::back()
+    .bottom_left_of(&frame, - dimm::border())
+    .emit(tx, Msg::DrawMenu);
 
   RetFrameEnv{ frame }
 } // fn: new }}}

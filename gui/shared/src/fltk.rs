@@ -4,6 +4,9 @@ use fltk::prelude::*;
 
 use crate::dimm;
 
+pub mod button;
+pub mod dialog;
+
 // pub trait WidgetExtExtra {{{
 #[allow(warnings)]
 pub trait WidgetExtExtra
@@ -22,6 +25,8 @@ pub trait WidgetExtExtra
   fn top_right_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn top_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn bottom_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn bottom_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
+  fn bottom_right_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn bottom_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn below_center_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self;
   fn with_pos_of<W: WidgetExt + Clone>(&mut self, other: &W) -> Self;
@@ -127,6 +132,24 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
   {
     self.set_pos(
         other.x() + (other.w() / 2) - (self.w() / 2)
+      , other.y() + other.h() - self.h() + offset
+    );
+    self.clone()
+  }
+
+  fn bottom_left_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() - offset
+      , other.y() + other.h() - self.h() + offset
+    );
+    self.clone()
+  }
+
+  fn bottom_right_of<W: WidgetExt + Clone>(&mut self, other: &W, offset : i32) -> Self
+  {
+    self.set_pos(
+        other.x() + other.w() - self.w() + offset
       , other.y() + other.h() - self.h() + offset
     );
     self.clone()

@@ -3,7 +3,6 @@ use fltk::{
   output::Output,
   app::Sender,
   widget::Widget,
-  button::Button,
   group::PackType,
   enums::{Align,FrameType,Color},
   frame::Frame,
@@ -16,7 +15,6 @@ use shared::std::PathBufExt;
 use shared::std::OsStrExt;
 use shared::fltk::WidgetExtExtra;
 
-use crate::svg;
 use crate::common::Msg;
 
 pub struct RetFrameExecutable
@@ -131,13 +129,20 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   let db_executables = shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default();
   let mut f_make_entry = move |key : String|
   {
+    // Setup output for executable path
+    let mut output_executable = Output::default()
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*4 - dimm::width_button_rec(), dimm::height_button_wide())
+      .with_align(Align::TopLeft)
+      .with_label("Executable");
+    let _ = output_executable.insert(key.as_str());
+    output_executable.set_frame(FrameType::BorderBox);
+    output_executable.set_text_size(dimm::height_text());
+    clone_scroll.add(&mut output_executable.as_base_widget());
+
     // Use button
     let clone_path_file_db_executable = clone_path_file_db_executable.clone();
-    let mut btn_use = fltk::button::ToggleButton::default()
-      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-      .with_align(Align::Inside)
-      .with_focus(false);
-    clone_scroll.add(&mut btn_use.as_base_widget());
+    let mut btn_use = shared::fltk::button::rect::toggle(db_executables.contains_key(&output_executable.value()))
+      .right_of(&output_executable, dimm::border());
 
     // Label for use button
     let _ = fltk::frame::Frame::default()
@@ -148,27 +153,6 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
       .with_color(Color::BackGround)
       .with_frame(FrameType::NoBox);
 
-    // Setup output for executable path
-    let mut output_executable = Output::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*4 - dimm::width_button_rec(), dimm::height_button_wide())
-      .right_of(&btn_use, dimm::border())
-      .with_align(Align::TopLeft)
-      .with_label("Executable");
-    let _ = output_executable.insert(key.as_str());
-    output_executable.set_frame(FrameType::BorderBox);
-    output_executable.set_text_size(dimm::height_text());
-
-    // Setup initial value of 'use button'
-    if db_executables.contains_key(&output_executable.value())
-    {
-      btn_use.with_svg(&shared::svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()));
-      btn_use.set_value(true);
-    } // if
-    else
-    {
-      btn_use.with_svg(&shared::svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()));
-      btn_use.set_value(false);
-    } // else
 
     // Setup 'use button' callback
     let clone_output_executable = output_executable.clone();
@@ -176,7 +160,6 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     {
       if e.value()
       {
-        e.with_svg(&shared::svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()));
         if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &clone_output_executable.value(), &"1".to_string())
         {
           eprintln!("Could not insert key '{}' in db: {}", clone_output_executable.value(), e);
@@ -188,10 +171,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
         {
           eprintln!("Could not remove key '{}' from db: {}", clone_output_executable.value(), e);
         } // if
-        e.with_svg(&shared::svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()));
       }
-      fltk::app::redraw();
-      fltk::app::awake();
     });
 
 
@@ -234,37 +214,21 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
 
   // Get current database entries
   scroll.begin();
-  if let Ok(paths) = find_executables()
+  for path in find_executables().unwrap_or_default()
   {
-    for path in paths
-    {
-      f_make_entry(path.string());
-    } // for
-  } // if
+    f_make_entry(path.string());
+  } // for
   scroll.end();
 
   // Back to home
-  let mut btn_home = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_align(Align::Inside | Align::Center)
-    .with_focus(false)
-    .center_x(&frame);
-  btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
-  btn_home.set_frame(FrameType::BorderBox);
-  btn_home.set_label_size(dimm::height_text()*2);
-  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home(1.0).as_str()).unwrap()));
-  btn_home.emit(tx, Msg::DrawCover);
+  shared::fltk::button::rect::home()
+    .bottom_center_of(&frame, - dimm::border())
+    .emit(tx, Msg::DrawCover);
 
   // Back to menu
-  let mut btn_back = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_focus(false)
-    .with_align(Align::Inside | Align::Center);
-  btn_back.set_pos(dimm::border(), frame.h() - dimm::bar());
-  btn_back.set_frame(FrameType::BorderBox);
-  btn_back.set_label_size(dimm::height_text()*2);
-  btn_back.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_back(1.0).as_str()).unwrap()));
-  btn_back.emit(tx, Msg::DrawMenu);
+  shared::fltk::button::rect::back()
+    .bottom_left_of(&frame, - dimm::border())
+    .emit(tx, Msg::DrawMenu);
 
   RetFrameExecutable{ frame }
 } // fn: new }}}

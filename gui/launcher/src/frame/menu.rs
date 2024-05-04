@@ -12,7 +12,6 @@ use shared::dimm;
 use shared::fltk::WidgetExtExtra;
 
 use crate::common;
-use crate::svg;
 use common::Msg;
 
 pub struct RetFrameSelector
@@ -82,17 +81,9 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   scroll.end();
 
   // Back to home
-  let mut btn_home = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_align(Align::Inside | Align::Center)
-    .with_focus(false)
-    .center_x(&frame);
-  btn_home.set_pos(btn_home.x(), frame.h() - dimm::bar());
-  btn_home.set_frame(FrameType::BorderBox);
-  btn_home.set_label_size(dimm::height_text()*2);
-  btn_home.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_home(1.0).as_str()).unwrap()));
-  btn_home.emit(tx, Msg::DrawCover);
-
+  shared::fltk::button::rect::home()
+    .bottom_center_of(&frame, - dimm::border())
+    .emit(tx, Msg::DrawCover);
 
   RetFrameSelector{ frame }
 } // fn: new }}}
