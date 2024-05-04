@@ -1,4 +1,5 @@
 use std::env;
+use std::sync::Mutex;
 
 use fltk::prelude::*;
 use fltk::{
@@ -12,8 +13,11 @@ use fltk::{
   image::SharedImage,
 };
 
+use anyhow::anyhow as ah;
+
 use shared::dimm;
 use shared::svg;
+use shared::std::PathBufExt;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
@@ -28,9 +32,32 @@ pub struct RetFrameCover
   pub btn_right : Button,
 } // Ret
 
+// get_path_db_executable() {{{
+fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
+  path_db.push("gameimage.wine.executable.json");
+
+  Ok(path_db)
+} // get_path_db_executable() }}}
+
+// get_default_executable() {{{
+fn get_default_executable() -> anyhow::Result<std::path::PathBuf>
+{
+  let path_file_db = std::path::PathBuf::from(std::env::var("GIMG_LAUNCHER_ROOT")? + "/gameimage.json");
+  let db = shared::db::kv::read(&path_file_db)?;
+  Ok(db.get("path_file_rom").ok_or(ah!("Could not read path_file_rom"))?.clone().into())
+} // get_default_executable()}}}
+
 // fn: new {{{
 pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
 {
+  let path_file_db_executable = match get_path_db_executable()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
   let mut frame_base = Frame::default().with_size(dimm::width_launcher(), dimm::height_launcher());
   frame_base.set_type(PackType::Vertical);
   frame_base.set_frame(FrameType::FlatBox);
@@ -138,6 +165,55 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
       clone_tx.send_awake(Msg::DrawCover);
     });
   });
+
+  // Executable selection menu
+  let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
+
+  // Keep track of the currently selected item
+  static PATH_CURRENT_EXECUTABLE : once_cell::sync::Lazy<Mutex<Option<std::path::PathBuf>>>
+    = once_cell::sync::Lazy::new(|| Mutex::new(None));
+
+  // Return if there are no executables selected
+  if db_executables.len() == 0
+  {
+    return RetFrameCover{ frame, btn_left, btn_right };
+  } // if
+
+  let mut btn_executable = fltk::menu::Choice::default()
+    .with_size(frame.w(), dimm::height_button_rec())
+    .top_left_of(&frame, 0)
+    .with_frame(FrameType::BorderBox)
+    .with_focus(false);
+
+  // Add other menu entries
+  for i in db_executables.keys().into_iter().chain(vec![get_default_executable().map(|e| e.string()).unwrap_or_default()].iter())
+  {
+    if i.is_empty() { continue; }
+    btn_executable.add(&i
+    , fltk::enums::Shortcut::None
+    , fltk::menu::MenuFlag::Normal
+    , |e|
+    {
+      let path_file_executable : std::path::PathBuf = e.item_pathname(None).unwrap_or(String::new()).into();
+      std::env::set_var("GIMG_LAUNCHER_EXECUTABLE", &path_file_executable);
+      match PATH_CURRENT_EXECUTABLE.lock()
+      {
+        Ok(mut guard) => *guard = Some(path_file_executable),
+        Err(e) => eprintln!("Could not lock PATH_CURRENT_EXECUTABLE: {}", e),
+      } // if
+    });
+  } // for
+
+  // Set default entry or use existing
+  if let Ok(guard) = PATH_CURRENT_EXECUTABLE.lock()
+  {
+    let path_default_executable = &get_default_executable().unwrap_or_default().string();
+    match guard.clone()
+    {
+      Some(value) => { btn_executable.set_item(&btn_executable.find_item(&value.string()).unwrap()); },
+      None => { btn_executable.set_item(&btn_executable.find_item(&path_default_executable).unwrap()); },
+    } // if
+  } // if
 
   RetFrameCover{ frame, btn_left, btn_right }
 } // fn: new }}}
