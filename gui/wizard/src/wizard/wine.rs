@@ -560,12 +560,13 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       // Arguments input
       let clone_item = item.clone();
       let clone_path_file_db = path_file_db.clone();
-      let mut _input = fltk::input::Input::default()
+      let mut _input : fltk_evented::Listener<_> = fltk::input::Input::default()
         .with_size(frame_list.width() - dimm::border(), dimm::height_button_wide())
         .with_pos(btn_check.x(), btn_check.y() + btn_check.h() + dimm::border() + dimm::height_text())
         .with_align(Align::TopLeft)
         .with_label("Executable arguments")
-        .with_callback(move |e|
+        .into();
+      _input.on_keyup(move |e|
       {
         if e.value().trim().is_empty()
         {
@@ -586,7 +587,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       // Entry separator
       let _sep = fltk::frame::Frame::default()
         .with_size(frame_list.width(), dimm::height_sep())
-        .below_of(&_input, dimm::border())
+        .below_of(&_input.as_base_widget(), dimm::border())
         .with_frame(FrameType::BorderBox);
       parent = _sep.as_base_widget();
     } // for

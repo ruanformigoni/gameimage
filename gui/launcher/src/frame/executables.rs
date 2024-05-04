@@ -135,11 +135,12 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     // btn_use.set_color(Color::BackGround);
 
     // Setup input for arguments
-    let mut input_arguments = fltk::input::Input::default()
+    let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default()
       .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
       .with_label("Arguments")
       .with_align(Align::TopLeft)
-      .below_of(&output_executable, dimm::border() + dimm::height_text());
+      .below_of(&output_executable, dimm::border() + dimm::height_text())
+      .into();
     input_arguments.set_frame(FrameType::BorderBox);
     input_arguments.set_text_size(dimm::height_text());
     if let Ok(db) = shared::db::kv::read(&path_file_db) && db.contains_key(&key)
@@ -148,7 +149,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     } // if
     let clone_output_executable = output_executable.clone();
     let clone_path_file_db = path_file_db.clone();
-    input_arguments.set_callback(move |e|
+    input_arguments.on_keyup(move |e|
     {
       let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());
     });
@@ -156,7 +157,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
 
     // Separator
     let mut sep = Frame::default()
-      .below_of(&input_arguments, dimm::border())
+      .below_of(&input_arguments.as_base_widget(), dimm::border())
       .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_sep());
     sep.set_frame(FrameType::FlatBox);
     sep.set_color(Color::Black);

@@ -9,6 +9,7 @@ edition = "2021"
 shared = { path = "../shared" }
 fltk = "1.4"
 fltk-theme = "0.6.0"
+fltk-evented = "0.5"
 display-info = "0.4.4"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
