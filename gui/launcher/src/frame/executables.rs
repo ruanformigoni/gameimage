@@ -63,6 +63,15 @@ fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
   Ok(ret)
 } // find_executables() }}}
 
+// get_path_db_executable() {{{
+fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
+  path_db.push("gameimage.wine.executable.json");
+
+  Ok(path_db)
+} // get_path_db_executable() }}}
+
 // get_path_db_args() {{{
 fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 {
@@ -75,7 +84,13 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 // fn: new {{{
 pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
 {
-  let path_file_db = match get_path_db_args()
+  let path_file_db_args = match get_path_db_args()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
+  let path_file_db_executable = match get_path_db_executable()
   {
     Ok(e) => e,
     Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
@@ -112,27 +127,73 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   //
   let mut clone_scroll = scroll.clone();
   // let clone_tx = tx.clone();
+  let clone_path_file_db_executable = path_file_db_executable.clone();
+  let db_executables = shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default();
   let mut f_make_entry = move |key : String|
   {
+    // Use button
+    let clone_path_file_db_executable = clone_path_file_db_executable.clone();
+    let mut btn_use = fltk::button::ToggleButton::default()
+      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+      .with_align(Align::Inside)
+      .with_focus(false);
+    clone_scroll.add(&mut btn_use.as_base_widget());
+
+    // Label for use button
+    let _ = fltk::frame::Frame::default()
+      .with_size(btn_use.w(), dimm::height_text())
+      .above_of(&btn_use, 2)
+      .with_align(Align::Inside)
+      .with_label("Use")
+      .with_color(Color::BackGround)
+      .with_frame(FrameType::NoBox);
+
     // Setup output for executable path
     let mut output_executable = Output::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
+      .with_size(clone_scroll.widget_ref().w() - dimm::border()*4 - dimm::width_button_rec(), dimm::height_button_wide())
+      .right_of(&btn_use, dimm::border())
       .with_align(Align::TopLeft)
       .with_label("Executable");
     let _ = output_executable.insert(key.as_str());
     output_executable.set_frame(FrameType::BorderBox);
     output_executable.set_text_size(dimm::height_text());
-    clone_scroll.add(&mut output_executable.as_base_widget());
 
-    // // Use button
-    // let mut btn_use = fltk::button::ToggleButton::default()
-    //   .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    //   .right_of(&output_executable, dimm::border())
-    //   .with_align(Align::TopLeft)
-    //   .with_label("Use")
-    //   .with_focus(false);
-    // btn_use.set_selection_color(Color::Blue);
-    // btn_use.set_color(Color::BackGround);
+    // Setup initial value of 'use button'
+    if db_executables.contains_key(&output_executable.value())
+    {
+      btn_use.with_svg(&shared::svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()));
+      btn_use.set_value(true);
+    } // if
+    else
+    {
+      btn_use.with_svg(&shared::svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()));
+      btn_use.set_value(false);
+    } // else
+
+    // Setup 'use button' callback
+    let clone_output_executable = output_executable.clone();
+    btn_use.set_callback(move |e|
+    {
+      if e.value()
+      {
+        e.with_svg(&shared::svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()));
+        if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &clone_output_executable.value(), &"1".to_string())
+        {
+          eprintln!("Could not insert key '{}' in db: {}", clone_output_executable.value(), e);
+        } // if
+      }
+      else
+      {
+        if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, clone_output_executable.value())
+        {
+          eprintln!("Could not remove key '{}' from db: {}", clone_output_executable.value(), e);
+        } // if
+        e.with_svg(&shared::svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()));
+      }
+      fltk::app::redraw();
+      fltk::app::awake();
+    });
+
 
     // Setup input for arguments
     let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default()
@@ -143,12 +204,12 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
       .into();
     input_arguments.set_frame(FrameType::BorderBox);
     input_arguments.set_text_size(dimm::height_text());
-    if let Ok(db) = shared::db::kv::read(&path_file_db) && db.contains_key(&key)
+    if let Ok(db) = shared::db::kv::read(&path_file_db_args) && db.contains_key(&key)
     {
       let _ = input_arguments.insert(&db[&key]);
     } // if
     let clone_output_executable = output_executable.clone();
-    let clone_path_file_db = path_file_db.clone();
+    let clone_path_file_db = path_file_db_args.clone();
     input_arguments.on_keyup(move |e|
     {
       let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());

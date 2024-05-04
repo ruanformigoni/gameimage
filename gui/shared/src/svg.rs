@@ -107,6 +107,18 @@ const ICON_CHECK: &str = r#"
 </svg>
 "#;
 
+const ICON_BOX_SELECTED: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="#006D00" class="bi bi-check-square-fill" viewBox="0 0 16 16">
+  <path d="M 0,0 -0.0077,0.005731 V 16 H -0.0113 15.99234 V 16.000193 0 h 9.68e-4 z m 12.022255,4.97 c 0.288934,0.2886287 0.293824,0.7553814 0.011,1.05 l -3.992,4.99 c -0.289263,0.311563 -0.7794,0.32064 -1.08,0.02 l -2.645,-2.646 c -0.757891,-0.7062104 0.35379,-1.8178912 1.06,-1.06 l 2.094,2.093 3.473,-4.425 c 0.288689,-0.3121252 0.778839,-0.3221097 1.08,-0.022 z" id="path1" sodipodi:nodetypes="ccccccccccccccccccc" />
+</svg>
+"##;
+
+const ICON_BOX_DESELECTED: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="#8E3838" class="bi bi-x-square-fill" viewBox="0 0 16 16">
+  <path d="m 0,0 -0.0023,0.002837 v 15.998933 -0.0018 h 15.996765 l 0.0032,-0.0098 V 0.00369266 l -0.003,-0.003693 z M 5.351742,4.646 7.9977415,7.293 10.643742,4.646 c 0.471999,-0.4719998 1.179999,0.2360002 0.707999,0.708 L 8.7047415,8 11.351742,10.646 c 0.47165,0.472 -0.23635,1.18 -0.708,0.708 L 7.9977415,8.707 5.351742,11.354 c -0.472,0.471651 -1.18,-0.236349 -0.708,-0.708 L 7.290742,8 4.643742,5.354 c -0.472,-0.4719998 0.236,-1.1799998 0.708,-0.708" id="path1" sodipodi:nodetypes="cccccccccccccccccccccc" />
+</svg>
+"##;
+
 const ICON_HAMBURGUER: &str = r#"
 <svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" viewBox="0 0 16 16">
   <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3c0-.269-.035-.53-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814zm9.646 10.646a.5.5 0 0 1 .708 0l2.914 2.915a.5.5 0 0 1-.707.707l-2.915-2.914a.5.5 0 0 1 0-.708M3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026z"/>
@@ -278,6 +290,27 @@ macro_rules! icon
   }
 }
 
+macro_rules! icon_with_size
+{
+  ($func_name:ident, $icon:expr) =>
+  {
+    pub fn $func_name(size_1 : i32, size_2 : i32) -> String
+    {
+      let scaling = crate::scaling::factor().unwrap_or(1.0);
+
+      let size_1 = (size_1 as f32 * scaling * 1.0) as i32;
+      let str_size_1 = size_1.to_string();
+
+      let size_2 = (size_2 as f32 * scaling * 1.0) as i32;
+      let str_size_2 = size_2.to_string();
+
+      let mut result = $icon.replacen("{}", str_size_1.as_str(), 1);
+      result = result.replacen("{}", str_size_2.as_str(), 1);
+      result
+    }
+  }
+}
+
 
 icon!(icon_home, ICON_HOME, 16, 16);
 icon!(icon_background, ICON_BACKGROUND, 317, 60);
@@ -297,5 +330,15 @@ icon!(icon_check, ICON_CHECK, 24, 24);
 icon!(icon_switch, ICON_SWITCH, 16, 16);
 icon!(icon_close, ICON_CLOSE, 16, 16);
 icon!(icon_hamburguer, ICON_HAMBURGUER, 24, 24);
+icon!(icon_box_selected, ICON_BOX_SELECTED, 16, 16);
+icon!(icon_box_deselected, ICON_BOX_DESELECTED, 16, 16);
+
+pub mod with_size
+{
+
+icon_with_size!(icon_box_deselected, crate::svg::ICON_BOX_DESELECTED);
+icon_with_size!(icon_box_selected, crate::svg::ICON_BOX_SELECTED);
+
+}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
