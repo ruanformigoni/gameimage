@@ -212,6 +212,11 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     let clone_path_file_db = path_file_db_args.clone();
     input_arguments.on_keyup(move |e|
     {
+      if e.value().is_empty()
+      {
+        let _ = shared::db::kv::erase(&clone_path_file_db, clone_output_executable.value());
+        return;
+      }
       let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());
     });
     clone_scroll.add(&mut input_arguments.as_base_widget());
