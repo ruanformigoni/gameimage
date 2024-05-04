@@ -198,6 +198,13 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   }
   , ns_db::Mode::READ);
 
+  // If GIMG_LAUNCHER_EXECUTABLE is defined, use it instead
+  if ( const char* var = ns_env::get("GIMG_LAUNCHER_EXECUTABLE"); var != nullptr )
+  {
+    path_file_rom_relative = var;
+    path_file_rom = path_dir_self / path_file_rom_relative;
+  } // if
+
   // Enter directory of rom file
   fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
 
