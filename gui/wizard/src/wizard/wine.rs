@@ -10,7 +10,6 @@ use fltk::{
   app::Sender,
   button,
   button::Button,
-  group,
   output,
   frame::Frame,
   dialog,
@@ -30,7 +29,6 @@ use crate::common;
 use shared::std::PathBufExt;
 use crate::frame;
 use crate::wizard;
-use shared::svg;
 use crate::gameimage;
 
 // pub fn name() {{{
@@ -372,171 +370,152 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       , frame_content.height() - dimm::border()*2)
     .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
 
-  let mut scroll = group::Scroll::default()
-    .with_size(frame_list.w(), frame_list.h())
-    .with_pos(frame_list.x(), frame_list.y());
-
-  scroll.set_scrollbar_size(dimm::border());
+  // Create scrollbar
+  let mut scroll = shared::fltk::ScrollList::new(
+    frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
+    , frame_content.height() - dimm::border()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border());
+  scroll.set_border(dimm::border(), dimm::border());
 
   scroll.begin();
 
   // Insert items in list of currently installed items
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
 
-  let mut parent = scroll.as_base_widget();
-  if let Ok(vec_items) = gameimage::search::search_local("rom")
+  let input_args = match shared::db::kv::read(&path_file_db)
   {
-    let input_args = match shared::db::kv::read(&path_file_db)
+    Ok(input_args) => input_args,
+    Err(e) => { log!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
+  }; // match
+
+  for item in gameimage::search::search_local("rom").unwrap_or_default()
+  {
+    // Checkbutton
+    let btn_check = shared::fltk::button::rect::radio();
+    scroll.add(&mut btn_check.as_base_widget());
+
+    // Include values into shared vector
+    if let Ok(mut lock) = vec_radio_path.lock()
     {
-      Ok(input_args) => input_args,
-      Err(e) => { log!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
-    }; // match
+      lock.push((btn_check.clone(), path::PathBuf::from(item.to_owned())));
+    } // if
 
-    for item in vec_items
-    {
-      // Checkbutton
-      let mut btn_check = button::RadioButton::default()
-        .with_color_selected(Color::Blue)
-        .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-        .with_focus(false)
-        .below_of(&parent, dimm::border());
+    // Label with file name
+    let mut output = output::Output::default()
+      .with_size(scroll.widget_ref().w() - dimm::width_button_rec()*3 - dimm::border()*6, dimm::height_button_wide())
+      .right_of(&btn_check, dimm::border());
+    let _ = output.insert(&item.string());
 
-      // Include values into shared vector
-      if let Ok(mut lock) = vec_radio_path.lock()
+    // Button to open file in file manager
+    let clone_item = item.clone();
+    let mut clone_output_status = ret_frame_footer.output_status.clone();
+    let btn_folder = shared::fltk::button::rect::folder()
+      .right_of(&output, dimm::border())
+      .with_callback(move |_|
       {
-        lock.push((btn_check.clone(), path::PathBuf::from(item.to_owned())));
-      } // if
-
-      if parent.is_same(&scroll.as_base_widget())
-      {
-        btn_check = btn_check.top_left_of(&parent, 0);
-      } // if
-
-      // Label with file name
-      let mut output = output::Output::default()
-        .with_size(frame_list.width() - dimm::width_button_rec()*3 - dimm::border()*4, dimm::height_button_wide())
-        .right_of(&btn_check, dimm::border());
-      let _ = output.insert(&item.string());
-
-      // Button to open file in file manager
-      let clone_item = item.clone();
-      let mut clone_output_status = ret_frame_footer.output_status.clone();
-      let btn_folder = button::Button::default()
-        .with_focus(false)
-        .with_svg(svg::icon_folder(1.0).as_str())
-        .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-        .right_of(&output, dimm::border())
-        .with_callback(move |_|
+        let path_dir_project = if let Ok(project) = db::project::current()
+          && let Ok(path_dir_project) = project.get_dir_self()
         {
-          let path_dir_project = if let Ok(project) = db::project::current()
-            && let Ok(path_dir_project) = project.get_dir_self()
-          {
-            path_dir_project
-          } // if
-          else
-          {
-            log!("Could not open project directory");
-            return;
-          }; // else
-
-          let mut path_dir_executable = path_dir_project.join(&clone_item);
-
-          log!("Executable: {}", path_dir_executable.string());
-
-          if ! path_dir_executable.pop()
-          {
-            log!("Could not get parent dir for executable");
-          } // if
-
-          clone_output_status.set_value(format!("Open '{}'", path_dir_executable.string()).as_str());
-
-          let _ = std::process::Command::new("xdg-open")
-              .env_remove("LD_PRELOAD")
-              .stderr(std::process::Stdio::inherit())
-              .stdout(std::process::Stdio::inherit())
-              .arg(&path_dir_executable.string())
-              .spawn();
-        });
-
-      let clone_tx = tx.clone();
-      let clone_item = item.clone();
-      let _btn_run = button::Button::default()
-        .with_focus(false)
-        .with_svg(svg::icon_play(1.0).as_str())
-        .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-        .right_of(&btn_folder, dimm::border())
-        .with_callback(move |_|
-        {
-          // Execute wine
-          let clone_item = clone_item.clone();
-          clone_tx.send_awake(common::Msg::WindDeactivate);
-          std::thread::spawn(move ||
-          {
-            // Set the selected binary as default
-            match gameimage::select::select("rom", &clone_item)
-            {
-              Ok(_) => log!("Rom selected successfully"),
-              Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
-            } // else
-
-            // Test the selected binary
-            match gameimage::test::test()
-            {
-              Ok(_) => log!("Test finished without errors"),
-              Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
-            } // match
-
-            clone_tx.send_awake(common::Msg::WindActivate);
-          });
-        });
-      // Arguments input
-      let clone_item = item.clone();
-      let clone_path_file_db = path_file_db.clone();
-      let mut _input : fltk_evented::Listener<_> = fltk::input::Input::default()
-        .with_size(frame_list.width() - dimm::border(), dimm::height_button_wide())
-        .with_pos(btn_check.x(), btn_check.y() + btn_check.h() + dimm::border() + dimm::height_text())
-        .with_align(Align::TopLeft)
-        .with_label("Executable arguments")
-        .into();
-      _input.on_keyup(move |e|
-      {
-        if e.value().trim().is_empty()
-        {
-          let _ = shared::db::kv::erase(&clone_path_file_db, clone_item.string());
-          return;
+          path_dir_project
         } // if
-        match shared::db::kv::write(&clone_path_file_db, &clone_item.string(), &e.value())
+        else
         {
-          Ok(()) => (),
-          Err(e) => log!("Could not write to db: {}", e),
-        }
+          log!("Could not open project directory");
+          return;
+        }; // else
+
+        let mut path_dir_executable = path_dir_project.join(&clone_item);
+
+        log!("Executable: {}", path_dir_executable.string());
+
+        if ! path_dir_executable.pop()
+        {
+          log!("Could not get parent dir for executable");
+        } // if
+
+        clone_output_status.set_value(format!("Open '{}'", path_dir_executable.string()).as_str());
+
+        let _ = std::process::Command::new("xdg-open")
+            .env_remove("LD_PRELOAD")
+            .stderr(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .arg(&path_dir_executable.string())
+            .spawn();
       });
-      if input_args.contains_key(&item.string())
+
+    let clone_tx = tx.clone();
+    let clone_item = item.clone();
+    let _btn_run = shared::fltk::button::rect::play()
+      .right_of(&btn_folder, dimm::border())
+      .with_callback(move |_|
       {
-        _input.set_value(input_args[&item.string()].as_str());
+        // Execute wine
+        let clone_item = clone_item.clone();
+        clone_tx.send_awake(common::Msg::WindDeactivate);
+        std::thread::spawn(move ||
+        {
+          // Set the selected binary as default
+          match gameimage::select::select("rom", &clone_item)
+          {
+            Ok(_) => log!("Rom selected successfully"),
+            Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+          } // else
+
+          // Test the selected binary
+          match gameimage::test::test()
+          {
+            Ok(_) => log!("Test finished without errors"),
+            Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+          } // match
+
+          clone_tx.send_awake(common::Msg::WindActivate);
+        });
+      });
+    // Arguments input
+    let clone_item = item.clone();
+    let clone_path_file_db = path_file_db.clone();
+    let mut input : fltk_evented::Listener<_> = fltk::input::Input::default()
+      .with_size(scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
+      .with_align(Align::TopLeft)
+      .with_label("Executable arguments")
+      .into();
+    input.on_keyup(move |e|
+    {
+      if e.value().trim().is_empty()
+      {
+        let _ = shared::db::kv::erase(&clone_path_file_db, clone_item.string());
+        return;
       } // if
+      match shared::db::kv::write(&clone_path_file_db, &clone_item.string(), &e.value())
+      {
+        Ok(()) => (),
+        Err(e) => log!("Could not write to db: {}", e),
+      }
+    });
+    scroll.set_border(dimm::border(), dimm::border() + dimm::height_text());
+    scroll.add(&mut input.as_base_widget());
+    scroll.set_border(dimm::border(), dimm::border());
+    // Initial value
+    if input_args.contains_key(&item.string())
+    {
+      input.set_value(input_args[&item.string()].as_str());
+    } // if
 
-      // Entry separator
-      let _sep = fltk::frame::Frame::default()
-        .with_size(frame_list.width(), dimm::height_sep())
-        .below_of(&_input.as_base_widget(), dimm::border())
-        .with_frame(FrameType::BorderBox);
-      parent = _sep.as_base_widget();
-    } // for
-  } // if
-
+    // Entry separator
+    let sep = fltk::frame::Frame::default()
+      .with_size(input.w(), dimm::height_sep())
+      .with_frame(FrameType::BorderBox);
+    scroll.add(&mut sep.as_base_widget());
+  } // for
 
   scroll.end();
 
   // Add new item
   let clone_tx = tx.clone();
-  let _btn_add = Button::default()
-    .with_color(Color::Green)
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_frame(FrameType::RoundedFrame)
-    .with_svg(svg::icon_add(1.0).as_str())
-    .with_focus(false)
+  let mut btn_add = shared::fltk::button::rect::add()
     .right_of(&frame_list, dimm::border())
+    .with_color(Color::Green)
     .with_callback(move |_|
     {
       // Pick files to install
@@ -572,6 +551,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         clone_tx.send_awake(common::Msg::DrawWineRom);
       });
     });
+  btn_add.set_pos(btn_add.x(), btn_add.y() + dimm::border());
 
   // Go to next frame iff a default executable was selected
   // ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineCompress);
