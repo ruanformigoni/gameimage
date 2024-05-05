@@ -190,46 +190,15 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   btn_add.set_color(Color::Green);
   btn_add.set_callback(move |_|
   {
-    let mut wind = fltk::window::Window::default()
-      .with_size(
-          dimm::width_button_wide() * 4 + dimm::border() * 3
-        , dimm::height_button_wide() * 3 + dimm::border() * 4
-      );
-    wind.begin();
-    let input_key = fltk::input::Input::default()
-      .with_pos(wind.w() - dimm::width_button_wide()*3 - dimm::border(), dimm::border())
-      .with_size(dimm::width_button_wide()*3, dimm::height_button_wide())
-      .with_align(Align::Left);
-    let _label_key = Frame::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .left_of(&input_key, dimm::border())
-      .with_align(Align::Inside | Align::Left)
-      .with_label("Key");
-    let input_value = fltk::input::Input::default()
-      .below_of(&input_key, dimm::border())
-      .with_size(input_key.w(), input_key.h())
-      .with_align(input_key.align());
-    let label_value = Frame::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .left_of(&input_value, dimm::border())
-      .with_align(Align::Inside | Align::Left)
-      .with_label("Value");
-    let mut btn_ok = Button::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .below_of(&label_value, dimm::border())
-      .with_label("OK");
-    btn_ok.set_pos(wind.w() / 2 - btn_ok.w() / 2, btn_ok.y());
-    btn_ok.set_color(Color::Green);
-    let mut clone_wind = wind.clone();
-    let clone_input_key = input_key.clone();
-    let clone_input_value = input_value.clone();
+    let dialog = shared::fltk::dialog::key_value();
+    let clone_dialog = dialog.clone();
     let clone_tx = clone_tx.clone();
     let clone_path_file_db = path_file_db.clone();
-    btn_ok.set_callback(move |_|
+    dialog.btn_ok.clone().set_callback(move |_|
     {
-      clone_wind.hide();
-      let key = clone_input_key.value();
-      let value = clone_input_value.value();
+      clone_dialog.wind.clone().hide();
+      let key = clone_dialog.input_key.value();
+      let value = clone_dialog.input_value.value();
       if key.is_empty() { return; }
       match shared::db::kv::write(&clone_path_file_db, &key, &value)
       {
@@ -238,8 +207,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
       } // if
       clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
-    wind.end();
-    wind.show();
+    dialog.wind.clone().show();
   });
 } // }}}
 
