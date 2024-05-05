@@ -11,6 +11,7 @@
   - [Install](#install)
   - [Tutorials](#tutorials)
   - [FlatImage](#flatimage)
+  - [Known Issues](#known-issues)
 
 ## About
 
@@ -111,6 +112,27 @@ The key advantages of flatimage are:
    (wine+prefix+game data) and one directory (saves), you just have to backup
    one file. Flatimage grows automatically to accomodate your save data, you can
    still use the previous method with flatimage, as well as others listed in 
+
+## Known Issues
+
+### Ubuntu 24.04
+
+Recent changes to [apparmor](https://gitlab.com/apparmor/apparmor) requires to
+create the file `/etc/apparmor.d/bwrap` with the contents:
+
+```apparmor
+# This profile allows everything and only exists to give the
+# application a name instead of having the label "unconfined"
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /**/bwrap flags=(unconfined) {
+  userns,
+}
+```
+
+Lastly run `sudo systemctl reload apparmor` to reload the configuration files.
 
 ---
 
