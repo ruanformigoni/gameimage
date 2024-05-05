@@ -64,6 +64,14 @@ fn get_path_db() -> anyhow::Result<std::path::PathBuf>
   Ok(path_dir_db)
 } // get_path_db() }}}
 
+// get_path_db_executable() {{{
+fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.wine.executable.json");
+  Ok(path_file_db)
+} // get_path_db_executable() }}}
+
 // get_path_db_env() {{{
 fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
 {
@@ -350,10 +358,16 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
-  let path_file_db = match get_path_db_args()
+  let path_file_db_args = match get_path_db_args()
   {
     Ok(e) => e,
-    Err(e) => { log!("Could not retrieve path to db file: {}", e); return; }
+    Err(e) => { log!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
+  let path_file_db_executable = match get_path_db_executable()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
 
   let ret_frame_header = frame::common::frame_header(title);
@@ -383,7 +397,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   // Insert items in list of currently installed items
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
 
-  let input_args = match shared::db::kv::read(&path_file_db)
+  let input_args = match shared::db::kv::read(&path_file_db_args)
   {
     Ok(input_args) => input_args,
     Err(e) => { log!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
@@ -474,7 +488,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       });
     // Arguments input
     let clone_item = item.clone();
-    let clone_path_file_db = path_file_db.clone();
+    let clone_path_file_db = path_file_db_args.clone();
     let mut input : fltk_evented::Listener<_> = fltk::input::Input::default()
       .with_size(scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
       .with_align(Align::TopLeft)
@@ -501,6 +515,36 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     {
       input.set_value(input_args[&item.string()].as_str());
     } // if
+
+    // Checkbutton for "selectable in launcher"
+    let mut btn_selectable = fltk::button::CheckButton::default()
+      .with_size(dimm::width_checkbutton(), dimm::width_checkbutton())
+      .with_align(Align::Right)
+      .with_focus(false)
+      .with_label("Make this executable selectable in the launcher");
+    scroll.add(&mut btn_selectable.as_base_widget());
+    let clone_path_file_db_executable = path_file_db_executable.clone();
+    let clone_output = output.clone();
+    // Initial value
+    btn_selectable.set_value(shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default().contains_key(&output.value()));
+    // Callback
+    btn_selectable.set_callback(move |e|
+    {
+      if e.value()
+      {
+        if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &clone_output.value(), &"1".to_string())
+        {
+          eprintln!("Could not insert key '{}' in db: {}", clone_output.value(), e);
+        } // if
+      }
+      else
+      {
+        if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, clone_output.value())
+        {
+          eprintln!("Could not remove key '{}' from db: {}", clone_output.value(), e);
+        } // if
+      }
+    });
 
     // Entry separator
     let sep = fltk::frame::Frame::default()
