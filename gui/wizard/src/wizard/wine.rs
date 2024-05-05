@@ -8,7 +8,6 @@ use std::
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  widget::Widget,
   button,
   button::Button,
   group,
@@ -253,32 +252,28 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     clone_tx.send_awake(common::Msg::DrawWineRom);
   });
 
+  // Create scrollbar
+  let mut scroll = shared::fltk::ScrollList::new(
+    frame_content.width() - dimm::border()*2
+    , frame_content.height() - dimm::border()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border());
+  scroll.set_border(dimm::border(), dimm::border());
+
   let clone_tx = tx.clone();
-  let f_add_entry = |w: Widget
-    , entry_label: &str
-    , some_args: Option<Vec<&str>>| -> (Button, Frame)
+  let mut f_add_entry = move |entry_label: &str , some_args: Option<Vec<&str>>| -> Button
   {
-    let mut label = Frame::default()
-      .with_size(w.w(), w.h())
+    let label = Frame::default()
+      .with_width(scroll.widget_ref().w() - dimm::border()*3 - dimm::width_button_rec())
+      .with_height(dimm::height_button_wide())
       .with_label(entry_label)
-      .below_of(&w, dimm::border());
+      .with_frame(FrameType::BorderBox);
+    scroll.add(&mut label.as_base_widget());
 
-    label.set_frame(FrameType::BorderBox);
-
-    if w.is_same(&frame_content.as_base_widget())
-    {
-      label.set_size(frame_content.w() - dimm::border()*3 - dimm::width_button_rec()
-        , dimm::height_button_rec()
-      );
-      label.clone().set_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
-    } // if
-
-    let mut btn = Button::default()
-      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-      .right_of(&label, dimm::border());
-    btn.set_color(Color::Green);
-    btn.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_gear(1.0).as_str()).unwrap()));
-    let args = if let Some(args) = some_args { args } else { return (btn, label); };
+    let mut btn = shared::fltk::button::rect::configure()
+      .right_of(&label, dimm::border())
+      .with_color(Color::Green);
+    let args = if let Some(args) = some_args { args } else { return btn; };
     let args_owned : Vec<String> = args.iter().map(|s| s.to_string()).collect();
     btn.set_callback(move |_|
     {
@@ -295,33 +290,18 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
       });
     });
 
-    (btn, label)
+    btn
   };
 
-  let (_, label) = f_add_entry(frame_content.as_base_widget()
-    , "Install DXVK for directx 9/10/11"
-    , Some(vec!["install", "dxvk"])
-  );
+  let _ = f_add_entry("Install DXVK for directx 9/10/11", Some(vec!["install", "dxvk"]));
 
-  let (_, label) = f_add_entry(label.clone().as_base_widget()
-    , "Install VKD3D for directx 12"
-    , Some(vec!["install", "vkd3d"])
-  );
+  let _ = f_add_entry("Install VKD3D for directx 12", Some(vec!["install", "vkd3d"]));
 
-  let (_, label) = f_add_entry(label.clone().as_base_widget()
-    , "Run regedit"
-    , Some(vec!["install", "wine", "regedit"])
-  );
+  let _ = f_add_entry("Run regedit", Some(vec!["install", "wine", "regedit"]));
 
-  let (_, label) = f_add_entry(label.clone().as_base_widget()
-    , "Run add/remove programs"
-    , Some(vec!["install", "wine", "uninstaller"])
-  );
+  let _ = f_add_entry("Run add/remove programs", Some(vec!["install", "wine", "uninstaller"]));
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
-    , "Run a custom winetricks command"
-    , None
-  );
+  let mut btn = f_add_entry("Run a custom winetricks command", None);
   let clone_tx = tx.clone();
   btn.set_callback(move |_|
   {
@@ -343,10 +323,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let (mut btn, label) = f_add_entry(label.clone().as_base_widget()
-    , "Run a custom wine command"
-    , None
-  );
+  let mut btn = f_add_entry("Run a custom wine command", None);
   let clone_tx = tx.clone();
   btn.set_callback(move |_|
   {
@@ -368,11 +345,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let (mut btn, _) = f_add_entry(label.clone().as_base_widget()
-    , "Configure environment"
-    , None
-  );
-  btn.emit(tx, common::Msg::DrawWineEnvironment);
+  let _ = f_add_entry("Configure environment", None).emit(tx, common::Msg::DrawWineEnvironment);
 
 } // fn: configure }}}
 
