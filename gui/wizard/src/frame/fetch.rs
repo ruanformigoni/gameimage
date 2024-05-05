@@ -109,8 +109,15 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
   // , download and progress bar
   let mut vec_fetch : Vec<Data> = vec![];
 
-  // Populate 'vec_fetch' with links and download paths
-  let mut base = frame_content.as_base_widget();
+  // Create scroll list
+  let mut scroll = shared::fltk::ScrollList::new(
+    frame_content.width() - dimm::border()*2
+    , frame_content.height() - dimm::border()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border()
+  );
+  scroll.set_frame(FrameType::BorderBox);
+  scroll.set_border(dimm::border(), dimm::border());
 
   let vec_files = match gameimage::fetch::query_files()
   {
@@ -124,46 +131,34 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     Err(e) => log_return_void!("Could not fetch file list from backend: {}", e),
   };
 
+  scroll.begin();
   for (entry_path, entry_url) in std::iter::zip(vec_files, vec_urls)
   {
     // Get full path to save the file into
     let file_dest = std::path::Path::new(&entry_path).to_path_buf();
 
     // Parse url
-    let url = if let Ok(value) = Url::Url::parse(&entry_url)
+    let url = match Url::Url::parse(&entry_url)
     {
-      value
-    }
-    else
-    {
-      log!("Could not create url '{}'", entry_url);
-      return;
-    }; // if
+      Ok(value) => value,
+      Err(e) => { log!("Could not create url '{}': {}", entry_url, e); return; },
+    }; // match
 
     // Get basename
-    let url_basename = if let Ok(value) = url_basename(url.clone())
+    let url_basename = match url_basename(url.clone())
     {
-      value
-    }
-    else
-    {
-      log!("Could not get url basename");
-      return;
-    }; // if
+      Ok(value) => value,
+      Err(e) => { log!("Could not get url basename: {}", e); return; },
+    }; // match
 
     // Create progress bar
-    let mut prog = Progress::default()
-      .above_of(&base, - dimm::border())
-      .with_size(frame_content.w() - dimm::width_button_wide() - dimm::border()*3, dimm::height_button_wide())
-      .with_label(url_basename.as_str());
-    prog.set_pos(dimm::border(), base.y() + dimm::border());
-    prog.set_frame(FrameType::FlatBox);
-    prog.set_color(Color::Background2);
-    prog.set_selection_color(Color::Blue);
-    if base != frame_content.as_base_widget()
-    {
-      prog.set_pos(prog.x(), prog.y() + dimm::height_button_wide());
-    } // if
+    let prog = Progress::default()
+      .with_size(scroll.widget_ref().w() - dimm::width_button_wide() - dimm::border()*3, dimm::height_button_wide())
+      .with_label(url_basename.as_str())
+      .with_frame(FrameType::BorderBox)
+      .with_color(Color::BackGround)
+      .with_color_selected(Color::Blue);
+    scroll.add(&mut prog.as_base_widget());
 
     // Create start button
     let btn_fetch = Button::default()
@@ -172,12 +167,10 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
       .with_label("Fetch")
       .with_focus(false);
 
-    // Update base widget for positioning
-    base = btn_fetch.as_base_widget();
-
     // Save in data to create callback afterwards
     vec_fetch.push(Data{file_dest, prog, btn_fetch, clicked: Arc::new(Mutex::new(false))});
   } // for
+  scroll.end();
 
   // Function to fetch a file
   let clone_tx = tx.clone();
