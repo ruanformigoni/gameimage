@@ -44,6 +44,7 @@ pub fn toggle(value : bool) -> fltk::button::ToggleButton
   // Set image
   btn.draw(move |e|
   {
+    fltk::draw::draw_rect_fill(e.x()+2, e.y()+2, e.w()-4, e.h()-4, fltk::enums::Color::from_hex_str("#ffffff").unwrap());
     // -1 on w and h because if is drawn with the same size as the button it leaves a weird border when updated
     match e.value()
     {
@@ -75,6 +76,7 @@ pub fn radio() -> fltk::button::RadioButton
   // Set image
   btn.draw(move |e|
   {
+    fltk::draw::draw_rect_fill(e.x()+2, e.y()+2, e.w()-4, e.h()-4, fltk::enums::Color::from_hex_str("#ffffff").unwrap());
     match e.value()
     {
       true =>
