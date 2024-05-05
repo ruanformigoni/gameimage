@@ -7,7 +7,7 @@ use fltk::prelude::*;
 use fltk::{
   app::Sender,
   button,
-  button::{Button,CheckButton},
+  button::CheckButton,
   frame::Frame,
   output,
   dialog,
@@ -16,7 +16,6 @@ use fltk::{
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
-use shared::svg;
 use shared::std::PathBufExt;
 
 use crate::dimm;
@@ -71,7 +70,7 @@ fn create_entry(project : db::project::Entry
   // Info
   //
   let mut frame_info = output::MultilineOutput::default()
-    .with_size(width - width_icon - dimm::width_checkbutton() - dimm::border(), height)
+    .with_size(width - width_icon - dimm::width_checkbutton(), height)
     .right_of(&frame_icon, 0)
     .with_frame(FrameType::BorderBox)
     .with_color(Color::Background);
@@ -131,22 +130,13 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  // Finish package creation on click next
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
-  {
-    if dialog::choice2_default("Finish image creation?", "No", "Yes", "") == Some(1)
-    {
-      clone_tx.send_awake(common::Msg::DrawDesktop);
-    } // if
-  });
-
   let mut scroll = shared::fltk::ScrollList::new(
     frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
     , frame_content.height() - dimm::border()*2
     , frame_content.x() + dimm::border()
     , frame_content.y() + dimm::border()
   );
-  scroll.widget_mut().set_frame(FrameType::BorderBox);
+  scroll.set_frame(FrameType::BorderBox);
   scroll.set_border(dimm::border(), dimm::border());
 
   scroll.begin();
@@ -162,7 +152,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,PathBuf)>::new()));
   for project in &projects
   {
-    let width_entry = scroll.widget_ref().w() - scroll.widget_ref().scrollbar_size() - dimm::border();
+    let width_entry = scroll.widget_ref().w() - dimm::border()*2;
     let height_entry = dimm::height_button_rec()*4;
     let (button, path_dir_project) = match create_entry(project.clone(), &mut scroll, width_entry, height_entry)
     {
@@ -180,23 +170,16 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   scroll.end();
 
   // Add new package
-  let mut btn_add = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .right_of(scroll.widget_mut(), dimm::border());
-  btn_add.set_frame(FrameType::RoundedFrame);
-  btn_add.visible_focus(false);
-  btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
-  btn_add.set_color(Color::Green);
+  let mut btn_add = shared::fltk::button::rect::add()
+    .right_of(scroll.widget_mut(), dimm::border())
+    .with_color(Color::Green);
   btn_add.emit(tx, common::wizard_by_platform().unwrap_or(common::Msg::DrawCreator));
 
   // Erase package
-  let mut btn_del = Button::default()
+  let mut btn_del = shared::fltk::button::rect::del()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border());
-  btn_del.set_frame(FrameType::RoundedFrame);
-  btn_del.visible_focus(false);
-  btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
-  btn_del.set_color(Color::Red);
+    .below_of(&btn_add, dimm::border())
+    .with_color(Color::Red);
   let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
@@ -226,22 +209,32 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     clone_tx.send_awake(common::Msg::DrawCreator);
   });
 
-  // Include inside image
-  let mut btn_insert = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_del, dimm::border());
-  btn_insert.set_color(Color::Blue);
-  btn_insert.set_frame(FrameType::RoundedFrame);
-  btn_insert.visible_focus(false);
-  btn_insert.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_box_heart(1.0).as_str()).unwrap()));
+  // Finish package creation on click next
+  let clone_vec_btn = vec_btn.clone();
   let mut clone_output_status = ret_frame_footer.output_status.clone();
-  let clone_tx = tx.clone();
-  btn_insert.set_callback(move |_|
+  ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     if dialog::choice2_default("Include selected projects in the image?", "No", "Yes", "") != Some(1)
     {
       return;
     } // if
+    
+    match clone_vec_btn.lock()
+    {
+      Ok(e) => if e.is_empty()
+      {
+        log!("No project to include");
+        clone_output_status.set_value("No project to include");
+        return;
+      } // if
+      else if ! e.iter().any(|e| e.0.is_set())
+      {
+        log!("No project was selected");
+        clone_output_status.set_value("No project was selected");
+        return;
+      } // else if
+      Err(e) => { log!("Could not lock projects vector: {}", e); return; }
+    }
 
     // Set status
     clone_output_status.set_value("Inserting projects in the image");
@@ -250,7 +243,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Include files in new thread
-    let clone_vec_checkbutton = vec_btn.clone();
+    let clone_vec_checkbutton = clone_vec_btn.clone();
     std::thread::spawn(move ||
     {
       // Get lock to vector of checkbuttons
@@ -277,14 +270,21 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         match gameimage::package::package(&path_file_dwarfs)
         {
           Ok(()) => log!("Packaged {}", path_file_dwarfs.string()),
-          Err(e) => log!("Could not include {} into the image: {}", path_file_dwarfs.string(), e),
+          Err(e) =>
+          {
+            clone_tx.send_awake(common::Msg::WindActivate);
+            clone_tx.send_awake(common::Msg::DrawCreator);
+            log!("Could not include {} into the image: {}", path_file_dwarfs.string(), e);
+          },
         } // match
       } // for
 
       // Refresh
-      clone_tx.send_awake(common::Msg::DrawCreator);
+      clone_tx.send_awake(common::Msg::WindActivate);
+      clone_tx.send_awake(common::Msg::DrawDesktop);
     });
   });
+
 
 }
 // }}}
