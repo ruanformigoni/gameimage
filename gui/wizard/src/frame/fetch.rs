@@ -218,7 +218,6 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
           Ok(progress) => progress,
           Err(e) => { log!("Could not convert progress to float: {}", e); return; },
         }; // match
-        log!("Progress: {}", progress);
         clone_data.prog.clone().set_value(progress);
       } // while
     });
