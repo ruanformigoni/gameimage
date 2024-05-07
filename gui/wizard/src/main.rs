@@ -356,7 +356,7 @@ fn init(&mut self)
   // Set log window to the left of the main window
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
-  // self.tx.send(Msg::DrawLinuxDefault);
+  // self.tx.send(Msg::DrawWineRom);
   self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {

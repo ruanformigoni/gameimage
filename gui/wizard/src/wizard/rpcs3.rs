@@ -7,7 +7,6 @@ use fltk::
   },
   browser::MultiBrowser,
   button,
-  button::Button,
   dialog,
   output,
   prelude::*,
@@ -23,7 +22,6 @@ use crate::log;
 use crate::frame;
 use crate::gameimage;
 use crate::wizard;
-use shared::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
@@ -73,13 +71,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   } // if
 
   // Add new item
-  let mut btn_add = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .right_of(&frame_list, dimm::border());
-  btn_add.set_frame(FrameType::RoundedFrame);
-  btn_add.visible_focus(false);
-  btn_add.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_add(1.0).as_str()).unwrap()));
-  btn_add.set_color(Color::Green);
+  let mut btn_add = shared::fltk::button::rect::add()
+    .right_of(&frame_list, dimm::border())
+    .with_color(Color::Green);
   let clone_tx = tx.clone();
   btn_add.set_callback(move |_|
   {
@@ -120,13 +114,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   });
 
   // Erase package
-  let mut btn_del = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border());
-  btn_del.set_frame(FrameType::RoundedFrame);
-  btn_del.visible_focus(false);
-  btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
-  btn_del.set_color(Color::Red);
+  let mut btn_del = shared::fltk::button::rect::del()
+    .below_of(&btn_add, dimm::border())
+    .with_color(Color::Red);
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   btn_del.set_callback(move |_|
   {

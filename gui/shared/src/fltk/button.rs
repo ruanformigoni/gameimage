@@ -36,6 +36,8 @@ pub fn del() -> fltk::button::Button { button::<fltk::button::Button>().with_svg
 
 pub fn folder() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_folder(1.0).as_str()) }
 
+pub fn save() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_save(1.0).as_str()) }
+
 pub fn toggle(value : bool) -> fltk::button::ToggleButton
 {
   let mut btn  = button::<fltk::button::ToggleButton>()

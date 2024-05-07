@@ -9,10 +9,9 @@ use std::{
 
 use fltk::{
   app,
-  button::Button,
   dialog::file_chooser,
   prelude::*,
-  enums::{FrameType,Color},
+  enums::Color,
   text::SimpleTerminal,
 };
 
@@ -22,7 +21,6 @@ use shared::fltk::WidgetExtExtra;
 use crate::dimm;
 use crate::common;
 use crate::log;
-use shared::svg;
 
 // struct Term {{{
 #[derive(Clone)]
@@ -64,14 +62,10 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   term.wrap_mode(fltk::text::WrapMode::None, 0);
 
   let mut clone_term = term.clone();
-  let _btn_save = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+  let _btn_save = shared::fltk::button::rect::save()
     .right_of(&term, dimm::border())
     .with_posy_of(&term)
-    .with_frame(FrameType::RoundedFrame)
-    .with_focus(false)
     .with_color(Color::Blue)
-    .with_svg(svg::icon_save(1.0).as_str())
     .with_callback (move |_|
     {
       let path_file_dest = match file_chooser("Save as...",  "*.txt", ".", true).map(|e| PathBuf::from(e) )

@@ -17,7 +17,6 @@ use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
 use crate::gameimage;
-use shared::svg;
 
 // struct Install {{{
 pub struct Install
@@ -64,12 +63,8 @@ pub fn install(tx: Sender<common::Msg>
   // Add new item
   let clone_tx = tx.clone();
   let clone_label : String = label.to_string();
-  let btn_add = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+  let btn_add = shared::fltk::button::rect::add()
     .right_of(&frame_list, dimm::border())
-    .with_frame(FrameType::RoundedFrame)
-    .with_focus(false)
-    .with_svg(svg::icon_add(1.0).as_str())
     .with_color(Color::Green)
     .with_callback(move |_|
     {
@@ -111,13 +106,9 @@ pub fn install(tx: Sender<common::Msg>
     });
 
   // Erase package
-  let mut btn_del = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border());
-  btn_del.set_frame(FrameType::RoundedFrame);
-  btn_del.visible_focus(false);
-  btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
-  btn_del.set_color(Color::Red);
+  let mut btn_del = shared::fltk::button::rect::del()
+    .below_of(&btn_add, dimm::border())
+    .with_color(Color::Red);
   let mut clone_output_status = ret_frame_footer.output_status.clone();
   let clone_label = label.to_string();
   let clone_frame_list = frame_list.clone();
