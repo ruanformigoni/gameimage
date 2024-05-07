@@ -81,20 +81,20 @@ https://github.com/ruanformigoni/gameimage/assets/18180693/208c41dd-2454-484a-a3
 
 ### Wine Single
 
-https://github.com/ruanformigoni/gameimage/assets/18180693/bf29fc74-399d-4068-bffc-0acb48ad1e89
+https://github.com/ruanformigoni/gameimage/assets/18180693/0592dd5f-9b27-4503-9978-77842ad4c7b6
 
-[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine-ubuntu.mp4)
+[download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine.mp4)
 
 
 ### Wine Multiple
 
-https://github.com/ruanformigoni/gameimage/assets/18180693/2103cd47-728a-4a54-b2b8-93409277039f
+https://github.com/ruanformigoni/gameimage/assets/18180693/a2d92de2-ce28-4c7b-9f25-02eb9db525da
 
 [download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-wine-multi.mp4)
 
 ### Linux
 
-https://github.com/ruanformigoni/gameimage/assets/18180693/bd74f416-0ea2-45be-9382-7beed0d8a682
+https://github.com/ruanformigoni/gameimage/assets/18180693/b5ad407e-23a6-48fd-b636-c2ef2a89fd28
 
 [download video](https://github.com/ruanformigoni/gameimage/raw/master/doc/video/tutorial-linux.mp4)
 
@@ -114,6 +114,10 @@ The key advantages of flatimage are:
    still use the previous method with flatimage, as well as others listed in 
 
 ## Known Issues
+
+### General
+
+Avoid using `NTFS` formatted hard-drives.
 
 ### Ubuntu 24.04
 
