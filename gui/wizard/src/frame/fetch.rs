@@ -228,8 +228,6 @@ pub fn fetch(tx: Sender<common::Msg>, title: &str)
     let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
-      // Enable progress bar
-      clone_data.prog.clone().activate();
       let mut clone_btn_fetch = clone_data.btn_fetch.clone();
 
       // Change fetch button
