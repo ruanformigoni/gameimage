@@ -3,7 +3,6 @@ use fltk::prelude::*;
 use fltk::{
   app::Sender,
   browser::MultiBrowser,
-  button::Button,
   dialog,
   output,
   enums::{FrameType,Color,Align},
@@ -20,7 +19,6 @@ use shared::std::PathBufExt;
 use crate::log;
 use crate::db;
 use crate::gameimage;
-use shared::svg;
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
@@ -78,12 +76,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let clone_frame_list = frame_list.clone();
   let mut clone_output_status = output_status.clone();
   let clone_tx = tx.clone();
-  let btn_default = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+  let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
-    .with_frame(FrameType::RoundedFrame)
-    .with_focus(false)
-    .with_svg(svg::icon_check(1.0).as_str())
     .with_color(Color::Blue)
     .with_callback(move |_|
     {
@@ -205,12 +199,8 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   // Update default core
   let clone_frame_list_installed = frame_list_installed.clone();
   let mut clone_output_status = output_status.clone();
-  let btn_default = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+  let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
-    .with_frame(FrameType::RoundedFrame)
-    .with_focus(false)
-    .with_svg(svg::icon_check(1.0).as_str())
     .with_color(Color::Blue)
     .with_callback(move |_|
     {
@@ -294,12 +284,8 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   // Add new item from remote
   let clone_tx = tx.clone();
   let clone_frame_list_remote = frame_list_remote.clone();
-  let _btn_install_from_remote = Button::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+  let _btn_install_from_remote = shared::fltk::button::rect::cloud()
     .right_of(&frame_list_remote, dimm::border())
-    .with_frame(FrameType::RoundedFrame)
-    .with_focus(false)
-    .with_svg(svg::icon_install(1.0).as_str())
     .with_color(Color::Green)
     .with_callback(move |_|
     {

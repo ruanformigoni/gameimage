@@ -38,6 +38,10 @@ pub fn folder() -> fltk::button::Button { button::<fltk::button::Button>().with_
 
 pub fn save() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_save(1.0).as_str()) }
 
+pub fn check() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_check(1.0).as_str()) }
+
+pub fn cloud() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_cloud(1.0).as_str()) }
+
 pub fn toggle(value : bool) -> fltk::button::ToggleButton
 {
   let mut btn  = button::<fltk::button::ToggleButton>()
