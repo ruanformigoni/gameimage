@@ -82,6 +82,9 @@ _fetch "https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7
 # Fetch busybox
 _fetch "https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox" "$BIN_DIR"/busybox
 
+# Fetch lsof
+_fetch "https://github.com/ruanformigoni/lsof-static-musl/releases/download/12c2552/lsof-x86_64" "$BIN_DIR"/lsof
+
 # Fetch fd
 _fetch "https://github.com/sharkdp/fd/releases/download/v8.7.1/fd-v8.7.1-x86_64-unknown-linux-musl.tar.gz" "$BIN_DIR"/fd "fd-v8.7.1-x86_64-unknown-linux-musl/fd"
 
