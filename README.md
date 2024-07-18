@@ -121,22 +121,13 @@ Avoid using `NTFS` formatted hard-drives.
 
 ### Ubuntu 24.04
 
-Recent changes to [apparmor](https://gitlab.com/apparmor/apparmor) requires to
-create the file `/etc/apparmor.d/bwrap` with the contents:
+Recent changes to [apparmor](https://gitlab.com/apparmor/apparmor) broke portable bubblewrap applications such as gameimage, to work around these issues you can use the following commands:
 
-```apparmor
-# This profile allows everything and only exists to give the
-# application a name instead of having the label "unconfined"
-
-abi <abi/4.0>,
-include <tunables/global>
-
-profile bwrap /**/bwrap flags=(unconfined) {
-  userns,
-}
+```bash
+sudo add-apt-repository ppa:apparmor-dev/apparmor-sru
+sudo apt update
+sudo apt install apparmor
 ```
-
-Lastly run `sudo systemctl reload apparmor` to reload the configuration files.
 
 ---
 
