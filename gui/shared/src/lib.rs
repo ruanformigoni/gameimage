@@ -1,6 +1,5 @@
 pub mod fltk;
 pub mod dimm;
-pub mod scaling;
 pub mod svg;
 pub mod std;
 pub mod image;

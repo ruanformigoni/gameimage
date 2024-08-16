@@ -41,16 +41,9 @@ struct Gui
 // impl: Gui {{{
 impl Gui
 {
-
   // fn: new {{{
   pub fn new() -> Self
   {
-    match shared::fltk::scale::scale()
-    {
-      Ok(()) => (),
-      Err(e) => log!("{}", e)
-    }; // match
-
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind_main = Window::default()
       .with_label("GameImage")

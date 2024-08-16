@@ -40,12 +40,6 @@ impl Gui
 // fn: new {{{
 pub fn new() -> Self
 {
-  match shared::fltk::scale::scale()
-  {
-    Ok(()) => (),
-    Err(e) => eprintln!("{}", e)
-  }; // match
-
   let app =  app::App::default().with_scheme(app::Scheme::Gtk);
   app::set_frame_type(FrameType::BorderBox);
   app::set_font_size(dimm::height_text());
