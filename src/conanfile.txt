@@ -5,7 +5,6 @@ cpr/1.10.5
 nlohmann_json/3.11.3
 matchit/1.0.1
 magic_enum/0.9.5
-boost/1.83.0
 easyloggingpp/9.97.1
 libjpeg-turbo/3.0.1
 libpng/1.6.40

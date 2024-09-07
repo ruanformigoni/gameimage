@@ -8,7 +8,8 @@ RUN echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/reposit
 # Install deps
 RUN apk update && apk upgrade
 RUN apk add --no-cache build-base git libbsd-dev py3-pip pipx git patchelf cmake gcc \
-  bash e2fsprogs xz curl zstd gawk debootstrap m4 gcompat nasm wget upx
+  bash e2fsprogs xz curl zstd gawk debootstrap m4 gcompat nasm wget upx \
+  boost-dev boost-static
 
 # Fonts to copy from inside the container
 RUN apk add --no-cache font-noto
@@ -30,16 +31,12 @@ COPY . /gameimage/
 WORKDIR /gameimage/src
 
 # Compile
-# # This will fail ;(, official xz is not available after the github repo was taken down
-RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
-
 # # This will fail ;(, needs to run, patch, run again
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
 # # nasm bug when on musl system "undefined symbol"
 # # m4 bug when on musl system "undefined symbol"
 RUN cp "$(command -v nasm)" /root/.conan2/p/nasmc*/p/bin/nasm
 RUN cp "$(command -v m4)" /root/.conan2/p/m4*/p/bin/m4
-
 # # Should work now
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build
 RUN cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release

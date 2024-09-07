@@ -38,6 +38,8 @@ find_package(cppcoro REQUIRED)
 find_package(libzippp REQUIRED)
 find_package(cryptopp REQUIRED)
 find_package(LibArchive REQUIRED)
+find_package(Boost COMPONENTS filesystem REQUIRED)
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 # Main executable
 add_executable(main main.cpp)
@@ -48,10 +50,10 @@ target_link_libraries(main PRIVATE
   nlohmann_json::nlohmann_json
   matchit::matchit
   magic_enum::magic_enum
-  boost::boost
   easyloggingpp::easyloggingpp
   libjpeg-turbo::libjpeg-turbo
   PNG::PNG
+  /usr/lib/libboost_filesystem.a
   ZLIB::ZLIB
   cppcoro::cppcoro
   libzippp::libzippp
@@ -69,10 +71,10 @@ target_link_libraries(boot PRIVATE
   nlohmann_json::nlohmann_json
   matchit::matchit
   magic_enum::magic_enum
-  boost::boost
   easyloggingpp::easyloggingpp
   libjpeg-turbo::libjpeg-turbo
   PNG::PNG
+  /usr/lib/libboost_filesystem.a
   ZLIB::ZLIB
   cppcoro::cppcoro
 )
