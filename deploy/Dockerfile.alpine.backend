@@ -38,14 +38,14 @@ RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-fold
 RUN cp "$(command -v nasm)" /root/.conan2/p/nasmc*/p/bin/nasm
 RUN cp "$(command -v m4)" /root/.conan2/p/m4*/p/bin/m4
 # # Should work now
-RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build
+RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain
 RUN cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release
 RUN cmake --build --preset conan-release
 
 # Move to dist
 RUN mkdir /dist
-RUN cp ./build/build/Release/main /dist
-RUN cp ./build/build/Release/boot /dist
+RUN cp ./build/Release/main /dist
+RUN cp ./build/Release/boot /dist
 WORKDIR /dist
 
 # Strip
