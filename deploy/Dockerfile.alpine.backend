@@ -32,7 +32,6 @@ WORKDIR /gameimage/src
 # Compile
 # # This will fail ;(, official xz is not available after the github repo was taken down
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
-RUN cp ../deploy/conandata.yml /root/.conan2/p/xz_*/e/conandata.yml
 
 # # This will fail ;(, needs to run, patch, run again
 RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain --output-folder=build || true
