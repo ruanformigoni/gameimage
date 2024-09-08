@@ -18,4 +18,4 @@ WORKDIR /dist
 RUN strip -s *
 
 # Compress
-RUN upx --brute --no-lzma *
+RUN upx -6 --no-lzma *
