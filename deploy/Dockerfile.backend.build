@@ -1,4 +1,4 @@
-FROM gameimage-backend-dev
+FROM ghcr.io/ruanformigoni/gameimage-backend-dev
 
 COPY ./src /backend
 
