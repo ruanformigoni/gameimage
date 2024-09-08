@@ -13,5 +13,5 @@ RUN mv /target /gameimage/target
 RUN cd wizard && cargo build --release --target=x86_64-unknown-linux-musl
 
 # Make dist
-# RUN mkdir /dist
-# RUN cp /gui/target/x86_64-unknown-linux-musl/release/wizard /dist
+RUN mkdir /dist
+RUN cp /gameimage/target/x86_64-unknown-linux-musl/release/wizard /dist
