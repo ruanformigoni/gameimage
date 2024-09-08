@@ -1,4 +1,4 @@
-FROM gameimage-wizard-dev
+FROM ghcr.io/ruanformigoni/gameimage-wizard-dev
 
 # Copy sources
 COPY ./gui /gameimage
