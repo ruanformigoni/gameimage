@@ -41,13 +41,9 @@ COPY . /gameimage
 # Enter src dir
 WORKDIR gameimage
 
-# Compile gui & launcher
+# Compile wizard
 RUN cd gui/wizard && cargo build --release --target=x86_64-unknown-linux-musl
-
-# Patch
-RUN chmod +x ./deploy/makeself-wizard.sh 
-RUN ./deploy/makeself-wizard.sh "/gameimage/gui/target/x86_64-unknown-linux-musl/release/wizard"
 
 # Make dist
 RUN mkdir /dist
-RUN cp -r ./deploy/makeself-wizard /dist
+RUN cp /gameimage/gui/target/x86_64-unknown-linux-musl/release/wizard /dist
