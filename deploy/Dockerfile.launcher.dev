@@ -1,7 +1,7 @@
 FROM archlinux:latest
 
 # Update
-RUN pacman -Sy --noconfirm
+RUN pacman -Syy --noconfirm
 RUN pacman-key --init
 RUN pacman -S --noconfirm archlinux-keyring
 RUN pacman -Syu --noconfirm
@@ -15,14 +15,15 @@ ENV PATH "/root/.cargo/bin:$PATH"
 
 # Copy files
 RUN mkdir /gameimage
-COPY . /gameimage/
+COPY ./gui /gameimage/
 
 # Enter src dir
 WORKDIR gameimage
 
 # Compile
-RUN cd gui/launcher && cargo build --release
+RUN cd launcher && cargo build --release
 
-# Move to dist
-RUN mkdir /dist
-RUN cp ./gui/target/release/launcher /dist/launcher
+# Save target folder
+WORKDIR /
+RUN mv /gameimage/target /target
+RUN rm -rf /gameimage
