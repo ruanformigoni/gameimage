@@ -5,7 +5,7 @@ RUN mkdir /gameimage
 COPY ./gui /gameimage/
 
 # Retrieve target folder
-RUN mv target /target
+RUN mv /target /gameimage/target
 
 # Enter src dir
 WORKDIR gameimage
