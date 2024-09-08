@@ -134,12 +134,12 @@ inline void wine(Op const& op, std::vector<std::string> args)
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "wine.sh", std::forward<T>(t));
+    ns_subprocess::sync(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t));
   };
 
   auto f_winetricks = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "wine.sh", "winetricks", std::forward<T>(t));
+    ns_subprocess::sync(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t));
   };
 
   // Execute operation

@@ -26,6 +26,9 @@ inline decltype(auto) desktop(fs::path path_file_icon)
   // Path to flatimage
   fs::path path_file_flatimage;
 
+  // Path to project
+  fs::path path_dir_project;
+
   // Path to boot file
   // Get default path
   ns_db::from_file_default([&](auto&& db)
@@ -35,40 +38,34 @@ inline decltype(auto) desktop(fs::path path_file_icon)
 
     // Path to flatimage
     path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
+
+    // Path to current project
+    path_dir_project = static_cast<fs::path>(db[str_project]["path_dir_project"]);
   }
   , ns_db::Mode::READ);
 
-  // Configure application name
-  ns_subprocess::sync(path_file_flatimage
-    , "fim-config-set"
-    , "name"
-    , str_project);
+  fs::path path_file_desktop = path_dir_project / "desktop.json";
 
-  // Copy icon to inside the image
-  ns_subprocess::sync(path_file_flatimage
-    , "fim-exec"
-    , "cp"
-    , path_file_icon.string()
-    , "/fim/desktop/icon.png");
+  // Configure application data
+  ns_db::from_file(path_file_desktop
+  , [&](auto&& db)
+  {
+    db("name") = str_project;
+    db("icon") = path_file_icon;
+    db("categories") = std::vector<std::string>{"Game"};
+  }, ns_db::Mode::CREATE);
 
-  // Configure icon
+  // Apply application data
   ns_subprocess::sync(path_file_flatimage
-    , "fim-config-set"
-    , "icon"
-    , "'\"\\$FIM_DIR_MOUNT\"/fim/desktop/icon.png'");
-
-  // Set categories
-  ns_subprocess::sync(path_file_flatimage
-    , "fim-config-set"
-    , "categories"
-    , "Game");
+    , "fim-desktop"
+    , "setup"
+    , path_file_desktop);
 
   // Enable desktop integration
   ns_subprocess::sync(path_file_flatimage
-    , "fim-config-set"
-    , "desktop"
-    , "1");
-
+    , "fim-desktop"
+    , "enable"
+    , "entry,mimetype,icon");
 } // desktop() }}}
  
 } // namespace ns_test

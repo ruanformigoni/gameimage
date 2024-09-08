@@ -35,17 +35,11 @@ inline void package(fs::path path_file_dwarfs)
   // Verify that dwarfs exists
   ns_fs::ns_path::file_exists<true>(path_file_dwarfs);
 
-  // Get stem of dwarfs file
-  std::string str_stem_dwarfs = path_file_dwarfs.stem();
-
-  // Get path to the dwarfs mount point
-  fs::path path_dir_mount = fs::path{"/fim/mount/"} / str_stem_dwarfs;
-
   // Include in image
   ns_subprocess::sync(path_image
-    , "fim-dwarfs-add"
-    , path_file_dwarfs
-    , path_dir_mount);
+    , "fim-layer"
+    , "add"
+    , path_file_dwarfs);
 
   // Get path to launcher
   fs::path path_file_launcher = ns_fs::ns_path::dir_self<true>()._ret / "gameimage-launcher";
@@ -58,7 +52,7 @@ inline void package(fs::path path_file_dwarfs)
     , "/fim/static/gameimage-launcher");
 
   // Set boot command
-  ns_subprocess::sync(path_image, "fim-cmd", "gameimage-launcher");
+  ns_subprocess::sync(path_image, "fim-boot", "/fim/static/gameimage-launcher");
   
 
 } // package() }}}

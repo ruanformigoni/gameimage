@@ -184,12 +184,9 @@ inline decltype(auto) compress()
   
   // Compress
   ns_subprocess::sync(str_image
-    , "fim-exec"
-    , "mkdwarfs"
-    , "-f"
-    , "-i"
+    , "fim-layer"
+    , "create"
     , str_path_project
-    , "-o"
     , str_target
   );
 
