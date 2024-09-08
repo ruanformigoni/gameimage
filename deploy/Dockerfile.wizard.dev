@@ -17,14 +17,6 @@ RUN apk add git wget curl patchelf py3-pip pipx file build-base cmake \
 RUN ln -sfT /usr/bin/gcc /usr/bin/musl-gcc
 RUN ln -sfT /usr/bin/g++ /usr/bin/musl-g++
 
-# Fetch tools
-RUN mkdir -p /tools
-RUN wget -O /tools/tar "https://github.com/ruanformigoni/gnu-static-musl/releases/download/b122ecc/tar"
-RUN chmod +x /tools/tar
-RUN wget -O /tools/makeself "https://github.com/megastep/makeself/releases/download/release-2.5.0/makeself-2.5.0.run"
-RUN chmod +x /tools/makeself && /tools/makeself --target /tools && chmod +x /tools/*.sh
-ENV PATH="/tools:$PATH"
-
 # Compile as shared libraries
 ENV RUSTFLAGS='-C target-feature=-crt-static'
 
@@ -34,16 +26,17 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
 # Update env
 ENV PATH="/root/.cargo/bin:$PATH"
 
-# Fetch sources
-# RUN git clone https://gitlab.com/formigoni/gameimage.git
-COPY . /gameimage
+# Copy sources
+COPY ./gui /gameimage
 
 # Enter src dir
 WORKDIR gameimage
 
-# Compile wizard
-RUN cd gui/wizard && cargo build --release --target=x86_64-unknown-linux-musl
+# Compile
+RUN cargo build --release --target=x86_64-unknown-linux-musl
 
-# Make dist
-RUN mkdir /dist
-RUN cp /gameimage/gui/target/x86_64-unknown-linux-musl/release/wizard /dist
+# Move target folder
+RUN mv ./target /target
+
+# Remove gameimage folder
+RUN rm -rf /gameimage

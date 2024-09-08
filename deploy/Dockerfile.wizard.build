@@ -1,0 +1,17 @@
+FROM gameimage-wizard-dev
+
+# Copy sources
+COPY ./gui /gameimage
+
+# Enter src dir
+WORKDIR /gameimage
+
+# Retrieve pre-compiled dependencies
+RUN mv /target /gameimage/target
+
+# Compile wizard
+RUN cd wizard && cargo build --release --target=x86_64-unknown-linux-musl
+
+# Make dist
+# RUN mkdir /dist
+# RUN cp /gui/target/x86_64-unknown-linux-musl/release/wizard /dist
