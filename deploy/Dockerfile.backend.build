@@ -1,0 +1,21 @@
+FROM gameimage-backend-dev
+
+COPY ./src /backend
+
+WORKDIR /backend
+
+RUN conan install . --build=missing -g CMakeDeps -g CMakeToolchain
+RUN cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release
+RUN cmake --build --preset conan-release
+
+# Move to dist
+RUN mkdir /dist
+RUN cp ./build/Release/main /dist
+RUN cp ./build/Release/boot /dist
+WORKDIR /dist
+
+# Strip
+RUN strip -s *
+
+# Compress
+RUN upx --brute --no-lzma *
