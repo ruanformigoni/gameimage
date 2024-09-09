@@ -8,7 +8,7 @@ use fltk::{
   app::App,
   window::Window,
   dialog,
-  enums::{FrameType,Color},
+  enums::{FrameType,Color,Font},
 };
 use fltk_theme::{ColorTheme, color_themes};
 
@@ -52,6 +52,13 @@ impl Gui
       .center_screen();
     wind_main.begin();
     wind_main.end();
+
+    if let Ok(font) = Font::load_font("/usr/share/fonts/noto/NotoSans-Regular.ttf")
+    {
+      Font::set_font(Font::Helvetica, &font);
+      app::set_font(Font::Helvetica);
+      app::set_font_size(12);
+    } // if
 
     let mut wind_log = Window::default()
       .with_label("Logger")
