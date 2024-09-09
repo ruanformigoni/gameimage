@@ -45,7 +45,7 @@ class Ipc
 // Ipc::Ipc() {{{
 inline Ipc::Ipc(fs::path path_file, bool keep_open)
 {
-  ns_log::write('i', "Starting IPC for '{}'", path_file);
+  ns_log::write('i', "Starting IPC for ", path_file);
 
   std::string identifier = ns_string::to_string(path_file);
   ns_log::write('i', "key identifier: ", identifier);
