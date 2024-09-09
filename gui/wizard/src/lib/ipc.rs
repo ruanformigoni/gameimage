@@ -74,6 +74,8 @@ fn close(path : &std::path::PathBuf)
 pub fn new<F>(path : std::path::PathBuf, mut f_wait : F) -> anyhow::Result<Ipc>
 where F: FnMut() + 'static + Send + Sync
 {
+  log!("Starting ipc for '{}", path.string());
+
   // Close existing queue
   Ipc::close(&path);
 
