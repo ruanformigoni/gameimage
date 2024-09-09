@@ -104,6 +104,21 @@ inline const char* get(const char* name)
   return ret;
 } // get() }}}
 
+// get_or_throw() {{{
+// Get an env variable
+template<typename T = const char*>
+inline T get_or_throw(const char* name)
+{
+  const char* value = std::getenv(name);
+
+  if (not value)
+  {
+    throw std::runtime_error("Variable '{}' is undefined"_fmt(name));
+  } // if
+
+  return value;
+} // get_or_throw() }}}
+
 } // namespace ns_env }}}
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

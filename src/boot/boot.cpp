@@ -209,7 +209,7 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_WINE");
+  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_WINE");
 
   // Start application
   ns_subprocess::sync(str_cmd.c_str(), path_file_rom, wine_args(path_dir_self, path_file_rom_relative));
@@ -244,7 +244,7 @@ void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_dat
   );
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_RETROARCH");
+  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RETROARCH");
 
   // Start application
   ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
@@ -280,7 +280,7 @@ void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_databas
   );
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_PCSX2");
+  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_PCSX2");
 
   // Start application
   ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
@@ -326,7 +326,7 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
   ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_RPCS3");
+  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RPCS3");
 
   // Start application
   ns_subprocess::sync(str_cmd.c_str(), "--allow-any-location", "--no-gui", "--", path_file_rom);
@@ -364,7 +364,7 @@ void boot_ryujinx(fs::path const& path_dir_self, fs::path const& path_file_datab
   ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
 
   // Get boot command
-  std::string str_cmd = ns_env::get("FIM_BINARY_RYUJINX");
+  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RYUJINX");
 
   // Start application
   ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
@@ -396,7 +396,7 @@ void boot(int argc, char** argv)
   // ns_env::set("LC_ALL", "C", ns_env::Replace::N);
 
   // Flatimage distribution
-  ns_log::write('i', "FlatImage distribution: ", ns_env::get("FIM_DIST"));
+  ns_log::write('i', "FlatImage distribution: ", ns_env::get_or_throw("FIM_DIST"));
 
   // Get platform
   ns_enum::Platform platform;
