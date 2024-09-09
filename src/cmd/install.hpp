@@ -134,12 +134,12 @@ inline void wine(Op const& op, std::vector<std::string> args)
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t));
+    ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t));
   };
 
   auto f_winetricks = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t));
+    ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t));
   };
 
   // Execute operation
@@ -173,7 +173,7 @@ inline void linux(Op const& op, std::vector<std::string> args)
 
   // Run selected file
   ns_env::set("FIM_HOME", (path_dir_project / "linux").c_str(), ns_env::Replace::Y);
-  ns_subprocess::sync(path_flatimage, "fim-exec", args);
+  ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", args);
 } // linux() }}}
 
 // emulator_install_file_ryujinx() {{{
@@ -350,7 +350,7 @@ inline void emulator(Op op, std::vector<std::string> args)
     {
       ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
       ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
-      ns_subprocess::sync(path_flatimage);
+      ns_subprocess::sync("/fim/static/fim_portal", path_flatimage);
     }
     break;
     case Op::BIOS: { f_install_files(op, path_dir_bios, args); } break;

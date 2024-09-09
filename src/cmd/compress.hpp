@@ -183,7 +183,8 @@ inline decltype(auto) compress()
   ns_log::write('i', "dir: ", str_path_project);
   
   // Compress
-  ns_subprocess::sync(str_image
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , str_image
     , "fim-layer"
     , "create"
     , str_path_project

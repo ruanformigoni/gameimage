@@ -36,7 +36,8 @@ inline void package(fs::path path_file_dwarfs)
   ns_fs::ns_path::file_exists<true>(path_file_dwarfs);
 
   // Include in image
-  ns_subprocess::sync(path_image
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_image
     , "fim-layer"
     , "add"
     , path_file_dwarfs);
@@ -45,14 +46,19 @@ inline void package(fs::path path_file_dwarfs)
   fs::path path_file_launcher = ns_fs::ns_path::dir_self<true>()._ret / "gameimage-launcher";
 
   // Include inside image
-  ns_subprocess::sync(path_image
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_image
     , "fim-exec"
     , "cp"
     , path_file_launcher
     , "/fim/static/gameimage-launcher");
 
   // Set boot command
-  ns_subprocess::sync(path_image, "fim-boot", "/fim/static/gameimage-launcher");
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_image
+    , "fim-boot"
+    , "/fim/static/gameimage-launcher"
+  );
   
 
 } // package() }}}

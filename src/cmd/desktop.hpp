@@ -56,13 +56,15 @@ inline decltype(auto) desktop(fs::path path_file_icon)
   }, ns_db::Mode::CREATE);
 
   // Apply application data
-  ns_subprocess::sync(path_file_flatimage
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_file_flatimage
     , "fim-desktop"
     , "setup"
     , path_file_desktop);
 
   // Enable desktop integration
-  ns_subprocess::sync(path_file_flatimage
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_file_flatimage
     , "fim-desktop"
     , "enable"
     , "entry,mimetype,icon");
