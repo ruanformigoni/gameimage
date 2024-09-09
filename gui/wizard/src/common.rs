@@ -90,23 +90,49 @@ pub const STR_DESC_RYUJINX : &str = "Ryujinx is an open-source Nintendo Switch e
 // impl_log() {{{
 pub fn impl_log(value : &str)
 {
-  static TX : OnceLock<Mutex<frame::term::Term>> = OnceLock::new();
+  static TX: OnceLock<std::sync::mpsc::Sender<String>> = OnceLock::new();
 
-  let lock = TX.get_or_init(|| Mutex::new(frame::term::Term::new(dimm::border()
-    , dimm::width_wizard() - dimm::border()*2
-    , dimm::height_wizard() - dimm::border()*2
-    , dimm::border()
-    , dimm::border()
-  )));
-
-  let clone_value = value.to_owned();
-  std::thread::spawn(move ||
+  // Initialize the logging channel and logger thread the first time impl_log is called
+  let sender = TX.get_or_init(||
   {
-    if let Ok(term) = lock.try_lock()
+    // Create a channel for log messages
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+
+    // Create a new terminal to append logs (shared between threads)
+    let term = std::sync::Arc::new(Mutex::new(frame::term::Term::new(
+      dimm::border(),
+      dimm::width_wizard() - dimm::border() * 2,
+      dimm::height_wizard() - dimm::border() * 2,
+      dimm::border(),
+      dimm::border(),
+    )));
+
+    // Spawn a singleton logger thread that will consume messages and append them to the terminal
+    let term_clone = std::sync::Arc::clone(&term);
+    std::thread::spawn(move ||
     {
-      term.append(&clone_value);
-    } // if
+      while let Ok(log_message) = rx.recv()
+      {
+        // Lock the terminal and append the log message
+        if let Ok(term) = term_clone.try_lock()
+        {
+          term.append(&log_message);
+        } // if
+        else
+        {
+          eprintln!("Failed to acquire terminal lock");
+        } // else
+      }
+    }); // std::thread
+
+    // Return the sender for future calls to impl_log
+    tx
   });
+
+  // Send the log message to the logger thread
+  if let Err(e) = sender.send(value.to_string()) {
+      println!("Failed to send log message: {}", e);
+  }
 } // impl_log() }}}
 
 // macro_rules log! {{{
