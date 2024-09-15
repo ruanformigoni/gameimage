@@ -149,18 +149,12 @@ pub fn icon(tx: Sender<common::Msg>
     menu_source.add_choice(IconFrame::Local.as_str());
     menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
 
-  // Scale icon image size
-  let f_scale = |val: i32| -> i32
-  {
-    (val as f32 * scaling::factor().unwrap_or(1.0)) as i32
-  };
-
   if let Ok(lock) = ICON_FRAME.lock() && *lock == IconFrame::Local
   {
 
     // Create icon box
     let frame_icon = Frame::default()
-      .with_size(f_scale(150), f_scale(225))
+      .with_size(150, 225)
       .center_of(&frame_content)
       .with_frame(FrameType::BorderBox);
 

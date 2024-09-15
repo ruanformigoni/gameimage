@@ -45,6 +45,14 @@ impl Gui
   // fn: new {{{
   pub fn new() -> Self
   {
+    // Detect proper scale
+    
+    match shared::scaling::factor()
+    {
+      Some(scale) => app::set_screen_scale(0, scale),
+      None => log!("Could not apply scaling")
+    } // match
+
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind_main = Window::default()
       .with_label("GameImage")

@@ -1,5 +1,3 @@
-use crate::scaling;
-
 const HEIGHT_WIZARD : i32 = 500;
 const WIDTH_WIZARD  : i32 = 500;
 const HEIGHT_LAUNCHER : i32 = 450;
@@ -31,7 +29,7 @@ macro_rules! function_scale
   {
     pub fn $func_name() -> i32
     {
-      return if let Some(factor) = scaling::factor() { ($baseline as f32 * factor) as i32 } else { $baseline }
+      return $baseline;
     }
   }
 }

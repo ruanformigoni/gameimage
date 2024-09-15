@@ -269,12 +269,10 @@ macro_rules! icon
   {
     pub fn $func_name(scale : f32) -> String
     {
-      let scaling = scaling::factor().unwrap_or(1.0);
-
-      let size_1 = ($size_1 as f32 * scaling * scale) as i32;
+      let size_1 = ($size_1 as f32 * scale) as i32;
       let str_size_1 = size_1.to_string();
 
-      let size_2 = ($size_2 as f32 * scaling * scale) as i32;
+      let size_2 = ($size_2 as f32 * scale) as i32;
       let str_size_2 = size_2.to_string();
 
       let mut result = $icon.replacen("{}", str_size_1.as_str(), 1);
@@ -290,14 +288,8 @@ macro_rules! icon_with_size
   {
     pub fn $func_name(size_1 : i32, size_2 : i32) -> String
     {
-      let scaling = crate::scaling::factor().unwrap_or(1.0);
-
-      let size_1 = (size_1 as f32 * scaling * 1.0) as i32;
       let str_size_1 = size_1.to_string();
-
-      let size_2 = (size_2 as f32 * scaling * 1.0) as i32;
       let str_size_2 = size_2.to_string();
-
       let mut result = $icon.replacen("{}", str_size_1.as_str(), 1);
       result = result.replacen("{}", str_size_2.as_str(), 1);
       result
