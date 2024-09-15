@@ -45,13 +45,11 @@ impl Gui
   // fn: new {{{
   pub fn new() -> Self
   {
-    // Detect proper scale
-    
-    match shared::scaling::factor()
+    match shared::fltk::scale::scale()
     {
-      Some(scale) => app::set_screen_scale(0, scale),
-      None => log!("Could not apply scaling")
-    } // match
+      Ok(()) => (),
+      Err(e) => log!("{}", e)
+    }; // match
 
     let app =  app::App::default().with_scheme(app::Scheme::Gtk);
     let mut wind_main = Window::default()
