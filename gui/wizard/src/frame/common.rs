@@ -79,26 +79,26 @@ pub fn frame_footer() -> RetFrameFooter
 
   // Continue
   let mut btn_next = Button::default()
-    .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
+    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .with_label("Next")
-    .above_of(&output_status, dimm::BORDER);
-  btn_next.set_pos(dimm::width_wizard() - dimm::WIDTH_BUTTON_WIDE - dimm::BORDER, btn_next.y());
+    .above_of(&output_status, dimm::border());
+  btn_next.set_pos(dimm::width_wizard() - dimm::width_button_wide() - dimm::border(), btn_next.y());
   btn_next.set_color(Color::Blue);
 
   // Prev
   let mut btn_prev = Button::default()
-    .with_size(dimm::WIDTH_BUTTON_WIDE, dimm::HEIGHT_BUTTON_WIDE)
+    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .with_label("Prev")
-    .above_of(&output_status, dimm::BORDER);
-  btn_prev.set_pos(dimm::BORDER, btn_prev.y());
+    .above_of(&output_status, dimm::border());
+  btn_prev.set_pos(dimm::border(), btn_prev.y());
   btn_prev.set_color(Color::Background);
 
   // Separator
   let mut sep = Frame::default()
-    .above_of(&btn_next, dimm::BORDER)
-    .with_size(dimm::width_wizard() - dimm::BORDER*2, dimm::height_sep());
+    .above_of(&btn_next, dimm::border())
+    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_sep());
   sep.set_frame(FrameType::BorderBox);
-  sep.set_pos(dimm::BORDER, sep.y());
+  sep.set_pos(dimm::border(), sep.y());
 
   RetFrameFooter { frame, output_status, btn_next, btn_prev, sep }
 
