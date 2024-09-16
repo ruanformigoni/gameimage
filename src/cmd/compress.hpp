@@ -156,10 +156,10 @@ inline decltype(auto) compress()
   std::string str_project;
 
   // Path to current project
-  std::string str_path_project;
+  fs::path path_dir_project_root;
 
   // Path to image
-  std::string str_image;
+  fs::path path_file_image;
 
   ns_db::from_file_default([&](auto&& db)
   {
@@ -167,31 +167,31 @@ inline decltype(auto) compress()
     str_project = db["project"];
 
     // Path to current application
-    str_path_project = ns_fs::ns_path::dir_exists<true>(db[str_project]["path_dir_project"])._ret;
+    path_dir_project_root = ns_fs::ns_path::dir_exists<true>(db[str_project]["path_dir_project_root"])._ret;
 
     // Path to image
-    str_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
+    path_file_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
   }
   , ns_db::Mode::READ);
 
   // Output file
-  std::string str_target = str_path_project + ".dwarfs";
+  fs::path path_file_dwarfs{path_dir_project_root.string() + ".dwarfs"};
 
   // Log
   ns_log::write('i', "project: ", str_project);
-  ns_log::write('i', "image: ", str_image);
-  ns_log::write('i', "dir: ", str_path_project);
+  ns_log::write('i', "image: ", path_file_image);
+  ns_log::write('i', "dwarfs: ", path_file_dwarfs);
   
   // Compress
   ns_subprocess::sync("/fim/static/fim_portal"
-    , str_image
+    , path_file_image
     , "fim-layer"
     , "create"
-    , str_path_project
-    , str_target
+    , path_dir_project_root
+    , path_file_dwarfs
   );
 
-  ns_log::write('i', "Wrote file to '", str_target, "'");
+  ns_log::write('i', "Wrote file to '", path_file_dwarfs, "'");
 } // compress() }}}
 
 } // namespace ns_compress

@@ -19,6 +19,9 @@
 inline const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
 
 // macros {{{
+#define throw_if(cond, msg) \
+  if (cond) { throw std::runtime_error(msg); }
+
 #define return_if(cond, ...) \
   if (cond) { return __VA_ARGS__; }
 

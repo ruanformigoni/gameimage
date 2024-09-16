@@ -28,14 +28,21 @@ namespace fs = std::filesystem;
 
 // init() {{{
 inline void init(std::string const& str_platform
-  , std::string const& str_path_project
-  , std::string const& str_path_image)
+  , fs::path path_dir_project
+  , fs::path path_file_image)
 {
-  // Set paths
+  // Set platform
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-  fs::path path_image        = ns_fs::ns_path::file_exists<true>(str_path_image)._ret;
-  fs::path path_dir_project  = ns_fs::ns_path::dir_create<true>(str_path_project)._ret;
-  fs::path path_dir_build    = path_dir_project.parent_path();
+  // Set path to runner flatimage
+  path_file_image   = ns_fs::ns_path::file_exists<true>(path_file_image)._ret;
+  // Create project dir and return an absolute path to it
+  fs::path path_dir_project_root  = ns_fs::ns_path::dir_create<true>(path_dir_project)._ret;
+  // Verify if build dir exists and return an absolute path for it
+  fs::path path_dir_build = ns_fs::ns_path::dir_exists<true>(path_dir_project_root.parent_path())._ret;
+  // The actual project files are nested in /opt/gameimage-games, because that's where they'll be in
+  // the final flatimage
+  path_dir_project = ns_fs::ns_path::dir_create<true>(path_dir_project / "opt" / "gameimage-games" / path_dir_project.filename())._ret;
+  // Configure data directory names
   fs::path path_dir_config   = "config";
   fs::path path_dir_data     = "data";
   fs::path path_dir_rom      = "rom";
@@ -51,19 +58,20 @@ inline void init(std::string const& str_platform
   } // if
 
   // Log
-  ns_log::write('i', "platform         : ", str_platform);
-  ns_log::write('i', "image            : ", path_image);
-  ns_log::write('i', "path_dir_project : ", path_dir_project);
-  ns_log::write('i', "path_dir_build   : ", path_dir_build);
-  ns_log::write('i', "path_dir_config  : ", path_dir_config);
-  ns_log::write('i', "path_dir_data    : ", path_dir_data);
-  ns_log::write('i', "path_dir_rom     : ", path_dir_rom);
-  ns_log::write('i', "path_dir_core    : ", path_dir_core);
-  ns_log::write('i', "path_dir_bios    : ", path_dir_bios);
-  ns_log::write('i', "path_dir_keys    : ", path_dir_keys);
+  ns_log::write('i', "platform              :", str_platform);
+  ns_log::write('i', "image                 :", path_file_image);
+  ns_log::write('i', "path_dir_project_root :", path_dir_project_root);
+  ns_log::write('i', "path_dir_project      :", path_dir_project);
+  ns_log::write('i', "path_dir_build        :", path_dir_build);
+  ns_log::write('i', "path_dir_config       :", path_dir_config);
+  ns_log::write('i', "path_dir_data         :", path_dir_data);
+  ns_log::write('i', "path_dir_rom          :", path_dir_rom);
+  ns_log::write('i', "path_dir_core         :", path_dir_core);
+  ns_log::write('i', "path_dir_bios         :", path_dir_bios);
+  ns_log::write('i', "path_dir_keys         :", path_dir_keys);
 
   // Check if data file exists
-  ns_fs::ns_path::file_exists<true>(path_image);
+  ns_fs::ns_path::file_exists<true>(path_file_image);
 
   // Check if project directory parent exists
   ns_fs::ns_path::dir_exists<true>(path_dir_project.parent_path());
@@ -93,9 +101,10 @@ inline void init(std::string const& str_platform
     db_global("projects") |= str_name;
 
     // Set data
-    db_global(str_name)("path_file_image")   = path_image;
-    db_global(str_name)("path_dir_project") = path_dir_project;
-    db_global(str_name)("platform")     = ns_enum::to_string(platform);
+    db_global(str_name)("path_file_image")       = path_file_image;
+    db_global(str_name)("path_dir_project")      = path_dir_project;
+    db_global(str_name)("path_dir_project_root") = path_dir_project_root;
+    db_global(str_name)("platform")              = ns_enum::to_string(platform);
   }
   , fs::exists(ns_db::file_default())? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
 

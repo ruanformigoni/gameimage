@@ -35,7 +35,7 @@ fn get_platform(path_dir_root : &std::path::PathBuf) -> anyhow::Result<common::P
 // pub fn mounts() {{{
 pub fn mounts() -> anyhow::Result<Vec<Data>>
 {
-  let vec_entries : Vec<DirEntry> = fs::read_dir("/fim/mount")?
+  let vec_entries : Vec<DirEntry> = fs::read_dir("/opt/gameimage-games")?
     .filter_map(|e| { e.ok() })
     .filter(|e|{ e.path().is_dir() })
     .collect();
