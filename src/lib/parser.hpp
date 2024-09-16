@@ -337,10 +337,10 @@ class Package final : public Parser
       m_enum_stage = ns_enum::Stage::PACKAGE;
 
       // Set args
-      m_parser->add_argument("dwarfs")
-        .action([&](std::string const& s){ m_map_option_value["dwarfs"]=s; })
+      m_parser->add_argument("name")
+        .action([&](std::string const& s){ m_map_option_value["name"]=s; })
         .required()
-        .help("Path to the dwarfs filesystem to include in the project image");
+        .help("Name of the project to include in the image");
     } // Package
 }; // class: Package }}}
 

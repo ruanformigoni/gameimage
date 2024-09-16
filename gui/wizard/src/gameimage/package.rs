@@ -1,17 +1,15 @@
-use shared::std::PathBufExt;
-
 use anyhow::anyhow as ah;
 
 use crate::gameimage::gameimage;
 
 // pub fn package() {{{
-pub fn package(path : &std::path::PathBuf) -> anyhow::Result<()>
+pub fn package(name : &str) -> anyhow::Result<()>
 {
   // Wait for message & check return value
-  match gameimage::gameimage_sync(vec!["package", &path.string()])
+  match gameimage::gameimage_sync(vec!["package", &name])
   {
     0 => Ok(()),
-    ret => Err(ah!("Could not include {} into the image: {}", path.string(), ret)),
+    ret => Err(ah!("Could not include project '{}' into the image: {}", name, ret)),
   } // match
 } // fn: package }}}
 
