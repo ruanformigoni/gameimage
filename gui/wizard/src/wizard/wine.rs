@@ -16,8 +16,6 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
-use anyhow::anyhow as ah;
-
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::dimm;
@@ -54,14 +52,8 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 // get_path_db() {{{
 fn get_path_db() -> anyhow::Result<std::path::PathBuf>
 {
-  let entry = db::global::read()?;
-
-  let path_dir_db = entry
-      .path_dir_build
-      .ok_or(ah!("Could not read build dir to set env"))?
-      .join(entry.project.ok_or(ah!("Could not read project dir to set env"))?);
-
-  Ok(path_dir_db)
+  let global = db::global::read()?;
+  Ok(global.get_project_dir(&global.project.string())?)
 } // get_path_db() }}}
 
 // get_path_db_executable() {{{
@@ -225,16 +217,15 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     // Get path to wine prefix
-    let path_dir_wine_prefix = if let Ok(project) = db::project::current()
-      && let Ok(path_dir_self) = project.get_dir_self()
+    let path_dir_wine_prefix = match db::project::current()
+    {
+      Ok(project) => match project.get_dir_self()
       {
-        path_dir_self.join("wine")
-      } // if
-      else
-      {
-        log!("Could not get path to current project");
-        return;
-      }; // else
+        Ok(path_dir_self) => path_dir_self.join("wine"),
+        Err(e) => log_return_void!("{}", e)
+      } // match
+      Err(e) => log_return_void!("{}", e)
+    }; // match
 
     if ! path_dir_wine_prefix.exists()
     {

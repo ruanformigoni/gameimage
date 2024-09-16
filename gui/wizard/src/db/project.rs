@@ -20,8 +20,8 @@ pub enum EntryName
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Entry
 {
-  project        : Option<String>,
-  platform       : Option<String>,
+  project        : String,
+  platform       : String,
   path_file_icon : Option<PathBuf>,
   path_file_rom  : Option<PathBuf>,
   path_file_core : Option<PathBuf>,
@@ -33,28 +33,28 @@ impl Entry
 
 pub fn get_project(&self) -> anyhow::Result<String>
 {
-  Ok(self.project.clone().ok_or(ah!("Could not read project name"))?)
+  Ok(self.project.clone())
 } // project
 
 pub fn get_platform(&self) -> anyhow::Result<String>
 {
-  Ok(self.platform.clone().ok_or(ah!("Could not read platform name"))?)
+  Ok(self.platform.clone())
 } // project
 
 pub fn get_dir_self(&self) -> anyhow::Result<PathBuf>
 {
   // Get the build dir
-  let path_dir_build = global::read()?.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
+  let db = global::read()?;
 
   // Get project name
-  let project = match self.get_project()
+  let name_project = match self.get_project()
   {
-    Ok(project) => project,
+    Ok(name_project) => name_project,
     Err(e) => return Err(ah!("Could not get project name: {}", e)),
   };
 
-  // Get project dir == build_dir / project_name
-  Ok(path_dir_build.join(project))
+  // Return project dir
+  Ok(db.get_project_dir(&name_project)?)
 }
 
 pub fn get_path_absolute(&self, entry: EntryName) -> anyhow::Result<PathBuf>
@@ -110,15 +110,10 @@ pub fn list() -> anyhow::Result<Entries>
   // Get global info
   let global = global::read()?;
 
-  // Get the build dir
-  let path_dir_build = global.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
-
-  for project in global::read()?
-    .projects
-    .ok_or(ah!("Could not read projects from global database"))?
+  for project in global::read()?.projects
   {
     // Expected project directory
-    let path_dir_project = path_dir_build.join(project);
+    let path_dir_project = global.get_project_dir(&project.string())?;
 
     // Expected json file
     let path_file_json = path_dir_project.join("gameimage.json");
@@ -152,15 +147,8 @@ pub fn current() -> anyhow::Result<Entry>
   // Get global info
   let global = global::read()?;
 
-  // Get the build dir
-  let path_dir_build = global.path_dir_build.ok_or(ah!("Failed to fetch build dir"))?;
-
   // Get the current project
-  let path_dir_project = match global.project.ok_or(ah!("Could not get project dir"))
-  {
-    Ok(project) => path_dir_build.join(project),
-    Err(e) => { log!("Could not read project directory with error: {}", e); return Err(e); },
-  };
+  let path_dir_project = global.get_project_dir(&global.project.string())?;
 
   // Path to file with the project info
   let path_file_project = path_dir_project.join("gameimage.json");
