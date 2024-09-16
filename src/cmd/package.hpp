@@ -30,7 +30,7 @@ inline void package(std::string const& str_name_project)
   ns_db::from_file_default([&](auto&& db)
   {
     path_file_image = fs::path(db[str_name_project]["path_file_image"]);
-    path_dir_project_root = fs::path(db["path_dir_project_root"]);
+    path_dir_project_root = fs::path(db[str_name_project]["path_dir_project_root"]);
     path_dir_build = fs::path(db["path_dir_build"]);
   }
   , ns_db::Mode::READ);
