@@ -64,6 +64,12 @@ inline void package(std::string const& str_name_project)
     , path_file_launcher
     , "/fim/static/gameimage-launcher");
 
+  // Commit changes into the image
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_file_image
+    , "fim-commit"
+  );
+
   // Set boot command
   ns_subprocess::sync("/fim/static/fim_portal"
     , path_file_image
