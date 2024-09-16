@@ -8,7 +8,7 @@ use fltk::{
   app::*,
   prelude::*,
   window::Window,
-  enums::FrameType,
+  enums::{FrameType,Font},
 };
 
 use shared::svg;
@@ -53,6 +53,14 @@ pub fn new() -> Self
     .with_label("GameImage")
     .with_size(dimm::width_launcher(), dimm::height_launcher())
     .center_screen();
+
+  // Font
+  if let Ok(font) = Font::load_font("/usr/share/fonts/noto/NotoSans-Regular.ttf")
+  {
+    Font::set_font(Font::Helvetica, &font);
+    app::set_font(Font::Helvetica);
+    app::set_font_size(12);
+  } // if
 
   // Window icon
   if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
