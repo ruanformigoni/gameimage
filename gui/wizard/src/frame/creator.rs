@@ -218,7 +218,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     {
       return;
     } // if
-    
+
     match clone_vec_btn.lock()
     {
       Ok(e) => if e.is_empty()
@@ -262,19 +262,19 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       {
         if ! checkbutton.is_checked() { continue; } // if
 
-        let path_file_dwarfs = path_dir_project.with_extension("dwarfs");
+        let name_project = path_dir_project.file_name().unwrap_or_default().to_string_lossy().to_string();
 
-        log!("File: {}", path_file_dwarfs.string());
+        log!("Project to include in the image: {}", name_project);
 
         // Wait for message & check return value
-        match gameimage::package::package(&path_file_dwarfs)
+        match gameimage::package::package(&name_project)
         {
-          Ok(()) => log!("Packaged {}", path_file_dwarfs.string()),
+          Ok(()) => log!("Packaged {}", name_project),
           Err(e) =>
           {
             clone_tx.send_awake(common::Msg::WindActivate);
             clone_tx.send_awake(common::Msg::DrawCreator);
-            log!("Could not include {} into the image: {}", path_file_dwarfs.string(), e);
+            log!("Could not include {} into the image: {}", name_project, e);
           },
         } // match
       } // for
