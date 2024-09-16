@@ -193,6 +193,4 @@ fn main()
   let _ = Gui::new().init();
 } // }}}
 
-// cmd: !BIN_WINE="/home/ruan/Experiments/test.lua" GIMG_PLATFORM=retroarch GIMG_PKG_TYPE=flatimage GIMG_LAUNCHER_NAME=prostreet GIMG_LAUNCHER_IMG=/home/ruan/Pictures/prostreet.png cargo run --release
-
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
