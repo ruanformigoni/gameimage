@@ -37,13 +37,13 @@ mkdir -p "$BIN_DIR"
 # Compile wizard
 docker build . -t gameimage-wizard-build -f deploy/Dockerfile.wizard.build
 docker run --rm -v "$(pwd)":/workdir gameimage-wizard-build cp /dist/wizard /workdir
-cp -vf ./wizard ./build/app/bin/gameimage-wizard
+cp -vf ./wizard "$BIN_DIR"/gameimage-wizard
 rm -vf ./wizard
 
 # Launcher does not need to be static since it runs inside the arch container
 docker build . -t gameimage-launcher-build -f deploy/Dockerfile.launcher.build
 docker run --rm -v "$(pwd)":/workdir gameimage-launcher-build cp /dist/launcher /workdir
-cp -vf ./launcher ./build/app/bin/gameimage-launcher
+cp -vf ./launcher "$BIN_DIR"/gameimage-launcher
 rm -vf ./launcher
 
 # Create backend
