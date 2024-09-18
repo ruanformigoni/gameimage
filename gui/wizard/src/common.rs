@@ -181,6 +181,29 @@ macro_rules! log_return_void
 }
 // }}}
 
+// fn: log_fd() {{{
+pub fn log_fd<T: std::io::Read>(mut fd: T, tx: std::sync::mpsc::Sender<String>) -> impl FnMut() -> ()
+{
+  // let (rx, tx) = mpsc::channel();
+  return move ||
+  {
+    // Use buf to write buf to stdout
+    loop
+    {
+      let mut buf = vec![0; 4096];
+      let bytes_read = match fd.read(&mut buf)
+      {
+        Ok(bytes_read) => bytes_read,
+        Err(_) => break,
+      }; // match
+      if bytes_read == 0 { break; }
+      let mut output = String::from_utf8_lossy(&buf[..bytes_read]).to_string();
+      output = output.trim().to_string();
+      let _ = tx.send(output);
+    } // loop
+  }; // return
+} // fn: log_fd() }}}
+
 // pub fn wizard_by_platform() {{{
 pub fn wizard_by_platform() -> anyhow::Result<Msg>
 {

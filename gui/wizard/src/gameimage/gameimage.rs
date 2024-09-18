@@ -27,29 +27,6 @@ pub fn dir_build() -> anyhow::Result<()>
   Ok(env::set_current_dir(std::path::PathBuf::from(env::var("GIMG_DIR")?))?)
 } // fn: dir_build }}}
 
-// fn: log_fd() {{{
-fn log_fd<T: Read>(mut fd : T, tx : mpsc::Sender<String>) -> impl FnMut() -> ()
-{
-  // let (rx, tx) = mpsc::channel();
-  return move ||
-  {
-    // Use buf to write buf to stdout
-    loop
-    {
-      let mut buf = vec![0; 4096];
-      let bytes_read = match fd.read(&mut buf)
-      {
-        Ok(bytes_read) => bytes_read,
-        Err(_) => break,
-      }; // match
-      if bytes_read == 0 { break; }
-      let mut output = String::from_utf8_lossy(&buf[..bytes_read]).to_string();
-      output = output.trim().to_string();
-      let _ = tx.send(output);
-    } // loop
-  }; // return
-} // fn: log_fd() }}}
-
 // pub fn gameimage_async() {{{
 pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
 {
@@ -77,8 +54,8 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
   std::thread::spawn(move ||
   {
     let (tx_log, rx_log) = mpsc::channel();
-    let handle_stdout = std::thread::spawn(log_fd(stdout.unwrap(), tx_log.clone()));
-    let handle_stderr = std::thread::spawn(log_fd(stderr.unwrap(), tx_log));
+    let handle_stdout = std::thread::spawn(common::log_fd(stdout.unwrap(), tx_log.clone()));
+    let handle_stderr = std::thread::spawn(common::log_fd(stderr.unwrap(), tx_log));
     while let Ok(msg) = rx_log.recv()
     {
       log!("{}", msg);
