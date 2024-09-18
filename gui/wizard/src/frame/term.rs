@@ -2,7 +2,7 @@ use std::{
   fs,
   path::PathBuf,
   sync::{Arc, Mutex},
-  io::{Read, Write},
+  io::Write,
   process::{Command, Stdio, Child},
   sync::mpsc,
 };
@@ -21,6 +21,7 @@ use shared::fltk::WidgetExtExtra;
 use crate::dimm;
 use crate::common;
 use crate::log;
+use crate::log_err;
 
 // struct Term {{{
 #[derive(Clone)]
@@ -28,8 +29,6 @@ pub struct Term
 {
   // Current process in the terminal
   opt_proc_thread : Option<(Arc<Mutex<std::process::Child>>, Arc<Mutex<Option<std::thread::JoinHandle<()>>>>)>,
-  // Terminate with signal
-  opt_tx : Option<std::sync::mpsc::Sender<bool>>,
   // Terminal gui
   pub term : SimpleTerminal,
 } // struct Term }}}
@@ -87,7 +86,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
     });
 
   // Return new term
-  Term{ term, opt_proc_thread: None, opt_tx: None }
+  Term{ term, opt_proc_thread: None }
 } // new() }}}
 
 // kill() {{{
@@ -105,9 +104,6 @@ fn kill(&mut self, opt_proc_thread : Option<(Arc<Mutex<std::process::Child>>, Ar
     Ok(mut guard) => { let _ = guard.kill(); let _ = guard.wait(); },
     Err(e) => { log!("Could not lock arc with error: {}", e); return; }
   }; // match
-
-  // Send stop signal to thread
-  if let Some(tx) = self.opt_tx.take() { let _ = tx.send(true); } // if
 
   // Wait for thread
   match thread.lock()
@@ -128,12 +124,13 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
     .env("FIM_FIFO", "0")
     .args(cmd_args)
     .stdin(Stdio::piped())
-    .stderr(Stdio::inherit())
+    .stderr(Stdio::piped())
     .stdout(Stdio::piped())
     .spawn()?;
 
   // Create arc reader for stdout
   let arc_stdout = Arc::new(Mutex::new(reader_cmd.stdout.take()));
+  let arc_stderr = Arc::new(Mutex::new(reader_cmd.stderr.take()));
 
   // Put child in arc
   let arc_reader = Arc::new(Mutex::new(reader_cmd));
@@ -144,47 +141,22 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
   // Setup callback
   let mut clone_term = self.term.clone();
   let clone_arc_stdout = arc_stdout.clone();
-  let (tx, rx) = mpsc::channel::<bool>();
+  let clone_arc_stderr = arc_stderr.clone();
   let clone_arc_reader = arc_reader.clone();
   let handle = std::thread::spawn(move ||
   {
-    // Write buf to stdout
-    loop
+    let (tx_log, rx_log) = mpsc::channel::<String>();
+    let f_callback = move |tx : mpsc::Sender<String>, msg : String| { log_err!(tx.send(msg)); };
+    let handle_stdout = std::thread::spawn(common::log_fd(clone_arc_stdout.lock().unwrap().take().unwrap(), tx_log.clone(), f_callback.clone()));
+    let handle_stderr = std::thread::spawn(common::log_fd(clone_arc_stderr.lock().unwrap().take().unwrap(), tx_log, f_callback));
+    while let Ok(msg) = rx_log.recv()
     {
-      // Stop loop when requested
-      if let Ok(true) = rx.try_recv() { log!("Killed by message"); break; } // if
-
-      // Wait a bit to avoid over consumption
-      std::thread::sleep(std::time::Duration::from_millis(50));
-
-      // Acquire stdout
-      let mut guard = match clone_arc_stdout.lock()
-      {
-        Ok(guard) => guard,
-        Err(e) => { log!("Failed to acquire mut stdout: {}", e); return; },
-      }; // match
-
-      // Create buf
-      let mut buf = vec![0; 4096];
-
-      let bytes_read = if let Some(stdout) = guard.as_mut()
-      && let Ok(bytes_read) = stdout.read(&mut buf)
-      {
-        bytes_read
-      }
-      else
-      {
-        log!("Could not get stdout");
-        break;
-      };
-
-      if bytes_read == 0 { log!("Break subprocess due to no bytes left to read"); break; }
-      let output = String::from_utf8_lossy(&buf[..bytes_read]);
-      clone_term.insert(&output);
+      clone_term.insert(&msg);
       clone_term.show_insert_position();
-
       app::awake();
-    } // loop
+    } // while
+    log_err!(handle_stdout.join());
+    log_err!(handle_stderr.join());
 
     // Make callback
     let code_return : i32 = if let Ok(mut lock) = clone_arc_reader.lock()
@@ -196,9 +168,6 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
 
   // Save proc & thread handle
   self.opt_proc_thread = Some((arc_reader.clone(), Arc::new(Mutex::new(Some(handle)))));
-
-  // Transmitter to the thread
-  self.opt_tx = Some(tx);
 
   Ok(arc_reader.clone())
 } // dispatch() }}}
