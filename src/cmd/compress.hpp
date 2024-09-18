@@ -181,6 +181,12 @@ inline decltype(auto) compress()
   ns_log::write('i', "project: ", str_project);
   ns_log::write('i', "image: ", path_file_image);
   ns_log::write('i', "dwarfs: ", path_file_dwarfs);
+
+  // Commit
+  ns_subprocess::sync("/fim/static/fim_portal"
+    , path_file_image
+    , "fim-commit"
+  );
   
   // Compress
   ns_subprocess::sync("/fim/static/fim_portal"
