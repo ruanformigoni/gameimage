@@ -58,7 +58,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
     , "");
   term.set_pos(x, y);
   term.set_text_color(Color::White);
-  term.set_text_size((dimm::height_text() as f64 * 0.7) as i32);
+  term.set_text_size(dimm::height_text());
   term.wrap_mode(fltk::text::WrapMode::None, 0);
   term.set_history_lines(std::i32::MAX);
 
