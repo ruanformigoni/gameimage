@@ -150,6 +150,21 @@ macro_rules! log
 }
 // }}}
 
+// macro_rules log_err! {{{
+#[macro_export]
+macro_rules! log_err
+{
+  ($result:expr) =>
+  {
+    match $result
+    {
+      Ok(()) => (),
+      Err(e) => log!("{:?}", e),
+    }
+  }
+}
+// }}}
+
 // macro_rules log_return_err! {{{
 #[macro_export]
 macro_rules! log_return_err
