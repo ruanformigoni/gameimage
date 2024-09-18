@@ -1,6 +1,5 @@
 use std::
 {
-  io::prelude::*,
   env,
   sync::{Arc,Mutex,mpsc},
 };
@@ -54,11 +53,13 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<mpsc::Receiver<i32>>
   std::thread::spawn(move ||
   {
     let (tx_log, rx_log) = mpsc::channel();
-    let handle_stdout = std::thread::spawn(common::log_fd(stdout.unwrap(), tx_log.clone()));
-    let handle_stderr = std::thread::spawn(common::log_fd(stderr.unwrap(), tx_log));
+    let f_callback = |tx : mpsc::Sender<String>, msg| { log_err!(tx.send(msg)); };
+    let handle_stdout = std::thread::spawn(common::log_fd(stdout.unwrap(), tx_log.clone(), f_callback));
+    let handle_stderr = std::thread::spawn(common::log_fd(stderr.unwrap(), tx_log, f_callback));
     while let Ok(msg) = rx_log.recv()
     {
       log!("{}", msg);
+      fltk::app::awake();
     } // while
 
     log_err!(handle_stdout.join());
