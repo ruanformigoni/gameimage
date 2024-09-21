@@ -275,6 +275,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
             clone_tx.send_awake(common::Msg::WindActivate);
             clone_tx.send_awake(common::Msg::DrawCreator);
             log!("Could not include {} into the image: {}", name_project, e);
+            return;
           },
         } // match
       } // for
