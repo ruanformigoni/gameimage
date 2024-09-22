@@ -144,7 +144,7 @@ cp ~/Public/alpine.flatimage "$IMAGE"
 "$IMAGE" fim-env set 'PATH=/opt/gameimage/bin:"$PATH"' 'GIMG_BACKEND="/opt/gameimage/bin/gameimage-cli"'
 
 # Set boot command
-"$IMAGE" fim-boot /opt/gameimage/bin/gameimage-wizard
+"$IMAGE" fim-boot sh -c '/opt/gameimage/bin/gameimage-wizard'
 
 # Copy binaries
 "$IMAGE" fim-exec cp -r "$BUILD_DIR"/app /opt/gameimage
