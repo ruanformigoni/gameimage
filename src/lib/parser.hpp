@@ -320,6 +320,12 @@ class Desktop final : public Parser
       m_enum_stage = ns_enum::Stage::DESKTOP;
 
       // Set args
+      m_parser->add_argument("name")
+        .action([&](std::string const& s){ m_map_option_value["name"]=s; })
+        .required()
+        .help("Set the name of the game");
+
+      // Set args
       m_parser->add_argument("icon")
         .action([&](std::string const& s){ m_map_option_value["icon"]=s; })
         .required()

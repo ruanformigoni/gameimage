@@ -28,7 +28,7 @@ enum class IntegrationItems
 }
 
 // desktop() {{{
-inline decltype(auto) desktop(fs::path path_file_icon, std::string str_items)
+inline decltype(auto) desktop(std::string str_name, fs::path path_file_icon, std::string str_items)
 {
   // Validate icon path
   path_file_icon = ns_fs::ns_path::file_exists<true>(path_file_icon)._ret;
@@ -39,9 +39,6 @@ inline decltype(auto) desktop(fs::path path_file_icon, std::string str_items)
     , [](auto&& e){ return ns_enum::from_string<IntegrationItems>(e); }
   );
   throw_if(vec_items.empty(), "No integration items available");
-
-  // Current application
-  std::string str_project;
 
   // Path to flatimage
   fs::path path_file_flatimage;
@@ -54,7 +51,7 @@ inline decltype(auto) desktop(fs::path path_file_icon, std::string str_items)
   ns_db::from_file_default([&](auto&& db)
   {
     // Current application
-    str_project = db["project"];
+  std::string str_project = db["project"];
 
     // Path to flatimage
     path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
@@ -70,7 +67,7 @@ inline decltype(auto) desktop(fs::path path_file_icon, std::string str_items)
   ns_db::from_file(path_file_desktop
   , [&](auto&& db)
   {
-    db("name") = str_project;
+    db("name") = str_name;
     db("icon") = path_file_icon;
     db("categories") = std::vector<std::string>{"Game"};
   }, ns_db::Mode::CREATE);

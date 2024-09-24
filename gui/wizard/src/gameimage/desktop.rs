@@ -7,11 +7,11 @@ use crate::log;
 use crate::gameimage::gameimage;
 
 // pub fn desktop() {{{
-pub fn desktop(path : &std::path::PathBuf, items: &str) -> anyhow::Result<()>
+pub fn desktop(name: &str, path : &std::path::PathBuf, items: &str) -> anyhow::Result<()>
 {
   log!("Integration items: {}", items);
   // Wait for message & check return value
-  match gameimage::gameimage_sync(vec!["desktop", &path.string(), items])
+  match gameimage::gameimage_sync(vec!["desktop", name, &path.string(), items])
   {
     0 => Ok(()),
     ret => Err(ah!("Could not include {} into the image: {}", path.string(), ret)),
