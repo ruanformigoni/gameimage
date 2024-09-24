@@ -177,6 +177,14 @@ inline decltype(auto) compress()
   // Output file
   fs::path path_file_dwarfs{path_dir_project_root.string() + ".dwarfs"};
 
+  // Erase if exists
+  std::error_code ec;
+  fs::remove(path_file_dwarfs, ec);
+  if ( ec )
+  {
+    ns_log::write('e', "Could not remove file ", path_file_dwarfs);
+  } // if
+
   // Log
   ns_log::write('i', "project: ", str_project);
   ns_log::write('i', "image: ", path_file_image);

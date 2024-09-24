@@ -74,6 +74,8 @@ inline void package(std::string const& str_name_project)
   ns_subprocess::sync("/fim/static/fim_portal"
     , path_file_image
     , "fim-boot"
+    , "/bin/bash"
+    , "-c"
     , "/fim/static/gameimage-launcher"
   );
 
