@@ -324,6 +324,12 @@ class Desktop final : public Parser
         .action([&](std::string const& s){ m_map_option_value["icon"]=s; })
         .required()
         .help("Path to the file to use as icon");
+
+      // Set args
+      m_parser->add_argument("items")
+        .action([&](std::string const& s){ m_map_option_value["items"]=s; })
+        .required()
+        .help("Items to enable in desktop integration [entry,mimetype,icon]");
     } // Desktop
 }; // class: Desktop }}}
 

@@ -1,14 +1,17 @@
-use shared::std::PathBufExt;
-
 use anyhow::anyhow as ah;
 
+use shared::std::PathBufExt;
+
+use crate::common;
+use crate::log;
 use crate::gameimage::gameimage;
 
 // pub fn desktop() {{{
-pub fn desktop(path : &std::path::PathBuf) -> anyhow::Result<()>
+pub fn desktop(path : &std::path::PathBuf, items: &str) -> anyhow::Result<()>
 {
+  log!("Integration items: {}", items);
   // Wait for message & check return value
-  match gameimage::gameimage_sync(vec!["desktop", &path.string()])
+  match gameimage::gameimage_sync(vec!["desktop", &path.string(), items])
   {
     0 => Ok(()),
     ret => Err(ah!("Could not include {} into the image: {}", path.string(), ret)),

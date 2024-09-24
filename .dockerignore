@@ -1,4 +1,5 @@
-build/
+build
+deploy
 gui/target
 gui/shared/target
 gui/launcher/target

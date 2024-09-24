@@ -73,13 +73,13 @@ std::string to_upper(T&& t)
 } // to_upper() }}}
 
 // from_container() {{{
-template<typename T>
-std::string from_container(T&& t, char sep = ' ')
+template<typename T, typename F = std::function<std::string(typename std::remove_cvref_t<T>::value_type)>>
+std::string from_container(T&& t, char sep = ' ', F&& f = [](auto&& e){ return e; })
 {
   std::stringstream ret;
   for( auto it = t.begin(); it != t.end(); ++it )
   {
-    ret << *it;
+    ret << f(*it);
     if ( std::next(it) != t.end() ) { ret << sep; }
   } // if
   return ret.str();

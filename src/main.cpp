@@ -180,7 +180,7 @@ void test()
 // desktop() {{{
 void desktop(ns_parser::Parser const& parser)
 {
-  ns_desktop::desktop(parser["icon"]);
+  ns_desktop::desktop(parser["icon"], parser["items"]);
 } // desktop() }}}
 
 // package() {{{

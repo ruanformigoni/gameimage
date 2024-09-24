@@ -8,17 +8,37 @@
 
 #include "../lib/db.hpp"
 #include "../lib/subprocess.hpp"
+#include "../std/vector.hpp"
 
 namespace ns_desktop
 {
 
+namespace
+{
+
 namespace fs = std::filesystem;
 
+enum class IntegrationItems
+{
+  MIMETYPE,
+  ENTRY,
+  ICON
+};
+
+}
+
 // desktop() {{{
-inline decltype(auto) desktop(fs::path path_file_icon)
+inline decltype(auto) desktop(fs::path path_file_icon, std::string str_items)
 {
   // Validate icon path
   path_file_icon = ns_fs::ns_path::file_exists<true>(path_file_icon)._ret;
+
+  // Validate items
+  auto vec_items = ns_vector::from_string<std::vector<IntegrationItems>>(str_items
+    , ','
+    , [](auto&& e){ return ns_enum::from_string<IntegrationItems>(e); }
+  );
+  throw_if(vec_items.empty(), "No integration items available");
 
   // Current application
   std::string str_project;
@@ -67,7 +87,8 @@ inline decltype(auto) desktop(fs::path path_file_icon)
     , path_file_flatimage
     , "fim-desktop"
     , "enable"
-    , "entry,mimetype,icon");
+    , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); })
+  );
 
   // Commit changes into the image
   ns_subprocess::sync("/fim/static/fim_portal"
@@ -75,7 +96,7 @@ inline decltype(auto) desktop(fs::path path_file_icon)
     , "fim-commit"
   );
 } // desktop() }}}
- 
+
 } // namespace ns_test
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

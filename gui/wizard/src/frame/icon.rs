@@ -21,7 +21,6 @@ use shared::fltk::WidgetExtExtra;
 use anyhow::anyhow as ah;
 
 use shared::fltk::SenderExt;
-use shared::scaling;
 use shared::std::PathBufExt;
 
 use crate::dimm;
@@ -100,6 +99,8 @@ pub struct Icon
   pub ret_frame_header   : crate::frame::common::RetFrameHeader,
   pub ret_frame_footer   : crate::frame::common::RetFrameFooter,
   pub arc_path_file_icon : Arc<Mutex<Option<PathBuf>>>,
+  pub opt_frame_icon     : Option<Frame>,
+  pub opt_input_icon     : Option<FileInput>
 } // Icon }}}
 
 // pub fn icon() {{{
@@ -117,9 +118,12 @@ pub fn icon(tx: Sender<common::Msg>
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
 
-  let ret = Icon{ ret_frame_header: ret_frame_header.clone()
+  let mut ret = Icon
+  {   ret_frame_header: ret_frame_header.clone()
     , ret_frame_footer: ret_frame_footer.clone()
     , arc_path_file_icon: OPTION_PATH_FILE_ICON.clone()
+    , opt_frame_icon: None
+    , opt_input_icon: None
   };
 
   let frame_content = ret_frame_header.frame_content.clone();
@@ -157,6 +161,7 @@ pub fn icon(tx: Sender<common::Msg>
       .with_size(150, 225)
       .center_of(&frame_content)
       .with_frame(FrameType::BorderBox);
+    ret.opt_frame_icon = Some(frame_icon.clone());
 
     // Icon
     let mut input_icon = FileInput::default()
@@ -165,6 +170,7 @@ pub fn icon(tx: Sender<common::Msg>
       .with_posx_of(&menu_source)
       .with_align(Align::Top | Align::Left);
     input_icon.set_readonly(true);
+    ret.opt_input_icon = Some(input_icon.clone());
 
     if let Ok(option_path_file_icon) = OPTION_PATH_FILE_ICON.lock()
     && let Some(path_file_icon) = option_path_file_icon.as_ref()
