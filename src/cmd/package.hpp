@@ -73,7 +73,7 @@ inline void package(std::string const& str_name_project)
     , "/fim/static/gameimage-launcher"
   );
 
-  // Commit changes into the image
+  // Enable notify-send
   ns_subprocess::sync("/fim/static/fim_portal"
     , path_file_image
     , "fim-notify"
