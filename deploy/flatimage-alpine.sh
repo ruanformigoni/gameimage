@@ -138,7 +138,7 @@ cp ~/Public/alpine.flatimage "$IMAGE"
 "$IMAGE" fim-perms add home,media,network,xorg,wayland
 
 # Install dependencies
-"$IMAGE" fim-root apk add libxinerama libxcursor font-noto xz tar
+"$IMAGE" fim-root apk add libxkbcommon libxinerama libxcursor font-noto xz tar libssl3
 
 # Set environment variables
 "$IMAGE" fim-env set 'PATH=/opt/gameimage/bin:"$PATH"' 'GIMG_BACKEND="/opt/gameimage/bin/gameimage-cli"'

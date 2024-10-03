@@ -4,10 +4,12 @@ FROM archlinux:latest
 RUN pacman -Syy --noconfirm
 RUN pacman-key --init
 RUN pacman -S --noconfirm archlinux-keyring
-RUN pacman -Syu --noconfirm
+RUN pacman -Syu --overwrite "*" --noconfirm
 
 # Install dependencies
-RUN pacman -S --noconfirm autoconf automake binutils bison debugedit fakeroot file findutils flex gawk gcc gettext grep groff gzip libtool m4 make patch pkgconf sed sudo texinfo which git cmake gtk3 
+RUN pacman -S --noconfirm --overwrite "*" autoconf automake binutils bison debugedit fakeroot \
+  file findutils flex gawk gcc gettext grep groff gzip libtool m4 make patch \
+  pkgconf sed sudo texinfo which git cmake gtk3 wayland-protocols wayland dbus
 
 # Setup rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly

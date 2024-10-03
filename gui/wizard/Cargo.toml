@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared" }
-fltk = "^1.3"
+fltk = { version = "1.4", features = ["use-wayland"] }
 fltk-theme = "0.6.0"
 fltk-grid = "0.4"
 fltk-evented = "0.5"

@@ -11,7 +11,7 @@ RUN apk add git wget curl patchelf py3-pip pipx file build-base cmake \
   fuse3-dev libxinerama-dev libxcursor-dev libxfixes-dev libxft-dev pango \
   pango-dev libayatana-appindicator libayatana-appindicator-dev gtk+3.0-dev \
   bash fuse fuse3 zlib-static glib-static cairo-static lddtree font-noto \
-  openssl-dev
+  openssl-dev wayland wayland-protocols wayland-dev dbus dbus-dev libssl3
 
 # Symlink compilers
 RUN ln -sfT /usr/bin/gcc /usr/bin/musl-gcc
