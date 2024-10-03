@@ -86,12 +86,6 @@ inline decltype(auto) desktop(std::string str_name, fs::path path_file_icon, std
     , "enable"
     , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); })
   );
-
-  // Commit changes into the image
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_flatimage
-    , "fim-commit"
-  );
 } // desktop() }}}
 
 } // namespace ns_test
