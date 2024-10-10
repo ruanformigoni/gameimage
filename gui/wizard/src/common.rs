@@ -142,8 +142,7 @@ macro_rules! log
   ($($arg:tt)*) =>
   {
     {
-      let mut output = format!($($arg)*);
-      output.push('\n');
+      let output = format!($($arg)*);
       common::impl_log(output.as_str());
     }
   }

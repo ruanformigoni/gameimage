@@ -31,6 +31,8 @@ pub struct Term
   opt_proc_thread : Option<(Arc<Mutex<std::process::Child>>, Arc<Mutex<Option<std::thread::JoinHandle<()>>>>)>,
   // Terminal gui
   pub term : SimpleTerminal,
+  // Terminal message sender
+  pub tx : mpsc::Sender<String>,
 } // struct Term }}}
 
 impl Drop for Term
@@ -85,8 +87,26 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
       let _ = writeln!(&mut file_dest, "{}", clone_term.text());
     });
 
+  // Stay at the bottom
+  term.set_stay_at_bottom(true);
+
+  // Create sender and receiver
+  let (tx, rx) = mpsc::channel::<String>();
+
+  // Dispatch message writer thread
+  let mut clone_term = term.clone();
+  std::thread::spawn(move ||
+  {
+    while let Ok(msg) = rx.recv()
+    {
+      clone_term.append(&msg);
+      clone_term.append("\n");
+      app::awake();
+    } // while
+  });
+
   // Return new term
-  Term{ term, opt_proc_thread: None }
+  Term{ term, opt_proc_thread: None, tx }
 } // new() }}}
 
 // kill() {{{
@@ -139,10 +159,10 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
   self.kill(self.opt_proc_thread.clone());
 
   // Setup callback
-  let mut clone_term = self.term.clone();
   let clone_arc_stdout = arc_stdout.clone();
   let clone_arc_stderr = arc_stderr.clone();
   let clone_arc_reader = arc_reader.clone();
+  let clone_tx = self.tx.clone();
   let handle = std::thread::spawn(move ||
   {
     let (tx_log, rx_log) = mpsc::channel::<String>();
@@ -151,9 +171,7 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
     let handle_stderr = std::thread::spawn(common::log_fd(clone_arc_stderr.lock().unwrap().take().unwrap(), tx_log, f_callback));
     while let Ok(msg) = rx_log.recv()
     {
-      clone_term.insert(&msg);
-      clone_term.show_insert_position();
-      app::awake();
+      let _ = clone_tx.send(msg);
     } // while
     log_err!(handle_stdout.join());
     log_err!(handle_stderr.join());
@@ -175,10 +193,7 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
 // pub fn append() {{{
 pub fn append(&self, value: &str)
 {
-  let mut clone_term = self.term.clone();
-  clone_term.append(value);
-  clone_term.show_insert_position();
-  app::awake();
+  let _ = self.tx.send(value.to_string());
 } // fn: append }}}
 
 } // impl
