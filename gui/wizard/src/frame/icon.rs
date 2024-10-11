@@ -24,6 +24,7 @@ use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 
 use crate::dimm;
+use crate::db;
 use crate::frame;
 use crate::common;
 use crate::log;
@@ -33,17 +34,32 @@ use crate::gameimage;
 // resize_draw_image() {{{
 fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
 {
-  // Resize
-  let path_icon_resized = PathBuf::from(path_file_icon.clone())
-    .parent()
-    .unwrap()
-    .join("icon.wizard.resized.png");
-
-  if let Err(e) = shared::image::resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32)
+  // Get path to project directory
+  let db_global = match db::global::read()
   {
-    log!("Failed to resize image to '{}', with err '{}'", path_icon_resized.string(), e);
-  } // if
-
+    Ok(db_global) => db_global,
+    Err(e) => { return Err(ah!("Error to open global directory: {}", e)); },
+  };
+  let path_dir_project = match db_global.get_project_dir(&db_global.project.string())
+  {
+    Ok(path_dir_project) => path_dir_project,
+    Err(e) => { return Err(ah!("Error to open project directory: {}", e)); },
+  }; // match
+  // Create path to resized icon
+  let path_icon_resized_parent = path_dir_project.join("icon");
+  let path_icon_resized = path_icon_resized_parent.join("icon.wizard.resized.png");
+  match std::fs::create_dir_all(&path_icon_resized_parent)
+  {
+    Ok(()) => log!("Created directory {}", path_icon_resized_parent.string()),
+    Err(e) => { return Err(ah!("Failure to create directories: {}", e));  },
+  }; // match
+  // Resize icon
+  match shared::image::resize(path_icon_resized.clone(), path_file_icon, frame.w() as u32, frame.h() as u32)
+  {
+    Ok(()) => log!("Resized image '{}'", path_icon_resized.string()),
+    Err(e) => return Err(ah!("Failed to resize image to '{}', with err '{}'", path_icon_resized.string(), e)),
+  }; // if
+  // Load image
   match fltk::image::PngImage::load(path_icon_resized)
   {
     Ok(png_image) =>
@@ -51,15 +67,11 @@ fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
       frame.set_image_scaled(Some(png_image));
       fltk::app::redraw();
       fltk::app::awake();
-      return Ok(())
     },
-    Err(e) =>
-    {
-      log!("Could not load png icon: {}", e);
-    },
+    Err(e) => return Err(ah!("Could not load png icon: {}", e)),
   } // if
 
-  Err(ah!("Could not set cover frame image"))
+  Ok(())
 } // resize_draw_image() }}}
 
 // enum IconFrame {{{
@@ -149,9 +161,9 @@ pub fn icon(tx: Sender<common::Msg>
         *lock = lock.from_str(label.as_str());
       } // if
     });
-    // menu_source.add_choice(IconFrame::Web.as_str());
-    menu_source.add_choice(IconFrame::Local.as_str());
-    menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
+  // menu_source.add_choice(IconFrame::Web.as_str());
+  menu_source.add_choice(IconFrame::Local.as_str());
+  menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
 
   if let Ok(lock) = ICON_FRAME.lock() && *lock == IconFrame::Local
   {
