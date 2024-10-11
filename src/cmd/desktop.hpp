@@ -5,7 +5,7 @@
 
 #pragma once
 
-
+#include "../lib/image.hpp"
 #include "../lib/db.hpp"
 #include "../lib/subprocess.hpp"
 #include "../std/vector.hpp"
@@ -28,7 +28,7 @@ enum class IntegrationItems
 }
 
 // desktop() {{{
-inline decltype(auto) desktop(std::string str_name, fs::path path_file_icon, std::string str_items)
+inline void desktop(std::string str_name, fs::path path_file_icon, std::string str_items)
 {
   // Validate icon path
   path_file_icon = ns_fs::ns_path::file_exists<true>(path_file_icon)._ret;
@@ -62,13 +62,17 @@ inline decltype(auto) desktop(std::string str_name, fs::path path_file_icon, std
   , ns_db::Mode::READ);
 
   fs::path path_file_desktop = path_dir_project / "desktop.json";
+  fs::path path_file_icon_resized = path_dir_project / "desktop.png";
+
+  // Resize icon
+  ns_image::resize(path_file_icon, path_file_icon_resized, 300, 450);
 
   // Configure application data
   ns_db::from_file(path_file_desktop
   , [&](auto&& db)
   {
     db("name") = str_name;
-    db("icon") = path_file_icon;
+    db("icon") = path_file_icon_resized;
     db("categories") = std::vector<std::string>{"Game"};
   }, ns_db::Mode::CREATE);
 

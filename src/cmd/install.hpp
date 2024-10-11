@@ -8,12 +8,6 @@
 #include <cstdlib>
 #include <filesystem>
 
-#include <boost/gil.hpp>
-#include <boost/gil/extension/io/jpeg.hpp>
-#include <boost/gil/extension/io/png.hpp>
-#include <boost/gil/extension/numeric/sampler.hpp>
-#include <boost/gil/extension/numeric/resample.hpp>
-
 #include "../enum.hpp"
 #include "../common.hpp"
 
@@ -23,6 +17,7 @@
 #include "../lib/subprocess.hpp"
 #include "../lib/db.hpp"
 #include "../lib/zip.hpp"
+#include "../lib/image.hpp"
 
 #include "fetch.hpp"
 #include "select.hpp"
@@ -366,8 +361,6 @@ inline void emulator(Op op, std::vector<std::string> args)
 // icon() {{{
 inline void icon(std::string str_file_icon)
 {
-  namespace gil = boost::gil;
-
   // Current application
   std::string str_project = ns_db::query(ns_db::file_default(), "project");
 
@@ -377,94 +370,17 @@ inline void icon(std::string str_file_icon)
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
 
-  // File extension
-  std::string ext = path_file_icon_src.extension();
-
-  // // Check result
-  "Empty file extension"_throw_if([&]{ return ext.empty(); });
-
-  // // Remove the leading dot
-  ext.erase(ext.begin());
-
   // Create icon directory and set file name
   fs::path path_dir_icon = path_dir_project / "icon";
   ns_fs::ns_path::dir_create<true>(path_dir_icon);
   fs::path path_file_icon_dst = path_dir_icon / "icon.png";
   fs::path path_file_icon_gray_dst = path_dir_icon / "icon.grayscale.png";
 
-  // Get enum option
-  ns_enum::ImageFormat image_format;
+  // Resize icon
+  ns_image::resize(str_file_icon, path_file_icon_dst, 300, 450);
 
-  // Check image type
-  "Image type '{}' is not supported, supported types are '.jpg, .jpeg, .png'"_try(
-    [&]{ image_format = ns_enum::from_string<ns_enum::ImageFormat>(ext); }
-    , ext
-  );
-
-  ns_log::write('i', "Reading image from ", path_file_icon_src);
-  gil::rgba8_image_t img;
-  switch ( image_format )
-  {
-    // Convert jpg to png
-    case ns_enum::ImageFormat::JPG:
-    case ns_enum::ImageFormat::JPEG:
-      ns_log::write('i', "Reading as 'jpg'");
-      gil::read_and_convert_image(path_file_icon_src, img, gil::jpeg_tag());
-      break;
-    // Copy
-    case ns_enum::ImageFormat::PNG:
-      ns_log::write('i', "Reading as 'png'");
-      gil::read_and_convert_image(path_file_icon_src, img, gil::png_tag());
-      break;
-  } // switch
-
-  ns_log::write('i', "Image size is ", std::to_string(img.width()), "x", std::to_string(img.height()));
-
-  // Target dimms
-  int const width = 300;
-  int const height = 450;
-
-  // Calculate desired and current aspected ratios
-  double src_aspect = static_cast<double>(img.width()) / img.height();
-  double dst_aspect = static_cast<double>(width) / height;
-
-  // Calculate novel dimensions that preserve the aspect ratio
-  int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
-  int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
-
-  // Resize
-  gil::rgba8_image_t img_resized(width_new, height_new);
-  ns_log::write('i', "Image  aspect ratio is ", std::to_string(src_aspect));
-  ns_log::write('i', "Target aspect ratio is ", std::to_string(dst_aspect));
-  ns_log::write('i', "Resizing image to ", std::to_string(width_new), "x", std::to_string(height_new));
-  gil::resize_view(gil::const_view(img), gil::view(img_resized), gil::bilinear_sampler());
-
-  // Calculate crop
-  int crop_x = (width_new - width) / 2;
-  int crop_y = (height_new - height) / 2;
-
-  // Crop the image
-  auto view_img_cropped = gil::subimage_view(gil::view(img_resized), crop_x, crop_y, width, height);
-
-  // Save cropped image
-  ns_log::write('i', "Writing image to ", path_file_icon_dst);
-  gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
-
-  // Save cropped image as grayscale
-  ns_log::write('i', "Writing grayscale image to ", path_file_icon_gray_dst);
-  gil::rgba8_image_t img_gray(view_img_cropped.dimensions());
-  auto view_gray = gil::view(img_gray);
-  for (int y = 0; y < view_img_cropped.height(); ++y)
-  {
-    for (int x = 0; x < view_img_cropped.width(); ++x)
-    {
-      auto pixel = view_img_cropped(x, y);
-      auto gray_val = static_cast<uint8_t>(0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]);
-      auto alpha_val = pixel[3];
-      view_gray(x,y) = gil::rgba8_pixel_t(gray_val, gray_val, gray_val, alpha_val);
-    } // for
-  } // for
-  gil::write_view(path_file_icon_gray_dst, view_gray, gil::png_tag());
+  // Create grayscale icon
+  ns_image::grayscale(path_file_icon_dst, path_file_icon_gray_dst);
 
   // Save icon path in project database
   ns_db::from_file_project([&](auto&& db)

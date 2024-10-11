@@ -88,6 +88,8 @@ _fetch "https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7
 # Fetch busybox
 _fetch "https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox" "$BIN_DIR"/busybox
 
+_fetch "https://github.com/ruanformigoni/imagemagick-static-musl/releases/download/c1c5775/magick-x86_64" "$BIN_DIR"/magick
+
 # Fetch lsof
 _fetch "https://github.com/ruanformigoni/lsof-static-musl/releases/download/12c2552/lsof-x86_64" "$BIN_DIR"/lsof
 
