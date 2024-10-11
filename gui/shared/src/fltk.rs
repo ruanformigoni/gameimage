@@ -6,7 +6,6 @@ use crate::dimm;
 
 pub mod button;
 pub mod dialog;
-pub mod scale;
 
 // pub trait WidgetExtExtra {{{
 #[allow(warnings)]
