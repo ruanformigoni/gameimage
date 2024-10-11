@@ -441,10 +441,10 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
         clone_output_status.set_value(format!("Open '{}'", path_dir_executable.string()).as_str());
 
-        let _ = std::process::Command::new("xdg-open")
-            .env_remove("LD_PRELOAD")
+        let _ = std::process::Command::new("fim_portal")
             .stderr(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
+            .arg("xdg-open")
             .arg(&path_dir_executable.string())
             .spawn();
       });
