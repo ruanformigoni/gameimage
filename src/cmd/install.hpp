@@ -421,8 +421,8 @@ inline void icon(std::string str_file_icon)
   ns_log::write('i', "Image size is ", std::to_string(img.width()), "x", std::to_string(img.height()));
 
   // Target dimms
-  int const width = 600;
-  int const height = 900;
+  int const width = 300;
+  int const height = 450;
 
   // Calculate desired and current aspected ratios
   double src_aspect = static_cast<double>(img.width()) / img.height();
