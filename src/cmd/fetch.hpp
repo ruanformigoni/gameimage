@@ -8,8 +8,12 @@
 #include <fcntl.h>
 #include <cpr/cpr.h>
 #include <fmt/ranges.h>
+#include <expected>
+
+#include "fetch/check.hpp"
 
 #include "../common.hpp"
+#include "../macro.hpp"
 #include "../enum.hpp"
 
 #include "../lib/ipc.hpp"
@@ -17,9 +21,9 @@
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
 #include "../lib/sha.hpp"
-#include "../lib/tar.hpp"
 
-inline const char* FETCH_URL = "https://raw.githubusercontent.com/gameimage/runners/master/fetch.json";
+inline constexpr const char* URL_FETCH = "http://192.168.0.16:1170/fetch.json";
+inline constexpr const char* URL_WINE_SCRIPT = "http://192.168.0.16:1170/wine.sh";
 
 namespace ns_fetch
 {
@@ -29,13 +33,34 @@ namespace fs = std::filesystem;
 // enum class UrlType {{{
 enum class UrlType
 {
-  DWARFS,
+  LAYER,
   BASE,
 }; // }}}
 
 // anonymous namespace
 namespace
 {
+
+// struct fetchlist_base_ret_t {{{
+struct fetchlist_base_ret_t
+{
+  fs::path path;
+  cpr::Url url;
+}; // }}}
+
+// struct fetchlist_layer_ret_t {{{
+struct fetchlist_layer_ret_t
+{
+  fs::path path;
+  cpr::Url url;
+}; // }}}
+
+// struct CoreUrl {{{
+struct CoreUrl
+{
+  std::string core;
+  std::string url;
+}; // }}}
 
 // enum class IpcQuery {{{
 enum class IpcQuery
@@ -50,30 +75,22 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   // Get self dir
   fs::path path_dir_current = fs::current_path();
   // Check if exists
-  if ( not fs::exists(path_dir_current) ) { "dir current does not exist"_throw(); }
+  if ( not fs::exists(path_dir_current) ) { "current directory does not exist"_throw(); }
   // Create image path
   return path_dir_current / ( ns_enum::to_string_lower(platform) + ".flatimage" );
 } // }}}
 
 // fetch_file_from_url() {{{
-inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
+[[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
 {
   ns_log::write('i', "Fetch file '", url.c_str(), "' to '", path_file, "'");
   // Try to open destination file
   auto ofile = std::ofstream{path_file, std::ios::binary};
-  // Open file error
-  if ( ! ofile.good() ) { "Failed to open file '{}' for writing"_throw(path_file); }
-  // IPC
+  // Check if file is open
+  qreturn_if(not ofile.is_open(), std::unexpected("Failed to open file '{}' for writing"_fmt(path_file)));
+  // Initialize IPC
   std::unique_ptr<ns_ipc::Ipc> ptr_ipc = nullptr;
-  try
-  {
-    ptr_ipc = std::make_unique<ns_ipc::Ipc>(path_file);
-  }
-  catch(std::exception const& e)
-  {
-    ns_log::write('e', e.what());
-    ns_log::write('e', "Could not initialize message ipc for ", path_file);
-  } // catch
+  ns_log::exception([&]{ ptr_ipc = std::make_unique<ns_ipc::Ipc>(path_file); });
   // fetch_callback
   auto fetch_callback = [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t)
   {
@@ -87,7 +104,7 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
       // Update progress
       int percentage = static_cast<int>((downloadNow * 100) / downloadTotal);
       // Send progress to watching processes
-      if ( ptr_ipc != nullptr ){  ptr_ipc->send(percentage); }
+      if ( ptr_ipc ){ ptr_ipc->send(percentage); }
       // Log
       ns_log::write('i', "Download progress: ", percentage, "%");
     }
@@ -96,148 +113,82 @@ inline void fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
   // Fetch file
   cpr::Response r = cpr::Download(ofile, url, cpr::ProgressCallback{fetch_callback, reinterpret_cast<intptr_t>(&ofile)});
   // Check for success
-  if ( r.status_code != 200 )
-  {
-    "Failure to fetch file '{}' with code '{}'"_throw(path_file, r.status_code);
-  }
+  qreturn_if(r.status_code != 200,  std::unexpected("Failure to fetch file '{}' with code '{}'"_fmt(path_file, r.status_code)));
   // Set to progress 100%
-  if ( ptr_ipc != nullptr ){  ptr_ipc->send(100); }
+  if ( ptr_ipc ){ ptr_ipc->send(100); }
   ns_log::write('i', "Download progress: 100%");
   // Make file executable
   using std::filesystem::perms;
-  fs::permissions(path_file, perms::owner_all | perms::group_all | perms::others_read);
+  std::error_code ec;
+  fs::permissions(path_file, perms::owner_all | perms::group_all | perms::others_read, ec);
+  elog_if(ec, "Failed to change permissions of file '{}': '{}'"_fmt(path_file, ec.message()));
+  // Success
+  return path_file;
 } // }}}
-
-// check_file_from_sha() {{{
-inline void check_file_from_sha(fs::path const& path_file_src, cpr::Url const& url)
-{
-  ns_sha::SHA_TYPE sha_type;
-
-  fs::path path_file_sha;
-  try
-  {
-    ns_log::write('i', "SHA256: Trying to find in url");
-    // SHA file name is file name + sha256sum
-    path_file_sha = path_file_src.string() + ".sha256sum";
-    // Fetch SHA file
-    fetch_file_from_url(path_file_sha, url.str() + ".sha256sum");
-    ns_log::write('i', "SHA256 found in url");
-    sha_type = ns_sha::SHA_TYPE::SHA256;
-  } // try
-  catch(std::exception const& e)
-  {
-    ns_log::write('i', "SHA512: Trying to find in url");
-    // SHA file name is file name + sha512sum
-    path_file_sha = path_file_src.string() + ".sha512sum";
-    // Fetch SHA file
-    fetch_file_from_url(path_file_sha, url.str() + ".sha512sum");
-    ns_log::write('i', "SHA512 found in url");
-    sha_type = ns_sha::SHA_TYPE::SHA512;
-  } // catch
-
-  // Check SHA
-  if ( not ns_sha::check_sha(path_file_src, path_file_sha, sha_type))
-  {
-    "SHA failed for {}"_throw(path_file_src);
-  } // if
-  ns_log::write('i', "SHA passed for ", path_file_src);
-} // }}}
-
-// check_file_from_size() {{{
-decltype(auto) check_file_from_size(fs::path path_file_src, cpr::Url url)
-{
-  uintmax_t size_reference = fs::file_size(path_file_src);
-  uintmax_t size_calculated = 0;
-
-  ns_log::write('i', "SIZE: Reference is ", size_reference);
-
-  // Get size of file to download
-  cpr::Response response_head = cpr::Head(url);
-  if ( response_head.status_code != 200 )
-  {
-    "Could not fetch remote size to compare local size with"_throw();
-  } // if
-
-  auto it = response_head.header.find("Content-Length");
-  if (it == response_head.header.end())
-  {
-    "Could not find field 'Content-Length' in response"_throw();
-  }
-
-  size_calculated = std::stoi(it->second);
-  ns_log::write('i', "SIZE: Calculated is ", size_calculated);
-
-  if ( size_reference != size_calculated )
-  {
-    "Size reference differs from size_calculated"_throw();
-  } // if
-} // check_file_from_size() }}}
 
 // check_file() {{{
-decltype(auto) check_file(fs::path path_file_src, cpr::Url url)
+[[nodiscard]] bool check_file(fs::path path_file_src, cpr::Url url)
 {
-  // Try by SHA
-  try
-  {
-    check_file_from_sha(path_file_src, url);
-  } // try
-  catch(std::exception const& e)
-  {
-    ns_log::write('e', "Could not verify with SHA: ", e.what());
-    check_file_from_size(path_file_src, url);
-  } // catch
+  fs::path path_file_sha;
+  ns_sha::SHA_TYPE sha_type;
 
-  // Send progress through IPC
-  try
+  // Fetch SHA
+  if ( auto expected256 = fetch_file_from_url(path_file_src.string() + ".sha256sum", url.str() + ".sha256sum") )
   {
-    ns_ipc::Ipc ipc(path_file_src);
-    ipc.send(100);
-  }
-  catch(std::exception const& e)
+    path_file_sha = *expected256;
+    sha_type = ns_sha::SHA_TYPE::SHA256;
+  } // if
+  else if ( auto expected512 = fetch_file_from_url(path_file_src.string() + ".sha512sum", url.str() + ".sha512sum") )
   {
-    ns_log::write('e', e.what());
-    ns_log::write('e', "Could not initialize message ipc for ", path_file_src);
-  } // catch
+    path_file_sha = *expected512;
+    sha_type = ns_sha::SHA_TYPE::SHA512;
+  } // if
+  else
+  {
+    ns_log::write('e', expected256.error());
+    ns_log::write('e', expected512.error());
+    return false;
+  } // else
 
+  // Check
+  return ns_fetch::ns_check::check_file(path_file_src, path_file_sha, sha_type, url);
 } // check_file() }}}
 
-// fetch_file_from_url_on_failed_check() {{{
-inline void fetch_file_from_url_on_failed_check(fs::path const& path_file, cpr::Url const& url)
+// fetch_on_failed_check() {{{
+[[nodiscard]] inline std::error<std::string> fetch_on_failed_check(fs::path const& path_file, cpr::Url const& url)
 {
-  try
+  if ( check_file(path_file, url) )
   {
-    check_file(path_file, url);
-  }
-  // Re-download if SHA failed, and json write is disabled
-  catch(std::exception const& e)
+    return std::nullopt;
+  } // if
+
+  ns_log::write('i', "Failed to check SHA for file ", path_file);
+
+  if(auto expected_path_file = fetch_file_from_url(path_file, url); not expected_path_file )
   {
-    // Re-download on failure
-    ns_log::write('i', "Failed to check SHA for file ", path_file);
-    fetch_file_from_url(path_file, url);
-  }
+    return expected_path_file.error();
+  } // if
+
+  return std::nullopt;
 } // }}}
 
-// struct fetchlist_base_ret_t {{{
-struct fetchlist_base_ret_t
-{
-  fs::path path;
-  cpr::Url url;
-}; // }}}
-
 // fetchlist_base() {{{
-inline decltype(auto) fetchlist_base(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
+[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetchlist_base(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
 {
   // Create dir
   ns_fs::ns_path::dir_create<true>(path_dir_fetch);
+
+  // Create platform string
+  std::string str_platform = ns_enum::to_string_lower(platform);
 
   // Temporary file with fetch list
   auto path_json = path_dir_fetch / "fetch.base.json";
 
   // Fetch list
-  fetch_file_from_url(path_json, cpr::Url{FETCH_URL});
-
-  // Create platform string
-  auto str_platform = ns_enum::to_string_lower(platform);
+  if ( auto expected = fetch_file_from_url(path_json, cpr::Url{URL_FETCH}); not expected )
+  {
+    return std::unexpected(expected.error());
+  } // if
 
   // Select wine distribution
   std::string str_url_base = ns_db::query(path_json, str_platform, "base");
@@ -247,20 +198,13 @@ inline decltype(auto) fetchlist_base(ns_enum::Platform const& platform, fs::path
 
   return fetchlist_base_ret_t
   {
-    .path = fs::path{path_dir_fetch} / "{}.tar.xz"_fmt(str_platform),
+    .path = fs::path{path_dir_fetch} / "{}.flatimage"_fmt(str_platform),
     .url = cpr::Url(str_url_base),
   };
 } // fetchlist_base() }}}
 
-// struct fetchlist_dwarfs_ret_t {{{
-struct fetchlist_dwarfs_ret_t
-{
-  fs::path path;
-  cpr::Url url;
-}; // }}}
-
-// fetchlist_dwarfs() {{{
-inline decltype(auto) fetchlist_dwarfs(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
+// fetchlist_layer() {{{
+[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
 {
   // Create dir
   ns_fs::ns_path::dir_create<true>(path_dir_fetch);
@@ -268,94 +212,50 @@ inline decltype(auto) fetchlist_dwarfs(ns_enum::Platform const& platform, fs::pa
   // Temporary file with fetch list
   auto path_json = path_dir_fetch / "fetch.base.json";
 
-  // Fetch list
-  fetch_file_from_url(path_json, cpr::Url{FETCH_URL});
-
   // Create platform string
   auto str_platform = ns_enum::to_string_lower(platform);
 
-  // Select wine distribution
-  std::string str_url_dwarfs;
-  if ( const char* dist = ns_env::get("GIMG_WINE_DIST"); platform == ns_enum::Platform::WINE )
+  // Fetch list
+  if ( auto expected = fetch_file_from_url(path_json, cpr::Url{URL_FETCH}); not expected )
   {
-    if ( dist != nullptr )
+    return std::unexpected(expected.error());
+  } // if
+
+  // Select wine distribution
+  std::string str_url_layer;
+  if (platform == ns_enum::Platform::WINE)
+  {
+    if (const char* dist = ns_env::get("GIMG_WINE_DIST"); dist != nullptr )
     {
-      str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs", dist);
+      str_url_layer = ns_db::query(path_json, str_platform, "layer", dist);
     } // if
     else
     {
-      str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs", "default");
+      str_url_layer = ns_db::query(path_json, str_platform, "layer", "ge");
     } // else
   } // if
   else
   {
-    str_url_dwarfs = ns_db::query(path_json, str_platform, "dwarfs");
+    str_url_layer = ns_db::query(path_json, str_platform, "layer");
   } // else
 
-  ns_log::write('i', "url dwarfs: ", str_url_dwarfs);
+  ns_log::write('i', "url layer: ", str_url_layer);
 
-  return fetchlist_dwarfs_ret_t
+  return fetchlist_layer_ret_t
   {
-    .path = fs::path{path_dir_fetch} / "{}.dwarfs"_fmt(str_platform),
-    .url = cpr::Url(str_url_dwarfs),
+    .path = fs::path{path_dir_fetch} / "{}.layer"_fmt(str_platform),
+    .url = cpr::Url(str_url_layer),
   };
-} // fetchlist_dwarfs() }}}
+} // fetchlist_layer() }}}
 
-// tarball_extract_flatimage() {{{
-inline void tarball_extract_flatimage(fs::path const& path_file_tarball, fs::path const& path_file_out)
+// merge_base_and_layer() {{{
+inline void merge_base_and_layer(fs::path const& path_file_image , fs::path const& path_file_layer)
 {
-  auto archive_files = ns_tar::list(path_file_tarball.c_str());
-
-  if ( archive_files.empty() )
-  {
-    ns_log::write('e', "Empty archive'", path_file_tarball, "'");
-    return;
-  } // if
-
-  auto it_str_file_name = std::ranges::find_if(archive_files, [](auto&& e){ return e.ends_with(".flatimage"); });
-
-  if ( it_str_file_name == std::ranges::end(archive_files) )
-  {
-    ns_log::write('e', "Could not find the flatimage file in '", path_file_tarball, "'");
-    return;
-  } // if
-
-  ns_log::write('i', "Tarball contains file '{}'"_fmt(*it_str_file_name));
-
-  // Extract base
-  ns_tar::extract(path_file_tarball.c_str(), ns_tar::Opts{0, *it_str_file_name});
-
-  // Move to target name
-  fs::rename(*it_str_file_name, path_file_out);
-  ns_log::write('i', "Extracted file ", path_file_out);
-} // tarball_extract_flatimage() }}}
-
-// dwarfs_create() {{{
-inline void dwarfs_create(fs::path path_file_image, fs::path const& path_dir_src, std::string path_file_target)
-{
-  // Compress
-  ns_subprocess::sync(path_file_image
-    , "fim-exec"
-    , "mkdwarfs"
-    , "-f"
-    , "-i"
-    , path_dir_src
-    , "-o"
-    , path_file_target
-  );
-} // dwarfs_create() }}}
-
-// merge_base_and_dwarfs() {{{
-inline void merge_base_and_dwarfs(std::string str_platform
-  , fs::path const& path_file_image
-  , fs::path const& path_file_dwarfs)
-{
-  // Merge files
-  ns_subprocess::sync(path_file_image, "fim-dwarfs-add", path_file_dwarfs, "/fim/mount/{}"_fmt(str_platform));
-} // merge_base_and_dwarfs() }}}
+  ns_subprocess::sync(path_file_image, "fim-layer", "add", path_file_layer);
+} // merge_base_and_layer() }}}
 
 // url_get() {{{
-inline std::optional<std::string> url_get(ns_enum::Platform platform, UrlType url_type)
+inline std::optional<std::string> url_get(ns_enum::Platform const& platform, UrlType const& url_type)
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
@@ -371,172 +271,103 @@ inline std::optional<std::string> url_get(ns_enum::Platform platform, UrlType ur
 } // url_get() }}}
 
 // url_resolve_base() {{{
-decltype(auto) url_resolve_base(ns_enum::Platform platform, fs::path path_dir_dst)
+[[nodiscard]] std::expected<fetchlist_base_ret_t, std::string> url_resolve_base(ns_enum::Platform const& platform
+  , fs::path const& path_dir_dst)
 {
-  fetchlist_base_ret_t path_and_url_base;
-
   // Fetch from custom url
   if ( auto url = url_get(platform, UrlType::BASE); url.has_value() )
   {
     ns_log::write('i', "Download url: '", url->c_str());
-    path_and_url_base = { path_dir_dst / "{}.tar.xz"_fmt(ns_enum::to_string_lower(platform)), *url };
+    return fetchlist_base_ret_t { path_dir_dst / "{}.flatimage"_fmt(ns_enum::to_string_lower(platform)), *url };
   } // if
-  // Fetch from fetchlist
-  else
-  {
-    path_and_url_base = fetchlist_base(platform, path_dir_dst);
-    ns_log::write('i', "Download url: '", path_and_url_base.url.c_str());
-  } // else
 
-  return path_and_url_base;
+  // Fetch from fetchlist
+  auto expected_path_and_url_base = fetchlist_base(platform, path_dir_dst);
+  qreturn_if(not expected_path_and_url_base, std::unexpected(expected_path_and_url_base.error()));
+
+  return *expected_path_and_url_base;
 } // url_resolve_base() }}}
 
-// url_resolve_dwarfs() {{{
-decltype(auto) url_resolve_dwarfs(ns_enum::Platform platform, fs::path path_dir_dst)
+// url_resolve_layer() {{{
+[[nodiscard]] std::expected<fetchlist_layer_ret_t, std::string> url_resolve_layer(ns_enum::Platform platform, fs::path path_dir_dst)
 {
   std::string str_platform = ns_enum::to_string_lower(platform);
 
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs;
+  fetchlist_layer_ret_t path_and_url_layer;
 
   // Custom URL
-  if ( auto url = url_get(platform, UrlType::DWARFS); url.has_value() )
+  if ( auto url = url_get(platform, UrlType::LAYER); url.has_value() )
   {
     if ( std::string{url->c_str()}.ends_with(".tar.xz") )
     {
-      path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs.tar.xz"_fmt(str_platform) , *url};
+      return fetchlist_layer_ret_t {path_dir_dst / "{}.layer.tar.xz"_fmt(str_platform) , *url};
     } // if
-    else if ( std::string{url->c_str()}.ends_with(".dwarfs") )
+    else if ( std::string{url->c_str()}.ends_with(".layer") )
     {
-      path_and_url_dwarfs = {path_dir_dst / "{}.dwarfs"_fmt(str_platform) , *url};
+      return fetchlist_layer_ret_t {path_dir_dst / "{}.layer"_fmt(str_platform) , *url};
     } // else if
     else
     {
-      throw std::runtime_error("Unsupported file type for download");
+      return std::unexpected("Unsupported file type for download");
     } // else
     ns_log::write('i', "Download url (custom): '", url->c_str());
   } // if
-  else
-  {
-    path_and_url_dwarfs = fetchlist_dwarfs(platform, path_dir_dst);
-    ns_log::write('i', "Download url (fetchlist): '", path_and_url_dwarfs.url.c_str());
-  } // else
 
-  return path_and_url_dwarfs;
-} // url_resolve_dwarfs() }}}
+  // Fetch from fetchlist
+  auto expected_path_and_url_layer = fetchlist_layer(platform, path_dir_dst);
+  qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
 
-// fetch_base() {{{
-void fetch_base(fetchlist_base_ret_t path_and_url)
-{
-  ns_log::write('i', "Downloading file: '", path_and_url.path);
-  // Try to download
-  fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
-} // fetch_base() }}}
+  return *expected_path_and_url_layer;
+} // url_resolve_layer() }}}
 
 // fetch_base() {{{
-inline fetchlist_base_ret_t fetch_base(ns_enum::Platform platform, fs::path path_dir_image)
+[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetch_base(ns_enum::Platform platform, fs::path path_dir_image)
 {
-  // Resolve custom url
-  fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
-
-  // Fetch base
-  fetch_base(path_and_url_base);
-
-  return path_and_url_base;
+  // Resolve URL
+  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  qreturn_if(not expected_path_and_url_base, std::unexpected(expected_path_and_url_base.error()));
+  // Fetch
+  auto error_fetch = fetch_on_failed_check(expected_path_and_url_base->path, expected_path_and_url_base->url);
+  qreturn_if(error_fetch, std::unexpected(*error_fetch));
+  // Return fetched path and url
+  return *expected_path_and_url_base;
 } // fetch() }}}
 
-// fetch_dwarfs() {{{
-void fetch_dwarfs(fetchlist_dwarfs_ret_t path_and_url)
+// fetch_layer() {{{
+[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetch_layer(ns_enum::Platform platform, fs::path path_dir_image)
 {
-  fetch_file_from_url_on_failed_check(path_and_url.path, path_and_url.url);
-} // fetch_dwarfs() }}}
-
-// fetch_dwarfs() {{{
-inline fetchlist_dwarfs_ret_t fetch_dwarfs(ns_enum::Platform platform, fs::path path_dir_image)
-{
-  // Resolve custom url
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
-
-  // Fetch dwarfs
-  fetch_dwarfs(path_and_url_dwarfs);
-
-  return path_and_url_dwarfs;
+  // Resolve URL
+  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
+  // Fetch
+  auto error_fetch = fetch_on_failed_check(expected_path_and_url_layer->path, expected_path_and_url_layer->url);
+  qreturn_if(error_fetch, std::unexpected(*error_fetch));
+  // Return fetched path and url
+  return *expected_path_and_url_layer;
 } // fetch() }}}
-
-// build_dwarfs() {{{
-decltype(auto) build_dwarfs(ns_enum::Platform platform
-  , fetchlist_dwarfs_ret_t path_and_url
-  , fs::path path_file_image)
-{
-  std::string str_platform = ns_enum::to_string_lower(platform);
-
-  // If is a dwarfs file, then it is ok to finish
-  if ( path_and_url.path.extension() == ".dwarfs" ) { return; } // if
-
-  // It may be a compressed file, requires to create the dwarfs file
-  uint32_t components_to_strip{0};
-
-  // Check if tarball contains the required files
-  if ( platform == ns_enum::Platform::WINE )
-  {
-    auto opt_path_parent = ns_tar::find(path_and_url.path, "bin/wine");
-    if ( not opt_path_parent.has_value() )
-    {
-      "Could not find '{}' inside tarball '{}'"_throw("bin/wine", path_and_url.path);
-    } // if
-    components_to_strip = std::distance(opt_path_parent->begin(), opt_path_parent->end());
-    ns_log::write('i', "Components to strip: ", components_to_strip);
-  } // if
-  else
-  {
-    "Custom download not implemented for {}"_throw(str_platform);
-  } // else
-
-  // Extract tarball to "platform" directory
-  ns_tar::extract(path_and_url.path, ns_tar::Opts{components_to_strip, std::nullopt, str_platform});
-
-  // Fetch runner script
-  if ( platform == ns_enum::Platform::WINE )
-  {
-    // Download wine.sh script into the binary directory
-    fetch_file_from_url(fs::path(str_platform) / "bin" / "wine.sh"
-      , "https://raw.githubusercontent.com/gameimage/runners/master/wine/wine.sh"
-    );
-  } // switch
-  else
-  {
-    "Custom download not implemented for {}"_throw(str_platform);
-  } // else
-
-  // Create dwarfs filesystem
-  dwarfs_create(path_file_image, str_platform, str_platform + ".dwarfs");
-  
-} // build_dwarfs() }}}
 
 } // anonymous namespace
 
 // cores_list() {{{
-inline decltype(auto) cores_list(fs::path const& path_dir_fetch)
+inline std::expected<std::vector<CoreUrl>,std::string> cores_list(fs::path const& path_dir_fetch)
 {
   // Temporary file with fetch list
   fs::path path_file_json = path_dir_fetch / "fetch.cores.json";
 
   // Fetch fetch list
-  fetch_file_from_url(path_file_json, cpr::Url{FETCH_URL});
-
-  struct Ret
+  if ( auto expected = fetch_file_from_url(path_file_json, cpr::Url{URL_FETCH}); not expected)
   {
-    std::string core;
-    std::string url;
-  };
+    return std::unexpected(expected.error());
+  } // if
 
-  std::vector<Ret> vector_cores;
+  std::vector<CoreUrl> vector_cores;
 
   // Get cores
   ns_db::from_file(path_file_json, [&](auto&& db)
   {
     for( auto const& [key, value] : db["retroarch"]["core"].items() )
     {
-      vector_cores.push_back(Ret{ns_string::to_string(key), ns_string::to_string(value)});
+      vector_cores.push_back(CoreUrl{ns_string::to_string(key), ns_string::to_string(value)});
     }
   }, ns_db::Mode::READ);
 
@@ -551,43 +382,37 @@ inline void fetch(ns_enum::Platform platform, std::optional<fs::path> const& onl
   fs::path path_file_image = get_path_file_image(platform);
   fs::path path_dir_image = path_file_image.parent_path();
 
-  if ( only_file and (only_file->string().ends_with(".dwarfs") or only_file->string().ends_with(".dwarfs.tar.xz")))
+  if ( only_file and only_file->string().ends_with(".layer") )
   {
-    fetch_dwarfs(platform, path_dir_image);
+    auto expected = fetch_layer(platform, path_dir_image);
+    elog_if(not expected, expected.error());
     return;
-  } // else if
+  } // if
 
-  if ( only_file and only_file->string().ends_with(".tar.xz"))
+  if ( only_file and only_file->string().ends_with(".flatimage") )
   {
-    fetch_base(platform, path_dir_image);
+    auto expected = fetch_base(platform, path_dir_image);
+    elog_if(not expected, expected.error());
     return;
   } // if
 
   // Verify & configure base
-  fetchlist_base_ret_t path_and_url_base = fetch_base(platform, path_dir_image);
-  tarball_extract_flatimage(path_and_url_base.path, path_file_image);
+  auto expected_path_and_url_base = fetch_base(platform, path_dir_image);
+  ereturn_if(not expected_path_and_url_base, expected_path_and_url_base.error());
 
-  // No dwarfs for linux
+  // No layer for linux
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
-  // Verify & configure dwarfs
-  fetchlist_dwarfs_ret_t path_and_url_dwarfs = fetch_dwarfs(platform, path_dir_image);
-  build_dwarfs(platform, path_and_url_dwarfs, path_file_image);
+  // Verify & configure layer
+  auto expected_path_and_url_layer = fetch_layer(platform, path_dir_image);
+  ereturn_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
 
-  // Remove .dwarfs.tar.xz to get built dwarfs file path
-  if ( auto str_path = path_and_url_dwarfs.path.string(); str_path.ends_with(".dwarfs.tar.xz") )
-  {
-    path_and_url_dwarfs.path = str_path.erase(str_path.find(".dwarfs.tar.xz")) + ".dwarfs";
-  } // if
-
-  // Merge base and dwarfs
-  merge_base_and_dwarfs(ns_enum::to_string_lower(platform)
-    , path_file_image
-    , path_and_url_dwarfs.path);
+  // Merge base and layer
+  merge_base_and_layer(path_file_image, expected_path_and_url_layer->path);
 } // fetch() }}}
 
 // sha() {{{
-inline void sha(ns_enum::Platform platform)
+inline std::error<std::string> sha(ns_enum::Platform platform)
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
@@ -599,19 +424,27 @@ inline void sha(ns_enum::Platform platform)
   ns_log::write('i', "Only checking SHA");
 
   // Get base
-  auto path_and_url_base = url_resolve_base(platform, path_dir_image);
+  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  qreturn_if(expected_path_and_url_base, expected_path_and_url_base.error());
 
   // Check sha for base
-  check_file(path_and_url_base.path, path_and_url_base.url);
+  qreturn_if(not check_file(expected_path_and_url_base->path, expected_path_and_url_base->url)
+    , "Failed to check file '{}'"_fmt(expected_path_and_url_base->path)
+  );
 
-  // Linux does not have a separate dwarfs file
-  if ( platform == ns_enum::Platform::LINUX ) { return; }
+  // Linux does not have a separate layer file
+  if ( platform == ns_enum::Platform::LINUX ) { return std::nullopt; }
 
-  // Get dwarfs
-  auto path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
+  // Get layer
+  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  qreturn_if(expected_path_and_url_layer, expected_path_and_url_layer.error());
 
-  // Check sha for dwarfs
-  check_file(path_and_url_dwarfs.path, path_and_url_dwarfs.url);
+  // Check sha for layer
+  qreturn_if(not check_file(expected_path_and_url_base->path, expected_path_and_url_base->url)
+    , "Failed to check file '{}'"_fmt(expected_path_and_url_base->path)
+  );
+
+  return std::nullopt;
 } // sha() }}}
 
 // ipc() {{{
@@ -628,35 +461,23 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
   ns_ipc::Ipc ipc(path_file_ipc, true);
   ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
 
-  if ( not query.has_value() )
-  {
-    "No query provided for IPC"_throw();
-  } // if
+  // Check if query exists
+  ethrow_if( not query.has_value(), "No query provided for IPC");
 
   // Get query
   IpcQuery ipc_query = ns_enum::from_string<IpcQuery>(ns_string::to_upper(*query));
 
-  switch (ipc_query)
-  {
-    case IpcQuery::FILES:
-    {
-      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
-      ipc.send(path_and_url_base.path);
-      if ( platform == ns_enum::Platform::LINUX ) { return; }
-      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
-      ipc.send(path_and_url_dwarfs.path);
-    } // case
-    break;
-    case IpcQuery::URLS:
-    {
-      fetchlist_base_ret_t path_and_url_base = url_resolve_base(platform, path_dir_image);
-      ipc.send(path_and_url_base.url);
-      if ( platform == ns_enum::Platform::LINUX ) { return; }
-      fetchlist_dwarfs_ret_t path_and_url_dwarfs = url_resolve_dwarfs(platform, path_dir_image);
-      ipc.send(path_and_url_dwarfs.url);
-    } // case
-    break;
-  } // switch
+  // Send base path or url
+  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  ethrow_if(not expected_path_and_url_base, expected_path_and_url_base.error());
+  ipc.send((ipc_query == IpcQuery::FILES)? expected_path_and_url_base->path.string() : expected_path_and_url_base->url.str());
+
+  if ( platform == ns_enum::Platform::LINUX ) { return; }
+
+  // Send layer path or url
+  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  ethrow_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
+  ipc.send((ipc_query == IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
 } // ipc() }}}
 
 // url_set() {{{
@@ -665,10 +486,7 @@ inline void url_set(ns_enum::Platform platform
   , UrlType url_type
 )
 {
-  if ( not opt_str_url.has_value() )
-  {
-    "No url was provided"_throw();
-  } // if
+  ethrow_if (not opt_str_url.has_value(), "No url was provided");
 
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);

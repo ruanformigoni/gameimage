@@ -43,9 +43,9 @@ void fetch(ns_parser::Parser const& parser)
     return;
   } // if
 
-  if ( parser.optional("--url-dwarfs") )
+  if ( parser.optional("--url-layer") )
   {
-    ns_fetch::url_set(platform, parser.optional("--url-dwarfs"), ns_fetch::UrlType::DWARFS);
+    ns_fetch::url_set(platform, parser.optional("--url-layer"), ns_fetch::UrlType::LAYER);
     return;
   } // if
 
@@ -57,7 +57,8 @@ void fetch(ns_parser::Parser const& parser)
 
   if ( parser.contains("--sha") )
   {
-    ns_fetch::sha(platform);
+    auto error = ns_fetch::sha(platform);
+    elog_if(error, *error);
     return;
   } // if
 

@@ -132,10 +132,10 @@ class Fetch final : public Parser
       m_parser->add_argument("--url-base")
         .action([&](std::string const& s){ m_map_option_value["--url-base"]=s; })
         .help("Set custom url for the base");
-      // Set custom dwarfs url
-      m_parser->add_argument("--url-dwarfs")
-        .action([&](std::string const& s){ m_map_option_value["--url-dwarfs"]=s; })
-        .help("Set custom url to for dwarfs");
+      // Set custom layer url
+      m_parser->add_argument("--url-layer")
+        .action([&](std::string const& s){ m_map_option_value["--url-layer"]=s; })
+        .help("Set custom url to for layer");
       // Clear custom urls url
       m_parser->add_argument("--url-clear")
         .default_value(false)

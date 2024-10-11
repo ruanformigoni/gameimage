@@ -89,11 +89,11 @@ fn set_url(str_type : &str, str_url : &str) -> anyhow::Result<i32>
   Ok(rc)
 } // set_url() }}}
 
-// set_url_dwarfs() {{{
-pub fn set_url_dwarfs(str_url : &str) -> anyhow::Result<i32>
+// set_url_layer() {{{
+pub fn set_url_layer(str_url : &str) -> anyhow::Result<i32>
 {
-  Ok(set_url("--url-dwarfs", str_url)?)
-} // set_url_dwarfs() }}}
+  Ok(set_url("--url-layer", str_url)?)
+} // set_url_layer() }}}
 
 // fetch() {{{
 pub fn fetch(opt_path_file_dst : Option<std::path::PathBuf>) -> anyhow::Result<i32>

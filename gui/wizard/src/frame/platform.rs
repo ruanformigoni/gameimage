@@ -88,7 +88,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     .bottom_of(&frame_content, - dimm::border())
     .center_x(&frame_content)
     .with_focus(false);
-  btn_menu.add_choice("linux|wine|wine_url|retroarch|pcsx2|rpcs3");
+  btn_menu.add_choice("linux|wine|retroarch|pcsx2|rpcs3");
 
   // Create callback with descriptions
   let buffer = TextBuffer::default();
@@ -135,7 +135,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
           e.set_label(&choice);
         });
       // Set dist options
-      btn_wine_dist.add_choice("caffe|default|osu-tkg|soda|staging|tkg|vaniglia");
+      btn_wine_dist.add_choice("caffe|ge|osu-tkg|soda|staging|tkg|vaniglia");
       // Init default value for btn_wine_dist
       if let Ok(var) = std::env::var("GIMG_WINE_DIST")
       {
@@ -143,8 +143,8 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
       } // if
       else
       {
-        std::env::set_var("GIMG_WINE_DIST", "default");
-        btn_wine_dist.set_label("default");
+        std::env::set_var("GIMG_WINE_DIST", "ge");
+        btn_wine_dist.set_label("ge");
       } // else
     } // if
     else if *lock == Some(Platform::WineUrl)
@@ -233,7 +233,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
     // Set custom url if it was passed
     if let Ok(guard) = URL.lock() && let Some(url) = guard.clone()
     {
-      if let Err(e) = gameimage::fetch::set_url_dwarfs(&url)
+      if let Err(e) = gameimage::fetch::set_url_layer(&url)
       {
         log!("Exit backend with error: {}", e);
       } // if

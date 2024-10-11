@@ -97,9 +97,11 @@ inline std::vector<fs::path> search_dirs(fs::path const& path_dir_search)
 inline std::vector<std::string> search_remote(fs::path const& path_dir_fetch)
 {
   std::vector<std::string> ret;
-  for( auto i : ns_fetch::cores_list(path_dir_fetch) )
+  auto expected_cores_list = ns_fetch::cores_list(path_dir_fetch);
+  ethrow_if(not expected_cores_list, expected_cores_list.error());
+  for( auto entry : *expected_cores_list )
   {
-    ret.push_back(i.core);
+    ret.push_back(entry.core);
   } // for
   return ret;
 } // search_remote() }}}

@@ -402,7 +402,7 @@ inline void icon(std::string str_file_icon)
   );
 
   ns_log::write('i', "Reading image from ", path_file_icon_src);
-  gil::rgba8_image_t img; 
+  gil::rgba8_image_t img;
   switch ( image_format )
   {
     // Convert jpg to png
@@ -445,7 +445,7 @@ inline void icon(std::string str_file_icon)
 
   // Crop the image
   auto view_img_cropped = gil::subimage_view(gil::view(img_resized), crop_x, crop_y, width, height);
-  
+
   // Save cropped image
   ns_log::write('i', "Writing image to ", path_file_icon_dst);
   gil::write_view(path_file_icon_dst, view_img_cropped, gil::png_tag());
@@ -506,7 +506,7 @@ inline void install(Op op, std::vector<std::string> args)
     case ns_enum::Platform::RYUJINX: ns_install::emulator(op, args);
     break;
   } // switch
-  
+
 } // install() }}}
 
 // remote() {{{
@@ -537,13 +537,14 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Fetch cores / urls
-  auto vec_core_url = ns_fetch::cores_list(path_dir_project);
+  auto expected_vec_core_url = ns_fetch::cores_list(path_dir_project);
+  ethrow_if(not expected_vec_core_url, expected_vec_core_url.error());
 
   // Put in a set
   std::set<std::string> set_cores(vec_cores.begin(), vec_cores.end());
 
   // Install if match
-  for( auto i : vec_core_url )
+  for( auto i : *expected_vec_core_url )
   {
     if ( ! set_cores.contains(i.core) )
     {
@@ -553,7 +554,8 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
 
     fs::path path_file_out = path_dir_project / rpath_dir_core / i.core;
     ns_log::write('i', "Install ", i.core, " to ", path_file_out);
-    ns_fetch::fetch_file_from_url(path_file_out, i.url);
+    auto expected_fetch_core = ns_fetch::fetch_file_from_url(path_file_out, i.url);
+    econtinue_if(not expected_fetch_core, expected_fetch_core.error());
     // Extract & install
     if ( i.core.ends_with(".zip") )
     {
@@ -565,7 +567,7 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
       install(op, std::vector<std::string>{path_file_out.replace_extension("")});
     } // if
   } // for
-  
+
 } // remote() }}}
 
 } // namespace ns_install

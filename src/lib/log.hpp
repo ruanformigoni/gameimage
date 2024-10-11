@@ -11,12 +11,14 @@
 #include <fmt/core.h>
 
 #include "../std/concepts.hpp"
+#include "../std/exception.hpp"
 
 namespace ns_log
 {
 
 namespace fs = std::filesystem;
 
+// logger_file() {{{
 inline void logger_file(fs::path const& path_file_log)
 {
   // Configure
@@ -36,8 +38,9 @@ inline void logger_file(fs::path const& path_file_log)
     , "false");
   // default logger uses default configurations
   el::Loggers::reconfigureLogger("default", default_conf);
-}
+} // logger_file() }}}
 
+// logger_stdout() {{{
 inline void logger_stdout()
 {
   // Configure
@@ -53,8 +56,9 @@ inline void logger_stdout()
     , "true");
   // default logger uses default configurations
   el::Loggers::reconfigureLogger("term", default_conf);
-}
+} // logger_stdout() }}}
 
+// init() {{{
 inline void init(int argc
   , char** argv
   , fs::path path_file_log)
@@ -76,8 +80,9 @@ inline void init(int argc
   {
     LOG(ERROR) << fmt::format("Could not make canonical path for log file '{}'", path_file_log.c_str());
   } // catch: 
-} // function: init
+} // init() }}}
 
+// write() {{{
 template<ns_concept::StreamInsertable... T>
 void write(char level, T&&... t)
 {
@@ -106,7 +111,16 @@ void write(char level, T&&... t)
       CLOG(INFO, "default")  << line;
     }; break;
   } // switch: level
-} // function: write
+} // write() }}}
+
+// fn: exception {{{
+inline void exception(auto&& fn)
+{
+  if (auto expected = ns_exception::to_expected(fn); not expected)
+  {
+    write('e', expected.error());
+  } // if
+} // }}}
 
 } // namespace ns_log
 

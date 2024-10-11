@@ -18,6 +18,14 @@
 
 inline const char * GIMG_PATH_JSON_FETCH = "/tmp/gameimage/json";
 
+namespace std
+{
+
+template<typename T>
+using error = optional<T>;
+
+} // namespace std
+
 // macros {{{
 #define throw_if(cond, msg) \
   if (cond) { throw std::runtime_error(msg); }
