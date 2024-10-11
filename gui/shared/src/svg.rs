@@ -1,5 +1,12 @@
 #![allow(dead_code)]
 
+const ICON_REFRESH: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+</svg>
+"##;
+
 const ICON_HOME: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-house-fill" viewBox="0 0 16 16">
   <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293z"/>
@@ -296,6 +303,7 @@ macro_rules! icon_with_size
 }
 
 
+icon!(icon_refresh, ICON_REFRESH, 16, 16);
 icon!(icon_home, ICON_HOME, 16, 16);
 icon!(icon_background, ICON_BACKGROUND, 317, 60);
 icon!(icon_configure, ICON_CONFIGURE, 16, 16);

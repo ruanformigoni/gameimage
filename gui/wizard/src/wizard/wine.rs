@@ -588,6 +588,16 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     });
   btn_add.set_pos(btn_add.x(), btn_add.y() + dimm::border());
 
+  // Refresh executable list
+  let clone_tx = tx.clone();
+  let _btn_refresh = shared::fltk::button::rect::refresh()
+    .below_of(&btn_add, dimm::border())
+    .with_color(Color::Green)
+    .with_callback(move |_|
+    {
+      clone_tx.send_awake(common::Msg::DrawWineRom);
+    });
+
   // Go to next frame iff a default executable was selected
   // ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineCompress);
   let clone_tx = tx.clone();

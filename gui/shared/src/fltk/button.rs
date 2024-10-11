@@ -42,6 +42,8 @@ pub fn check() -> fltk::button::Button { button::<fltk::button::Button>().with_s
 
 pub fn cloud() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_cloud(1.0).as_str()) }
 
+pub fn refresh() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_refresh(1.0).as_str()) }
+
 pub fn toggle(value : bool) -> fltk::button::ToggleButton
 {
   let mut btn  = button::<fltk::button::ToggleButton>()
@@ -72,7 +74,7 @@ pub fn toggle(value : bool) -> fltk::button::ToggleButton
   btn.set_value(value);
 
   btn
-}
+} // toggle()
 
 pub fn radio() -> fltk::button::RadioButton
 {
@@ -101,8 +103,8 @@ pub fn radio() -> fltk::button::RadioButton
   });
 
   btn
-}
+} // radio()
 
-}
+} // pub mod rect
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
