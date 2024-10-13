@@ -128,6 +128,12 @@ class Fetch final : public Parser
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::FETCH;
+      // Fetch fetchlist
+      m_parser->add_argument("--fetchlist")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--fetchlist"]=s; })
+        .help("Fetch the remote fetchlist");
       // Set custom base url
       m_parser->add_argument("--url-base")
         .action([&](std::string const& s){ m_map_option_value["--url-base"]=s; })

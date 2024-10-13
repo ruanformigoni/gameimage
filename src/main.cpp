@@ -35,6 +35,13 @@ INITIALIZE_EASYLOGGINGPP
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
+  if ( parser.optional("--fetchlist")  )
+  {
+    auto error = ns_fetch::fetchlist();
+    elog_if(error, *error);
+    return;
+  } // if
+
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
 
   if ( parser.optional("--url-base") )

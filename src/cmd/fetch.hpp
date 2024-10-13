@@ -69,6 +69,12 @@ enum class IpcQuery
   URLS,
 }; // }}}
 
+// get_path_fetchlist() {{{
+inline fs::path get_path_fetchlist()
+{
+  return fs::current_path() / "fetch.json";
+} // get_path_fetchlist() }}}
+
 // get_path_file_image() {{{
 decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 {
@@ -182,16 +188,10 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   std::string str_platform = ns_enum::to_string_lower(platform);
 
   // Temporary file with fetch list
-  auto path_json = path_dir_fetch / "fetch.base.json";
-
-  // Fetch list
-  if ( auto expected = fetch_file_from_url(path_json, cpr::Url{URL_FETCH}); not expected )
-  {
-    return std::unexpected(expected.error());
-  } // if
+  fs::path path_file_fetchlist = get_path_fetchlist();
 
   // Select wine distribution
-  std::string str_url_base = ns_db::query(path_json, str_platform, "base");
+  std::string str_url_base = ns_db::query(path_file_fetchlist, str_platform, "base");
 
   // Show base url
   ns_log::write('i', "url base  : ", str_url_base);
@@ -210,16 +210,10 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   ns_fs::ns_path::dir_create<true>(path_dir_fetch);
 
   // Temporary file with fetch list
-  auto path_json = path_dir_fetch / "fetch.base.json";
+  auto path_file_fetchlist = path_dir_fetch / "fetch.json";
 
   // Create platform string
   auto str_platform = ns_enum::to_string_lower(platform);
-
-  // Fetch list
-  if ( auto expected = fetch_file_from_url(path_json, cpr::Url{URL_FETCH}); not expected )
-  {
-    return std::unexpected(expected.error());
-  } // if
 
   // Select wine distribution
   std::string str_url_layer;
@@ -227,16 +221,16 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   {
     if (const char* dist = ns_env::get("GIMG_WINE_DIST"); dist != nullptr )
     {
-      str_url_layer = ns_db::query(path_json, str_platform, "layer", dist);
+      str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer", dist);
     } // if
     else
     {
-      str_url_layer = ns_db::query(path_json, str_platform, "layer", "umu-proton-ge");
+      str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer", "umu-proton-ge");
     } // else
   } // if
   else
   {
-    str_url_layer = ns_db::query(path_json, str_platform, "layer");
+    str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer");
   } // else
 
   ns_log::write('i', "url layer: ", str_url_layer);
@@ -374,6 +368,15 @@ inline std::expected<std::vector<CoreUrl>,std::string> cores_list(fs::path const
   // Return cores
   return vector_cores;
 } // get_files_by_platform() }}}
+
+// fetchlist() {{{
+inline std::error<std::string> fetchlist()
+{
+  fs::path path_dir_current = fs::current_path();
+  auto expected = fetch_file_from_url(path_dir_current / "fetch.json", cpr::Url{URL_FETCH});
+  qreturn_if(not expected, expected.error());
+  return std::nullopt;
+} // fetchlist() }}}
 
 // fetch() {{{
 inline void fetch(ns_enum::Platform platform, std::optional<fs::path> const& only_file = std::nullopt)

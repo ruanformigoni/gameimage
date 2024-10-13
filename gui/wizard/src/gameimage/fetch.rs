@@ -123,6 +123,18 @@ pub fn fetch(opt_path_file_dst : Option<std::path::PathBuf>) -> anyhow::Result<i
   Ok(0)
 } // fetch() }}}
 
+// fetchlist() {{{
+pub fn fetchlist() -> anyhow::Result<i32>
+{
+  match gameimage::gameimage::gameimage_sync(vec!["fetch", "--fetchlist"])
+  {
+    0 => log!("Fetch on backend finished successfully"),
+    rc => { log_return!("Failed to execute fetch on backend with {}", rc); },
+  } // match
+
+  Ok(0)
+} // fetchlist() }}}
+
 // validate() {{{
 pub fn validate() -> anyhow::Result<i32>
 {

@@ -8,12 +8,15 @@ use fltk::{
   text::{TextBuffer,TextDisplay},
   menu::MenuButton,
   enums::{Align,FrameType},
+  dialog,
 };
 
-use shared::fltk::WidgetExtExtra;
+use anyhow::anyhow as ah;
 
+use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
+use crate::db;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -61,6 +64,24 @@ impl Platform
     } // match
   } // as_str
 } // impl IconFrame }}}
+
+// check_version() {{{
+fn check_version() -> anyhow::Result<()>
+{
+  let db_fetch = match db::fetch::read()
+  {
+    Ok(db) => db,
+    Err(e) => return Err(ah!("error: could not read fetch.json, backend failed? No internet? '{}", e)),
+  }; // match
+
+  let version = db_fetch.version;
+  if ! version.starts_with("1.4")
+  {
+    return Err(ah!("error: you should update to version {}", version));
+  } // if
+
+  Ok(())
+} // check_version() }}}
 
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
@@ -243,7 +264,25 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
       log!("Could not set custom url");
     } // else
 
-    // Disable window
+    // Fetch fetchlist
+    if let Err(e) = gameimage::fetch::fetchlist()
+    {
+      log!("Could not fetch fetchlist '{}'", e);
+      dialog::message_default("Could not fetch fetchlist");
+      clone_tx.send_awake(common::Msg::WindActivate);
+      return;
+    } // if
+
+    // Check if version matches
+    if let Err(e) = check_version()
+    {
+      log!("{}", e);
+      dialog::message_default(&format!("{}", e));
+      clone_tx.send_awake(common::Msg::WindActivate);
+      return;
+    } // if
+
+    // Enable window
     clone_tx.send_awake(common::Msg::DrawFetch);
   });
 }

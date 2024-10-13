@@ -5,6 +5,8 @@ use std::fs::File;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
+use shared::std::PathBufExt;
+
 // struct Entry {{{
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Entry
@@ -42,6 +44,22 @@ pub fn get_project_dir(&self, name_project : &str) -> anyhow::Result<PathBuf>
 } // get_project_dir() }}}
 
 }
+
+// get_current_project_dir() {{{
+pub fn get_current_project_dir() -> anyhow::Result<PathBuf>
+{
+  let db_global = read()?;
+  let name_project = db_global.project.string();
+
+  Ok(db_global
+    .dynamic_projects
+    .clone()
+    .ok_or(ah!("Project list is empty"))?
+    .get(&name_project)
+    .ok_or(ah!("Project not found in projects list"))?
+    .path_dir_project
+    .clone())
+} // get_current_project_dir() }}}
 
 // read() {{{
 pub fn read() -> anyhow::Result<Entry>
