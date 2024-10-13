@@ -231,7 +231,7 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
     } // if
     else
     {
-      str_url_layer = ns_db::query(path_json, str_platform, "layer", "ge");
+      str_url_layer = ns_db::query(path_json, str_platform, "layer", "umu-proton-ge");
     } // else
   } // if
   else

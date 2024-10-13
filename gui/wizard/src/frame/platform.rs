@@ -123,9 +123,9 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   {
     if *lock == Some(Platform::Wine)
     {
-      btn_menu.set_width(frame_text.w() - dimm::border() - dimm::width_button_wide()*2);
+      btn_menu.set_width(frame_text.w() - dimm::border() - (dimm::width_button_wide() as f32 * 2.5) as i32);
       let mut btn_wine_dist = MenuButton::default()
-        .with_size(dimm::width_button_wide()*2, dimm::height_button_wide())
+        .with_size((dimm::width_button_wide() as f32 * 2.5) as i32, dimm::height_button_wide())
         .with_focus(false)
         .right_of(&btn_menu, dimm::border())
         .with_callback(|e|
@@ -135,7 +135,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
           e.set_label(&choice);
         });
       // Set dist options
-      btn_wine_dist.add_choice("caffe|ge|osu-tkg|soda|staging|tkg|vaniglia");
+      btn_wine_dist.add_choice("caffe|umu-pronton-ge|osu-tkg|soda|staging|tkg|vaniglia");
       // Init default value for btn_wine_dist
       if let Ok(var) = std::env::var("GIMG_WINE_DIST")
       {
@@ -143,8 +143,8 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
       } // if
       else
       {
-        std::env::set_var("GIMG_WINE_DIST", "ge");
-        btn_wine_dist.set_label("ge");
+        std::env::set_var("GIMG_WINE_DIST", "umu-proton-ge");
+        btn_wine_dist.set_label("umu-proton-ge");
       } // else
     } // if
     else if *lock == Some(Platform::WineUrl)
