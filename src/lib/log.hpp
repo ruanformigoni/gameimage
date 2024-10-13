@@ -122,6 +122,24 @@ inline void exception(auto&& fn)
   } // if
 } // }}}
 
+// fn: ec {{{
+template<typename F, typename... Args>
+inline auto ec(F&& fn, Args&&... args) -> std::invoke_result_t<F, Args...>
+{
+  std::error_code ec;
+  if constexpr ( std::same_as<void,std::invoke_result_t<F, Args...>> )
+  {
+    fn(std::forward<Args>(args)..., ec);
+    if ( ec ) { ns_log::write('e', ec.message()); } // if
+  }
+  else
+  {
+    auto ret = fn(std::forward<Args>(args)..., ec);
+    if ( ec ) { ns_log::write('e', ec.message()); } // if
+    return ret;
+  } // else
+} // }}}
+
 } // namespace ns_log
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/
