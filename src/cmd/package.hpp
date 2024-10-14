@@ -41,8 +41,8 @@ inline void package(std::string const& str_name_project)
   // Verify that directory exists
   ns_fs::ns_path::dir_exists<true>(path_dir_build);
 
-  // Include dwarfs file in image
-  fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(path_dir_project_root.string() + ".dwarfs")._ret;
+  // Include layer file in image
+  fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(path_dir_project_root.string() + ".layer")._ret;
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
     .with_args(path_file_image, "fim-layer", "add", path_file_layer)

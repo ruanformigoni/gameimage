@@ -74,7 +74,7 @@ inline void validate()
         paths_file.push_back(path_file);
       } // for
     }, ns_db::Mode::READ);
-    
+
     for(auto&& path_file : paths_file)
     {
       "Missing file {} in json for '{}'"_try([&]
@@ -145,7 +145,7 @@ inline void validate()
   } // switch
 
 } // validate() }}}
-  
+
 // compress() {{{
 inline decltype(auto) compress()
 {
@@ -175,20 +175,20 @@ inline decltype(auto) compress()
   , ns_db::Mode::READ);
 
   // Output file
-  fs::path path_file_dwarfs{path_dir_project_root.string() + ".dwarfs"};
+  fs::path path_file_layer{path_dir_project_root.string() + ".layer"};
 
   // Erase if exists
   std::error_code ec;
-  fs::remove(path_file_dwarfs, ec);
+  fs::remove(path_file_layer, ec);
   if ( ec )
   {
-    ns_log::write('e', "Could not remove file ", path_file_dwarfs);
+    ns_log::write('e', "Could not remove file ", path_file_layer);
   } // if
 
   // Log
   ns_log::write('i', "project: ", str_project);
   ns_log::write('i', "image: ", path_file_image);
-  ns_log::write('i', "dwarfs: ", path_file_dwarfs);
+  ns_log::write('i', "layer: ", path_file_layer);
 
   // Commit
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
@@ -196,15 +196,15 @@ inline decltype(auto) compress()
     .with_args(path_file_image, "fim-commit")
     .spawn()
     .wait();
-  
+
   // Compress
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(path_file_image , "fim-layer" , "create" , path_dir_project_root , path_file_dwarfs)
+    .with_args(path_file_image , "fim-layer" , "create" , path_dir_project_root , path_file_layer)
     .spawn()
     .wait();
 
-  ns_log::write('i', "Wrote file to '", path_file_dwarfs, "'");
+  ns_log::write('i', "Wrote file to '", path_file_layer, "'");
 } // compress() }}}
 
 } // namespace ns_compress

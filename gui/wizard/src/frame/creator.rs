@@ -200,7 +200,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     {
       if checkbutton.is_checked()
       {
-        let _ = fs::remove_file(path_dir_project.with_extension("dwarfs"));
+        let _ = fs::remove_file(path_dir_project.with_extension("layer"));
         let _ = fs::remove_dir_all(path_dir_project);
       }
     } // for
