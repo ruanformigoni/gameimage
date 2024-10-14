@@ -130,6 +130,8 @@ class Subprocess
 template<ns_concept::AsString T>
 Subprocess::Subprocess(T&& t)
   : m_program(ns_string::to_string(t))
+  , m_fstdout([](auto&& e){ ns_log::write('i', "[o]: ", e); })
+  , m_fstderr([](auto&& e){ ns_log::write('i', "[e]: ", e); })
   , m_with_piped_outputs(false)
 {
   // argv0 is program name
