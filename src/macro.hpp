@@ -35,6 +35,10 @@
 #define eexit_if(cond, msg, ret) \
   if (cond) { ns_log::write('e', msg); exit(ret); }
 
+// Abort
+#define eabort_if(cond, msg) \
+  if ( (cond) ) { ns_log::write('e', msg); std::abort(); }
+
 // Return
 #define qreturn_if(cond, ...) \
   if (cond) { return __VA_ARGS__; }

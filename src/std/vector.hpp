@@ -19,15 +19,14 @@ T pop_back(V& vec)
   return value;
 }
 
-template<std::ranges::input_range R = std::vector<std::string>
-  , typename F = std::function<std::string(typename std::remove_cvref_t<R>::value_type)>>
-inline R from_string(ns_concept::AsString auto&& t
+template<ns_concept::Iterable R = std::vector<std::string>>
+inline R from_string(ns_concept::AsString auto&& s
   , char delimiter
-  , auto&& f = [](auto&& e){ return e; })
+  , std::function<typename R::value_type(std::string)> f = [](auto&& e){ return e; })
 {
   R tokens;
   std::string token;
-  std::istringstream stream_token(ns_string::to_string(t));
+  std::istringstream stream_token(ns_string::to_string(s));
 
   while (std::getline(stream_token, token, delimiter))
   {

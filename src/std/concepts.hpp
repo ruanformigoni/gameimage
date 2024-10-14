@@ -16,6 +16,20 @@ template<typename T>
 concept Enum = std::is_enum_v<T>;
 
 template<typename T>
+concept Iterable = requires(T t)
+{
+  { t.begin() } -> std::input_iterator;
+  { t.end() } -> std::input_iterator;
+};
+
+template<typename T>
+concept IterableConst = requires(T t)
+{
+  { t.cbegin() } -> std::input_iterator;
+  { t.cend() } -> std::input_iterator;
+};
+
+template<typename T>
 concept IterableForward = std::forward_iterator<T>;
 
 template<typename T>

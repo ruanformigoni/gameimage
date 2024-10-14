@@ -77,19 +77,21 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   }, ns_db::Mode::CREATE);
 
   // Apply application data
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_flatimage
-    , "fim-desktop"
-    , "setup"
-    , path_file_desktop);
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_flatimage, "fim-desktop", "setup", path_file_desktop)
+    .spawn()
+    .wait();
 
   // Enable desktop integration
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_flatimage
-    , "fim-desktop"
-    , "enable"
-    , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); })
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_flatimage
+      , "fim-desktop"
+      , "enable"
+      , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); }))
+    .spawn()
+    .wait();
 } // desktop() }}}
 
 } // namespace ns_test

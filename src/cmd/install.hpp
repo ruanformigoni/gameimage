@@ -129,12 +129,20 @@ inline void wine(Op const& op, std::vector<std::string> args)
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t));
+    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+      .with_piped_outputs()
+      .with_args(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t))
+      .spawn()
+      .wait();
   };
 
   auto f_winetricks = [&]<typename T>(T&& t)
   {
-    ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t));
+    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+      .with_piped_outputs()
+      .with_args(path_flatimage, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t))
+      .spawn()
+      .wait();
   };
 
   // Execute operation
@@ -165,10 +173,15 @@ inline void linux(Op const& op, std::vector<std::string> args)
 
   // Project dir
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  fs::path path_dir_linux = path_dir_project / "linux";
+  lec(fs::create_directories, path_dir_linux);
 
   // Run selected file
-  ns_env::set("FIM_HOME", (path_dir_project / "linux").c_str(), ns_env::Replace::Y);
-  ns_subprocess::sync("/fim/static/fim_portal", path_flatimage, "fim-exec", args);
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_flatimage, "fim-exec", "env", "HOME={}"_fmt(path_dir_linux.c_str()), args)
+    .spawn()
+    .wait();
 } // linux() }}}
 
 // emulator_install_file_ryujinx() {{{
@@ -343,9 +356,13 @@ inline void emulator(Op op, std::vector<std::string> args)
   {
     case Op::GUI:
     {
-      ns_env::set("FIM_XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
-      ns_env::set("FIM_XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
-      ns_subprocess::sync("/fim/static/fim_portal", path_flatimage);
+      (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+        .with_piped_outputs()
+        .with_var("FIM_XDG_CONFIG_HOME", path_dir_config.c_str())
+        .with_var("FIM_XDG_DATA_HOME", path_dir_data.c_str())
+        .with_args(path_flatimage)
+        .spawn()
+        .wait();
     }
     break;
     case Op::BIOS: { f_install_files(op, path_dir_bios, args); } break;

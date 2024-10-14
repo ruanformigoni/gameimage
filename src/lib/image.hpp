@@ -74,8 +74,13 @@ inline void resize(fs::path const& path_file_src
   // Resize
   // Boost gil generates bad results when resizing, use magick for now
   fs::path path_file_resized = path_file_dst.parent_path() / "cropped.png";
-  fs::path path_file_magick = ns_subprocess::search_path("magick");
-  ns_subprocess::sync(path_file_magick, path_file_src, "-resize", "{}x{}"_fmt(width, height), path_file_resized);
+  auto optional_path_file_magick = ns_subprocess::search_path("magick");
+  ereturn_if(not optional_path_file_magick, "Could not find magick binary");
+  (void) ns_subprocess::Subprocess(*optional_path_file_magick)
+    .with_piped_outputs()
+    .with_args(path_file_src, "-resize", "{}x{}"_fmt(width, height), path_file_resized)
+    .spawn()
+    .wait();
 
   // Crop
   gil::rgba8_image_t img;

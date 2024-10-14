@@ -176,7 +176,13 @@ void boot_linux(fs::path const& path_dir_self, fs::path const& path_file_databas
   // Start application
   ns_log::write('i', "Execute: ", cmd);
 
-  ns_subprocess::sync(boost::process::search_path("bash").string(), "-c", cmd);
+  auto optional_path_file_bash = ns_subprocess::search_path("bash");
+  ereturn_if (not optional_path_file_bash, "Could not find bash");
+  (void) ns_subprocess::Subprocess(*optional_path_file_bash)
+    .with_piped_outputs()
+    .with_args("-c", cmd)
+    .spawn()
+    .wait();
 } // boot_linux() }}}
 
 // boot_wine() {{{
@@ -212,7 +218,11 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_WINE");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), path_file_rom, wine_args(path_dir_self, path_file_rom_relative));
+  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+    .with_piped_outputs()
+    .with_args(path_file_rom, wine_args(path_dir_self, path_file_rom_relative))
+    .spawn()
+    .wait();
 } // boot_wine() }}}
 
 // boot_retroarch() {{{
@@ -247,8 +257,11 @@ void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_dat
   std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RETROARCH");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), "-L", path_file_core, path_file_rom);
-
+  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+    .with_piped_outputs()
+    .with_args("-L", path_file_core, path_file_rom)
+    .spawn()
+    .wait();
 } // boot_retroarch() }}}
 
 // boot_pcsx2() {{{
@@ -283,7 +296,11 @@ void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_databas
   std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_PCSX2");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), "--", path_file_rom);
+  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+    .with_piped_outputs()
+    .with_args("--", path_file_rom)
+    .spawn()
+    .wait();
 } // boot_pcsx2() }}}
 
 // boot_rpcs3() {{{
@@ -329,7 +346,11 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
   std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RPCS3");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), "--allow-any-location", "--no-gui", "--", path_file_rom);
+  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+    .with_piped_outputs()
+    .with_args("--allow-any-location", "--no-gui", "--", path_file_rom)
+    .spawn()
+    .wait();
 } // boot_rpcs3() }}}
 
 // boot_ryujinx() {{{
@@ -367,7 +388,11 @@ void boot_ryujinx(fs::path const& path_dir_self, fs::path const& path_file_datab
   std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RYUJINX");
 
   // Start application
-  ns_subprocess::sync(str_cmd.c_str(), path_file_rom);
+  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+    .with_piped_outputs()
+    .with_args(path_file_rom)
+    .spawn()
+    .wait();
 } // boot_ryujinx() }}}
 
 // boot() {{{

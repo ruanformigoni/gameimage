@@ -73,14 +73,16 @@ std::string to_upper(T&& t)
 } // to_upper() }}}
 
 // from_container() {{{
-template<typename T, typename F = std::function<std::string(typename std::remove_cvref_t<T>::value_type)>>
-std::string from_container(T&& t, char sep = ' ', F&& f = [](auto&& e){ return e; })
+template<ns_concept::Iterable R
+  , typename V = typename std::remove_cvref_t<R>::value_type
+  , typename F = std::function<std::string(V)>>
+std::string from_container(R&& r, char sep = ',', F f = [](V&& e) -> std::string { return e; })
 {
   std::stringstream ret;
-  for( auto it = t.begin(); it != t.end(); ++it )
+  for( auto it = r.begin(); it != r.end(); ++it )
   {
     ret << f(*it);
-    if ( std::next(it) != t.end() ) { ret << sep; }
+    if ( std::next(it) != r.end() ) { ret << sep; }
   } // if
   return ret.str();
 } // from_container() }}}

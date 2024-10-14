@@ -46,7 +46,11 @@ inline decltype(auto) test()
   , ns_db::Mode::READ);
 
   // Start application
-  ns_subprocess::sync("/fim/static/fim_portal", path_file_flatimage, "fim-exec", path_file_boot);
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_flatimage, "fim-exec", path_file_boot)
+    .spawn()
+    .wait();
 } // test() }}}
  
 } // namespace ns_test

@@ -42,12 +42,12 @@ inline void package(std::string const& str_name_project)
   ns_fs::ns_path::dir_exists<true>(path_dir_build);
 
   // Include dwarfs file in image
-  fs::path path_file_dwarfs = ns_fs::ns_path::file_exists<true>(path_dir_project_root.string() + ".dwarfs")._ret;
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-layer"
-    , "add"
-    , path_file_dwarfs);
+  fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(path_dir_project_root.string() + ".dwarfs")._ret;
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image, "fim-layer", "add", path_file_layer)
+    .spawn()
+    .wait();
 
   // Copy launcher to outside wizard image
   fs::path path_file_launcher = path_dir_build / "gameimage-launcher";
@@ -57,34 +57,40 @@ inline void package(std::string const& str_name_project)
   );
 
   // Include launcher inside game image
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-exec"
-    , "cp"
-    , path_file_launcher
-    , "/fim/static/gameimage-launcher");
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image
+      , "fim-exec"
+      , "cp"
+      , path_file_launcher
+      , "/fim/static/gameimage-launcher")
+    .spawn()
+    .wait();
 
   // Set boot command
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-boot"
-    , "/bin/bash"
-    , "-c"
-    , "/fim/static/gameimage-launcher"
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image
+      , "fim-boot"
+      , "/bin/bash"
+      , "-c"
+      , "/fim/static/gameimage-launcher")
+    .spawn()
+    .wait();
 
   // Enable notify-send
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-notify"
-    , "on"
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image, "fim-notify", "on")
+    .spawn()
+    .wait();
 
   // Commit changes into the image
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-commit"
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image , "fim-commit")
+    .spawn()
+    .wait();
 
 } // package() }}}
 

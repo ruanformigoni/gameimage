@@ -17,6 +17,7 @@
 #include "../enum.hpp"
 
 #include "../lib/ipc.hpp"
+#include "../std/env.hpp"
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
 #include "../lib/db.hpp"
@@ -245,7 +246,11 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 // merge_base_and_layer() {{{
 inline void merge_base_and_layer(fs::path const& path_file_image , fs::path const& path_file_layer)
 {
-  ns_subprocess::sync(path_file_image, "fim-layer", "add", path_file_layer);
+  (void) ns_subprocess::Subprocess(path_file_image)
+    .with_piped_outputs()
+    .with_args("fim-layer", "add", path_file_layer)
+    .spawn()
+    .wait();
 } // merge_base_and_layer() }}}
 
 // url_get() {{{

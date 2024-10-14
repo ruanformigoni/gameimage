@@ -191,19 +191,18 @@ inline decltype(auto) compress()
   ns_log::write('i', "dwarfs: ", path_file_dwarfs);
 
   // Commit
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-commit"
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image, "fim-commit")
+    .spawn()
+    .wait();
   
   // Compress
-  ns_subprocess::sync("/fim/static/fim_portal"
-    , path_file_image
-    , "fim-layer"
-    , "create"
-    , path_dir_project_root
-    , path_file_dwarfs
-  );
+  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    .with_piped_outputs()
+    .with_args(path_file_image , "fim-layer" , "create" , path_dir_project_root , path_file_dwarfs)
+    .spawn()
+    .wait();
 
   ns_log::write('i', "Wrote file to '", path_file_dwarfs, "'");
 } // compress() }}}
