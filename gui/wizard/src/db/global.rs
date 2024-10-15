@@ -45,21 +45,18 @@ pub fn get_project_dir(&self, name_project : &str) -> anyhow::Result<PathBuf>
 
 }
 
-// get_current_project_dir() {{{
-pub fn get_current_project_dir() -> anyhow::Result<PathBuf>
+// get_current_project() {{{
+pub fn get_current_project() -> anyhow::Result<EntryDetails>
 {
   let db_global = read()?;
   let name_project = db_global.project.string();
 
   Ok(db_global
-    .dynamic_projects
-    .clone()
+    .dynamic_projects.clone()
     .ok_or(ah!("Project list is empty"))?
     .get(&name_project)
-    .ok_or(ah!("Project not found in projects list"))?
-    .path_dir_project
-    .clone())
-} // get_current_project_dir() }}}
+    .ok_or(ah!("Project not found in projects list"))?.clone())
+} // get_current_project() }}}
 
 // read() {{{
 pub fn read() -> anyhow::Result<Entry>

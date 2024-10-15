@@ -24,6 +24,7 @@ use shared::dimm;
 use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
+use crate::db;
 use crate::frame;
 use crate::wizard;
 use crate::gameimage;
@@ -93,6 +94,26 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     , frame_content.h() - dimm::border()*4 - dimm::height_button_wide() - height_input_script - dimm::height_text()*2
     , frame_content.x() + dimm::border()
     , frame_content.y() + dimm::border());
+
+  // Create browse button below save button
+  let _btn_browse = shared::fltk::button::rect::folder()
+    .below_of(&term.btn_save, dimm::border())
+    .with_color(fltk::enums::Color::Blue)
+    .with_callback(|_|
+    {
+      let project = match db::global::get_current_project()
+      {
+        Ok(project) => project,
+        Err(e) => { log!("Error to get current project '{}'", e); return; }
+      }; // match
+      
+      let _ = std::process::Command::new("fim_portal")
+          .stderr(std::process::Stdio::inherit())
+          .stdout(std::process::Stdio::inherit())
+          .arg("xdg-open")
+          .arg(&project.path_dir_project.join("linux"))
+          .spawn();
+    });
 
   // Field that shows the currently selected file
   let mut input_script = fltk::input::FileInput::default()

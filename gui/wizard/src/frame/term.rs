@@ -33,6 +33,8 @@ pub struct Term
   pub term : SimpleTerminal,
   // Terminal message sender
   pub tx : mpsc::Sender<String>,
+  // Save button
+  pub btn_save : fltk::button::Button,
 } // struct Term }}}
 
 impl Drop for Term
@@ -64,7 +66,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   term.set_history_lines(std::i32::MAX);
 
   let mut clone_term = term.clone();
-  let _btn_save = shared::fltk::button::rect::save()
+  let btn_save = shared::fltk::button::rect::save()
     .right_of(&term, dimm::border())
     .with_posy_of(&term)
     .with_color(Color::Blue)
@@ -106,7 +108,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   });
 
   // Return new term
-  Term{ term, opt_proc_thread: None, tx }
+  Term{ term, opt_proc_thread: None, tx, btn_save }
 } // new() }}}
 
 // kill() {{{
