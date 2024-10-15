@@ -46,6 +46,7 @@ enum class Op
 {
   ICON,
   ROM,
+	LINUX,
   CORE,
   BIOS,
   KEYS,

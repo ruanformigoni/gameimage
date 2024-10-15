@@ -40,14 +40,47 @@ class Project
     std::vector<fs::path> paths_file_bios;
     std::vector<fs::path> paths_file_core;
     std::vector<fs::path> paths_file_rom;
+    void set_default(ns_enum::Op const op, fs::path const& rpath_file_target);
+    void append(ns_enum::Op const op, fs::path const& rpath_file_target);
     void erase(ns_enum::Op const op, fs::path const& rpath_file_target);
+    fs::path get_directory(ns_enum::Op const op);
   friend Project read_impl(fs::path path_file_db);
   friend void write_impl(Project const& project);
 }; // struct Project }}}
 
+// set_default() {{{
+void Project::set_default(ns_enum::Op const op, fs::path const& rpath_file_target)
+{
+  ethrow_if(not rpath_file_target.is_relative(), "Path '{}' is not relative"_fmt(rpath_file_target));
+
+  switch(op)
+  {
+    case ns_enum::Op::BIOS: path_file_bios = rpath_file_target; break;
+    case ns_enum::Op::CORE: path_file_core = rpath_file_target; break;
+    case ns_enum::Op::ROM: path_file_rom = rpath_file_target; break;
+    default: throw std::runtime_error("Invalid item to make default");
+  } // switch
+} // set_default() }}}
+
+// append() {{{
+void Project::append(ns_enum::Op const op, fs::path const& rpath_file_target)
+{
+  ethrow_if(not rpath_file_target.is_relative(), "Path '{}' is not relative"_fmt(rpath_file_target));
+
+  switch(op)
+  {
+    case ns_enum::Op::BIOS: paths_file_bios.push_back(rpath_file_target); break;
+    case ns_enum::Op::CORE: paths_file_core.push_back(rpath_file_target); break;
+    case ns_enum::Op::ROM: paths_file_rom.push_back(rpath_file_target); break;
+    default: throw std::runtime_error("Invalid item to append");
+  } // switch
+} // append() }}}
+
 // erase() {{{
 void Project::erase(ns_enum::Op const op, fs::path const& rpath_file_target)
 {
+  ethrow_if(not rpath_file_target.is_relative(), "Path '{}' is not relative"_fmt(rpath_file_target));
+
   switch(op)
   {
     case ns_enum::Op::BIOS:
@@ -68,6 +101,22 @@ void Project::erase(ns_enum::Op const op, fs::path const& rpath_file_target)
     default: throw std::runtime_error("Invalid item to delete");
   } // switch
 } // erase() }}}
+
+// get_directory() {{{
+fs::path Project::get_directory(ns_enum::Op const op)
+{
+  switch(op)
+  {
+    case ns_enum::Op::CONFIG: return path_dir_config; break;
+    case ns_enum::Op::DATA: return path_dir_data; break;
+    case ns_enum::Op::BIOS: return path_dir_bios; break;
+    case ns_enum::Op::ROM: return path_dir_rom; break;
+    case ns_enum::Op::CORE: return path_dir_core; break;
+    case ns_enum::Op::KEYS: return path_dir_keys; break;
+    case ns_enum::Op::LINUX: return path_dir_linux; break;
+    default: throw std::runtime_error("Invalid item to get directory for");
+  } // switch
+} // get_directory() }}}
 
 // init_impl() {{{
 void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platform)
