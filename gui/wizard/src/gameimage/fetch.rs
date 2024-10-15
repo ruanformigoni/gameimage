@@ -55,46 +55,6 @@ pub fn query_files() -> anyhow::Result<Vec<String>>
   Ok(query("files")?)
 } // query_files() }}}
 
-// url_clear() {{{
-pub fn url_clear() -> anyhow::Result<i32>
-{
-  let platform = gameimage::gameimage::platform()?;
-
-  let rc = gameimage::gameimage::gameimage_sync(vec!
-  [
-    "fetch"
-    , "--platform", &platform
-    , "--url-clear"
-  ]);
-
-  if rc != 0 { return Err(ah!("backend exited with non-zero code: {}", rc)); } // if
-
-  Ok(rc)
-} // url_clear() }}}
-
-// set_url() {{{
-fn set_url(str_type : &str, str_url : &str) -> anyhow::Result<i32>
-{
-  let platform = gameimage::gameimage::platform()?;
-
-  let rc = gameimage::gameimage::gameimage_sync(vec!
-  [
-    "fetch"
-    , "--platform", &platform
-    , &str_type, &str_url
-  ]);
-
-  if rc != 0 { return Err(ah!("backend exited with non-zero code: {}", rc)); } // if
-
-  Ok(rc)
-} // set_url() }}}
-
-// set_url_layer() {{{
-pub fn set_url_layer(str_url : &str) -> anyhow::Result<i32>
-{
-  Ok(set_url("--url-layer", str_url)?)
-} // set_url_layer() }}}
-
 // fetch() {{{
 pub fn fetch(opt_path_file_dst : Option<std::path::PathBuf>) -> anyhow::Result<i32>
 {

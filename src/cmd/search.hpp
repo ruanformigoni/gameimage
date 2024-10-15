@@ -94,10 +94,10 @@ inline std::vector<fs::path> search_dirs(fs::path const& path_dir_search)
 } // search_dirs() }}}
 
 // search_remote() {{{
-inline std::vector<std::string> search_remote(fs::path const& path_dir_fetch)
+inline std::vector<std::string> search_remote()
 {
   std::vector<std::string> ret;
-  auto expected_cores_list = ns_fetch::cores_list(path_dir_fetch);
+  auto expected_cores_list = ns_fetch::fetch_cores();
   ethrow_if(not expected_cores_list, expected_cores_list.error());
   for( auto entry : *expected_cores_list )
   {
@@ -157,13 +157,12 @@ inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
   // Handle fetch for each platform
   switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
   {
-    case ns_enum::Platform::RETROARCH: send(search_remote(path_dir_project), ipc);
+    case ns_enum::Platform::RETROARCH: send(search_remote(), ipc);
     break;
     case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
     case ns_enum::Platform::PCSX2:
-    case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::RYUJINX : "Not implemented"_throw();
+    case ns_enum::Platform::RPCS3: "Not implemented"_throw();
   } // switch
 
 } // search_remote() }}}
@@ -235,7 +234,6 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
     case ns_enum::Platform::RETROARCH: send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
     case ns_enum::Platform::PCSX2    : send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
     case ns_enum::Platform::RPCS3    : send(search_dirs(path_dir_search), ipc);               break;
-    case ns_enum::Platform::RYUJINX  : send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
   } // switch
 
 } // search_local() }}}

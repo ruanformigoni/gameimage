@@ -435,8 +435,7 @@ inline void install(Op op, std::vector<std::string> args)
     break;
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
-    case ns_enum::Platform::RPCS3:
-    case ns_enum::Platform::RYUJINX: ns_install::emulator(op, args);
+    case ns_enum::Platform::RPCS3: ns_install::emulator(op, args);
     break;
   } // switch
 
@@ -456,21 +455,15 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   // Core dir
   fs::path rpath_dir_core = ns_db::query(ns_db::file_project(), "path_dir_core");
 
-  if ( enum_platform != ns_enum::Platform::RETROARCH )
-  {
-    "Core install is only available for retroarch"_throw();
-  } // if
+  ethrow_if(enum_platform != ns_enum::Platform::RETROARCH, "Core install is only available for retroarch" );
 
-  if ( op != Op::CORE )
-  {
-    "Only download of cores is available"_throw();
-  } // if
+  ethrow_if(op != Op::CORE, "Only download of cores is available" );
 
   // Get project directory
   fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Fetch cores / urls
-  auto expected_vec_core_url = ns_fetch::cores_list(path_dir_project);
+  auto expected_vec_core_url = ns_fetch::fetch_cores();
   ethrow_if(not expected_vec_core_url, expected_vec_core_url.error());
 
   // Put in a set

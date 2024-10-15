@@ -119,6 +119,14 @@ inline T get_or_throw(const char* name)
   return value;
 } // get_or_throw() }}}
 
+// get_or_else() {{{
+// Get an env variable
+inline std::string get_or_else(std::string_view name, std::string_view alternative)
+{
+  const char* value = std::getenv(name.data());
+  return (value != nullptr)? value : alternative.data();
+} // get_or_else() }}}
+
 } // namespace ns_env }}}
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/

@@ -353,48 +353,6 @@ void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_databas
     .wait();
 } // boot_rpcs3() }}}
 
-// boot_ryujinx() {{{
-void boot_ryujinx(fs::path const& path_dir_self, fs::path const& path_file_database)
-{
-  // Rom
-  fs::path path_file_rom;
-
-  // Config dir
-  fs::path path_dir_config;
-
-  // Data dir
-  fs::path path_dir_data;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-
-    // Config
-    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_config"])._ret;
-
-    // Data
-    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_data"])._ret;
-  }
-  , ns_db::Mode::READ);
-
-  // Set XDG vars
-  ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
-  ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
-
-  // Get boot command
-  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RYUJINX");
-
-  // Start application
-  (void) ns_subprocess::Subprocess(str_cmd.c_str())
-    .with_piped_outputs()
-    .with_args(path_file_rom)
-    .spawn()
-    .wait();
-} // boot_ryujinx() }}}
-
 // boot() {{{
 void boot(int argc, char** argv)
 {
@@ -443,7 +401,6 @@ void boot(int argc, char** argv)
     case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
     case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
     case ns_enum::Platform::RPCS3    : boot_rpcs3(path_dir_self, path_file_database)     ; break;
-    case ns_enum::Platform::RYUJINX  : boot_ryujinx(path_dir_self, path_file_database)   ; break;
   } // switch
 } // function: boot }}}
 

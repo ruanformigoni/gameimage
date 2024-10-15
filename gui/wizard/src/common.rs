@@ -144,6 +144,7 @@ macro_rules! log
     {
       let output = format!($($arg)*);
       common::impl_log(output.as_str());
+      eprintln!("{}", output);
     }
   }
 }

@@ -29,7 +29,6 @@ enum Platform
 {
   Linux,
   Wine,
-  WineUrl,
   Retroarch,
   Pcsx2,
   Rcps3,
@@ -42,11 +41,11 @@ impl Platform
   {
     match self
     {
-      Platform::Linux                    => "linux",
-      Platform::Wine | Platform::WineUrl => "wine",
-      Platform::Retroarch                => "retroarch",
-      Platform::Pcsx2                    => "pcsx2",
-      Platform::Rcps3                    => "rpcs3",
+      Platform::Linux     => "linux",
+      Platform::Wine      => "wine",
+      Platform::Retroarch => "retroarch",
+      Platform::Pcsx2     => "pcsx2",
+      Platform::Rcps3     => "rpcs3",
     } // match
   } // as_str
 
@@ -56,7 +55,6 @@ impl Platform
     {
       "linux"     => Some(Platform::Linux),
       "wine"      => Some(Platform::Wine),
-      "wine_url"  => Some(Platform::WineUrl),
       "retroarch" => Some(Platform::Retroarch),
       "pcsx2"     => Some(Platform::Pcsx2),
       "rpcs3"     => Some(Platform::Rcps3),
@@ -88,9 +86,6 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
   // Keep track of which frame to draw (search web or local)
   static PLATFORM : once_cell::sync::Lazy<Mutex<Option<Platform>>> = once_cell::sync::Lazy::new(|| Mutex::new(None));
-
-  // Remember custom url field
-  static URL : once_cell::sync::Lazy<Mutex<Option<String>>> = once_cell::sync::Lazy::new(|| Mutex::new(None));
 
   // Enter the build directory
   if let Err(e) = common::dir_build()
@@ -156,7 +151,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
           e.set_label(&choice);
         });
       // Set dist options
-      btn_wine_dist.add_choice("caffe|umu-pronton-ge|osu-tkg|soda|staging|tkg|vaniglia");
+      btn_wine_dist.add_choice("caffe|umu-proton-ge|osu-tkg|soda|staging|tkg|vaniglia");
       // Init default value for btn_wine_dist
       if let Ok(var) = std::env::var("GIMG_WINE_DIST")
       {
@@ -167,33 +162,6 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
         std::env::set_var("GIMG_WINE_DIST", "umu-proton-ge");
         btn_wine_dist.set_label("umu-proton-ge");
       } // else
-    } // if
-    else if *lock == Some(Platform::WineUrl)
-    {
-      frame_text.set_size(frame_text.w(), frame_text.h() - dimm::height_button_wide() - dimm::height_text() - dimm::border());
-      let _btn_wine_dist = fltk::input::Input::default()
-        .with_size_of(&btn_menu)
-        .above_of(&btn_menu, dimm::border())
-        .with_label("Insert the url for the custom wine tarball")
-        .with_align(Align::Top | Align::Left)
-        .with_callback(|e|
-        {
-          match URL.lock()
-          {
-            Ok(mut guard) => *guard = Some(e.value()),
-            Err(e) => log!("Could not lock input url field: {}", e),
-          };
-        });
-    } // else if
-
-    // Reset URL
-    if *lock != Some(Platform::WineUrl) && let Ok(mut guard) = URL.lock()
-    {
-      *guard = None;
-      if let Err(e) = gameimage::fetch::url_clear()
-      {
-        log!("Could not clear custom url: {}", e);
-      } // if
     } // if
 
     if let Some(platform) = lock.clone()
@@ -250,19 +218,6 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 
     // Disable window
     clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    // Set custom url if it was passed
-    if let Ok(guard) = URL.lock() && let Some(url) = guard.clone()
-    {
-      if let Err(e) = gameimage::fetch::set_url_layer(&url)
-      {
-        log!("Exit backend with error: {}", e);
-      } // if
-    } // match
-    else
-    {
-      log!("Could not set custom url");
-    } // else
 
     // Fetch fetchlist
     if let Err(e) = gameimage::fetch::fetchlist()

@@ -129,19 +129,6 @@ inline void validate()
       f_file_default("rom");
     } // case
     break;
-    case ns_enum::Platform::RYUJINX:
-    {
-      // default bios is managed by ryujinx
-      // default rom
-      f_file_default("rom");
-      // default key
-      f_file_default("keys");
-      // all roms
-      f_files_validate("rom");
-      // all keys
-      f_files_validate("keys");
-    } // case
-    break;
   } // switch
 
 } // validate() }}}

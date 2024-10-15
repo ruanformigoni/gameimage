@@ -20,7 +20,7 @@
 #include "../std/env.hpp"
 #include "../lib/subprocess.hpp"
 #include "../lib/log.hpp"
-#include "../lib/db.hpp"
+#include "../lib/db/fetch.hpp"
 #include "../lib/sha.hpp"
 
 inline constexpr const char* URL_FETCH = "http://192.168.0.16:1170/fetch.json";
@@ -56,13 +56,6 @@ struct fetchlist_layer_ret_t
   cpr::Url url;
 }; // }}}
 
-// struct CoreUrl {{{
-struct CoreUrl
-{
-  std::string core;
-  std::string url;
-}; // }}}
-
 // enum class IpcQuery {{{
 enum class IpcQuery
 {
@@ -79,12 +72,7 @@ inline fs::path get_path_fetchlist()
 // get_path_file_image() {{{
 decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 {
-  // Get self dir
-  fs::path path_dir_current = fs::current_path();
-  // Check if exists
-  if ( not fs::exists(path_dir_current) ) { "current directory does not exist"_throw(); }
-  // Create image path
-  return path_dir_current / ( ns_enum::to_string_lower(platform) + ".flatimage" );
+  return fs::current_path() / ( ns_enum::to_string_lower(platform) + ".flatimage" );
 } // }}}
 
 // fetch_file_from_url() {{{
@@ -180,65 +168,45 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 } // }}}
 
 // fetchlist_base() {{{
-[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetchlist_base(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
+[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetchlist_base(ns_enum::Platform const& platform)
 {
-  // Create dir
-  ns_fs::ns_path::dir_create<true>(path_dir_fetch);
-
   // Create platform string
   std::string str_platform = ns_enum::to_string_lower(platform);
-
   // Temporary file with fetch list
-  fs::path path_file_fetchlist = get_path_fetchlist();
-
-  // Select wine distribution
-  std::string str_url_base = ns_db::query(path_file_fetchlist, str_platform, "base");
-
+  fs::path path_file_fetch = get_path_fetchlist();
+  // Open file as database
+  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  ethrow_if(not database, database.error());
+  // Select the base in terms of platform
+  std::string str_url_base = database->get_platform(platform)->get_base();
   // Show base url
   ns_log::write('i', "url base  : ", str_url_base);
-
+  // Create destination / url pair
   return fetchlist_base_ret_t
   {
-    .path = fs::path{path_dir_fetch} / "{}.flatimage"_fmt(str_platform),
+    .path = fs::path{path_file_fetch.parent_path()} / "{}.flatimage"_fmt(str_platform),
     .url = cpr::Url(str_url_base),
   };
 } // fetchlist_base() }}}
 
 // fetchlist_layer() {{{
-[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer(ns_enum::Platform const& platform, fs::path const& path_dir_fetch)
+[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer(ns_enum::Platform const& platform)
 {
-  // Create dir
-  ns_fs::ns_path::dir_create<true>(path_dir_fetch);
-
   // Temporary file with fetch list
-  auto path_file_fetchlist = path_dir_fetch / "fetch.json";
-
-  // Create platform string
-  auto str_platform = ns_enum::to_string_lower(platform);
-
-  // Select wine distribution
-  std::string str_url_layer;
-  if (platform == ns_enum::Platform::WINE)
-  {
-    if (const char* dist = ns_env::get("GIMG_WINE_DIST"); dist != nullptr )
-    {
-      str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer", dist);
-    } // if
-    else
-    {
-      str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer", "umu-proton-ge");
-    } // else
-  } // if
-  else
-  {
-    str_url_layer = ns_db::query(path_file_fetchlist, str_platform, "layer");
-  } // else
-
+  fs::path path_file_fetch = get_path_fetchlist();
+  // Open file as database
+  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  ethrow_if(not database, database.error());
+  // Fetch layer url
+  std::string str_url_layer = database
+      ->get_platform(platform)
+      ->get_layer((platform == ns_enum::Platform::WINE)? ns_env::get_or_else("GIMG_WINE_DIST", "umu-proton-ge") : "");
+  // Show url
   ns_log::write('i', "url layer: ", str_url_layer);
-
+  // Create destination / url pair
   return fetchlist_layer_ret_t
   {
-    .path = fs::path{path_dir_fetch} / "{}.layer"_fmt(str_platform),
+    .path = fs::path{path_file_fetch.parent_path()} / "{}.layer"_fmt(ns_enum::to_string_lower(platform)),
     .url = cpr::Url(str_url_layer),
   };
 } // fetchlist_layer() }}}
@@ -253,77 +221,11 @@ inline void merge_base_and_layer(fs::path const& path_file_image , fs::path cons
     .wait();
 } // merge_base_and_layer() }}}
 
-// url_get() {{{
-inline std::optional<std::string> url_get(ns_enum::Platform const& platform, UrlType const& url_type)
-{
-  // Create image path
-  fs::path path_file_image = get_path_file_image(platform);
-  fs::path path_dir_image = path_file_image.parent_path();
-  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
-
-  // Log
-  ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
-  ns_log::write('i', "image: ", path_file_image);
-
-  // Get url and save path to base
-  return ns_common::catch_to_optional([&]{ return ns_db::query(path_file_json, ns_enum::to_string_lower(url_type)); });
-} // url_get() }}}
-
-// url_resolve_base() {{{
-[[nodiscard]] std::expected<fetchlist_base_ret_t, std::string> url_resolve_base(ns_enum::Platform const& platform
-  , fs::path const& path_dir_dst)
-{
-  // Fetch from custom url
-  if ( auto url = url_get(platform, UrlType::BASE); url.has_value() )
-  {
-    ns_log::write('i', "Download url: '", url->c_str());
-    return fetchlist_base_ret_t { path_dir_dst / "{}.flatimage"_fmt(ns_enum::to_string_lower(platform)), *url };
-  } // if
-
-  // Fetch from fetchlist
-  auto expected_path_and_url_base = fetchlist_base(platform, path_dir_dst);
-  qreturn_if(not expected_path_and_url_base, std::unexpected(expected_path_and_url_base.error()));
-
-  return *expected_path_and_url_base;
-} // url_resolve_base() }}}
-
-// url_resolve_layer() {{{
-[[nodiscard]] std::expected<fetchlist_layer_ret_t, std::string> url_resolve_layer(ns_enum::Platform platform, fs::path path_dir_dst)
-{
-  std::string str_platform = ns_enum::to_string_lower(platform);
-
-  fetchlist_layer_ret_t path_and_url_layer;
-
-  // Custom URL
-  if ( auto url = url_get(platform, UrlType::LAYER); url.has_value() )
-  {
-    if ( std::string{url->c_str()}.ends_with(".tar.xz") )
-    {
-      return fetchlist_layer_ret_t {path_dir_dst / "{}.layer.tar.xz"_fmt(str_platform) , *url};
-    } // if
-    else if ( std::string{url->c_str()}.ends_with(".layer") )
-    {
-      return fetchlist_layer_ret_t {path_dir_dst / "{}.layer"_fmt(str_platform) , *url};
-    } // else if
-    else
-    {
-      return std::unexpected("Unsupported file type for download");
-    } // else
-    ns_log::write('i', "Download url (custom): '", url->c_str());
-  } // if
-
-  // Fetch from fetchlist
-  auto expected_path_and_url_layer = fetchlist_layer(platform, path_dir_dst);
-  qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
-
-  return *expected_path_and_url_layer;
-} // url_resolve_layer() }}}
-
 // fetch_base() {{{
-[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetch_base(ns_enum::Platform platform, fs::path path_dir_image)
+[[nodiscard]] inline std::expected<fetchlist_base_ret_t, std::string> fetch_base(ns_enum::Platform platform)
 {
   // Resolve URL
-  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  auto expected_path_and_url_base = fetchlist_base(platform);
   qreturn_if(not expected_path_and_url_base, std::unexpected(expected_path_and_url_base.error()));
   // Fetch
   auto error_fetch = fetch_on_failed_check(expected_path_and_url_base->path, expected_path_and_url_base->url);
@@ -333,10 +235,10 @@ inline std::optional<std::string> url_get(ns_enum::Platform const& platform, Url
 } // fetch() }}}
 
 // fetch_layer() {{{
-[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetch_layer(ns_enum::Platform platform, fs::path path_dir_image)
+[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetch_layer(ns_enum::Platform platform)
 {
   // Resolve URL
-  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  auto expected_path_and_url_layer = fetchlist_layer(platform);
   qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
   // Fetch
   auto error_fetch = fetch_on_failed_check(expected_path_and_url_layer->path, expected_path_and_url_layer->url);
@@ -347,38 +249,27 @@ inline std::optional<std::string> url_get(ns_enum::Platform const& platform, Url
 
 } // anonymous namespace
 
-// cores_list() {{{
-inline std::expected<std::vector<CoreUrl>,std::string> cores_list(fs::path const& path_dir_fetch)
+// fetch_cores() {{{
+inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_cores()
 {
-  // Temporary file with fetch list
-  fs::path path_file_json = path_dir_fetch / "fetch.cores.json";
-
-  // Fetch fetch list
-  if ( auto expected = fetch_file_from_url(path_file_json, cpr::Url{URL_FETCH}); not expected)
+  // Define sources file
+  fs::path path_file_fetch = get_path_fetchlist();
+  // Fetch from remote
+  if ( auto expected = fetch_file_from_url(path_file_fetch, cpr::Url{URL_FETCH}); not expected)
   {
     return std::unexpected(expected.error());
   } // if
-
-  std::vector<CoreUrl> vector_cores;
-
-  // Get cores
-  ns_db::from_file(path_file_json, [&](auto&& db)
-  {
-    for( auto const& [key, value] : db["retroarch"]["core"].items() )
-    {
-      vector_cores.push_back(CoreUrl{ns_string::to_string(key), ns_string::to_string(value)});
-    }
-  }, ns_db::Mode::READ);
-
+  // Open as a database
+  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  ethrow_if(not database, database.error());
   // Return cores
-  return vector_cores;
-} // get_files_by_platform() }}}
+  return database->get_platform(ns_enum::Platform::RETROARCH)->get_cores();
+} // fetch_cores() }}}
 
 // fetchlist() {{{
 inline std::error<std::string> fetchlist()
 {
-  fs::path path_dir_current = fs::current_path();
-  auto expected = fetch_file_from_url(path_dir_current / "fetch.json", cpr::Url{URL_FETCH});
+  auto expected = fetch_file_from_url(get_path_fetchlist(), cpr::Url{URL_FETCH});
   qreturn_if(not expected, expected.error());
   return std::nullopt;
 } // fetchlist() }}}
@@ -392,27 +283,27 @@ inline void fetch(ns_enum::Platform platform, std::optional<fs::path> const& onl
 
   if ( only_file and only_file->string().ends_with(".layer") )
   {
-    auto expected = fetch_layer(platform, path_dir_image);
+    auto expected = fetch_layer(platform);
     elog_if(not expected, expected.error());
     return;
   } // if
 
   if ( only_file and only_file->string().ends_with(".flatimage") )
   {
-    auto expected = fetch_base(platform, path_dir_image);
+    auto expected = fetch_base(platform);
     elog_if(not expected, expected.error());
     return;
   } // if
 
   // Verify & configure base
-  auto expected_path_and_url_base = fetch_base(platform, path_dir_image);
+  auto expected_path_and_url_base = fetch_base(platform);
   ereturn_if(not expected_path_and_url_base, expected_path_and_url_base.error());
 
   // No layer for linux
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Verify & configure layer
-  auto expected_path_and_url_layer = fetch_layer(platform, path_dir_image);
+  auto expected_path_and_url_layer = fetch_layer(platform);
   ereturn_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
 
   // Merge base and layer
@@ -432,7 +323,7 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
   ns_log::write('i', "Only checking SHA");
 
   // Get base
-  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  auto expected_path_and_url_base = fetchlist_base(platform);
   qreturn_if(expected_path_and_url_base, expected_path_and_url_base.error());
 
   // Check sha for base
@@ -444,7 +335,7 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
   if ( platform == ns_enum::Platform::LINUX ) { return std::nullopt; }
 
   // Get layer
-  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  auto expected_path_and_url_layer = fetchlist_layer(platform);
   qreturn_if(expected_path_and_url_layer, expected_path_and_url_layer.error());
 
   // Check sha for layer
@@ -476,41 +367,17 @@ inline void ipc(ns_enum::Platform platform , std::optional<std::string> query)
   IpcQuery ipc_query = ns_enum::from_string<IpcQuery>(ns_string::to_upper(*query));
 
   // Send base path or url
-  auto expected_path_and_url_base = url_resolve_base(platform, path_dir_image);
+  auto expected_path_and_url_base = fetchlist_base(platform);
   ethrow_if(not expected_path_and_url_base, expected_path_and_url_base.error());
   ipc.send((ipc_query == IpcQuery::FILES)? expected_path_and_url_base->path.string() : expected_path_and_url_base->url.str());
 
   if ( platform == ns_enum::Platform::LINUX ) { return; }
 
   // Send layer path or url
-  auto expected_path_and_url_layer = url_resolve_layer(platform, path_dir_image);
+  auto expected_path_and_url_layer = fetchlist_layer(platform);
   ethrow_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
   ipc.send((ipc_query == IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
 } // ipc() }}}
-
-// url_set() {{{
-inline void url_set(ns_enum::Platform platform
-  , std::optional<std::string> opt_str_url
-  , UrlType url_type
-)
-{
-  ethrow_if (not opt_str_url.has_value(), "No url was provided");
-
-  // Create image path
-  fs::path path_file_image = get_path_file_image(platform);
-  fs::path path_dir_image = path_file_image.parent_path();
-  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
-
-  // Log
-  ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
-  ns_log::write('i', "image: ", path_file_image);
-
-  // Get url and save path to base
-  ns_db::from_file(path_file_json, [&](auto&& db)
-  {
-    db(ns_enum::to_string_lower(url_type)) = *opt_str_url;
-  }, ns_db::Mode::CREATE);
-} // url_set() }}}
 
 // url_clear() {{{
 inline void url_clear(ns_enum::Platform platform)

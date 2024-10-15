@@ -44,24 +44,6 @@ void fetch(ns_parser::Parser const& parser)
 
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
 
-  if ( parser.optional("--url-base") )
-  {
-    ns_fetch::url_set(platform, parser.optional("--url-base"), ns_fetch::UrlType::BASE);
-    return;
-  } // if
-
-  if ( parser.optional("--url-layer") )
-  {
-    ns_fetch::url_set(platform, parser.optional("--url-layer"), ns_fetch::UrlType::LAYER);
-    return;
-  } // if
-
-  if ( parser.contains("--url-clear") )
-  {
-    ns_fetch::url_clear(platform);
-    return;
-  } // if
-
   if ( parser.contains("--sha") )
   {
     auto error = ns_fetch::sha(platform);
@@ -145,7 +127,7 @@ void compress()
 // search() {{{
 void search(ns_parser::Parser const& parser)
 {
-  if ( parser.contains("--remote") ) 
+  if ( parser.contains("--remote") )
   {
     ns_search::search_remote(parser.optional("query"), parser.contains("--ipc"));
     return;

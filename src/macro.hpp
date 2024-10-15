@@ -87,3 +87,13 @@
 
 #define dlog_if(cond, msg) \
   if ( (cond) ) { ns_log::write('d', msg); }
+
+// Error log
+#define elogerror(expr) \
+  if ( auto error = expr ) { ns_log::write('e', *error); }
+
+#define ilogerror(expr) \
+  if ( auto error = expr ) { ns_log::write('i', *error); }
+
+#define dlogerror(expr) \
+  if ( auto error = expr ) { ns_log::write('d', *error); }

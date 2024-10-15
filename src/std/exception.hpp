@@ -9,6 +9,14 @@
 #include <sstream>
 #include <expected>
 
+namespace std
+{
+
+template<typename T>
+using error = optional<T>;
+
+} // namespace std
+
 namespace ns_exception
 {
 
@@ -51,6 +59,12 @@ template<std::regular_invocable F>
 auto to_optional(F&& f) -> std::optional<std::invoke_result_t<F>>
 {
   try { return std::make_optional(f()); } catch (...) { return std::nullopt; }
+} // function: to_optional
+
+template<std::regular_invocable F>
+inline std::error<std::string> to_error(F&& f)
+{
+  try { f(); return std::nullopt; } catch (std::exception const& e) { return std::make_optional(e.what()); }
 } // function: to_optional
 
 template<std::regular_invocable F>
