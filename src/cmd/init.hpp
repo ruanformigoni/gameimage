@@ -49,6 +49,7 @@ inline void init(std::string const& str_platform
   fs::path path_dir_core     = "core";
   fs::path path_dir_bios     = "bios";
   fs::path path_dir_keys     = "keys";
+  fs::path path_dir_linux    = "linux";
 
   // Adjust by platform
   if ( platform == ns_enum::Platform::RYUJINX )
@@ -69,6 +70,7 @@ inline void init(std::string const& str_platform
   ns_log::write('i', "path_dir_core         :", path_dir_core);
   ns_log::write('i', "path_dir_bios         :", path_dir_bios);
   ns_log::write('i', "path_dir_keys         :", path_dir_keys);
+  ns_log::write('i', "path_dir_linux        :", path_dir_linux);
 
   // Check if data file exists
   ns_fs::ns_path::file_exists<true>(path_file_image);
@@ -84,6 +86,7 @@ inline void init(std::string const& str_platform
   ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_core);
   ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_bios);
   ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_keys);
+  ns_fs::ns_path::dir_create<true>(path_dir_project / path_dir_linux);
 
   // Set global data
   ns_db::from_file_default([&](auto&& db_global)
@@ -126,6 +129,7 @@ inline void init(std::string const& str_platform
     db_project("path_dir_rom")     = path_dir_rom;
     db_project("path_dir_core")    = path_dir_core;
     db_project("path_dir_keys")    = path_dir_keys;
+    db_project("path_dir_linux")   = path_dir_linux;
   }
   , ns_db::Mode::CREATE);
 } // function: init }}}
