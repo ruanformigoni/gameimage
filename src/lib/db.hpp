@@ -12,6 +12,7 @@
 
 #include "../common.hpp"
 #include "../enum.hpp"
+#include "../macro.hpp"
 
 #include "../std/filesystem.hpp"
 
@@ -111,6 +112,8 @@ class Db
     decltype(auto) items() const;
     template<bool _throw = true, IsString T>
     bool contains(T&& t) const;
+    template<typename T = std::string>
+    std::vector<T> to_vector() const;
     bool empty() const;
 
     // Modifying
@@ -228,6 +231,17 @@ inline decltype(auto) Db::items() const
 {
   return data().items();
 } // items() }}}
+
+// to_vector() {{{
+template<typename T>
+std::vector<T> Db::to_vector() const
+{
+  json_t& json = data();
+  ethrow_if(not json.is_array(), "Tried to access non-array as array in DB");
+  std::vector<T> vector;
+  std::for_each(json.begin(), json.end(), [&](std::string e){ vector.push_back(T{e}); });
+  return vector;
+} // to_vector() }}}
 
 // contains() {{{
 template<bool _throw, IsString T>

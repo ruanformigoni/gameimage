@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <ranges>
 
 #include "../enum.hpp"
 #include "../common.hpp"
@@ -16,6 +17,7 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/db.hpp"
+#include "../lib/db/project.hpp"
 #include "../lib/zip.hpp"
 #include "../lib/image.hpp"
 
@@ -62,42 +64,11 @@ void remove_files(Op const& op
     ns_log::write('i', "File '", path_file_target, "' not found for removal");
   } // else
 
-  // Relative path
-  fs::path path_file_dst_relative = fs::relative(path_file_target, path_dir_project);
-
   // Remove from database
-  ns_db::from_file_project([&](auto&& db)
-  {
-    std::string entry_db = fmt::format("path_file_{}", ns_enum::to_string_lower(op));
-    try
-    {
-      // Remove default key if is default
-      if ( db.template contains<false>(entry_db) && db[entry_db] == path_file_dst_relative )
-      {
-        db.erase(entry_db);
-      } // if
-    } // try
-    catch(std::exception const& e)
-    {
-      ns_log::write('i', e.what());
-    } // catch
-
-    std::string entries_db = fmt::format("paths_file_{}", ns_enum::to_string_lower(op));
-    try
-    {
-      // Remove from list
-      if ( db.template contains<false>(entries_db) )
-      {
-        // Files are kept as relative in db
-        db(entries_db).erase(rpath_file_target);
-      } // if
-    } // try
-    catch(std::exception const& e)
-    {
-      ns_log::write('i', e.what());
-    } // catch
-  }
-  , ns_db::Mode::UPDATE);
+  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  ethrow_if(not db_project, "Failed to read db_project");
+  db_project->erase(op, rpath_file_target);
+  ns_db::ns_project::write(*db_project);
 } // remove_files() }}}
 
 // wine() {{{

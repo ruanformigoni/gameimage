@@ -54,6 +54,7 @@ class Fetch
     std::unique_ptr<Rpcs3> m_rpcs3 = std::make_unique<Rpcs3>();
     std::unique_ptr<Wine> m_wine = std::make_unique<Wine>();
     std::string m_version;
+    Fetch() = default;
   public:
     std::unique_ptr<Platform> get_platform(ns_enum::Platform platform) const
     {

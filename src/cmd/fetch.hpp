@@ -200,7 +200,7 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   // Fetch layer url
   std::string str_url_layer = database
       ->get_platform(platform)
-      ->get_layer((platform == ns_enum::Platform::WINE)? ns_env::get_or_else("GIMG_WINE_DIST", "umu-proton-ge") : "");
+      ->get_layer((platform == ns_enum::Platform::WINE)? ns_env::get_or_else("GIMG_WINE_DIST", "umu-proton-ge") : "default");
   // Show url
   ns_log::write('i', "url layer: ", str_url_layer);
   // Create destination / url pair
