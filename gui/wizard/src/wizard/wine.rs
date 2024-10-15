@@ -419,24 +419,17 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       .right_of(&output, dimm::border())
       .with_callback(move |_|
       {
-        let path_dir_project = if let Ok(project) = db::project::current()
-          && let Ok(path_dir_project) = project.get_dir_self()
+        let project = match db::global::get_current_project()
         {
-          path_dir_project
-        } // if
-        else
-        {
-          log!("Could not open project directory");
-          return;
-        }; // else
+          Ok(project) => project,
+          Err(e) => { log!("Error to get current project '{}'", e); return; }
+        }; // match
 
-        let mut path_dir_executable = path_dir_project.join(&clone_item);
-
-        log!("Executable: {}", path_dir_executable.string());
+        let mut path_dir_executable = project.path_dir_project.join(&clone_item);
 
         if ! path_dir_executable.pop()
         {
-          log!("Could not get parent dir for executable");
+          log!("Could not open executable: {}", path_dir_executable.string());
         } // if
 
         clone_output_status.set_value(format!("Open '{}'", path_dir_executable.string()).as_str());
