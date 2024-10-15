@@ -592,7 +592,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   let _btn_refresh = shared::fltk::button::rect::refresh()
     .below_of(&btn_add, dimm::border())
-    .with_color(Color::Green)
+    .with_color(Color::Blue)
     .with_callback(move |_|
     {
       clone_tx.send_awake(common::Msg::DrawWineRom);
