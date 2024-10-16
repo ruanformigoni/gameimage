@@ -222,8 +222,6 @@ inline void emulator(ns_db::ns_build::Metadata& db_metadata, Op op, std::vector<
     {
       (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
         .with_piped_outputs()
-        .with_var("FIM_XDG_CONFIG_HOME", path_dir_config.c_str())
-        .with_var("FIM_XDG_DATA_HOME", path_dir_data.c_str())
         .with_args(db_metadata.path_file_image)
         .spawn()
         .wait();
