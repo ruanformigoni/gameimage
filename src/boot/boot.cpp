@@ -14,7 +14,7 @@
 #include "../std/env.hpp"
 #include "../std/copy.hpp"
 
-#include "../lib/db.hpp"
+#include "../lib/db/project.hpp"
 #include "../lib/subprocess.hpp"
 
 // Start logging
@@ -75,40 +75,25 @@ fs::path get_xdg_data_home()
 } // get_xdg_data_home() }}}
 
 // db_files_copy() {{{
-void db_files_copy(std::string db_entry
-  , fs::path const& path_file_database
-  , fs::path const& path_dir_src
+void db_files_copy(ns_db::ns_project::Project& db_project
+  , ns_enum::Op const& op
+  , fs::path const& path_dir_self
   , fs::path const& path_dir_dst)
 {
-  // Check if has entry
-  ns_db::from_file(path_file_database.c_str()
-  , [&](auto&& db)
+  std::vector<fs::path> paths_file_entry = db_project.find_files(op);
+
+  for(fs::path path_file_entry_src : paths_file_entry)
   {
-    if ( ! db.template contains<false>(db_entry))
-    {
-      return;
-    } // if
-
-    std::vector<fs::path> paths_file_entry;
-
-    for (auto&& path_file_entry : db[db_entry])
-    {
-      paths_file_entry.push_back(path_file_entry);
-      ns_log::write('i', "Found entry '", path_file_entry, "'");
-    } // for
-
-    for(fs::path path_file_entry_src : paths_file_entry)
-    {
-      // Prepend working dir path
-      path_file_entry_src = path_dir_src / path_file_entry_src;
-      // Create path for copy destination
-      fs::path path_file_entry_target = path_dir_dst / path_file_entry_src.filename();
-      // Try to create directories to copy entry into
-      ns_fs::ns_path::dir_create<true>(path_file_entry_target.parent_path());
-      // Try to copy entry
-      ns_copy::file(path_file_entry_src, path_file_entry_target);
-    } // for
-  } , ns_db::Mode::READ); // ns_db::from_file
+    ns_log::write('i', "Found entry '", path_file_entry_src, "'");
+    // Prepend working dir path
+    path_file_entry_src = path_dir_self / path_file_entry_src;
+    // Create path for copy destination
+    fs::path path_file_entry_target = path_dir_dst / path_file_entry_src.filename();
+    // Try to create directories to copy entry into
+    ns_fs::ns_path::dir_create<true>(path_file_entry_target.parent_path());
+    // Try to copy entry
+    ns_copy::file(path_file_entry_src, path_file_entry_target);
+  } // for
 } // db_files_copy() }}}
 
 // wine_args() {{{
@@ -151,24 +136,13 @@ void env(fs::path const& path_dir_self)
 } // env() }}}
 
 // boot_linux() {{{
-void boot_linux(fs::path const& path_dir_self, fs::path const& path_file_database)
+void boot_linux(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
-  // Binary to execute
-  fs::path path_file_rom;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-  }
-  , ns_db::Mode::READ);
-
   // Enter application directory
   fs::current_path(path_dir_self);
 
   // Escape "'"
-  std::string cmd = ns_string::replace_substrings((path_dir_self / path_file_rom).c_str(), "'", R"('\'')");
+  std::string cmd = ns_string::replace_substrings((path_dir_self / db_project.path_file_rom).c_str(), "'", R"('\'')");
 
   // Sorround with ''
   cmd = fmt::format(fmt::runtime("'{}'"), cmd);
@@ -186,23 +160,14 @@ void boot_linux(fs::path const& path_dir_self, fs::path const& path_file_databas
 } // boot_linux() }}}
 
 // boot_wine() {{{
-void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database)
+void boot_wine(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
   // Set wine prefix
   ns_env::set("WINEPREFIX", (path_dir_self / "wine").c_str(), ns_env::Replace::Y);
 
   // Binary to execute
-  fs::path path_file_rom;
-  fs::path path_file_rom_relative;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    path_file_rom_relative = static_cast<fs::path>(db["path_file_rom"]);
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-  }
-  , ns_db::Mode::READ);
+  fs::path path_file_rom_relative = db_project.path_file_rom;
+  fs::path path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / path_file_rom_relative)._ret;
 
   // If GIMG_LAUNCHER_EXECUTABLE is defined, use it instead
   if ( const char* var = ns_env::get("GIMG_LAUNCHER_EXECUTABLE"); var != nullptr )
@@ -214,11 +179,8 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
   // Enter directory of rom file
   fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
 
-  // Get boot command
-  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_WINE");
-
   // Start application
-  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_WINE"))
     .with_piped_outputs()
     .with_args(path_file_rom, wine_args(path_dir_self, path_file_rom_relative))
     .spawn()
@@ -226,129 +188,39 @@ void boot_wine(fs::path const& path_dir_self, fs::path const& path_file_database
 } // boot_wine() }}}
 
 // boot_retroarch() {{{
-void boot_retroarch(fs::path const& path_dir_self, fs::path const& path_file_database)
+void boot_retroarch(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
-  // Rom
-  fs::path path_file_rom;
-
-  // Core
-  fs::path path_file_core;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-
-    // Core
-    path_file_core = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_core"])._ret;
-  }
-  , ns_db::Mode::READ);
-
   // Check if has bios
-  db_files_copy("paths_file_bios"
-    , path_file_database
-    , path_dir_self
-    , ( get_xdg_config_home() / "retroarch/system")
-  );
-
-  // Get boot command
-  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RETROARCH");
+  db_files_copy(db_project, ns_enum::Op::BIOS, path_dir_self, (get_xdg_config_home() / "retroarch/system"));
 
   // Start application
-  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RETROARCH"))
     .with_piped_outputs()
-    .with_args("-L", path_file_core, path_file_rom)
+    .with_args("-L", db_project.path_file_core, db_project.path_file_rom)
     .spawn()
     .wait();
 } // boot_retroarch() }}}
 
 // boot_pcsx2() {{{
-void boot_pcsx2(fs::path const& path_dir_self, fs::path const& path_file_database)
+void boot_pcsx2(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
-  // Rom
-  fs::path path_file_rom;
-
-  // Bios
-  fs::path path_file_bios;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    // Rom
-    path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-
-    // Bios
-    path_file_bios = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_bios"])._ret;
-  }
-  , ns_db::Mode::READ);
-
   // Check if has bios
-  db_files_copy("paths_file_bios"
-    , path_file_database
-    , path_dir_self
-    , ( get_xdg_config_home() / "PCSX2/bios")
-  );
-
-  // Get boot command
-  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_PCSX2");
+  db_files_copy(db_project, ns_enum::Op::BIOS, path_dir_self, ( get_xdg_config_home() / "PCSX2/bios"));
 
   // Start application
-  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_PCSX2"))
     .with_piped_outputs()
-    .with_args("--", path_file_rom)
+    .with_args("--", db_project.path_file_rom)
     .spawn()
     .wait();
 } // boot_pcsx2() }}}
 
 // boot_rpcs3() {{{
-void boot_rpcs3(fs::path const& path_dir_self, fs::path const& path_file_database)
+void boot_rpcs3(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
-  // Rom
-  fs::path path_file_rom;
-
-  // Config dir
-  fs::path path_dir_config;
-
-  // Data dir
-  fs::path path_dir_data;
-
-  // Database
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    // Rom
-    try
-    {
-      path_file_rom = ns_fs::ns_path::file_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-    } // try
-    catch(std::exception const& e)
-    {
-      ns_log::write('i', e.what());
-      path_file_rom = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_file_rom"])._ret;
-    } // catch
-
-    // Config
-    path_dir_config = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_config"])._ret;
-
-    // Data
-    path_dir_data = ns_fs::ns_path::dir_exists<true>(path_dir_self / db["path_dir_data"])._ret;
-  }
-  , ns_db::Mode::READ);
-
-  // Set XDG vars
-  ns_env::set("XDG_CONFIG_HOME", path_dir_config.c_str(), ns_env::Replace::Y);
-  ns_env::set("XDG_DATA_HOME", path_dir_data.c_str(), ns_env::Replace::Y);
-
-  // Get boot command
-  std::string str_cmd = ns_env::get_or_throw("FIM_BINARY_RPCS3");
-
-  // Start application
-  (void) ns_subprocess::Subprocess(str_cmd.c_str())
+  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RPCS3"))
     .with_piped_outputs()
-    .with_args("--allow-any-location", "--no-gui", "--", path_file_rom)
+    .with_args("--allow-any-location", "--no-gui", "--", path_dir_self / db_project.path_file_rom)
     .spawn()
     .wait();
 } // boot_rpcs3() }}}
@@ -386,6 +258,10 @@ void boot(int argc, char** argv)
 
   fs::path path_file_database = path_dir_self / "gameimage.json";
 
+  // Open db
+  auto db_project = ns_db::ns_project::read(path_file_database);
+  ethrow_if(not db_project, "Could not open build database");
+
   // Database file
   ns_db::from_file(path_file_database
   , [&](auto&& db)
@@ -396,11 +272,11 @@ void boot(int argc, char** argv)
 
   switch(platform)
   {
-    case ns_enum::Platform::LINUX    : boot_linux(path_dir_self, path_file_database)     ; break;
-    case ns_enum::Platform::WINE     : boot_wine(path_dir_self, path_file_database)      ; break;
-    case ns_enum::Platform::RETROARCH: boot_retroarch(path_dir_self, path_file_database) ; break;
-    case ns_enum::Platform::PCSX2    : boot_pcsx2(path_dir_self, path_file_database)     ; break;
-    case ns_enum::Platform::RPCS3    : boot_rpcs3(path_dir_self, path_file_database)     ; break;
+    case ns_enum::Platform::LINUX    : boot_linux(*db_project, path_dir_self)     ; break;
+    case ns_enum::Platform::WINE     : boot_wine(*db_project, path_dir_self)      ; break;
+    case ns_enum::Platform::RETROARCH: boot_retroarch(*db_project, path_dir_self) ; break;
+    case ns_enum::Platform::PCSX2    : boot_pcsx2(*db_project, path_dir_self)     ; break;
+    case ns_enum::Platform::RPCS3    : boot_rpcs3(*db_project, path_dir_self)     ; break;
   } // switch
 } // function: boot }}}
 

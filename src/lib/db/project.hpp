@@ -262,11 +262,11 @@ inline std::error<std::string> init(fs::path const& path_dir_project, ns_enum::P
 } // init() }}}
 
 // read() {{{
-inline std::expected<Project,std::string> read()
+inline std::expected<Project,std::string> read(fs::path path_file_db = ns_db::file_project())
 {
   return ns_exception::to_expected([&]
   {
-    return read_impl(ns_db::file_project());
+    return read_impl(path_file_db);
   });
 } // read() }}}
 
