@@ -154,6 +154,7 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 {
   if ( check_file(path_file, url) )
   {
+    ns_ipc::Ipc(path_file).send(100);
     return std::nullopt;
   } // if
 
