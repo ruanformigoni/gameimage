@@ -196,7 +196,7 @@ void boot_retroarch(ns_db::ns_project::Project& db_project, fs::path const& path
   // Start application
   (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RETROARCH"))
     .with_piped_outputs()
-    .with_args("-L", db_project.path_file_core, db_project.path_file_rom)
+    .with_args("-L", path_dir_self / db_project.path_file_core, path_dir_self / db_project.path_file_rom)
     .spawn()
     .wait();
 } // boot_retroarch() }}}
@@ -210,7 +210,7 @@ void boot_pcsx2(ns_db::ns_project::Project& db_project, fs::path const& path_dir
   // Start application
   (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_PCSX2"))
     .with_piped_outputs()
-    .with_args("--", db_project.path_file_rom)
+    .with_args("--", path_dir_self / db_project.path_file_rom)
     .spawn()
     .wait();
 } // boot_pcsx2() }}}
