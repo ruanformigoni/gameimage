@@ -223,7 +223,7 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
       // Check if is rom
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
-      path_dir_search = (db_metadata.path_dir_project / db_project->find_directory(op))  / "drive_c";
+      path_dir_search = (db_metadata.path_dir_project / "wine" / "drive_c");
       // Get files iterator
       auto it_files = search_files(path_dir_search, R"(.*\.exe$)", R"(windows)");
       // For each file, prepend "wine" to be relative to path_dir_project
