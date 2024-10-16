@@ -41,18 +41,18 @@ inline std::optional<std::string> search_path(std::string const& s)
   auto view = str_path | std::views::split(':');
   auto it = std::find_if(view.begin(), view.end(), [&](auto&& e)
   {
-    ns_log::write('d', "PATH: Check for ", fs::path(e.begin(), e.end()) / s);
+    ns_log::write('i', "PATH: Check for ", fs::path(e.begin(), e.end()) / s);
     return fs::exists(fs::path(e.begin(), e.end()) / s);
   });
 
   if (it != view.end())
   {
     auto result = fs::path((*it).begin(), (*it).end()) / s;
-    ns_log::write('d', "PATH: Found '", result);
+    ns_log::write('i', "PATH: Found '", result);
     return result;
   } // if
 
-  ns_log::write('d', "PATH: Could not find ", s);
+  ns_log::write('i', "PATH: Could not find ", s);
   return std::nullopt;
 } // search_path()}}}
 
@@ -180,7 +180,7 @@ Subprocess& Subprocess::rm_var(K&& k)
   // Erase if found
   if ( it != std::ranges::end(m_env) )
   {
-    ns_log::write('d', "Erased var entry: ", *it);
+    ns_log::write('i', "Erased var entry: ", *it);
     m_env.erase(it);
   } // if
 
@@ -320,7 +320,7 @@ inline Subprocess& Subprocess::with_pipes_parent(int pipestdout[2], int pipestde
     // Check if 'f' is defined
     if ( not f ) { f = [&](auto&& e)
     {
-      ns_log::write('d', prefix, "(", m_program, "): ", e); };
+      ns_log::write('i', prefix, "(", m_program, "): ", e); };
     } // if
     // Apply f to incoming data from pipe
     char buffer[1024];
@@ -375,7 +375,7 @@ inline void Subprocess::die_on_pid(pid_t pid)
     std::abort();
   } // if
   // Log pid and current pid
-  ns_log::write('d', getpid(), "dies with ", pid);
+  ns_log::write('i', getpid(), "dies with ", pid);
 } // die_on_pid() }}}
 
 // with_stdout_handle() {{{
@@ -417,7 +417,7 @@ inline std::optional<int> Subprocess::wait()
 inline Subprocess& Subprocess::spawn()
 {
   // Log
-  ns_log::write('d', "Spawn command: ", ns_string::from_container(m_args));
+  ns_log::write('i', "Spawn command: ", ns_string::from_container(m_args));
 
   int pipestdout[2];
   int pipestderr[2];
@@ -429,7 +429,7 @@ inline Subprocess& Subprocess::spawn()
   // Ignore on empty vec_argv
   if ( m_args.empty() )
   {
-    ns_log::write('d', "No arguments to spawn subprocess");
+    ns_log::write('i', "No arguments to spawn subprocess");
     return *this;
   } // if
 
@@ -498,7 +498,7 @@ inline Subprocess& Subprocess::spawn()
   execve(m_program.c_str(), (char**) argv_custom.get(), (char**) envp_custom.get());
 
   // Log error
-  ns_log::write('d', "execve() failed: ", strerror(errno));
+  ns_log::write('i', "execve() failed: ", strerror(errno));
 
   // Child should stop here
   std::abort();
