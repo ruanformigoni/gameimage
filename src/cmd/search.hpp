@@ -211,9 +211,9 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
        // Check if is rom
       "Only rom operation is available for linux"_throw_if([&]{ return op != Op::ROM; });
       // Enter application dir
-      path_dir_search = (db_metadata.path_dir_project / db_project->find_directory(op));
+      path_dir_search = (db_metadata.path_dir_project / "linux");
       // Get files iterator
-      auto it_files = search_files(path_dir_search, R"(.*\.sh)", "");
+      auto it_files = search_files(path_dir_search, R"(.*)", "");
       // Save files to json
       send(it_files, ipc);
     } // case
