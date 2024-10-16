@@ -9,7 +9,8 @@
 
 #include "../std/filesystem.hpp"
 
-#include "../lib/db.hpp"
+#include "../lib/db/build.hpp"
+#include "../lib/db/project.hpp"
 #include "../lib/subprocess.hpp"
 
 namespace ns_compress
@@ -18,62 +19,33 @@ namespace ns_compress
 namespace fs = std::filesystem;
 
 // validate() {{{
-inline void validate()
+inline void validate(ns_db::ns_build::Metadata& db_metadata, ns_db::ns_project::Project& db_project)
 {
-  std::string str_project;
-  std::string str_platform;
-  fs::path path_project;
-
-  ns_db::from_file_default([&](auto&& db)
-  {
-    str_project = db["project"];
-    str_platform = db[str_project]["platform"];
-    path_project = std::string(db[str_project]["path_dir_project"]);
-  }
-  , ns_db::Mode::READ);
-
-  auto enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-
   // Icon
   "Icon is not installed"_try([&]
   {
-    fs::path path_file_icon;
-    ns_db::from_file_project([&](auto&& db){ path_file_icon = path_project / db["path_file_icon"]; }, ns_db::Mode::READ);
+    fs::path path_file_icon = db_metadata.path_dir_project / db_project.path_file_icon;
     ns_fs::ns_path::file_exists<true>(path_file_icon);
     ns_log::write('i', "Found icon '", path_file_icon, "'");
   });
 
 
-  auto f_file_default = [&](auto&& type)
+  auto f_validate_file_or_directory = [&](ns_enum::Op const& op)
   {
-    "Default {} is not selected"_try([&]
+    fs::path path_file = db_metadata.path_dir_project / db_project.find_file(op);
+    try
     {
-      std::string str_tag_db = "path_file_{}"_fmt(type);
-      fs::path path_file;
-      ns_db::from_file_project([&](auto&& db){ path_file = path_project / db[str_tag_db]; }, ns_db::Mode::READ);
-      try
-      {
-        ns_fs::ns_path::file_exists<true>(path_file);
-      } // try
-      catch(std::exception const& e)
-      {
-        ns_fs::ns_path::dir_exists<true>(path_project / path_file);
-      } // catch
-      ns_log::write('i', "Found ", type, " '", path_file, "'");
-    }, type);
+      ns_fs::ns_path::file_exists<true>(path_file);
+    } // try
+    catch(std::exception const& e)
+    {
+      ns_fs::ns_path::dir_exists<true>(path_file);
+    } // catch
   };
 
-  auto f_files_validate = [&](auto&& type)
+  auto f_validate_files = [&](ns_enum::Op const& op)
   {
-    std::vector<fs::path> paths_file;
-
-    ns_db::from_file_project([&](auto&& db)
-    {
-      for(auto&& path_file : db["paths_file_{}"_fmt(type)])
-      {
-        paths_file.push_back(path_file);
-      } // for
-    }, ns_db::Mode::READ);
+    std::vector<fs::path> paths_file = db_project.find_files(op);
 
     for(auto&& path_file : paths_file)
     {
@@ -81,52 +53,52 @@ inline void validate()
       {
         try
         {
-          ns_fs::ns_path::file_exists<true>(path_project / path_file);
+          ns_fs::ns_path::file_exists<true>(db_metadata.path_dir_project / path_file);
         } // try
         catch(std::exception const& e)
         {
-          ns_fs::ns_path::dir_exists<true>(path_project / path_file);
+          ns_fs::ns_path::dir_exists<true>(db_metadata.path_dir_project / path_file);
         } // catch
-      }, type, path_file);
+      }, ns_enum::to_string(op), path_file);
     } // for
   };
 
-  switch(enum_platform)
+  switch(db_metadata.platform)
   {
     case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
     {
-      f_file_default("rom");
+      f_validate_file_or_directory(ns_enum::Op::ROM);
     }
     break;
     case ns_enum::Platform::RETROARCH:
     {
       // default rom
-      f_file_default("rom");
+      f_validate_file_or_directory(ns_enum::Op::ROM);
       // default core
-      f_file_default("core");
+      f_validate_file_or_directory(ns_enum::Op::CORE);
       // all roms
-      f_files_validate("rom");
+      f_validate_files(ns_enum::Op::ROM);
       // all cores
-      f_files_validate("core");
+      f_validate_files(ns_enum::Op::CORE);
     } // case
     break;
     case ns_enum::Platform::PCSX2:
     {
       // default rom
-      f_file_default("rom");
+      f_validate_file_or_directory(ns_enum::Op::ROM);
       // default bios
-      f_file_default("bios");
+      f_validate_file_or_directory(ns_enum::Op::BIOS);
       // all roms
-      f_files_validate("rom");
+      f_validate_files(ns_enum::Op::ROM);
       // all bios
-      f_files_validate("bios");
+      f_validate_files(ns_enum::Op::BIOS);
     } // case
     break;
     case ns_enum::Platform::RPCS3:
     {
       // default rom
-      f_file_default("rom");
+      f_validate_file_or_directory(ns_enum::Op::ROM);
     } // case
     break;
   } // switch
@@ -136,60 +108,42 @@ inline void validate()
 // compress() {{{
 inline decltype(auto) compress()
 {
+  // Open databases
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
+  auto db_project = ns_db::ns_project::read();
+  ethrow_if(not db_project, "Could not open project database");
+
   // Validate package by platform
-  validate();
-
-  // Current project
-  std::string str_project;
-
-  // Path to current project
-  fs::path path_dir_project_root;
-
-  // Path to image
-  fs::path path_file_image;
-
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Current project
-    str_project = db["project"];
-
-    // Path to current application
-    path_dir_project_root = ns_fs::ns_path::dir_exists<true>(db[str_project]["path_dir_project_root"])._ret;
-
-    // Path to image
-    path_file_image = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
-  }
-  , ns_db::Mode::READ);
+  validate(db_metadata, *db_project);
 
   // Output file
-  fs::path path_file_layer{path_dir_project_root.string() + ".layer"};
+  fs::path path_file_layer{db_metadata.path_dir_project_root.string() + ".layer"};
 
   // Erase if exists
-  std::error_code ec;
-  fs::remove(path_file_layer, ec);
-  if ( ec )
-  {
-    ns_log::write('e', "Could not remove file ", path_file_layer);
-  } // if
+  lec(fs::remove, path_file_layer);
 
   // Log
-  ns_log::write('i', "project: ", str_project);
-  ns_log::write('i', "image: ", path_file_image);
+  ns_log::write('i', "project: ", db_metadata.name);
+  ns_log::write('i', "image: ", db_metadata.path_file_image);
   ns_log::write('i', "layer: ", path_file_layer);
 
+  // Execute portal
+  auto f_portal = []<typename... Args>(Args&&... args)
+  {
+    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+      .with_piped_outputs()
+      .with_args(std::forward<Args>(args)...)
+      .spawn()
+      .wait();
+  };
+
   // Commit
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image, "fim-commit")
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image, "fim-commit");
 
   // Compress
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image , "fim-layer" , "create" , path_dir_project_root , path_file_layer)
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image , "fim-layer" , "create" , db_metadata.path_dir_project_root , path_file_layer);
 
   ns_log::write('i', "Wrote file to '", path_file_layer, "'");
 } // compress() }}}

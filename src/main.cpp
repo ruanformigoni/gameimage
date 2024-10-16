@@ -80,11 +80,9 @@ void install(ns_parser::Parser const& parser)
   // Check for op
   "No option was specified"_throw_if([&]{ return args.empty(); });
 
-  // Get project
-  std::string str_project = ns_db::query(ns_db::file_default(), "project");
-
-  // Get project path
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Error to open build database '{}'"_fmt(db_build.error()));
+  auto db_metadata = db_build->find(db_build->project);
 
   ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());
   args.erase(args.begin());
@@ -95,7 +93,7 @@ void install(ns_parser::Parser const& parser)
     // Check if has icon path
     "No file name specified for icon"_throw_if([&]{ return args.empty(); });
     // Create icon
-    ns_install::icon(args.front());
+    ns_install::icon(db_metadata, args.front());
     return;
   } // if
 
@@ -109,7 +107,7 @@ void install(ns_parser::Parser const& parser)
   // Remove item
   if ( parser.contains("--remove") )
   {
-    ns_install::remove(op, path_dir_project, args);
+    ns_install::remove(op, db_metadata.path_dir_project, args);
     return;
   }
 
@@ -143,12 +141,6 @@ void select(ns_parser::Parser const& parser)
 
   // Check for op
   "No option was specified"_throw_if([&]{ return args.empty(); });
-
-  // Get project
-  std::string str_project = ns_db::query(ns_db::file_default(), "project");
-
-  // Get project path
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
 
   // Parse operation
   ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());

@@ -6,7 +6,7 @@
 #pragma once
 
 #include "../lib/image.hpp"
-#include "../lib/db.hpp"
+#include "../lib/db/build.hpp"
 #include "../lib/subprocess.hpp"
 #include "../std/vector.hpp"
 
@@ -30,6 +30,11 @@ enum class IntegrationItems
 // desktop() {{{
 inline void desktop(std::string str_name, fs::path path_file_icon, std::string str_items)
 {
+  // Open databases
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
+
   // Validate icon path
   path_file_icon = ns_fs::ns_path::file_exists<true>(path_file_icon)._ret;
 
@@ -40,34 +45,15 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   );
   throw_if(vec_items.empty(), "No integration items available");
 
-  // Path to flatimage
-  fs::path path_file_flatimage;
-
   // Path to project
-  fs::path path_dir_project;
-
-  // Path to boot file
-  // Get default path
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Current application
-  std::string str_project = db["project"];
-
-    // Path to flatimage
-    path_file_flatimage = ns_fs::ns_path::file_exists<true>(db[str_project]["path_file_image"])._ret;
-
-    // Path to current project
-    path_dir_project = static_cast<fs::path>(db[str_project]["path_dir_project"]);
-  }
-  , ns_db::Mode::READ);
-
+  fs::path path_dir_project = db_metadata.path_dir_project;
   fs::path path_file_desktop = path_dir_project / "desktop.json";
   fs::path path_file_icon_resized = path_dir_project / "desktop.png";
 
   // Resize icon
   ns_image::resize(path_file_icon, path_file_icon_resized, 300, 450);
 
-  // Configure application data
+  // Create application data
   ns_db::from_file(path_file_desktop
   , [&](auto&& db)
   {
@@ -79,14 +65,14 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   // Apply application data
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(path_file_flatimage, "fim-desktop", "setup", path_file_desktop)
+    .with_args(db_metadata.path_file_image, "fim-desktop", "setup", path_file_desktop)
     .spawn()
     .wait();
 
   // Enable desktop integration
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(path_file_flatimage
+    .with_args(db_metadata.path_file_image
       , "fim-desktop"
       , "enable"
       , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); }))

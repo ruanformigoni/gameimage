@@ -7,36 +7,31 @@
 
 #include <string>
 
-#include "../lib/db.hpp"
+#include "../lib/db/build.hpp"
 
 namespace ns_project
 {
 
 // set() {{{
-inline void set(std::string const& s)
+inline void set(std::string const& name)
 {
-  // Tries to open default config file
-  ns_db::from_file_default([&](auto&& db)
-  {
-    // Check if exists or throw
-    db.template contains<true>(s);
-
-    // Updates default
-    db("project") = s;
-
-    ns_log::write('i', "Set default project to: ", s);
-  }
-  , ns_db::Mode::UPDATE);
+  // Open db
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  // Check if 'name' is present in db
+  "Could not find project '{}'"_try([&]{ (void) db_build->find(name); }, name);
+  // Set as current
+  db_build->project = name;
+  ns_db::ns_build::write(*db_build);
+  ns_log::write('i', "Set default project to: ", name);
 } // set() }}}
 
 // get() {{{
 inline std::string get()
 {
-  std::string ret = ns_db::query(ns_db::file_default(), "project");
-
-  ns_log::write('i', "Default project: ", ret);
-
-  return ret;
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  return db_build->project;
 } // get() }}}
 
 } // namespace ns_project

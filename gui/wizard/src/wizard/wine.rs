@@ -53,7 +53,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 fn get_path_db() -> anyhow::Result<std::path::PathBuf>
 {
   let global = db::global::read()?;
-  Ok(global.get_project_dir(&global.project.string())?)
+  Ok(global.get_project_dir(&global.project)?)
 } // get_path_db() }}}
 
 // get_path_db_executable() {{{

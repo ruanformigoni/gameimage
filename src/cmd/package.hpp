@@ -8,7 +8,7 @@
 #include <filesystem>
 
 #include "../lib/subprocess.hpp"
-#include "../lib/db.hpp"
+#include "../lib/db/build.hpp"
 #include "project.hpp"
 
 namespace ns_package
@@ -19,78 +19,52 @@ namespace fs = std::filesystem;
 // package() {{{
 inline void package(std::string const& str_name_project)
 {
-  fs::path path_file_image;
-  fs::path path_dir_project_root;
-  fs::path path_dir_build;
-
   // Set project to package
   ns_project::set(str_name_project);
 
-  // Get current project
-  ns_db::from_file_default([&](auto&& db)
-  {
-    path_file_image = fs::path(db[str_name_project]["path_file_image"]);
-    path_dir_project_root = fs::path(db[str_name_project]["path_dir_project_root"]);
-    path_dir_build = fs::path(db["path_dir_build"]);
-  }
-  , ns_db::Mode::READ);
+  // Open databases
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
 
   // Verify that image exists
-  ns_fs::ns_path::file_exists<true>(path_file_image);
+  ns_fs::ns_path::file_exists<true>(db_metadata.path_file_image);
 
   // Verify that directory exists
-  ns_fs::ns_path::dir_exists<true>(path_dir_build);
+  ns_fs::ns_path::dir_exists<true>(db_build->path_dir_build);
+
+  // Execute portal
+  auto f_portal = []<typename... Args>(Args&&... args)
+  {
+    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+      .with_piped_outputs()
+      .with_args(std::forward<Args>(args)...)
+      .spawn()
+      .wait();
+  };
 
   // Include layer file in image
-  fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(path_dir_project_root.string() + ".layer")._ret;
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image, "fim-layer", "add", path_file_layer)
-    .spawn()
-    .wait();
+  fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(db_metadata.path_dir_project_root.string() + ".layer")._ret;
+  f_portal(db_metadata.path_file_image, "fim-layer", "add", path_file_layer);
 
   // Copy launcher to outside wizard image
-  fs::path path_file_launcher = path_dir_build / "gameimage-launcher";
+  fs::path path_file_launcher = db_build->path_dir_build / "gameimage-launcher";
   fs::copy_file(ns_fs::ns_path::dir_self<true>()._ret / "gameimage-launcher"
     , path_file_launcher
     , fs::copy_options::overwrite_existing
   );
 
   // Include launcher inside game image
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image
-      , "fim-exec"
-      , "cp"
-      , path_file_launcher
-      , "/fim/static/gameimage-launcher")
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image, "fim-exec", "cp", path_file_launcher, "/fim/static/gameimage-launcher");
 
   // Set boot command
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image
-      , "fim-boot"
-      , "/bin/bash"
-      , "-c"
-      , "/fim/static/gameimage-launcher")
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image, "fim-boot", "/bin/bash", "-c", "/fim/static/gameimage-launcher");
 
   // Enable notify-send
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image, "fim-notify", "on")
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image, "fim-notify", "on");
 
   // Commit changes into the image
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
-    .with_piped_outputs()
-    .with_args(path_file_image , "fim-commit")
-    .spawn()
-    .wait();
+  f_portal(db_metadata.path_file_image , "fim-commit");
 
 } // package() }}}
 

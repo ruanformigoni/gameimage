@@ -7,7 +7,6 @@
 #pragma once
 
 #include <filesystem>
-#include <regex>
 
 #include <matchit.h>
 
@@ -16,9 +15,8 @@
 
 #include "../std/filesystem.hpp"
 
-#include "../lib/subprocess.hpp"
-#include "../lib/log.hpp"
-#include "../lib/db.hpp"
+#include "../lib/db/build.hpp"
+#include "../lib/db/project.hpp"
 
 namespace ns_select
 {
@@ -31,7 +29,7 @@ using Op = ns_enum::Op;
 inline void by_op(ns_enum::Platform enum_platform
   , Op op
   , fs::path path_dir_project
-  , fs::path path_file_op)
+  , fs::path path_file_target)
 {
   switch(enum_platform)
   {
@@ -74,43 +72,34 @@ inline void by_op(ns_enum::Platform enum_platform
   // Check if is regular file or directory
   try
   {
-    ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_op);
+    ns_fs::ns_path::file_exists<true>(path_dir_project / path_file_target);
   } // try
   catch(std::exception const& e)
   {
-    ns_fs::ns_path::dir_exists<true>(path_dir_project / path_file_op);
+    ns_fs::ns_path::dir_exists<true>(path_dir_project / path_file_target);
   } // catch
 
-  ns_db::from_file_project([&](auto&& db)
+  auto db_project = ns_db::ns_project::read();
+  ethrow_if(not db_project, "Could not open project database '{}'"_fmt(db_project.error()));
+  switch (op)
   {
-    // Get op
-    std::string str_op = "path_file_{}"_fmt(ns_enum::to_string_lower(op));
-    // Set as default rom file
-    db(str_op) = path_file_op;
-    ns_log::write('i', "Selected ", str_op, ": ", path_file_op);
-  }
-  , ns_db::Mode::UPDATE);
-
+    case ns_enum::Op::ROM: db_project->path_file_rom = path_file_target; break;
+    case ns_enum::Op::BIOS: db_project->path_file_bios = path_file_target; break;
+    case ns_enum::Op::CORE: db_project->path_file_core = path_file_target; break;
+    default: throw std::runtime_error("Cannot set default for '{}'"_fmt(ns_enum::to_string(op)));
+  } // switch
+  ns_db::ns_project::write(*db_project);
 } // select() }}}
 
 // select() {{{
-inline void select(Op const& op, std::string const& entry)
+inline void select(Op const& op, fs::path const& path_file_target)
 {
-  std::string str_project;
-  std::string str_platform;
-  fs::path path_project;
-
-  ns_db::from_file_default([&](auto&& db)
-  {
-    str_project  = db["project"];
-    str_platform = db[str_project]["platform"];
-    path_project = fs::path(db[str_project]["path_dir_project"]);
-  }
-  , ns_db::Mode::READ);
-
-  ns_enum::Platform enum_platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-
-  by_op(enum_platform, op, path_project, entry);
+  // Open db
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
+  // Select the default file by platform
+  by_op(db_metadata.platform, op, db_metadata.path_dir_project, path_file_target);
 } // }}}
 
 } // namespace ns_select

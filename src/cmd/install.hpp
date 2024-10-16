@@ -15,8 +15,7 @@
 #include "../std/copy.hpp"
 
 #include "../lib/subprocess.hpp"
-#include "../lib/db.hpp"
-#include "../lib/db/global.hpp"
+#include "../lib/db/build.hpp"
 #include "../lib/db/project.hpp"
 #include "../lib/zip.hpp"
 #include "../lib/image.hpp"
@@ -70,7 +69,7 @@ void remove_files(ns_db::ns_project::Project& project
 } // remove_files() }}}
 
 // wine() {{{
-inline void wine(ns_db::ns_global::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
+inline void wine(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
 {
   // Path to wine prefix
   fs::path path_wineprefix = db_metadata.path_dir_project / "wine";
@@ -117,7 +116,7 @@ inline void wine(ns_db::ns_global::Metadata& db_metadata, Op const& op, std::vec
 } // wine() }}}
 
 // linux() {{{
-inline void linux(ns_db::ns_global::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
+inline void linux(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
 {
   // Validate op
   ethrow_if ( op != Op::ROM,  "Only ROM is valid for the linux platform");
@@ -135,7 +134,7 @@ inline void linux(ns_db::ns_global::Metadata& db_metadata, Op const& op, std::ve
 } // linux() }}}
 
 // emulator_install_file() {{{
-void emulator_install_file(ns_db::ns_global::Metadata& db_metadata, Op const& op, fs::path path_file_src, fs::path const& path_file_dst)
+void emulator_install_file(ns_db::ns_build::Metadata& db_metadata, Op const& op, fs::path path_file_src, fs::path const& path_file_dst)
 {
   ereturn_if( op == Op::KEYS, "No platform uses 'keys'");
 
@@ -174,25 +173,29 @@ void emulator_install_file(ns_db::ns_global::Metadata& db_metadata, Op const& op
   fs::path path_file_dst_relative = fs::relative(path_file_dst, db_metadata.path_dir_project);
 
   // Save in database
-  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  auto db_project = ns_db::ns_project::read();
   ereturn_if(not db_project, "Could not open project '{}' database"_fmt(ns_db::file_project()));
+  // Check if is installed in database
+  auto op_files = db_project->find_files(op);
+  ireturn_if(std::ranges::contains(op_files, path_file_dst_relative), "File '{}' is already installed"_fmt(path_file_dst_relative));
+  // Include in database
   db_project->append(op, path_file_dst_relative);
   db_project->set_default(op, path_file_dst_relative);
   ns_db::ns_project::write(*db_project);
 } // emulator_install_file() }}}
 
 // emulator() {{{
-inline void emulator(ns_db::ns_global::Metadata& db_metadata, Op op, std::vector<std::string> args)
+inline void emulator(ns_db::ns_build::Metadata& db_metadata, Op op, std::vector<std::string> args)
 {
-  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
 
   // Install paths
-  fs::path path_dir_config = db_project->path_dir_config;
-  fs::path path_dir_data   = db_project->path_dir_data;
-  fs::path path_dir_rom    = db_project->path_dir_rom;
-  fs::path path_dir_core   = db_project->path_dir_core;
-  fs::path path_dir_bios   = db_project->path_dir_bios;
+  fs::path path_dir_config = db_metadata.path_dir_project / db_project->path_dir_config;
+  fs::path path_dir_data   = db_metadata.path_dir_project / db_project->path_dir_data;
+  fs::path path_dir_rom    = db_metadata.path_dir_project / db_project->path_dir_rom;
+  fs::path path_dir_core   = db_metadata.path_dir_project / db_project->path_dir_core;
+  fs::path path_dir_bios   = db_metadata.path_dir_project / db_project->path_dir_bios;
 
   // Log
   ns_log::write('i', "application   : ", db_metadata.name);
@@ -236,7 +239,7 @@ inline void emulator(ns_db::ns_global::Metadata& db_metadata, Op op, std::vector
 } // anonymous namespace
 
 // icon() {{{
-inline void icon(ns_db::ns_global::Metadata& db_metadata, std::string str_file_icon)
+inline void icon(ns_db::ns_build::Metadata& db_metadata, std::string str_file_icon)
 {
   // Validate that file exists
   fs::path path_file_icon_src = ns_fs::ns_path::file_exists<true>(str_file_icon)._ret;
@@ -254,7 +257,7 @@ inline void icon(ns_db::ns_global::Metadata& db_metadata, std::string str_file_i
   ns_image::grayscale(path_file_icon_dst, path_file_icon_gray_dst);
 
   // Save icon path in project database
-  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
   db_project->path_file_icon = fs::relative(path_file_icon_dst, db_metadata.path_dir_project);
   ns_db::ns_project::write(*db_project);
@@ -264,10 +267,10 @@ inline void icon(ns_db::ns_global::Metadata& db_metadata, std::string str_file_i
 template<typename R>
 void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 {
-  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
 
-  fs::path path_dir_item = db_project->get_directory(op);
+  fs::path path_dir_item = db_project->find_directory(op);
 
   // Remove file by file
   std::ranges::for_each(files, [&](fs::path e)
@@ -279,9 +282,9 @@ void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 // install() {{{
 inline void install(Op op, std::vector<std::string> args)
 {
-  auto db_global = ns_db::ns_global::read(ns_db::file_default());
-  ethrow_if(not db_global, "Could not open global database '{}'"_fmt(db_global.error()));
-  auto db_metadata = db_global->find(db_global->project);
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database '{}'"_fmt(db_build.error()));
+  auto db_metadata = db_build->find(db_build->project);
 
   // Install based on platform
   switch(db_metadata.platform)
@@ -301,10 +304,10 @@ inline void install(Op op, std::vector<std::string> args)
 // remote() {{{
 inline void remote(Op const& op, std::vector<std::string> vec_cores)
 {
-  auto db_global = ns_db::ns_global::read(ns_db::file_default());
-  ethrow_if(not db_global, "Could not open global database '{}'"_fmt(db_global.error()));
-  auto db_metadata = db_global->find(db_global->project);
-  auto db_project = ns_db::ns_project::read(ns_db::file_project());
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database '{}'"_fmt(db_build.error()));
+  auto db_metadata = db_build->find(db_build->project);
+  auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not open project database '{}'"_fmt(db_project.error()));
 
   // Core dir

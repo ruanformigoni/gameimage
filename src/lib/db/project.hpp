@@ -43,7 +43,9 @@ class Project
     void set_default(ns_enum::Op const op, fs::path const& rpath_file_target);
     void append(ns_enum::Op const op, fs::path const& rpath_file_target);
     void erase(ns_enum::Op const op, fs::path const& rpath_file_target);
-    fs::path get_directory(ns_enum::Op const op);
+    fs::path find_directory(ns_enum::Op const op);
+    fs::path find_file(ns_enum::Op const op);
+    std::vector<fs::path> const& find_files(ns_enum::Op const op);
   friend Project read_impl(fs::path path_file_db);
   friend void write_impl(Project const& project);
 }; // struct Project }}}
@@ -102,8 +104,8 @@ void Project::erase(ns_enum::Op const op, fs::path const& rpath_file_target)
   } // switch
 } // erase() }}}
 
-// get_directory() {{{
-fs::path Project::get_directory(ns_enum::Op const op)
+// find_directory() {{{
+fs::path Project::find_directory(ns_enum::Op const op)
 {
   switch(op)
   {
@@ -116,7 +118,32 @@ fs::path Project::get_directory(ns_enum::Op const op)
     case ns_enum::Op::LINUX: return path_dir_linux; break;
     default: throw std::runtime_error("Invalid item to get directory for");
   } // switch
-} // get_directory() }}}
+} // find_directory() }}}
+
+// find_file() {{{
+fs::path Project::find_file(ns_enum::Op const op)
+{
+  switch(op)
+  {
+    case ns_enum::Op::BIOS: return path_file_bios; break;
+    case ns_enum::Op::CORE: return path_file_core; break;
+    case ns_enum::Op::ROM: return path_file_rom; break;
+    case ns_enum::Op::ICON: return path_file_icon; break;
+    default: throw std::runtime_error("Invalid item to get directory for");
+  } // switch
+} // find_file() }}}
+
+// find_file() {{{
+std::vector<fs::path> const& Project::find_files(ns_enum::Op const op)
+{
+  switch(op)
+  {
+    case ns_enum::Op::BIOS: return paths_file_bios; break;
+    case ns_enum::Op::CORE: return paths_file_core; break;
+    case ns_enum::Op::ROM: return paths_file_rom; break;
+    default: throw std::runtime_error("Invalid item to get directory for");
+  } // switch
+} // find_file() }}}
 
 // init_impl() {{{
 void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platform)
@@ -235,11 +262,11 @@ inline std::error<std::string> init(fs::path const& path_dir_project, ns_enum::P
 } // init() }}}
 
 // read() {{{
-inline std::expected<Project,std::string> read(fs::path const& path_dir_project)
+inline std::expected<Project,std::string> read()
 {
   return ns_exception::to_expected([&]
   {
-    return read_impl(path_dir_project);
+    return read_impl(ns_db::file_project());
   });
 } // read() }}}
 

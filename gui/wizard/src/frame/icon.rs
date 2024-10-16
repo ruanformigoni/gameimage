@@ -40,7 +40,7 @@ fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Res
     Ok(db_global) => db_global,
     Err(e) => { return Err(ah!("Error to open global directory: {}", e)); },
   };
-  let path_dir_project = match db_global.get_project_dir(&db_global.project.string())
+  let path_dir_project = match db_global.get_project_dir(&db_global.project)
   {
     Ok(path_dir_project) => path_dir_project,
     Err(e) => { return Err(ah!("Error to open project directory: {}", e)); },

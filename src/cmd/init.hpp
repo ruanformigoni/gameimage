@@ -8,16 +8,14 @@
 
 #include <filesystem>
 
-#include "../common.hpp"
 #include "../macro.hpp"
 #include "../enum.hpp"
 
 #include "../std/filesystem.hpp"
-#include "../std/copy.hpp"
 #include "../std/env.hpp"
 
 #include "../lib/log.hpp"
-#include "../lib/db/global.hpp"
+#include "../lib/db/build.hpp"
 #include "../lib/db/project.hpp"
 
 //
@@ -55,7 +53,7 @@ inline void init(std::string const& str_platform
   // Check if project directory parent exists
   ns_fs::ns_path::dir_exists<true>(path_dir_project.parent_path());
   // Initialize projects data
-  elogerror(ns_db::ns_global::init(path_dir_build
+  elogerror(ns_db::ns_build::init(path_dir_build
     , path_dir_project
     , path_dir_project_root
     , path_file_image

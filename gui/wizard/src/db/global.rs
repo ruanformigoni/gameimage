@@ -5,17 +5,13 @@ use std::fs::File;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
-use shared::std::PathBufExt;
-
 // struct Entry {{{
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Entry
 {
-pub project: PathBuf, // path to default project
-pub path_dir_build: PathBuf, // path to build dir
-pub projects: Vec<PathBuf>, // list of projects by name
-#[serde(flatten)]
-pub dynamic_projects: Option<HashMap<String, EntryDetails>>,
+  pub project: String, // path to default project
+  pub path_dir_build: PathBuf, // path to build dir
+  pub projects: HashMap<String, EntryDetails>,
 } // Entry }}}
 
 // struct EntryDetails {{{
@@ -33,14 +29,7 @@ impl Entry
 // get_project_dir() {{{
 pub fn get_project_dir(&self, name_project : &str) -> anyhow::Result<PathBuf>
 {
-  Ok(self
-    .dynamic_projects
-    .clone()
-    .ok_or(ah!("Project list is empty"))?
-    .get(name_project)
-    .ok_or(ah!("Project not found in projects list"))?
-    .path_dir_project
-    .clone())
+  Ok(self.projects.get(name_project).ok_or(ah!("Key '{}' not found in projects list", name_project))?.path_dir_project.clone())
 } // get_project_dir() }}}
 
 }
@@ -49,13 +38,8 @@ pub fn get_project_dir(&self, name_project : &str) -> anyhow::Result<PathBuf>
 pub fn get_current_project() -> anyhow::Result<EntryDetails>
 {
   let db_global = read()?;
-  let name_project = db_global.project.string();
-
-  Ok(db_global
-    .dynamic_projects.clone()
-    .ok_or(ah!("Project list is empty"))?
-    .get(&name_project)
-    .ok_or(ah!("Project not found in projects list"))?.clone())
+  let name_project = db_global.project;
+  Ok(db_global.projects.get(&name_project).ok_or(ah!("Project not found in projects list"))?.clone())
 } // get_current_project() }}}
 
 // read() {{{

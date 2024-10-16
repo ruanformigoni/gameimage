@@ -106,17 +106,14 @@ pub type Entries = Vec<Entry>;
 pub fn list() -> anyhow::Result<Entries>
 {
   let mut entries : Entries = Vec::new();
+  let db_global = global::read()?;
 
-  // Get global info
-  let global = global::read()?;
-
-  for project in global::read()?.projects
+  for project in db_global.projects.clone()
   {
-    // Expected project directory
-    let path_dir_project = global.get_project_dir(&project.string())?;
+    let (_, data) = project.clone();
 
     // Expected json file
-    let path_file_json = path_dir_project.join("gameimage.json");
+    let path_file_json = data.path_dir_project.join("gameimage.json");
 
     // Open project file
     let file = match File::open(&path_file_json)
@@ -148,13 +145,10 @@ pub fn current() -> anyhow::Result<Entry>
   let global = global::read()?;
 
   // Get the current project
-  let path_dir_project = global.get_project_dir(&global.project.string())?;
-
-  // Path to file with the project info
-  let path_file_project = path_dir_project.join("gameimage.json");
+  let path_file_project = global.get_project_dir(&global.project)?.join("gameimage.json");
 
   // Read file
-  let file = File::open(path_file_project.clone())?;
+  let file = File::open(&path_file_project)?;
 
   // Read entry
   Ok(serde_json::from_reader(file)?)

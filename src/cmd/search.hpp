@@ -16,7 +16,8 @@
 #include "../std/filesystem.hpp"
 
 #include "../lib/log.hpp"
-#include "../lib/db.hpp"
+#include "../lib/db/project.hpp"
+#include "../lib/db/build.hpp"
 #include "../lib/ipc.hpp"
 
 namespace ns_search
@@ -123,9 +124,10 @@ auto send(auto&& vec_paths, std::unique_ptr<ns_ipc::Ipc> const& ipc)
 // search_remote() {{{
 inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
 {
-  std::string str_project = ns_db::query(ns_db::file_default(), "project");
-  std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
+
   std::unique_ptr<ns_ipc::Ipc> ipc;
 
   if ( use_ipc )
@@ -151,11 +153,8 @@ inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
     op = ns_enum::from_string<Op>(*opt_query);
   });
 
-  // Get search dir
-  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_{}"_fmt(ns_enum::to_string_lower(op)));
-
   // Handle fetch for each platform
-  switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
+  switch(db_metadata.platform)
   {
     case ns_enum::Platform::RETROARCH: send(search_remote(), ipc);
     break;
@@ -170,9 +169,12 @@ inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
 // search_local() {{{
 inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
 {
-  std::string str_project = ns_db::query(ns_db::file_default(), "project");
-  std::string str_platform = ns_db::query(ns_db::file_default(), str_project, "platform");
-  fs::path path_dir_project = ns_db::query(ns_db::file_default(), str_project, "path_dir_project");
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, "Could not open build database");
+  auto db_metadata = db_build->find(db_build->project);
+  auto db_project = ns_db::ns_project::read();
+  ethrow_if(not db_project, "Could not open project database");
+
   std::unique_ptr<ns_ipc::Ipc> ipc;
 
   if ( use_ipc )
@@ -199,17 +201,17 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
   });
 
   // Get search dir
-  fs::path path_dir_search = path_dir_project / ns_db::query(ns_db::file_project(), "path_dir_{}"_fmt(ns_enum::to_string_lower(op)));
+  fs::path path_dir_search = db_metadata.path_dir_project / db_project->find_directory(op);
 
   // Handle fetch for each platform
-  switch(ns_enum::from_string<ns_enum::Platform>(str_platform))
+  switch(db_metadata.platform)
   {
     case ns_enum::Platform::LINUX:
     {
        // Check if is rom
       "Only rom operation is available for linux"_throw_if([&]{ return op != Op::ROM; });
       // Enter application dir
-      path_dir_search = (path_dir_project / "linux");
+      path_dir_search = (db_metadata.path_dir_project / db_project->find_directory(op));
       // Get files iterator
       auto it_files = search_files(path_dir_search, R"(.*\.sh)", "");
       // Save files to json
@@ -221,7 +223,7 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
       // Check if is rom
       "Only rom operation is available for wine"_throw_if([&]{ return op != Op::ROM; });
       // Enter drive_c
-      path_dir_search = (path_dir_project / "wine") / "drive_c";
+      path_dir_search = (db_metadata.path_dir_project / db_project->find_directory(op))  / "drive_c";
       // Get files iterator
       auto it_files = search_files(path_dir_search, R"(.*\.exe$)", R"(windows)");
       // For each file, prepend "wine" to be relative to path_dir_project
