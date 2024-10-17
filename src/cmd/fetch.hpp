@@ -45,6 +45,7 @@ namespace
 struct fetchlist_base_ret_t
 {
   fs::path path;
+  fs::path cache;
   cpr::Url url;
 }; // }}}
 
@@ -75,16 +76,20 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 } // }}}
 
 // fetch_file_from_url() {{{
-[[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file, cpr::Url const& url)
+[[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file
+  , cpr::Url const& url
+  , std::optional<std::string> key_ipc = std::nullopt)
 {
   ns_log::write('i', "Fetch file '", url.c_str(), "' to '", path_file, "'");
+  // Create upper directories
+  lec(fs::create_directories, path_file.parent_path());
   // Try to open destination file
   auto ofile = std::ofstream{path_file, std::ios::binary};
   // Check if file is open
   qreturn_if(not ofile.is_open(), std::unexpected("Failed to open file '{}' for writing"_fmt(path_file)));
   // Initialize IPC
   std::unique_ptr<ns_ipc::Ipc> ptr_ipc = nullptr;
-  ns_log::exception([&]{ ptr_ipc = std::make_unique<ns_ipc::Ipc>(path_file); });
+  ns_log::exception([&]{ ptr_ipc = std::make_unique<ns_ipc::Ipc>(key_ipc.value_or(path_file)); });
   // fetch_callback
   auto fetch_callback = [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t)
   {
@@ -149,17 +154,15 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 } // check_file() }}}
 
 // fetch_on_failed_check() {{{
-[[nodiscard]] inline std::error<std::string> fetch_on_failed_check(fs::path const& path_file, cpr::Url const& url)
+[[nodiscard]] inline std::error<std::string> fetch_on_failed_check(fs::path const& path_file
+  , cpr::Url const& url
+  , std::optional<std::string> key_ipc = std::nullopt)
 {
-  if ( check_file(path_file, url) )
-  {
-    ns_ipc::Ipc(path_file).send(100);
-    return std::nullopt;
-  } // if
+  qreturn_if(check_file(path_file, url), std::nullopt);
 
   ns_log::write('i', "Failed to check SHA for file ", path_file);
 
-  if(auto expected_path_file = fetch_file_from_url(path_file, url); not expected_path_file )
+  if(auto expected_path_file = fetch_file_from_url(path_file, url, key_ipc); not expected_path_file )
   {
     return expected_path_file.error();
   } // if
@@ -173,9 +176,9 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   // Create platform string
   std::string str_platform = ns_enum::to_string_lower(platform);
   // Temporary file with fetch list
-  fs::path path_file_fetch = get_path_fetchlist();
+  fs::path path_file_fetchlist = get_path_fetchlist();
   // Open file as database
-  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  auto database = ns_db::ns_fetch::read(path_file_fetchlist);
   ethrow_if(not database, database.error());
   // Select the base in terms of platform
   std::string str_url_base = database->get_platform(platform)->get_base();
@@ -184,7 +187,8 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   // Create destination / url pair
   return fetchlist_base_ret_t
   {
-    .path = fs::path{path_file_fetch.parent_path()} / "{}.flatimage"_fmt(str_platform),
+    .path = fs::path{path_file_fetchlist.parent_path()} / "{}.flatimage"_fmt(str_platform),
+    .cache = fs::path{path_file_fetchlist.parent_path()} / "cache" / "{}.flatimage"_fmt(str_platform),
     .url = cpr::Url(str_url_base),
   };
 } // fetchlist_base() }}}
@@ -193,9 +197,9 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
 [[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer(ns_enum::Platform const& platform)
 {
   // Temporary file with fetch list
-  fs::path path_file_fetch = get_path_fetchlist();
+  fs::path path_file_fetchlist = get_path_fetchlist();
   // Open file as database
-  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  auto database = ns_db::ns_fetch::read(path_file_fetchlist);
   ethrow_if(not database, database.error());
   // Fetch layer url
   std::string str_url_layer = database
@@ -206,7 +210,7 @@ decltype(auto) get_path_file_image(ns_enum::Platform const& platform)
   // Create destination / url pair
   return fetchlist_layer_ret_t
   {
-    .path = fs::path{path_file_fetch.parent_path()} / "{}.layer"_fmt(ns_enum::to_string_lower(platform)),
+    .path = fs::path{path_file_fetchlist.parent_path()} / "{}.layer"_fmt(ns_enum::to_string_lower(platform)),
     .url = cpr::Url(str_url_layer),
   };
 } // fetchlist_layer() }}}
@@ -227,9 +231,21 @@ inline void merge_base_and_layer(fs::path const& path_file_image , fs::path cons
   // Resolve URL
   auto expected_path_and_url_base = fetchlist_base(platform);
   qreturn_if(not expected_path_and_url_base, std::unexpected(expected_path_and_url_base.error()));
-  // Fetch
-  auto error_fetch = fetch_on_failed_check(expected_path_and_url_base->path, expected_path_and_url_base->url);
+  // Decompose members
+  auto const& [path_target,path_cache,url] = *expected_path_and_url_base;
+  // Try to copy from cache (and re-fetch to cache if check fails afterwards)
+  if (lec(fs::exists, path_cache))
+  {
+    ns_log::write('i', "Fetch '{}' from cache '{}'"_fmt(path_target, path_cache));
+    lec(fs::copy_file, path_cache, path_target, fs::copy_options::overwrite_existing);
+  } // if
+  // Fetch to cache
+  auto error_fetch = fetch_on_failed_check(path_cache, url, path_target);
   qreturn_if(error_fetch, std::unexpected(*error_fetch));
+  // Copy to target location
+  lec(fs::copy_file, path_cache, path_target);
+  // Send 100% completion
+  ns_ipc::Ipc(path_target).send(100);
   // Return fetched path and url
   return *expected_path_and_url_base;
 } // fetch() }}}
@@ -240,9 +256,12 @@ inline void merge_base_and_layer(fs::path const& path_file_image , fs::path cons
   // Resolve URL
   auto expected_path_and_url_layer = fetchlist_layer(platform);
   qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
+  auto [path_target, url] = *expected_path_and_url_layer;
   // Fetch
-  auto error_fetch = fetch_on_failed_check(expected_path_and_url_layer->path, expected_path_and_url_layer->url);
+  auto error_fetch = fetch_on_failed_check(path_target, url);
   qreturn_if(error_fetch, std::unexpected(*error_fetch));
+  // Send 100% completion
+  ns_ipc::Ipc(path_target).send(100);
   // Return fetched path and url
   return *expected_path_and_url_layer;
 } // fetch() }}}
@@ -253,14 +272,14 @@ inline void merge_base_and_layer(fs::path const& path_file_image , fs::path cons
 inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_cores()
 {
   // Define sources file
-  fs::path path_file_fetch = get_path_fetchlist();
+  fs::path path_file_fetchlist = get_path_fetchlist();
   // Fetch from remote
-  if ( auto expected = fetch_file_from_url(path_file_fetch, cpr::Url{URL_FETCH}); not expected)
+  if ( auto expected = fetch_file_from_url(path_file_fetchlist, cpr::Url{URL_FETCH}); not expected)
   {
     return std::unexpected(expected.error());
   } // if
   // Open as a database
-  auto database = ns_db::ns_fetch::read(path_file_fetch);
+  auto database = ns_db::ns_fetch::read(path_file_fetchlist);
   ethrow_if(not database, database.error());
   // Return cores
   return database->get_platform(ns_enum::Platform::RETROARCH)->get_cores();
@@ -279,35 +298,33 @@ inline void fetch(ns_enum::Platform platform, std::optional<fs::path> const& onl
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
-  fs::path path_dir_image = path_file_image.parent_path();
-
-  if ( only_file and only_file->string().ends_with(".layer") )
-  {
-    auto expected = fetch_layer(platform);
-    elog_if(not expected, expected.error());
-    return;
-  } // if
-
-  if ( only_file and only_file->string().ends_with(".flatimage") )
+  // Operation selection
+  std::byte selection = (not only_file)? std::byte{0b11}
+    : (only_file->string().ends_with(".layer"))? std::byte{0b10}
+    : (only_file->string().ends_with(".flatimage"))? std::byte{0b01}
+    : std::byte{0b00};
+  // Check for valid extension
+  ereturn_if(std::to_integer<int>(selection) == 0, "Invalid file extension '{}'"_fmt(only_file.value()));
+  // 01 == fetch base
+  if ( std::to_integer<int>(selection) & 0b01 )
   {
     auto expected = fetch_base(platform);
-    elog_if(not expected, expected.error());
-    return;
+    ereturn_if(not expected, expected.error());
   } // if
-
-  // Verify & configure base
-  auto expected_path_and_url_base = fetch_base(platform);
-  ereturn_if(not expected_path_and_url_base, expected_path_and_url_base.error());
-
   // No layer for linux
   if ( platform == ns_enum::Platform::LINUX ) { return; }
-
-  // Verify & configure layer
-  auto expected_path_and_url_layer = fetch_layer(platform);
-  ereturn_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
-
-  // Merge base and layer
-  merge_base_and_layer(path_file_image, expected_path_and_url_layer->path);
+  // 10 == fetch layer
+  std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer; 
+  if ( std::to_integer<int>(selection) & 0b10 )
+  {
+    fetchlist_layer = fetch_layer(platform);
+    ereturn_if(not fetchlist_layer, fetchlist_layer.error());
+  } // if
+  // 11 == merge fetched layer and base
+  if ( std::to_integer<int>(selection) == 0b11 )
+  {
+    merge_base_and_layer(path_file_image, fetchlist_layer->path);
+  } // if
 } // fetch() }}}
 
 // sha() {{{
@@ -315,7 +332,6 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
 {
   // Create image path
   fs::path path_file_image = get_path_file_image(platform);
-  fs::path path_dir_image = path_file_image.parent_path();
 
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));

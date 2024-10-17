@@ -45,6 +45,12 @@ class Ipc
 // Ipc::Ipc() {{{
 inline Ipc::Ipc(fs::path path_file, bool keep_open)
 {
+  // Create empty file if not exists
+  if ( std::error_code ec; not fs::exists(path_file, ec) or ec )
+  {
+    (void) std::ofstream{path_file};
+  } // if
+
   ns_log::write('i', "Starting IPC for ", path_file);
 
   std::string identifier = ns_string::to_string(path_file);
