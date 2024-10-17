@@ -11,6 +11,7 @@
   - [Install](#install)
   - [Tutorials](#tutorials)
   - [FlatImage](#flatimage)
+  - [Tips](#tips)
   - [Known Issues](#known-issues)
 
 ## About
@@ -113,23 +114,17 @@ The key advantages of flatimage are:
    one file. Flatimage grows automatically to accomodate your save data, you can
    still use the previous method with flatimage, as well as others listed in 
 
+## Tips
+
+* Wine umu takes longer to start than other options
+* Select shaders in retroarch, and use ‘save as global preset’. GameImage will remember your selected shaders after the image creation.
+* Use the environment variable GAMEID to set the gameid for umu, either on the wizard or on the launcher.
+
 ## Known Issues
 
 ### General
 
 Avoid using `NTFS` formatted hard-drives.
-
-### Ubuntu 24.04
-
-Recent changes to [apparmor](https://gitlab.com/apparmor/apparmor) broke portable bubblewrap applications such as gameimage, to work around these issues you can use the following commands:
-
-```bash
-sudo add-apt-repository ppa:apparmor-dev/apparmor-sru
-sudo apt update
-sudo apt install apparmor
-```
-
----
 
 > Disclaimer: This project does not endorse piracy, buy your games and console
 > to use this software.
