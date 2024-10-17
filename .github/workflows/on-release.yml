@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Build Package
       run: |
@@ -39,7 +39,7 @@ jobs:
         sudo chmod -R 766 dist/
 
     - name: Upload artifact to release
-      uses: actions/upload-artifact@v1.0.0
+      uses: actions/upload-artifact@v3
       with:
         name: gameimage
         path: dist
