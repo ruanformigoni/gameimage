@@ -26,12 +26,12 @@ jobs:
           https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux-amd64
         chmod +x ./bin/*
         # Build packages
-        ( HOME="$(pwd)" FIM_DEBUG=1 ./deploy/makeself-gameimage.sh )
+        ( HOME="$(pwd)" FIM_DEBUG=1 ./deploy/flatimage-alpine.sh )
         # Create dist folder
         mkdir -p dist
-        mv ./build/gameimage.run dist
-        # Create SHA for gameimage.run
-        ( cd dist && sha256sum gameimage.run > gameimage.run.sha256sum )
+        mv ./build/gameimage dist/gameimage.flatimage
+        # Create SHA for gameimage.flatimage
+        ( cd dist && sha256sum gameimage.flatimage > gameimage.flatimage.sha256sum )
 
     - name: Set permissions for dist directory
       run: |
