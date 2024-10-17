@@ -22,6 +22,7 @@ pub enum Msg
 
   DrawLinuxName,
   DrawLinuxIcon,
+  DrawLinuxMethod,
   DrawLinuxRom,
   DrawLinuxDefault,
   DrawLinuxTest,

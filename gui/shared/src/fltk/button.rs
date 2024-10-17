@@ -18,6 +18,10 @@ pub fn button<T>() -> T
     .with_frame(fltk::enums::FrameType::BorderBox)
 }
 
+pub fn filter() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_filter(1.0).as_str()) }
+
+pub fn install() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_install(1.0).as_str()) }
+
 pub fn home() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_home(1.0).as_str()) }
 
 pub fn back() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_back(1.0).as_str()) }

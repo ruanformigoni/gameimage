@@ -151,6 +151,10 @@ fn redraw(&mut self, msg : Msg)
     {
       wizard::linux::icon(self.tx, "Select the Application Icon");
     }
+    Msg::DrawLinuxMethod =>
+    {
+      wizard::linux::method(self.tx, "Select How to Install the Application");
+    }
     Msg::DrawLinuxRom =>
     {
       wizard::linux::rom(self.tx, "Install the Application");

@@ -17,6 +17,7 @@ use fltk::
   prelude::*,
 };
 
+use shared::std::OsStrExt;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::dimm;
@@ -45,60 +46,24 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
     , title
     , common::Msg::DrawLinuxName
     , common::Msg::DrawLinuxIcon
-    , common::Msg::DrawLinuxRom
+    , common::Msg::DrawLinuxMethod
   );
 } // }}}
 
-// pub fn rom() {{{
-pub fn rom(tx: Sender<common::Msg>, title: &str)
+// fn method_explore() {{{
+fn method_explore(widget: fltk::widget::Widget, width: i32) -> fltk::widget::Widget
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
-
-  // Goto previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawLinuxIcon);
-
-  // Goto next frame
-  let clone_tx = tx.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
-  {
-    // Get the items to select from the backend
-    let vec_roms = match gameimage::search::search_local("rom")
-    {
-      Ok(result) => result,
-      Err(e) => { log!("{}", e); vec![] },
-    }; // match
-
-    // Check if is not empty
-    if vec_roms.is_empty()
-    {
-      clone_output_status.set_value("No installed '.sh' file was found");
-      return;
-    } // if
-
-    clone_tx.send(common::Msg::DrawLinuxDefault);
-  });
-
-  // Height to input field
-  let height_input_script = ( dimm::height_button_wide() as f32 *1.25 ) as i32;
-
-  // Currently running process
-  let arc_process : Arc<Mutex<Option<Arc<Mutex<std::process::Child>>>>> = Arc::new(Mutex::new(None));
-
-  // Show the running process stdout/stderr
-  let term = frame::term::Term::new(dimm::border()
-    , frame_content.w() - dimm::border()*2
-    , frame_content.h() - dimm::border()*4 - dimm::height_button_wide() - height_input_script - dimm::height_text()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
-
-  // Create browse button below save button
-  let _btn_browse = shared::fltk::button::rect::folder()
-    .below_of(&term.btn_save, dimm::border())
-    .with_color(fltk::enums::Color::Blue)
+  // Dialog
+  let frame_text = fltk::frame::Frame::default()
+    .with_frame(fltk::enums::FrameType::BorderBox)
+    .with_size(width - dimm::border() - dimm::width_button_rec(), dimm::height_button_wide())
+    .below_of(&widget, dimm::border())
+    .with_align(fltk::enums::Align::Center | fltk::enums::Align::Inside)
+    .with_label("Manually copy files with the file manager");
+  // Button to the right
+  shared::fltk::button::rect::folder()
+    .right_of(&frame_text, dimm::border())
+    .with_color(fltk::enums::Color::Green)
     .with_callback(|_|
     {
       let project = match db::global::get_current_project()
@@ -115,13 +80,121 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           .spawn();
     });
 
+  // Explanation
+  let mut frame_help = fltk::text::TextDisplay::default()
+    .with_frame(fltk::enums::FrameType::BorderBox)
+    .with_size(width, dimm::height_button_wide()*4)
+    .with_color(fltk::enums::Color::BackGround)
+    .below_of(&frame_text, dimm::border());
+  frame_help.wrap_mode(fltk::text::WrapMode::AtBounds, 0);
+  frame_help.visible_focus(false);
+  frame_help.set_buffer(fltk::text::TextBuffer::default());
+  frame_help.insert("Click on the file icon to open a folder with the file manager, you can copy your application files to this folder.");
+
+  frame_help.as_base_widget()
+} // }}}
+
+// fn method_install() {{{
+fn method_install(tx: Sender<common::Msg>, widget: fltk::widget::Widget, width: i32)
+{
+  // Dialog
+  let frame_text = fltk::frame::Frame::default()
+    .with_frame(fltk::enums::FrameType::BorderBox)
+    .with_size(width - dimm::border() - dimm::width_button_rec(), dimm::height_button_wide())
+    .below_of(&widget, dimm::border())
+    .with_align(fltk::enums::Align::Center | fltk::enums::Align::Inside)
+    .with_label("Install the application from a wizard");
+  // Button to the right
+  let mut btn_install = shared::fltk::button::rect::install()
+    .right_of(&frame_text, dimm::border())
+    .with_color(fltk::enums::Color::Green);
+  btn_install.emit(tx, common::Msg::DrawLinuxRom);
+  // Explanation
+  let mut frame_help = fltk::text::TextDisplay::default()
+    .with_frame(fltk::enums::FrameType::BorderBox)
+    .with_size(width, dimm::height_button_wide()*4)
+    .with_color(fltk::enums::Color::BackGround)
+    .below_of(&frame_text, dimm::border());
+  frame_help.wrap_mode(fltk::text::WrapMode::AtBounds, 0);
+  frame_help.visible_focus(false);
+  frame_help.set_buffer(fltk::text::TextBuffer::default());
+  frame_help.insert("Use an executable to install your application, this is useful for wizard installation such as GOG installers.");
+  frame_help.insert(" When installing games from GOG, use the default installation path that appears in the select the install location frame.");
+} // }}}
+
+// fn method_next() {{{
+fn method_next(tx: Sender<common::Msg>, mut button: fltk::button::Button, mut output: fltk::output::Output)
+{
+  button.set_callback(move |_|
+  {
+    // Get the items to select from the backend
+    let vec_roms = match gameimage::search::search_local("rom")
+    {
+      Ok(result) => result,
+      Err(e) => { log!("{}", e); vec![] },
+    }; // match
+
+    // Check if is not empty
+    if vec_roms.is_empty()
+    {
+      output.set_value("No installed file was found");
+      return;
+    } // if
+
+    tx.send(common::Msg::DrawLinuxDefault);
+  });
+} // }}}
+
+// pub fn method() {{{
+pub fn method(tx: Sender<common::Msg>, title: &str)
+{
+  let ret_frame_header = frame::common::frame_header(title);
+  let ret_frame_footer = frame::common::frame_footer();
+  let frame_sep = ret_frame_header.sep.clone();
+  let frame_output = ret_frame_footer.output_status.clone();
+  // Configure buttons
+  let btn_next = ret_frame_footer.btn_next.clone();
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawLinuxIcon);
+  // Explore with the file manager
+  let widget = method_explore(frame_sep.as_base_widget(), frame_sep.w());
+  // Install with a wizard
+  method_install(tx, widget, frame_sep.w());
+  // Install with a wizard
+  method_next(tx, btn_next.clone(), frame_output.clone());
+} // method() }}}
+
+// pub fn rom() {{{
+pub fn rom(tx: Sender<common::Msg>, title: &str)
+{
+  let ret_frame_header = frame::common::frame_header(title);
+  let ret_frame_footer = frame::common::frame_footer();
+
+  let frame_content = ret_frame_header.frame_content.clone();
+
+  // Configure navigation buttons
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawLinuxMethod);
+  ret_frame_footer.btn_next.clone().hide();
+
+  // Height to input field
+  let height_input_script = ( dimm::height_button_wide() as f32 *1.25 ) as i32;
+
+  // Currently running process
+  let arc_process : Arc<Mutex<Option<Arc<Mutex<std::process::Child>>>>> = Arc::new(Mutex::new(None));
+
+  // Show the running process stdout/stderr
+  let term = frame::term::Term::new(dimm::border()
+    , frame_content.w() - dimm::border()*2
+    , frame_content.h() - dimm::border()*4 - dimm::height_button_wide() - height_input_script - dimm::height_text()*2
+    , frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border());
+
   // Field that shows the currently selected file
   let mut input_script = fltk::input::FileInput::default()
     .with_width_of(&term.term)
     .with_height(height_input_script)
     .below_of(&term.term, dimm::border() + dimm::height_text())
     .with_align(fltk::enums::Align::Top | fltk::enums::Align::Left)
-    .with_label("Click on this field to search for a '.sh' file to execute");
+    .with_label("Click on this field to search for a file to execute");
   input_script.set_readonly(true);
 
   // Input to send commands to the running process
@@ -216,31 +289,79 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   }); // set_callback
 } // }}}
 
+// default_filter() {{{
+fn default_filter(tx: Sender<common::Msg>, widget: fltk::widget::Widget, width: i32) -> (String, fltk::widget::Widget)
+{
+  static SEARCH_TEXT: once_cell::sync::Lazy<Arc<Mutex<String>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(String::new())));
+  let search_text = SEARCH_TEXT.clone();
+
+  // Dialog
+  let mut input_text = fltk::input::Input::default()
+    .with_size(width - dimm::border() - dimm::width_button_rec(), dimm::height_button_wide())
+    .below_of(&widget, dimm::border() + dimm::height_text())
+    .with_align(fltk::enums::Align::Top | fltk::enums::Align::Left)
+    .with_label("Filter the files with the provided query (Press enter or the send button)");
+  let clone_tx = tx.clone();
+  let clone_search_text = search_text.clone();
+  input_text.handle(move |input, ev|
+  {
+    if ! ( ev == fltk::enums::Event::KeyUp && fltk::app::event_key() == fltk::enums::Key::Enter ) { return false; }
+    *clone_search_text.lock().unwrap() = input.value();
+    clone_tx.send(common::Msg::DrawLinuxDefault);
+    true
+  });
+  input_text.set_value(&search_text.lock().map(|e| e.clone()).unwrap_or(String::new()));
+  let _ = input_text.take_focus();
+  // Button to the right
+  let clone_tx = tx.clone();
+  let clone_input_text = input_text.clone();
+  let clone_search_text = search_text.clone();
+  shared::fltk::button::rect::filter()
+    .right_of(&input_text, dimm::border())
+    .with_color(fltk::enums::Color::Green)
+    .with_callback(move |_|
+    {
+      *clone_search_text.lock().unwrap() = clone_input_text.value();
+      clone_tx.send(common::Msg::DrawLinuxDefault);
+    });
+  // Return search text
+  (search_text.lock().map(|e| e.clone()).unwrap_or(String::new()), input_text.as_base_widget())
+} // default_filter() }}}
+
 // default() {{{
 pub fn default(tx: Sender<common::Msg>, title: &str)
 {
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
-
+  let frame_sep = ret_frame_header.sep.clone();
   let frame_content = ret_frame_header.frame_content.clone();
+  let frame_output = ret_frame_footer.output_status.clone();
 
   // Goto previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawLinuxRom);
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawLinuxMethod);
 
   // Get the items to select from the backend
-  let vec_roms = match gameimage::search::search_local("rom")
+  let mut vec_roms = match gameimage::search::search_local("rom")
   {
     Ok(result) => result,
     Err(e) => { log!("{}", e); vec![] },
   }; // match
 
+  // Create the filter
+  let clone_tx = tx.clone();
+  let (text_filter, widget_filter) = default_filter(clone_tx, frame_sep.as_base_widget(), frame_sep.w());
+  vec_roms = vec_roms.into_iter().filter(|p|
+  {
+    return p.file_name().map_or(false, |f| f.string().contains(&text_filter));
+  }).collect();
+
   // Create a scroll list
-  let mut scroll_list = shared::fltk::ScrollList::new(frame_content.w()
-    , frame_content.h()
-    , frame_content.x() + dimm::border()
-    , frame_content.y()
+  let mut scroll_list = shared::fltk::ScrollList::new(frame_content.w() - dimm::border()*2
+    , frame_content.h() - dimm::height_button_wide() - dimm::border()*2 - dimm::height_text()
+    , widget_filter.x()
+    , widget_filter.y() + widget_filter.h() + dimm::border()
   );
-  scroll_list.set_border(0, dimm::border());
+  scroll_list.set_border(dimm::border(), dimm::border());
 
   // Save items to select
   let arc_items : Arc<Mutex<Vec<(button::RadioButton, PathBuf)>>> = Arc::new(Mutex::new(vec![]));
@@ -249,15 +370,12 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   for rom in vec_roms
   {
     // Checkbutton
-    let btn_radio = button::RadioButton::default()
-      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-      .with_focus(false)
-      .with_color_selected(fltk::enums::Color::Blue);
+    let btn_radio = shared::fltk::button::rect::radio();
     scroll_list.add(&mut btn_radio.as_base_widget());
 
     // Rom name
     let mut frame_label = output::Output::default()
-      .with_width(scroll_list.widget_ref().w() - dimm::width_button_rec() - dimm::border()*3)
+      .with_width(scroll_list.widget_ref().w() - dimm::width_button_rec() - dimm::border()*4)
       .with_height(dimm::height_button_rec())
       .right_of(&btn_radio, dimm::border())
       .with_frame(fltk::enums::FrameType::BorderBox);
@@ -273,6 +391,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
 
   let clone_arc_items = arc_items.clone();
   let clone_tx = tx.clone();
+  let mut clone_frame_output = frame_output.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     // Get the vector
@@ -286,7 +405,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     let path_file_rom = match vec_items.iter().find(|x| x.0.is_set() )
     {
       Some(value) => value.1.clone(),
-      None => { log!("No button selected!"); return; },
+      None => { clone_frame_output.set_value("No file selected!"); log!("No file selected!"); return; },
     }; // match
 
     // Select rom
