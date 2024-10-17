@@ -62,6 +62,7 @@ function _fetch()
   local link="$1"
   local out="$2"
   local file="$3"
+  echo "Fetch '$link' to '$out'"
   if [[ "$link" =~ .tar.(xz|gz) ]]; then
     wget -q --show-progress --progress=dot:mega "$link" -O - | tar xz "$file" -O > "$out"
   else
@@ -86,7 +87,7 @@ _fetch "https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux-amd64" "$
 _fetch "https://github.com/ruanformigoni/7zip_static/releases/download/ed1f3df/7zz" "$BIN_DIR"/7zz
 
 # Fetch busybox
-_fetch "https://www.busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox" "$BIN_DIR"/busybox
+_fetch "https://github.com/ruanformigoni/busybox-static-musl/releases/download/7e2c5b6/busybox-x86_64" "$BIN_DIR"/busybox
 
 _fetch "https://github.com/ruanformigoni/imagemagick-static-musl/releases/download/c1c5775/magick-x86_64" "$BIN_DIR"/magick
 
@@ -131,10 +132,11 @@ for i in "$BUILD_DIR"/app/bin/*; do
   chmod +x "$i"
 done
 
-# TODO Fetch from github
 # Fetch flatimage
 export IMAGE="$BUILD_DIR"/alpine.flatimage
-cp ~/Public/alpine.flatimage "$IMAGE"
+wget -O"$IMAGE" "$(wget -qO - "https://api.github.com/repos/ruanformigoni/flatimage/releases/latest" \
+  | jq -r '.assets.[].browser_download_url | match(".*alpine.flatimage$").string')"
+chmod +x "$IMAGE"
 
 # Set permissions
 "$IMAGE" fim-perms add home,media,network,xorg,wayland
