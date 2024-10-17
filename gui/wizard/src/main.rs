@@ -285,38 +285,6 @@ fn redraw(&mut self, msg : Msg)
     }
 
     //
-    // Ryujinx
-    //
-    Msg::DrawRyujinxName =>
-    {
-      wizard::ryujinx::name(self.tx, "Select the Application Name");
-    }
-    Msg::DrawRyujinxIcon =>
-    {
-      wizard::ryujinx::icon(self.tx, "Select the Application Icon");
-    }
-    Msg::DrawRyujinxRom =>
-    {
-      wizard::ryujinx::rom(self.tx, "Install the Rom File(s)");
-    }
-    Msg::DrawRyujinxBios =>
-    {
-      wizard::ryujinx::bios(self.tx, "Install the firmware Files");
-    }
-    Msg::DrawRyujinxKeys =>
-    {
-      wizard::ryujinx::keys(self.tx, "Install the Decryption Keys");
-    }
-    Msg::DrawRyujinxTest =>
-    {
-      wizard::ryujinx::test(self.tx, "Test the Created Package");
-    }
-    Msg::DrawRyujinxCompress =>
-    {
-      wizard::ryujinx::compress(self.tx, "Compress the Created Package");
-    }
-
-    //
     // Quit
     //
     Msg::Quit =>

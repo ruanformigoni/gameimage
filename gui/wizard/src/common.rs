@@ -56,14 +56,6 @@ pub enum Msg
   DrawRpcs3Test,
   DrawRpcs3Compress,
 
-  DrawRyujinxName,
-  DrawRyujinxIcon,
-  DrawRyujinxRom,
-  DrawRyujinxBios,
-  DrawRyujinxKeys,
-  DrawRyujinxTest,
-  DrawRyujinxCompress,
-
   DrawFinish,
 
   WindActivate,
@@ -82,9 +74,6 @@ pub const STR_DESC_RETR : &str = "RetroArch is a frontend for emulators, game en
 pub const STR_DESC_PCSX2 : &str = "Being almost as old as the console it is emulating, PCSX2 not only has a lot of history behind it, but a continually evolving future. PCSX2 is a free and open-source PlayStation 2 (PS2) emulator. Its purpose is to emulate the PS2's hardware, using a combination of MIPS CPU Interpreters, Recompilers and a Virtual Machine which manages hardware states and PS2 system memory. The project has been running for almost 20 years. Past versions could only run a few public domain game demos, but newer versions can run most games at full speed, including popular titles such as Final Fantasy X and Devil May Cry 3. A significant majority of the official PS2 library is considered playable or perfect, with the remainder at least making it to the menus. PCSX2 allows you to play PS2 games on your PC, with many additional features and benefits. A few of those benefits include: custom resolutions and upscaling, virtual and sharable memory cards, save-states, patching system, internal recorder to achieve lossless quality at full speed.";
 
 pub const STR_DESC_RPCS3 : &str = "RPCS3 is a multi-platform open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows, Linux, macOS and FreeBSD. The purpose of the project is to completely and accurately emulate the Sony PlayStation 3 Computer Entertainment System in its entirety with the power of open-source community and reverse engineering. Our goal is to preserve the legacy of the PlayStation 3 hardware and its vast library by bringing it and its exclusives to the PC platform. We want to achieve this by targeting and supporting multiple operating systems as well as being compatible with a wide range of computer hardware with realistic requirements.";
-
-#[allow(dead_code)]
-pub const STR_DESC_RYUJINX : &str = "Ryujinx is an open-source Nintendo Switch emulator created by gdkchan and written in C#. This emulator aims at providing excellent accuracy and performance, a user-friendly interface, and consistent builds.";
 // }}}
 
 // impl_log() {{{
@@ -216,7 +205,6 @@ pub fn wizard_by_platform() -> anyhow::Result<Msg>
     "retroarch" => Ok(Msg::DrawRetroarchName),
     "pcsx2"     => Ok(Msg::DrawPcsx2Name),
     "rpcs3"     => Ok(Msg::DrawRpcs3Name),
-    "ryujinx"      => Ok(Msg::DrawRyujinxName),
     _           => Err(ah!("Unrecognized platform")),
   } // match
 
