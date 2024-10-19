@@ -8,24 +8,13 @@ pub type Kv = HashMap<String, String>;
 // pub fn read() {{{
 pub fn read(db : &PathBuf) -> anyhow::Result<Kv>
 {
-  let kv : Kv = match File::open(db)
-  {
-    Ok(file) => serde_json::from_reader(file).unwrap_or(Kv::default()),
-    Err(_) => Kv::default(),
-  }; // match
-
-  Ok(kv)
+  Ok(serde_json::from_reader(File::open(db)?)?)
 } // fn: read }}}
 
 // pub fn write() {{{
 pub fn write(db : &PathBuf, key: &String, val: &String) -> anyhow::Result<()>
 {
-  // Read existing data
-  let mut kv : Kv = match File::open(db.clone())
-  {
-    Ok(file) => serde_json::from_reader(file).unwrap_or(Kv::default()),
-    Err(_) => Kv::default(),
-  }; // match
+  let mut kv : Kv = serde_json::from_reader(File::open(db.clone())?)?;
 
   // Append
   kv.insert(key.clone(), val.clone());
