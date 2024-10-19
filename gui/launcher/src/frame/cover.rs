@@ -73,7 +73,6 @@ fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
   for executable in db_executables.keys().into_iter().chain(vec![path_default_executable.clone()].iter())
   {
     if executable.is_empty() { continue; }
-    println!("Selectable executable '{}'", executable);
     btn_executable.add(&executable
     , fltk::enums::Shortcut::None
     , fltk::menu::MenuFlag::Normal
