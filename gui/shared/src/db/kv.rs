@@ -5,16 +5,23 @@ use std::collections::HashMap;
 
 pub type Kv = HashMap<String, String>;
 
+// fn open() {{{
+fn open(db: &PathBuf) -> anyhow::Result<Kv>
+{
+  Ok(serde_json::from_reader(File::open(db)?)?)
+} // fn open() }}}
+
 // pub fn read() {{{
 pub fn read(db : &PathBuf) -> anyhow::Result<Kv>
 {
-  Ok(serde_json::from_reader(File::open(db)?)?)
+  open(db)
 } // fn: read }}}
 
 // pub fn write() {{{
 pub fn write(db : &PathBuf, key: &String, val: &String) -> anyhow::Result<()>
 {
-  let mut kv : Kv = serde_json::from_reader(File::open(db.clone())?)?;
+  // Open existing or create an empty database
+  let mut kv : Kv = open(db).unwrap_or(Kv::default());
 
   // Append
   kv.insert(key.clone(), val.clone());
