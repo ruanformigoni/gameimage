@@ -7,6 +7,7 @@ use shared::std::PathBufExt;
 use anyhow::anyhow as ah;
 
 use crate::common;
+use crate::db;
 
 pub struct Data
 {
@@ -17,20 +18,20 @@ pub struct Data
   pub path_boot : PathBuf,
 } // Data
 
-// get_path_db() {{{
-fn get_path_db(path_dir_root : &std::path::PathBuf) -> anyhow::Result<std::path::PathBuf>
+// fn mount() {{{
+fn mount(path_root : PathBuf) -> anyhow::Result<Data>
 {
-  let mut path_db = path_dir_root.clone();
-  path_db.push("gameimage.json");
-  Ok(path_db)
-} // get_path_db() }}}
-
-// get_platform() {{{
-fn get_platform(path_dir_root : &std::path::PathBuf) -> anyhow::Result<common::Platform>
-{
-  Ok(common::Platform::from_str(&shared::db::kv::read(&get_path_db(&path_dir_root)?)?
-    .get("platform").ok_or(ah!("Key not found"))?)?)
-} // get_platform() }}}
+  let db_project = db::project::read(&path_root.join("gameimage.json"))?;
+  let path_icon = path_root.join("icon/icon.png");
+  let path_icon_grayscale = path_root.join("icon").join("icon.grayscale.png");
+  let path_boot = path_root.join("boot");
+  let platform = common::Platform::from_str(&db_project.platform);
+  if path_icon.exists() && path_boot.exists()
+  {
+    return Ok(Data{ platform, path_boot, path_root, path_icon, path_icon_grayscale })
+  } // if
+  Err(ah!("Could not include project from '{}'", path_root.string()))
+} // fn mount() }}}
 
 // pub fn mounts() {{{
 pub fn mounts() -> anyhow::Result<Vec<Data>>
@@ -40,25 +41,21 @@ pub fn mounts() -> anyhow::Result<Vec<Data>>
     .filter(|e|{ e.path().is_dir() })
     .collect();
 
-  let mut vec_pairs : Vec<Data> = vec![];
+  let mut vec_data : Vec<Data> = vec![];
 
   for entry in vec_entries
   {
-    let path_root = entry.path();
-    let path_icon = path_root.join("icon").join("icon.png");
-    let path_icon_grayscale = path_root.join("icon").join("icon.grayscale.png");
-    let path_boot = path_root.join("boot");
-    let platform = get_platform(&path_root);
-    if path_icon.exists() && path_boot.exists()
+    match mount(entry.path())
     {
-      vec_pairs.push(Data{ platform, path_boot, path_root, path_icon, path_icon_grayscale });
-    } // if
+      Ok(data) => vec_data.push(data),
+      Err(e) => eprintln!("{}", e),
+    }
   } // for
 
   // Sort
-  vec_pairs.sort_by(|a, b| return a.path_root.string().partial_cmp(&b.path_root.string()).unwrap());
+  vec_data.sort_by(|a, b| return a.path_root.string().partial_cmp(&b.path_root.string()).unwrap());
 
-  Ok(vec_pairs)
+  Ok(vec_data)
 } // mounts() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
