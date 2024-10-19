@@ -66,7 +66,6 @@ fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
 {
   let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
   path_db.push("gameimage.wine.executable.json");
-
   Ok(path_db)
 } // get_path_db_executable() }}}
 
@@ -75,7 +74,6 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 {
   let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
   path_db.push("gameimage.wine.args.json");
-
   Ok(path_db)
 } // get_path_db_args() }}}
 
@@ -194,10 +192,18 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
     {
       if e.value().is_empty()
       {
-        let _ = shared::db::kv::erase(&clone_path_file_db, clone_output_executable.value());
+        match shared::db::kv::erase(&clone_path_file_db, clone_output_executable.value())
+        {
+          Ok(()) => (),
+          Err(e) => eprintln!("{}", e),
+        };
         return;
       }
-      let _ = shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value());
+      match shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value())
+      {
+        Ok(()) => (),
+        Err(e) => eprintln!("{}", e),
+      }
     });
     clone_scroll.add(&mut input_arguments.as_base_widget());
 
