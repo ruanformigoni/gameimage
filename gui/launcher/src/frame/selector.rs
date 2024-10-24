@@ -1,5 +1,3 @@
-use std::env;
-
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
@@ -13,7 +11,7 @@ use fltk::{
 use shared::dimm;
 use shared::fltk::WidgetExtExtra;
 
-use crate::mounts;
+use crate::games;
 use crate::common;
 use common::Msg;
 
@@ -78,25 +76,18 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
     entry
   };
 
-  // Populate entries
-  if let Ok(vec_pairs) = mounts::mounts()
+  // Create entries
+  if let Ok(vec_games) = games::games()
   {
-    for data in vec_pairs
+    for game in vec_games
     {
       // Set entry name
-      let osstr_name_file = data.path_root.file_name().unwrap_or(std::ffi::OsStr::new(""));
-      let str_name_file = osstr_name_file.to_str().unwrap_or("");
+      let osstr_name_file = game.path_root.file_name().unwrap_or_default();
+      let str_name_file = osstr_name_file.to_str().unwrap_or_default();
       let mut entry = f_make_entry(str_name_file);
       entry.set_callback(move |_|
       {
-        if let Ok(platform) = data.platform.as_ref()
-        {
-          env::set_var("GIMG_PLATFORM", platform.as_str());
-        } // if
-        env::set_var("GIMG_LAUNCHER_BOOT", data.path_boot.to_str().unwrap_or(""));
-        env::set_var("GIMG_LAUNCHER_ROOT", data.path_root.to_str().unwrap_or(""));
-        env::set_var("GIMG_LAUNCHER_IMG", data.path_icon.to_str().unwrap_or(""));
-        env::set_var("GIMG_LAUNCHER_IMG_GRAYSCALE", data.path_icon_grayscale.to_str().unwrap_or(""));
+        games::select(&game);
         tx.send(Msg::DrawCover);
       });
     } // for

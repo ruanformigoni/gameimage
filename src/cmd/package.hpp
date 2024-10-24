@@ -58,7 +58,7 @@ inline void package(std::string const& str_name_project)
   f_portal(db_metadata.path_file_image, "fim-exec", "cp", path_file_launcher, "/fim/static/gameimage-launcher");
 
   // Set boot command
-  f_portal(db_metadata.path_file_image, "fim-boot", "/bin/bash", "-c", "/fim/static/gameimage-launcher");
+  f_portal(db_metadata.path_file_image, "fim-boot", "/bin/bash", "-c", R"(/fim/static/gameimage-launcher "$@")", "--");
 
   // Enable notify-send
   f_portal(db_metadata.path_file_image, "fim-notify", "on");

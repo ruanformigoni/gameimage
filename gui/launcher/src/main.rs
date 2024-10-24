@@ -1,11 +1,8 @@
 #![feature(let_chains, proc_macro_hygiene, stmt_expr_attributes)]
 
-use std::env;
-
 // Gui
 use fltk::{
   app,
-  app::*,
   prelude::*,
   window::Window,
   enums::{FrameType,Font},
@@ -13,22 +10,23 @@ use fltk::{
 
 use shared::svg;
 
-mod mounts;
+mod games;
 mod frame;
 mod common;
 mod db;
 
-use shared::dimm;
-
-use fltk_theme::{ColorTheme, color_themes};
-
 use common::Msg;
+
+use shared::dimm;
+use shared::std::PathBufExt;
+use fltk_theme::{ColorTheme, color_themes};
+use clap::Parser;
 
 // struct: Gui {{{
 #[derive(Debug)]
 struct Gui
 {
-  app: App,
+  app: fltk::app::App,
   wind: Window,
   rx : fltk::app::Receiver<Msg>,
   tx : fltk::app::Sender<Msg>,
@@ -114,27 +112,26 @@ fn redraw(&mut self, msg: Msg)
 // init() {{{
 fn init(&mut self)
 {
-  // Fetch game entries
-  if let Ok(vec_entry) = mounts::mounts()
+  let vec_games = match games::games()
   {
-    // Create initial cover frame
-    self.tx.send(common::Msg::DrawCover);
-    // Update env
-    let data = vec_entry.first().unwrap();
-    if let Ok(platform) = data.platform.as_ref()
-    {
-      env::set_var("GIMG_PLATFORM", platform.as_str());
-    } // if
-    env::set_var("GIMG_LAUNCHER_ROOT", data.path_root.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_BOOT", data.path_boot.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_IMG", data.path_icon.to_str().unwrap_or(""));
-    env::set_var("GIMG_LAUNCHER_IMG_GRAYSCALE", data.path_icon_grayscale.to_str().unwrap_or(""));
+    Ok(vec_games) => vec_games,
+    Err(_) => { frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border()); vec![] }
+  }; // match
+
+  // Fetch game entries
+  if vec_games.is_empty()
+  {
+    frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border());
   } // if
   else
   {
-    frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border());
+    // Create initial cover frame
+    self.tx.send(common::Msg::DrawCover);
+    // Select the first game as the current
+    games::select(vec_games.first().unwrap());
   } // else
 
+  // Show window
   self.wind.make_resizable(false);
   self.wind.end();
   self.wind.show();
@@ -187,13 +184,48 @@ fn theme()
   app::foreground(255, 255, 255);
 } // }}}
 
-// fn: main {{{
-fn main()
+// struct Cli {{{
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli
 {
+  #[arg(long, value_name = "INDEX")]
+  select_index: Option<i32>,
+  #[arg(long)]
+  select_list: bool,
+} // struct Cli }}}
+
+// fn: main {{{
+fn main() -> anyhow::Result<()>
+{
+  let args = Cli::parse();
+
+  // Launch game directly
+  if let Some(index) = args.select_index
+  {
+    match games::select_by_index(index as usize)
+    {
+      Ok(()) => games::launch(),
+      Err(e) => { eprintln!("Could not select index '{}': '{}'", index, e); }
+    } // match
+    return Ok(());
+  } // if
+  else if args.select_list
+  {
+    for (index, game) in games::games()?.into_iter().enumerate()
+    {
+      println!("{}: {}", index, game.path_root.file_name_string());
+    } // for
+    return Ok(());
+  } // else if
+
   // Set theme
   theme();
 
-  let _ = Gui::new().init();
+  // Start GUI
+  Gui::new().init();
+
+  Ok(())
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

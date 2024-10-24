@@ -23,7 +23,7 @@ use shared::fltk::SenderExt;
 
 use crate::db;
 use crate::common;
-use crate::mounts;
+use crate::games;
 use common::Msg;
 
 pub struct RetFrameCover
@@ -61,7 +61,7 @@ fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
   // Executable selection menu
   let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
   // Return if there are no executables selected
-  if db_executables.len() == 0 { return Err(ah!("Not executable was selected")); } // if
+  if db_executables.len() == 0 { return Ok(()); } // if
   // Get the default executable
   let path_default_executable = get_default_executable()?.string();
   // Add menu entries for executable selection
@@ -156,7 +156,7 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
   btn_middle.hide();
 
   // Only show switch button in case there is more than one game
-  if let Ok(vec_entry) = mounts::mounts() && vec_entry.len() > 1
+  if let Ok(vec_entry) = games::games() && vec_entry.len() > 1
   {
     btn_middle.show();
   } // if
@@ -186,12 +186,8 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
     {
       // Deactivate window
       clone_tx.send_awake(common::Msg::WindDeactivate);
-      // Wait for child
-      let _ =  std::process::Command::new("sh")
-        .args(["-c", "$GIMG_LAUNCHER_BOOT"])
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .output();
+      // Launch game
+      games::launch();
       // Redraw
       clone_tx.send_awake(Msg::WindActivate);
       clone_tx.send_awake(Msg::DrawCover);
