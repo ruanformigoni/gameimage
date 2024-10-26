@@ -44,22 +44,30 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     .with_label("Select the application name");
 
   // Button to enable desktop entry
-  let is_integrate_entry = Arc::new(AtomicBool::new(true));
-  let clone_is_integrate_entry = is_integrate_entry.clone();
-  let f_set_integrate_entry = move |val: bool| { clone_is_integrate_entry.store(val, Ordering::SeqCst); };
-  let mut btn_check_icon = fltk::button::CheckButton::default()
-    .with_size(dimm::width_checkbutton(), dimm::width_checkbutton())
-    .below_of(&input_name, dimm::border())
-    .with_align(fltk::enums::Align::Right)
-    .with_focus(false)
-    .with_label("Show icon in the start menu?");
-  btn_check_icon.set_checked(true);
-  let clone_f_set_integrate_entry = f_set_integrate_entry.clone();
-  btn_check_icon.set_callback(move |e| clone_f_set_integrate_entry(e.is_checked()));
+  let f_create_atomic_option = move |label: &str, widget_parent: &fltk::widget::Widget|
+    -> (Arc<AtomicBool>, fltk::button::CheckButton)
+  {
+    let atomic_option = Arc::new(AtomicBool::new(true));
+    let clone_atomic_option = atomic_option.clone();
+    let mut btn_check = fltk::button::CheckButton::default()
+      .with_size(dimm::width_checkbutton(), dimm::width_checkbutton())
+      .below_of(widget_parent, dimm::border())
+      .with_align(fltk::enums::Align::Right)
+      .with_focus(false)
+      .with_label(label);
+    btn_check.set_checked(true);
+    let f_clone_atomic_option = move |val: bool| { clone_atomic_option.store(val, Ordering::SeqCst); };
+    btn_check.set_callback(move |e| f_clone_atomic_option(e.is_checked()));
+    (atomic_option.clone(), btn_check.clone())
+  };
+
+  let (is_integrate_entry, btn_integrate_entry) = f_create_atomic_option("Show icon in the start menu?", &input_name.as_base_widget());
+  let (is_integrate_icon, _) = f_create_atomic_option("Show icon file manager?", &btn_integrate_entry.as_base_widget());
 
   // Callback to install icon
   let clone_tx = tx.clone();
   let clone_is_integrate_entry = is_integrate_entry.clone();
+  let clone_is_integrate_icon = is_integrate_icon.clone();
   let clone_input_name = input_name.clone();
   ret.ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
@@ -93,23 +101,32 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     };
 
     let clone_is_integrate_entry = clone_is_integrate_entry.clone();
+    let clone_is_integrate_icon = clone_is_integrate_icon.clone();
     std::thread::spawn(move ||
     {
-      // Set as desktop entry icon for image
-      // Wait for message & check return value
-      let integration_items = match clone_is_integrate_entry.load(Ordering::SeqCst)
+      // Fetch selected options
+      let mut vec_integration_items = Vec::<String>::new();
+      if clone_is_integrate_entry.load(Ordering::SeqCst)
       {
-        true => "mimetype,icon,entry",
-        false => "mimetype,icon",
-      };
-      match gameimage::desktop::desktop(&str_name, &path_file_icon, integration_items)
+        vec_integration_items.push("entry".into());
+        vec_integration_items.push("icon".into());
+      } // if
+      if clone_is_integrate_icon.load(Ordering::SeqCst)
       {
-        Ok(()) => log!("Finished desktop configuration"),
-        Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
-      } // match
-
+        vec_integration_items.push("mimetype".into());
+      } // if
+      // Setup integration
+      let integration_items = vec_integration_items.join(",");
+      if ! integration_items.is_empty()
+      {
+        match gameimage::desktop::desktop(&str_name, &path_file_icon, &integration_items)
+        {
+          Ok(()) => log!("Finished desktop configuration"),
+          Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
+        } // match
+      } // if
+      // Go to file name selection frame
       clone_tx.send_awake(common::Msg::DrawName);
-      fltk::app::awake();
     });
 
   });
