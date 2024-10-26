@@ -298,6 +298,8 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 
   let _ = f_add_entry("Run add/remove programs", Some(vec!["install", "wine", "uninstaller"]));
 
+  let _ = f_add_entry("Run winetricks GUI", Some(vec!["install", "winetricks", "--gui"]));
+
   let mut btn = f_add_entry("Run a custom winetricks command", None);
   let clone_tx = tx.clone();
   btn.set_callback(move |_|
