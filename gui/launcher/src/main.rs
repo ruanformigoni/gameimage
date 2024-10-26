@@ -94,11 +94,11 @@ fn redraw(&mut self, msg: Msg)
     }
     Some(Msg::DrawExecutables) =>
     {
-      frame::executables::new(self.tx, 0, 0);
+      frame::menu::executables::new(self.tx, 0, 0);
     }
     Some(Msg::DrawEnv) =>
     {
-      frame::env::new(self.tx, 0, 0);
+      frame::menu::environment::new(self.tx, 0, 0);
     }
     Some(Msg::DrawMenu) =>
     {

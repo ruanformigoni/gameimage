@@ -14,6 +14,9 @@ use shared::fltk::WidgetExtExtra;
 use crate::common;
 use common::Msg;
 
+pub mod executables;
+pub mod environment;
+
 pub struct RetFrameSelector
 {
   pub frame : Frame,
