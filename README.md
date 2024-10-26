@@ -11,6 +11,7 @@
   - [Install](#install)
   - [Tutorials](#tutorials)
   - [FlatImage](#flatimage)
+  - [Cli](#cli)
   - [Tips](#tips)
   - [Known Issues](#known-issues)
 
@@ -113,6 +114,18 @@ The key advantages of flatimage are:
    (wine+prefix+game data) and one directory (saves), you just have to backup
    one file. Flatimage grows automatically to accomodate your save data, you can
    still use the previous method with flatimage, as well as others listed in 
+
+## Cli
+
+You can skip the GUI launcher and run a game directly with:
+```
+$ ./my-game.flatimage select-index=0
+```
+
+This will launch the game with index `0`, to list valid indices, use:
+```
+$ ./my-game.flatimage select-list
+```
 
 ## Tips
 
