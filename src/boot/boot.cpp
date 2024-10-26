@@ -141,20 +141,24 @@ void boot_linux(ns_db::ns_project::Project& db_project, fs::path const& path_dir
   // Enter application directory
   fs::current_path(path_dir_self);
 
-  // Escape "'"
-  std::string cmd = ns_string::replace_substrings((path_dir_self / db_project.path_file_rom).c_str(), "'", R"('\'')");
+  // Create full path to rom
+  fs::path path_file_rom = path_dir_self / db_project.path_file_rom;
 
-  // Sorround with ''
-  cmd = fmt::format(fmt::runtime("'{}'"), cmd);
+  // Include exec and read permissions (allow to fail)
+  lec(fs::permissions, path_file_rom
+    , fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec
+    | fs::perms::owner_read | fs::perms::group_read | fs::perms::others_read
+    , fs::perm_options::add
+  );
 
   // Start application
-  ns_log::write('i', "Execute: ", cmd);
+  ns_log::write('i', "Execute: ", path_file_rom);
 
   auto optional_path_file_bash = ns_subprocess::search_path("bash");
   ereturn_if (not optional_path_file_bash, "Could not find bash");
   (void) ns_subprocess::Subprocess(*optional_path_file_bash)
     .with_piped_outputs()
-    .with_args("-c", cmd)
+    .with_args("-c", R"("{}" "$@")"_fmt(path_file_rom))
     .spawn()
     .wait();
 } // boot_linux() }}}
