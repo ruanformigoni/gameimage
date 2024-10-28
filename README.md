@@ -119,12 +119,18 @@ The key advantages of flatimage are:
 
 You can skip the GUI launcher and run a game directly with:
 ```
-$ ./my-game.flatimage select-index=0
+$ ./my-game.flatimage --select-index=0
 ```
 
 This will launch the game with index `0`, to list valid indices, use:
 ```
-$ ./my-game.flatimage select-list
+$ ./my-game.flatimage --select-list
+```
+
+To disable the launcher completely, and open your game directly when double clicked in
+the file manager, use:
+```
+$ ./my-game.flatimage fim-boot sh -c '/fim/static/gameimage-launcher "$@"' -- --select-index 0
 ```
 
 ## Tips
