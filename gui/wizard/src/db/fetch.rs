@@ -1,13 +1,30 @@
 use std::env;
+use std::collections::HashMap;
 use std::fs::File;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntryEmulator
+{
+  pub layer: String,
+} // Entry }}}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntryWine
+{
+  pub layer: HashMap<String,String>,
+} // Entry }}}
 
 // struct Entry {{{
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Entry
 {
   pub version: String,
+  pub rpcs3: EntryEmulator,
+  pub pcsx2: EntryEmulator,
+  pub retroarch: EntryEmulator,
+  pub wine: EntryWine,
 } // Entry }}}
 
 // read() {{{

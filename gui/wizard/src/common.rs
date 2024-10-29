@@ -10,6 +10,47 @@ use anyhow::anyhow as ah;
 use crate::frame;
 use crate::dimm;
 
+// pub enum Platform {{{
+#[derive(Eq, PartialEq, Hash, Clone)]
+pub enum Platform
+{
+  Linux,
+  Wine,
+  Retroarch,
+  Pcsx2,
+  Rcps3,
+} // }}}
+
+// impl Platform {{{
+impl Platform
+{
+  pub fn as_str(&self) -> &'static str
+  {
+    match self
+    {
+      Platform::Linux     => "linux",
+      Platform::Wine      => "wine",
+      Platform::Retroarch => "retroarch",
+      Platform::Pcsx2     => "pcsx2",
+      Platform::Rcps3     => "rpcs3",
+    } // match
+  } // as_str
+
+  pub fn from_str(src : &str) -> Option<Platform>
+  {
+    match src
+    {
+      "linux"     => Some(Platform::Linux),
+      "wine"      => Some(Platform::Wine),
+      "retroarch" => Some(Platform::Retroarch),
+      "pcsx2"     => Some(Platform::Pcsx2),
+      "rpcs3"     => Some(Platform::Rcps3),
+      _           => None,
+    } // match
+  } // as_str
+} // impl IconFrame }}}
+
+// pub enum Msg {{{
 #[derive(Debug, Clone, Copy)]
 pub enum Msg
 {
@@ -63,7 +104,7 @@ pub enum Msg
   WindDeactivate,
 
   Quit,
-}
+} // }}}
 
 // Constants {{{
 pub const STR_DESC_LINUX : &str = "GameImage enhances the Linux gaming experience by offering unparalleled portability and compatibility. In Linux-native games, the tool repackages your favorite titles, ensuring they run flawlessly across a myriad of Linux distributions. Whether you’re facing library incompatibilities or missing dependencies, GameImage bridges the gap, so you can enjoy your games without the hassle. Embrace the freedom to play your way, on any Linux environment, with GameImage.";

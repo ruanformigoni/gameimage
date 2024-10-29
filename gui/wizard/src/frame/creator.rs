@@ -126,7 +126,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   {
     if dialog::choice2_default("This will reset the image, are you sure?", "No", "Yes", "") == Some(1)
     {
-      clone_tx.send_awake(common::Msg::DrawFetch);
+      clone_tx.send_awake(common::Msg::DrawWelcome);
     } // if
   });
 
@@ -173,12 +173,18 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let mut btn_add = shared::fltk::button::rect::add()
     .right_of(scroll.widget_mut(), dimm::border())
     .with_color(Color::Green);
-  btn_add.emit(tx, common::wizard_by_platform().unwrap_or(common::Msg::DrawCreator));
+  btn_add.emit(tx, common::Msg::DrawPlatform);
+
+  // Add new platform
+  let mut btn_platform = shared::fltk::button::rect::joystick()
+    .below_of(&btn_add, dimm::border())
+    .with_color(Color::Blue);
+  btn_platform.emit(tx, common::wizard_by_platform().unwrap_or(common::Msg::DrawFetch));
 
   // Erase package
   let mut btn_del = shared::fltk::button::rect::del()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border())
+    .below_of(&btn_platform, dimm::border())
     .with_color(Color::Red);
   let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();

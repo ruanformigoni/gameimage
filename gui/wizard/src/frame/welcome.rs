@@ -113,7 +113,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
       return;
     } // if
 
-    clone_tx.send_awake(common::Msg::DrawPlatform);
+    clone_tx.send_awake(common::Msg::DrawCreator);
   });
 } // fn: welcome }}}
 

@@ -138,10 +138,12 @@ class Fetch final : public Parser
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
         .help("Specity the platform to download the flatimage");
-      // Only download provided file
-      m_parser->add_argument("--only-file")
-        .action([&](std::string const& s){ m_map_option_value["--only-file"]=s; })
-        .help("Only downloads the specified file");
+      // Only list platforms
+      m_parser->add_argument("--installed")
+        .default_value(false)
+        .implicit_value(true)
+        .action([&](std::string const& s){ m_map_option_value["--installed"]=s; })
+        .help("List currently installed platforms");
       // Only check-sha, do not download
       m_parser->add_argument("--sha")
         .default_value(false)

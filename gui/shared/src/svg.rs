@@ -1,5 +1,23 @@
 #![allow(dead_code)]
 
+const ICON_ARROW_FORWARD: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-arrow-right-short" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8"/>
+</svg>
+"##;
+
+const ICON_TERMINAL: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-terminal-fill" viewBox="0 0 16 16">
+  <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm9.5 5.5h-3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1m-6.354-.354a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 1 0-.708.708L4.793 6.5z"/>
+</svg>
+"##;
+
+const ICON_RESIZE_DOWN: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-fullscreen-exit" viewBox="0 0 16 16">
+  <path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/>
+</svg>
+"##;
+
 const ICON_FILTER: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-filter" viewBox="0 0 16 16">
   <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5"/>
@@ -101,8 +119,8 @@ const ICON_BOX_HEART: &str = r#"
 "#;
 
 const ICON_CLOUD: &str = r#"
-<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-cloud-download-fill" viewBox="0 0 16 16">
-  <path fill-rule="evenodd" d="M8 0a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 4.095 0 5.555 0 7.318 0 9.366 1.708 11 3.781 11H7.5V5.5a.5.5 0 0 1 1 0V11h4.188C14.502 11 16 9.57 16 7.773c0-1.636-1.242-2.969-2.834-3.194C12.923 1.999 10.69 0 8 0m-.354 15.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 14.293V11h-1v3.293l-2.146-2.147a.5.5 0 0 0-.708.708z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
+  <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708"/>
 </svg>
 "#;
 
@@ -315,6 +333,9 @@ macro_rules! icon_with_size
 }
 
 
+icon!(icon_arrow_forward, ICON_ARROW_FORWARD, 16, 16);
+icon!(icon_terminal, ICON_TERMINAL, 16, 16);
+icon!(icon_resize_down, ICON_RESIZE_DOWN, 16, 16);
 icon!(icon_filter, ICON_FILTER, 16, 16);
 icon!(icon_install, ICON_INSTALL, 16, 16);
 icon!(icon_refresh, ICON_REFRESH, 16, 16);

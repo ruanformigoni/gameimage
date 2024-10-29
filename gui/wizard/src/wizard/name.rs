@@ -47,6 +47,7 @@ pub fn name(tx: Sender<common::Msg>
     .with_align(Align::Top | Align::Left);
   input_name.set_pos(frame_content.x() + dimm::border()
     , input_name.y() - input_name.h() - dimm::border());
+  let _ = input_name.take_focus();
 
   // Sanitize game name
   let f_sanitize = |input : String| -> String

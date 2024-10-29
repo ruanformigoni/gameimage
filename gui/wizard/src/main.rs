@@ -119,13 +119,13 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::welcome::welcome(self.tx, "Welcome to GameImage");
     }
-    Msg::DrawPlatform =>
-    {
-      frame::platform::platform(self.tx, "Select the Game Platform");
-    }
     Msg::DrawFetch =>
     {
-      frame::fetch::fetch(self.tx, "Fetch the Required Files");
+      frame::fetch::fetch(self.tx, "Download a Platform");
+    }
+    Msg::DrawPlatform =>
+    {
+      frame::platform::platform(self.tx, "Select a Platform");
     }
     Msg::DrawCreator =>
     {

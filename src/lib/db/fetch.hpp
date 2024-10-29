@@ -23,11 +23,9 @@ struct CoreUrl { std::string core; std::string url; };
 struct Platform
 {
   private:
-    std::string m_url_base;
     std::map<std::string,std::string> m_url_layer;
     std::vector<CoreUrl> m_vec_core_url;
   public:
-    virtual std::string get_base() const { return m_url_base; };
     virtual std::string get_layer(std::string identifier = "default")
     {
       ethrow_if(not m_url_layer.contains(identifier), "Layer '{}' not found for platform"_fmt(identifier));
@@ -79,21 +77,17 @@ inline Fetch read_impl(fs::path const& path_file_db)
   ns_db::from_file(path_file_db,[&](auto&& db)
   {
     // Linux
-    fetch.m_linux->m_url_base = db["linux"]["base"];
+    fetch.m_linux->m_url_layer["default"] = db["linux"];
     // Pcsx2
-    fetch.m_pcsx2->m_url_base = db["pcsx2"]["base"];
     fetch.m_pcsx2->m_url_layer["default"] = db["pcsx2"]["layer"];
     // Rpcs3
-    fetch.m_rpcs3->m_url_base = db["rpcs3"]["base"];
     fetch.m_rpcs3->m_url_layer["default"] = db["rpcs3"]["layer"];
     // Wine
-    fetch.m_wine->m_url_base = db["wine"]["base"];
     for( auto [key, val] : db["wine"]["layer"].items() )
     {
       fetch.m_wine->m_url_layer[key] = val;
     } // for
     // Retroarch
-    fetch.m_retroarch->m_url_base = db["retroarch"]["base"];
     fetch.m_retroarch->m_url_layer["default"] = db["retroarch"]["layer"];
     for(auto [name, url] : db["retroarch"]["core"].items())
     {

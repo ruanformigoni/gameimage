@@ -1,131 +1,65 @@
-use anyhow::anyhow as ah;
-
-use shared::std::PathBufExt;
-
 use crate::log;
 use crate::common;
-use crate::lib;
 use crate::gameimage;
-
-macro_rules! log_return
-{
-  ($($arg:tt)*) => { { log!($($arg)*); return Err(ah!($($arg)*)); } }
-} // log_return
-
-// query() {{{
-fn query(str_query : &str) -> anyhow::Result<Vec<String>>
-{
-  let binary = gameimage::gameimage::binary()?;
-  let platform = gameimage::gameimage::platform()?;
-
-  let ipc = match lib::ipc::Ipc::new(binary, || {})
-  {
-    Ok(ipc) => ipc,
-    Err(e) => { log_return!("Could not create ipc instance: {}", e); },
-  }; // match
-  log!("Started search ipc");
-
-  let _ = gameimage::gameimage::gameimage_async(vec!
-  [
-    "fetch"
-    , "--platform", &platform
-    , "--ipc", &str_query
-  ]);
-  log!("Started backend");
-
-  let mut vec = vec![];
-  while let Ok(msg) = ipc.recv()
-  {
-    vec.push(msg);
-  } // while
-  log!("Finished reading messages");
-
-  Ok(vec)
-} // query() }}}
-
-// query_urls() {{{
-pub fn query_urls() -> anyhow::Result<Vec<String>>
-{
-  Ok(query("urls")?)
-} // query_urls() }}}
-
-// query_files() {{{
-pub fn query_files() -> anyhow::Result<Vec<String>>
-{
-  Ok(query("files")?)
-} // query_files() }}}
+use crate::lib;
 
 // fetch() {{{
-pub fn fetch(opt_path_file_dst : Option<std::path::PathBuf>) -> anyhow::Result<i32>
+pub fn fetch(platform: common::Platform) -> anyhow::Result<i32>
 {
-  let str_platform = gameimage::gameimage::platform()?.to_lowercase();
-
-  let mut args = vec![
-      "fetch"
-    , "--platform"
-    , &str_platform
-  ];
-
-  let str_path_file_dst;
-  if let Some(path_file_dst) = opt_path_file_dst
-  {
-    str_path_file_dst = path_file_dst.string();
-    args.push("--only-file");
-    args.push(&str_path_file_dst);
-  } // if
-
+  let args = vec!["fetch", "--platform", platform.as_str() ];
   match gameimage::gameimage::gameimage_sync(args)
   {
-    0 => log!("Fetch on backend finished successfully"),
-    rc => { log_return!("Failed to execute fetch on backend with {}", rc); },
+    0 => { log!("Fetch on backend finished successfully"); Ok(0) },
+    rc => { log!("Failed to execute fetch on backend with {}", rc); Ok(rc) },
   } // match
-
-  Ok(0)
 } // fetch() }}}
+
+// installed() {{{
+pub fn installed() -> anyhow::Result<Vec<common::Platform>>
+{
+  let mut out : Vec<common::Platform> = vec![];
+  // Start ipc
+  let ipc = lib::ipc::Ipc::new(gameimage::gameimage::binary()?, || {})?;
+  // Start backend
+  gameimage::gameimage::gameimage_async(vec!["fetch", "--ipc=installed"])?;
+  // Read messages
+  while let Ok(msg) = ipc.recv()
+  {
+    match common::Platform::from_str(&msg)
+    {
+      Some(platform) => out.push(platform),
+      None => log!("Invalid platform '{}", msg),
+    }
+  } // while
+  Ok(out)
+} // installed() }}}
 
 // fetchlist() {{{
 pub fn fetchlist() -> anyhow::Result<i32>
 {
   match gameimage::gameimage::gameimage_sync(vec!["fetch", "--fetchlist"])
   {
-    0 => log!("Fetch on backend finished successfully"),
-    rc => { log_return!("Failed to execute fetch on backend with {}", rc); },
+    0 => { log!("Fetch on backend finished successfully"); Ok(0)},
+    rc => { log!("Failed to execute fetch on backend with {}", rc); Ok(rc)},
   } // match
-
-  Ok(0)
 } // fetchlist() }}}
 
 // validate() {{{
 pub fn validate() -> anyhow::Result<i32>
 {
-  let platform = gameimage::gameimage::platform()?;
-
-  let rc = gameimage::gameimage::gameimage_sync(vec!
-  [
-    "fetch"
-    , "--platform", &platform
-    , "--sha"
-  ]);
-
-  if rc == 0 { return Ok(rc); }
-
-  Err(ah!("Exit with error code {}", rc))
+  // let platform = gameimage::gameimage::platform()?;
+  //
+  // let rc = gameimage::gameimage::gameimage_sync(vec!
+  // [
+  //   "fetch"
+  //   , "--platform", &platform
+  //   , "--sha"
+  // ]);
+  //
+  // if rc == 0 { return Ok(rc); }
+  //
+  // Err(ah!("Exit with error code {}", rc))
+  Ok(0)
 } // validate() }}}
-
-// configure() {{{
-pub fn configure() -> anyhow::Result<i32>
-{
-  let platform = gameimage::gameimage::platform()?;
-
-  let rc = gameimage::gameimage::gameimage_sync(vec!
-  [
-    "fetch"
-    , "--platform", &platform
-  ]);
-
-  if rc == 0 { return Ok(rc); }
-
-  Err(ah!("Exit with error code {}", rc))
-} // configure() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

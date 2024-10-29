@@ -8,12 +8,6 @@ use crate::common;
 use crate::log_err;
 use crate::log;
 
-// fn platform() {{{
-pub fn platform() -> anyhow::Result<String>
-{
-  Ok(env::var("GIMG_PLATFORM")?.to_lowercase())
-} // }}}
-
 // fn binary() {{{
 pub fn binary() -> anyhow::Result<std::path::PathBuf>
 {

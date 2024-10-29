@@ -23,6 +23,15 @@ namespace ns_enum
 template<typename T>
 concept Enum = std::is_enum_v<std::remove_cvref_t<T>>;
 
+// enum class IpcQuery {{{
+enum class IpcQuery
+{
+  FILES,
+  URLS,
+	INSTALLED,
+	NONE,
+}; // }}}
+
 // enum class ImageFormat {{{
 enum class ImageFormat
 {
@@ -73,6 +82,13 @@ enum class Stage
 	COMPRESS,
 	PACKAGE,
 }; // enum class Stage }}}
+
+// is_enum_entry() {{{
+template<Enum U, ns_concept::StreamInsertable T>
+inline decltype(auto) is_enum_entry(T&& t)
+{
+  return magic::enum_cast<U>(ns_string::to_string(t), magic::case_insensitive).has_value();
+} // }}}
 
 // from_string() {{{
 template<Enum U, ns_concept::StreamInsertable T>

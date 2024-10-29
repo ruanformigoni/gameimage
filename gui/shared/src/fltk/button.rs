@@ -44,9 +44,13 @@ pub fn save() -> fltk::button::Button { button::<fltk::button::Button>().with_sv
 
 pub fn check() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_check(1.0).as_str()) }
 
-pub fn cloud() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_cloud(1.0).as_str()) }
+pub fn cloud() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_cloud(1.25).as_str()) }
 
 pub fn refresh() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_refresh(1.0).as_str()) }
+
+pub fn joystick() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_joystick(1.0).as_str()) }
+
+pub fn arrow_forward() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_arrow_forward(2.0).as_str()) }
 
 pub fn toggle(value : bool) -> fltk::button::ToggleButton
 {

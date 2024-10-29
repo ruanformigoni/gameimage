@@ -34,7 +34,7 @@ pub fn name(tx: Sender<common::Msg>, title: &str)
 {
   wizard::name::name(tx.clone()
     , title
-    , common::Msg::DrawCreator
+    , common::Msg::DrawPlatform
     , common::Msg::DrawWineIcon);
 } // }}}
 

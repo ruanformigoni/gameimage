@@ -35,10 +35,29 @@ INITIALIZE_EASYLOGGINGPP
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
+  // Use self as IPC reference
+  fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
+  ns_enum::IpcQuery entry_ipc_query = parser.contains("--ipc")?
+      ns_enum::from_string<ns_enum::IpcQuery>(*parser.optional("--ipc"))
+    : ns_enum::IpcQuery::NONE;
+
   if ( parser.optional("--fetchlist")  )
   {
     auto error = ns_fetch::fetchlist();
     elog_if(error, *error);
+    return;
+  } // if
+
+  if ( entry_ipc_query == ns_enum::IpcQuery::INSTALLED )
+  {
+    // Get installed platforms
+    auto vec_platform = ns_fetch::installed();
+    // Open IPC
+    ns_ipc::Ipc ipc(path_file_ipc, true);
+    // Send platforms
+    std::ranges::for_each(vec_platform | std::views::transform([](auto&& e){ return ns_enum::to_string_lower(e); })
+      , [&](auto&& e){ ipc.send(e); }
+    );
     return;
   } // if
 
@@ -51,13 +70,13 @@ void fetch(ns_parser::Parser const& parser)
     return;
   } // if
 
-  if ( parser.optional("--ipc")  )
+  if ( entry_ipc_query != ns_enum::IpcQuery::NONE )
   {
-    ns_fetch::ipc(platform , parser.optional("--ipc"));
+    ns_fetch::ipc(platform, entry_ipc_query);
     return;
   } // if
 
-  ns_fetch::fetch(platform, parser.optional("--only-file"));
+  ns_fetch::fetch(platform);
 } // fetch() }}}
 
 // init() {{{
