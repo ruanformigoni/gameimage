@@ -175,11 +175,6 @@ class Init final : public Parser
         .action([&](std::string const& s){ m_map_option_value["--dir"]=s; })
         .required()
         .help("The directory to init the application");
-      // Set path to image
-      m_parser->add_argument("--image")
-        .action([&](std::string const& s){ m_map_option_value["--image"]=s; })
-        .required()
-        .help("The flatimage to configure and package the program");
     } // Init
 }; // class: Init }}}
 
@@ -343,10 +338,10 @@ class Package final : public Parser
       m_enum_stage = ns_enum::Stage::PACKAGE;
 
       // Set args
-      m_parser->add_argument("name")
-        .action([&](std::string const& s){ m_map_option_value["name"]=s; })
+      m_parser->add_argument("projects")
+        .action([&](std::string const& s){ m_map_option_value["projects"]=s; })
         .required()
-        .help("Name of the project to include in the image");
+        .help("Package a list of projects separated by ':'");
     } // Package
 }; // class: Package }}}
 

@@ -77,7 +77,7 @@ inline Fetch read_impl(fs::path const& path_file_db)
   ns_db::from_file(path_file_db,[&](auto&& db)
   {
     // Linux
-    fetch.m_linux->m_url_layer["default"] = db["linux"];
+    fetch.m_linux->m_url_layer["default"] = db["linux"]["layer"];
     // Pcsx2
     fetch.m_pcsx2->m_url_layer["default"] = db["pcsx2"]["layer"];
     // Rpcs3

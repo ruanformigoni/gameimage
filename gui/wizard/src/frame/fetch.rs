@@ -1,15 +1,10 @@
-use std::env;
-use std::sync::Mutex;
 use std::collections::HashMap;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   enums::{Align,FrameType,Color},
-  dialog,
   group::PackType,
 };
 
@@ -56,7 +51,7 @@ fn check_version() -> anyhow::Result<()>
   }; // match
 
   let version = db_fetch.version;
-  if ! version.starts_with("1.4")
+  if ! version.starts_with("1.5")
   {
     return Err(ah!("error: you should update to version {}", version));
   } // if

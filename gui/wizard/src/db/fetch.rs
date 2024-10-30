@@ -21,6 +21,7 @@ pub struct EntryWine
 pub struct Entry
 {
   pub version: String,
+  pub linux: EntryEmulator,
   pub rpcs3: EntryEmulator,
   pub pcsx2: EntryEmulator,
   pub retroarch: EntryEmulator,

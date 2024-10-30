@@ -1,25 +1,18 @@
-use std::env;
-use std::sync::Mutex;
 use std::collections::HashMap;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  text::{TextBuffer,TextDisplay},
-  menu::MenuButton,
   enums::{Align,FrameType,Color},
-  dialog,
   group::PackType,
 };
 
 use lazy_static::lazy_static;
-use anyhow::anyhow as ah;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
-use crate::db;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -54,25 +47,23 @@ fn platform_add(tx: Sender<common::Msg>
   row.set_type(PackType::Horizontal);
   row.set_spacing(dimm::border());
   // Create progress bar
-  let mut prog = fltk::misc::Progress::default()
+  let _ = fltk::frame::Frame::default()
     .with_label(frame::fetch::HASH_PLATFORM_DESCR.get(platform.as_str()).unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
     .with_frame(FrameType::BorderBox)
-    .with_color(Color::BackGround)
-    .with_color_selected(Color::Blue);
-  if is_installed { prog.set_value(100.0); }
+    .with_color(Color::BackGround);
   // Create start button
-  let mut btn_fetch = shared::fltk::button::rect::arrow_forward()
-    .with_color(if is_installed { Color::Blue } else { Color::Green })
+  let mut btn_start = shared::fltk::button::rect::arrow_forward()
+    .with_color(if is_installed { Color::Green } else { Color::BackGround })
     .with_focus(false);
   let clone_tx = tx.clone();
-  btn_fetch.set_callback(move |_|
+  btn_start.set_callback(move |_|
   {
     std::env::set_var("GIMG_PLATFORM", platform.as_str());
     clone_tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
   });
-  if ! is_installed { btn_fetch.deactivate(); }
-  row.fixed(&btn_fetch, dimm::width_button_rec());
+  if ! is_installed { btn_start.deactivate(); }
+  row.fixed(&btn_start, dimm::width_button_rec());
   row.end();
   row
 } // fn platform_add() }}}

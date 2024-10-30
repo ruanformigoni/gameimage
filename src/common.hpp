@@ -24,6 +24,19 @@ namespace std
 template<typename T>
 using error = optional<T>;
 
+namespace ranges
+{
+
+template<range R>
+void sort_unique(R& r)
+{
+  sort(r);
+  auto [it_beg,it_end] = std::ranges::unique(r);
+  r.erase(it_beg, it_end);
+}
+
+}
+
 } // namespace std
 
 // macros {{{
@@ -138,6 +151,17 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
 
 namespace ns_common
 {
+
+namespace ns_dir
+{
+
+// get_path_dir_cache() {{{
+inline decltype(auto) get_path_dir_cache()
+{
+  return std::filesystem::current_path() / "cache";
+} // get_path_dir_cache() }}}
+
+}
 
 // check_and() {{{
 template<ns_concept::Enum T, ns_concept::Enum... Args>

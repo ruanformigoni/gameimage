@@ -112,23 +112,11 @@ pub fn name(tx: Sender<common::Msg>
       return;
     }; // else
 
-    // Check for image
-    let image = if let Ok(image) = env::var("GIMG_IMAGE")
-    {
-      image
-    }
-    else
-    {
-      clone_output_status.set_value("Could not fetch GIMG_IMAGE");
-      log!("Could not fetch GIMG_IMAGE");
-      return;
-    }; // else
-
     // Init project
     clone_tx.send_awake(common::Msg::WindDeactivate);
     std::thread::spawn(move ||
     {
-      match gameimage::init::init(name, platform, image)
+      match gameimage::init::init(name, platform)
       {
         Ok(_) => (),
         Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }

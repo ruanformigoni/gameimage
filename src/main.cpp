@@ -82,7 +82,7 @@ void fetch(ns_parser::Parser const& parser)
 // init() {{{
 void init(ns_parser::Parser const& parser)
 {
-  ns_init::init(parser["--platform"], parser["--dir"], parser["--image"]);
+  ns_init::init(parser["--platform"], parser["--dir"]);
 } // init() }}}
 
 // project() {{{
@@ -187,7 +187,7 @@ void desktop(ns_parser::Parser const& parser)
 // package() {{{
 void package(ns_parser::Parser const& parser)
 {
-  ns_package::package(parser["name"]);
+  ns_package::package(parser["projects"]);
 } // package() }}}
 
 // main() {{{
@@ -202,6 +202,9 @@ int main(int argc, char** argv)
     , ns_fs::ns_path::dir_executable<true>()._ret.c_str()
     , ns_env::Replace::Y
   );
+
+  // Set layers directory
+  ns_env::set("FIM_DIRS_LAYER", fs::current_path() / "cache", ns_env::Replace::Y);
 
   // Parse args
   ns_parser::Parser parser("GameImage", "Create portable single-file games that work across linux distributions");

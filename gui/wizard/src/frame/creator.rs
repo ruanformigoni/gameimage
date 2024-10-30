@@ -262,30 +262,21 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
           log!("Failed to lock checkbutton vector with: {}", e); return;
         }
       }; // match
-
-      // Remove all currently selected projects
-      for (checkbutton, path_dir_project) in lock.iter()
+      // Transform projects in a ':' separated string to send to the backend
+      let str_path_dir_projects = lock.iter()
+        .filter(|e| e.0.is_checked())
+        .map(|e| e.1.string())
+        .collect::<Vec<String>>()
+        .join(":");
+      log!("Projects to include in the image: {}", str_path_dir_projects);
+      // Wait for message & check return value
+      if let Err(e) = gameimage::package::package(&str_path_dir_projects)
       {
-        if ! checkbutton.is_checked() { continue; } // if
-
-        let name_project = path_dir_project.file_name().unwrap_or_default().to_string_lossy().to_string();
-
-        log!("Project to include in the image: {}", name_project);
-
-        // Wait for message & check return value
-        match gameimage::package::package(&name_project)
-        {
-          Ok(()) => log!("Packaged {}", name_project),
-          Err(e) =>
-          {
-            clone_tx.send_awake(common::Msg::WindActivate);
-            clone_tx.send_awake(common::Msg::DrawCreator);
-            log!("Could not include {} into the image: {}", name_project, e);
-            return;
-          },
-        } // match
-      } // for
-
+        clone_tx.send_awake(common::Msg::WindActivate);
+        clone_tx.send_awake(common::Msg::DrawCreator);
+        log!("Could not include projects into the image: {}", e);
+        return;
+      } // match
       // Refresh
       clone_tx.send_awake(common::Msg::WindActivate);
       clone_tx.send_awake(common::Msg::DrawDesktop);

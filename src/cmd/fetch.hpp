@@ -241,9 +241,7 @@ inline std::vector<ns_enum::Platform> installed()
     | std::views::filter([](auto&& e){ return fs::is_regular_file(e) and ns_enum::is_enum_entry<ns_enum::Platform>(e.path().stem()); })
     | std::views::transform([](auto&& e){ return ns_enum::from_string<ns_enum::Platform>(e.path().stem()); })
     | std::ranges::to<std::vector<ns_enum::Platform>>();
-  std::ranges::sort(platforms);
-  auto [it_beg, it_end] = std::ranges::unique(platforms);
-  platforms.erase(it_beg, it_end);
+  std::ranges::sort_unique(platforms);
   return platforms;
 } // installed() }}}
 

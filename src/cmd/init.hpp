@@ -27,18 +27,16 @@ namespace ns_init
 namespace fs = std::filesystem;
 
 // init() {{{
-inline void init(std::string const& str_platform
-  , fs::path path_dir_project
-  , fs::path path_file_image)
+inline void init(std::string const& str_platform, fs::path path_dir_project)
 {
   // Set platform
   ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
-  // Set path to runner flatimage
-  path_file_image = ns_fs::ns_path::file_exists<true>(path_file_image)._ret;
   // Create project dir and return an absolute path to it
   fs::path path_dir_project_root  = ns_fs::ns_path::dir_create<true>(path_dir_project)._ret;
   // Verify if build dir exists and return an absolute path for it
   fs::path path_dir_build = ns_fs::ns_path::dir_exists<true>(path_dir_project_root.parent_path())._ret;
+  // Set path to runner flatimage
+  fs::path path_file_image = ns_fs::ns_path::file_exists<true>(path_dir_build / "cache/linux.flatimage")._ret;
   // The actual project files are nested in /opt/gameimage-games, because that's where they'll be in
   // the final flatimage
   path_dir_project = ns_fs::ns_path::dir_create<true>(path_dir_project / "opt" / "gameimage-games" / path_dir_project.filename())._ret;
