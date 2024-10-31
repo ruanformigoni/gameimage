@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../db.hpp"
+#include "../db/build.hpp"
 
 namespace ns_db::ns_project
 {
@@ -178,7 +179,7 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
 
 
   // Set project data
-  ns_db::from_file_project([&](auto&& db_project)
+  ns_db::from_file(path_dir_project / "gameimage.json", [&](auto&& db_project)
   {
     db_project("project")         = path_dir_project.filename();
     db_project("platform")        = ns_enum::to_string(platform);
@@ -262,11 +263,24 @@ inline std::error<std::string> init(fs::path const& path_dir_project, ns_enum::P
 } // init() }}}
 
 // read() {{{
-inline std::expected<Project,std::string> read(fs::path path_file_db = ns_db::file_project())
+inline std::expected<Project,std::string> read(std::optional<fs::path> opt_path_file_database = std::nullopt)
 {
   return ns_exception::to_expected([&]
   {
-    return read_impl(path_file_db);
+    if ( opt_path_file_database )
+    {
+      return read_impl(*opt_path_file_database);
+    } // if
+    else
+    {
+      // Get build database
+      auto db_build = ns_db::ns_build::read();
+      ethrow_if(not db_build, "Could not open build database");
+      // Get current project
+      auto db_metadata = db_build->find(db_build->project);
+      // Read json file
+      return read_impl(db_metadata.path_dir_project);
+    } // else
   });
 } // read() }}}
 

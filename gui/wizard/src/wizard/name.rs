@@ -116,7 +116,7 @@ pub fn name(tx: Sender<common::Msg>
     clone_tx.send_awake(common::Msg::WindDeactivate);
     std::thread::spawn(move ||
     {
-      match gameimage::init::init(name, platform)
+      match gameimage::init::project(name, platform)
       {
         Ok(_) => (),
         Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }

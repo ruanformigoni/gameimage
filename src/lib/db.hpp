@@ -14,12 +14,12 @@
 #include "../enum.hpp"
 #include "../macro.hpp"
 
-#include "../std/filesystem.hpp"
-
 #include "../lib/log.hpp"
 
 namespace ns_db
 {
+
+using object_t = nlohmann::basic_json<>::object_t;
 
 namespace
 {
@@ -134,6 +134,7 @@ class Db
     T operator=(T&& t);
     template<IsString T>
     std::vector<T> operator=(std::vector<T> const& t);
+    object_t operator=(object_t const& obj);
     template<IsString T>
     Db& operator|=(T&& t);
 
@@ -370,6 +371,13 @@ inline std::vector<T> Db::operator=(std::vector<T> const& t)
   return t;
 } // operator=(vector<path>) }}}
 
+// operator=(object_t) {{{
+inline object_t Db::operator=(object_t const& obj)
+{
+  data() = obj;
+  return obj;
+} // operator=(vector<path>) }}}
+
 // operator|= {{{
 template<IsString T>
 Db& Db::operator|=(T&& t)
@@ -410,40 +418,6 @@ void to_file(Db const& json, T&& t)
   ofile_json << std::setw(2) << json;
   ofile_json.close();
 } // function: to_file }}}
-
-// file_default() {{{
-inline fs::path file_default()
-{
-  return fs::current_path() /= "gameimage.json";
-} // file_default() }}}
-
-// file_project() {{{
-inline fs::path file_project()
-{
-  fs::path path_project;
-
-  from_file(file_default(), [&](auto&& db)
-  { 
-    std::string str_project = db["project"];
-    path_project = std::string(db["projects"][str_project]["path_dir_project"]);
-  }, Mode::READ);
-
-  return path_project /= "gameimage.json";
-} // file_project() }}}
-
-// from_file_default() {{{
-template<typename F>
-inline void from_file_default(F&& f, Mode mode)
-{
-  from_file(file_default(), f, mode);
-} // function: from_file_default }}}
-
-// from_file_project() {{{
-template<typename F>
-inline void from_file_project(F&& f, Mode mode)
-{
-  from_file(file_project(), f, mode);
-} // function: from_file_project }}}
 
 // query() {{{
 template<typename F, typename... Args>

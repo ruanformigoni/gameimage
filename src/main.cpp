@@ -82,7 +82,16 @@ void fetch(ns_parser::Parser const& parser)
 // init() {{{
 void init(ns_parser::Parser const& parser)
 {
-  ns_init::init(parser["--platform"], parser["--dir"]);
+  if ( parser.contains("--build") )
+  {
+    ns_init::build(parser["--build"]);
+  } // if
+  else
+  {
+    ns_init::project(parser.optional("--name").value()
+      , parser.optional("--platform").value()
+    );
+  } // else
 } // init() }}}
 
 // project() {{{
@@ -196,12 +205,6 @@ int main(int argc, char** argv)
 
   // Init log
   ns_log::init(argc, argv, "gameimage.log");
-
-  // Export path to self directory
-  ns_env::set("GIMG_SCRIPT_DIR"
-    , ns_fs::ns_path::dir_executable<true>()._ret.c_str()
-    , ns_env::Replace::Y
-  );
 
   // Set layers directory
   ns_env::set("FIM_DIRS_LAYER", fs::current_path() / "cache", ns_env::Replace::Y);

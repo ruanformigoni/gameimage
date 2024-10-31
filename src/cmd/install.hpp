@@ -178,7 +178,7 @@ void emulator_install_file(ns_db::ns_build::Metadata& db_metadata, Op const& op,
 
   // Save in database
   auto db_project = ns_db::ns_project::read();
-  ereturn_if(not db_project, "Could not open project '{}' database"_fmt(ns_db::file_project()));
+  ereturn_if(not db_project, "Could not open project database");
   // Check if is installed in database
   auto op_files = db_project->find_files(op);
   ireturn_if(std::ranges::contains(op_files, path_file_dst_relative), "File '{}' is already installed"_fmt(path_file_dst_relative));
@@ -195,7 +195,7 @@ inline void emulator(fs::path const& path_file_image
   , std::vector<std::string> args)
 {
   auto db_project = ns_db::ns_project::read();
-  ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
+  ethrow_if(not db_project, "Could not read project database");
 
   // Install paths
   fs::path path_dir_config = db_metadata.path_dir_project / db_project->path_dir_config;
@@ -263,7 +263,7 @@ inline void icon(ns_db::ns_build::Metadata& db_metadata, std::string str_file_ic
 
   // Save icon path in project database
   auto db_project = ns_db::ns_project::read();
-  ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
+  ethrow_if(not db_project, "Could not read project database");
   db_project->path_file_icon = fs::relative(path_file_icon_dst, db_metadata.path_dir_project);
   ns_db::ns_project::write(*db_project);
 } // icon() }}}
@@ -273,7 +273,7 @@ template<typename R>
 void remove(Op const& op, fs::path const& path_dir_project, R&& files)
 {
   auto db_project = ns_db::ns_project::read();
-  ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
+  ethrow_if(not db_project, "Could not read project database");
 
   fs::path path_dir_item = db_project->find_directory(op);
 

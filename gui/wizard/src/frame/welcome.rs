@@ -13,6 +13,7 @@ use fltk::{
 
 use shared::fltk::SenderExt;
 
+use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -91,28 +92,24 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    let env_gimg_dir = if let Ok(value) = env::var("GIMG_DIR")
+    let path_dir_build = match env::var("GIMG_DIR")
     {
-      value
-    }
-    else
-    {
-      clone_output_status.set_value("Invalid temporary files directory");
-      return;
+      Ok(value) => PathBuf::from(value),
+      Err(e) => { clone_output_status.set_value(&format!("Invalid temporary files directory: {}", e)); return; }
     }; // if
-
-    let path_selected = PathBuf::from(env_gimg_dir);
-
-    // Create build dir
-    let _ = std::fs::create_dir(path_selected.clone());
-
-    if   ! path_selected.exists()
-      && std::fs::create_dir(path_selected.clone()).is_err()
+    // Create build directory
+    match std::fs::create_dir_all(&path_dir_build)
     {
-      clone_output_status.set_value("Selected path could not be created");
-      return;
-    } // if
-
+      Ok(()) => (),
+      Err(e) => log!("Could not create build directory: {}", e),
+    }
+    // Init project build directory
+    match gameimage::init::build(path_dir_build)
+    {
+      Ok(()) => (),
+      Err(e) => log!("Error to initialize build directory: {}", e)
+    }; // match
+    // Draw creator frame
     clone_tx.send_awake(common::Msg::DrawCreator);
   });
 } // fn: welcome }}}

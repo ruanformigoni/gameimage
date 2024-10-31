@@ -161,20 +161,22 @@ class Fetch final : public Parser
 class Init final : public Parser
 {
   public:
-    Init() : Parser("init", "Init a novel project")
+    Init() : Parser("init", "Init the build directory or a novel project")
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::INIT;
+      // Set build directory
+      m_parser->add_argument("--build")
+        .action([&](std::string const& s){ m_map_option_value["--build"]=s; })
+        .help("Create the build directory for gameimage");
       // Set platform
       m_parser->add_argument("--platform")
         .action([&](std::string const& s){ m_map_option_value["--platform"]=s; })
-        .required()
         .help("The platform to init the new directory");
       // Set directory name
-      m_parser->add_argument("--dir")
-        .action([&](std::string const& s){ m_map_option_value["--dir"]=s; })
-        .required()
-        .help("The directory to init the application");
+      m_parser->add_argument("--name")
+        .action([&](std::string const& s){ m_map_option_value["--name"]=s; })
+        .help("The name of the project");
     } // Init
 }; // class: Init }}}
 

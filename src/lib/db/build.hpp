@@ -6,11 +6,9 @@
 #pragma once
 
 #include "../db.hpp"
+#include "../../std/env.hpp"
 
 namespace ns_db::ns_build
-{
-
-namespace
 {
 
 struct Metadata
@@ -20,6 +18,9 @@ struct Metadata
   fs::path path_dir_project_root;
   ns_enum::Platform platform;
 };
+
+namespace
+{
 
 class Build
 {
@@ -54,31 +55,27 @@ Metadata& Build::find(std::string_view name)
 namespace fs = std::filesystem;
 
 // init_impl() {{{
-inline void init_impl(fs::path const& path_dir_build
-  , fs::path const& path_dir_project
-  , fs::path const& path_dir_project_root
-  , fs::path const& path_file_image
-  , ns_enum::Platform const& platform)
+inline void init_impl(fs::path const& path_dir_build)
 {
-  ns_db::from_file_default([&](auto&& db)
+  // Create build directory
+  fs::create_directories(path_dir_build);
+  // Create database
+  fs::path path_file_database = path_dir_build / "gameimage.json";
+  ns_db::from_file(path_file_database, [&](auto&& db)
   {
-    // project name is Dir name
-    std::string str_name = path_dir_project.filename();
-
     // build dir
     db("path_dir_build") = path_dir_build;
 
+    // Location of linux image
+    db("path_file_image") = path_dir_build / "cache/linux.flatimage";
+
     // Set as default project
-    db("project") = str_name;
+    db("project") = "";
 
-    // Set data
-    db("projects")(str_name)("path_file_image")       = path_file_image;
-    db("projects")(str_name)("path_dir_project")      = path_dir_project;
-    db("projects")(str_name)("path_dir_project_root") = path_dir_project_root;
-    db("projects")(str_name)("platform")              = ns_enum::to_string(platform);
+    // Projects array
+    db("projects") = ns_db::object_t();
   }
-  , fs::exists(ns_db::file_default())? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
-
+  , fs::exists(path_file_database)? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
 } // init_impl() }}}
 
 // read_impl() {{{
@@ -123,20 +120,11 @@ void write_impl(Build const& build)
 } // namespace
 
 // init() {{{
-[[nodiscard]] inline std::error<std::string> init(fs::path const& path_dir_build
-  , fs::path const& path_dir_project
-  , fs::path const& path_dir_project_root
-  , fs::path const& path_file_image
-  , ns_enum::Platform const& platform)
+[[nodiscard]] inline std::error<std::string> init(fs::path const& path_dir_build)
 {
   return ns_exception::to_error([&]
   {
-    init_impl(path_dir_build
-      , path_dir_project
-      , path_dir_project_root
-      , path_file_image
-      , platform
-    );
+    init_impl(path_dir_build);
  });
 } // init() }}}
 
@@ -145,7 +133,7 @@ inline std::expected<Build,std::string> read()
 {
   return ns_exception::to_expected([&]
   {
-    return read_impl(ns_db::file_default());
+    return read_impl(fs::path{ns_env::get_or_throw("GIMG_DIR")} / "gameimage.json");
   });
 } // read() }}}
 
