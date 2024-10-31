@@ -135,10 +135,6 @@ fn redraw(&mut self, msg : Msg)
     {
       frame::desktop::desktop(self.tx, "Select the Desktop Icon");
     }
-    Msg::DrawName =>
-    {
-      frame::name::name(self.tx, "Select the File Name");
-    }
 
     //
     // Linux

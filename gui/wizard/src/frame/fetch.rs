@@ -9,8 +9,6 @@ use fltk::{
 };
 
 use lazy_static::lazy_static;
-use anyhow::anyhow as ah;
-
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
@@ -40,24 +38,6 @@ lazy_static!
     m
   };
 }
-
-// check_version() {{{
-fn check_version() -> anyhow::Result<()>
-{
-  let db_fetch = match db::fetch::read()
-  {
-    Ok(db) => db,
-    Err(e) => return Err(ah!("error: could not read fetch.json, backend failed? No internet? '{}", e)),
-  }; // match
-
-  let version = db_fetch.version;
-  if ! version.starts_with("1.5")
-  {
-    return Err(ah!("error: you should update to version {}", version));
-  } // if
-
-  Ok(())
-} // check_version() }}}
 
 // fn fetch_backend() {{{
 fn fetch_backend(tx: Sender<common::Msg>, platform: common::Platform)

@@ -59,7 +59,6 @@ pub enum Msg
   DrawFetch,
   DrawCreator,
   DrawDesktop,
-  DrawName,
 
   DrawLinuxName,
   DrawLinuxIcon,

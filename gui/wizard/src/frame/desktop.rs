@@ -126,7 +126,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
         } // match
       } // if
       // Go to file name selection frame
-      clone_tx.send_awake(common::Msg::DrawName);
+      clone_tx.send_awake(common::Msg::DrawFinish);
     });
 
   });
