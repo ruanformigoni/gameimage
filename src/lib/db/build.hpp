@@ -65,10 +65,16 @@ inline void init_impl(fs::path const& path_dir_build)
     db("path_file_image") = path_dir_build / "cache/linux.flatimage";
 
     // Set as default project
-    db("project") = "";
+    if ( not db.contains("project") )
+    {
+      db("project") = "";
+    } // if
 
-    // Projects array
-    db("projects") = ns_db::object_t();
+    // Projects object
+    if ( not db.contains("projects"))
+    {
+      db("projects") = ns_db::object_t();
+    } // if
   }
   , fs::exists(path_file_database)? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
 } // init_impl() }}}
