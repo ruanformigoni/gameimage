@@ -279,7 +279,7 @@ inline std::expected<Project,std::string> read(std::optional<fs::path> opt_path_
       // Get current project
       auto db_metadata = db_build->find(db_build->project);
       // Read json file
-      return read_impl(db_metadata.path_dir_project);
+      return read_impl(db_metadata.path_dir_project / "gameimage.json");
     } // else
   });
 } // read() }}}
