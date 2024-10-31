@@ -8,6 +8,7 @@
 
 #include <filesystem>
 
+#include "project.hpp"
 #include "../macro.hpp"
 #include "../enum.hpp"
 
@@ -15,6 +16,7 @@
 #include "../std/env.hpp"
 
 #include "../lib/log.hpp"
+#include "../lib/subprocess.hpp"
 #include "../lib/db/build.hpp"
 #include "../lib/db/project.hpp"
 
@@ -63,14 +65,17 @@ inline void project(std::string const& str_name, std::string const& str_platform
   });
   // Write changes to database
   ns_db::ns_build::write(*db_build);
+  // Set project as default
+  ns_project::set(str_name);
   // Copy boot file for platform
-  fs::path path_file_boot = ns_fs::ns_path::file_exists<true>(ns_fs::ns_path::dir_executable<true>()._ret / "gameimage-boot")._ret;
+  auto path_file_boot = ns_subprocess::search_path("gameimage-boot");
+  ethrow_if(not path_file_boot, "Could not find gameimage-boot in PATH");
   lec(fs::copy_file
-    , path_file_boot
+    , *path_file_boot
     , path_dir_project / "boot"
     , fs::copy_options::overwrite_existing
   );
-  ns_log::write('i', "Copy ", path_file_boot, " -> ", path_dir_project / "boot");
+  ns_log::write('i', "Copy ", *path_file_boot, " -> ", path_dir_project / "boot");
   // Create project database
   elogerror(ns_db::ns_project::init(path_dir_project, platform));
 } // function: project }}}

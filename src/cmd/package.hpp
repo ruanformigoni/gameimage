@@ -73,9 +73,11 @@ inline void package(std::string const& str_projects)
   ns_fs::ns_path::dir_exists<true>(db_build->path_dir_build);
 
   // Copy launcher to outside wizard image
-  fs::path path_file_launcher = db_build->path_dir_build / "gameimage-launcher";
-  fs::copy_file(ns_fs::ns_path::dir_self<true>()._ret / "gameimage-launcher"
-    , path_file_launcher
+  auto path_file_launcher_src = ns_subprocess::search_path("gameimage-launcher");
+  ethrow_if(not path_file_launcher_src, "Could not find gameimage-launcher in PATH");
+  fs::path path_file_launcher_dst = db_build->path_dir_build / "gameimage-launcher";
+  fs::copy_file(*path_file_launcher_src
+    , path_file_launcher_dst
     , fs::copy_options::overwrite_existing
   );
 
@@ -88,7 +90,7 @@ inline void package(std::string const& str_projects)
   package_projects(vec_project, *db_build);
 
   // Include launcher inside game image
-  portal(db_build->path_file_image, "fim-exec", "cp", path_file_launcher, "/fim/static/gameimage-launcher");
+  portal(db_build->path_file_image, "fim-exec", "cp", path_file_launcher_dst, "/fim/static/gameimage-launcher");
 
   // Set boot command
   portal(db_build->path_file_image, "fim-boot", "/bin/bash", "-c", R"(/fim/static/gameimage-launcher "$@")", "--");
