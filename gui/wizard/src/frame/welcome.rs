@@ -12,7 +12,9 @@ use fltk::{
 };
 
 use shared::fltk::SenderExt;
+use anyhow::anyhow as ah;
 
+use crate::db;
 use crate::gameimage;
 use crate::dimm;
 use crate::frame;
@@ -20,6 +22,24 @@ use crate::common;
 use crate::log;
 use shared::svg;
 use shared::std::PathBufExt;
+
+// check_version() {{{
+fn check_version() -> anyhow::Result<()>
+{
+  let db_fetch = match db::fetch::read()
+  {
+    Ok(db) => db,
+    Err(e) => return Err(ah!("error: could not read fetch.json, backend failed? No internet? '{}", e)),
+  }; // match
+
+  let version = db_fetch.version;
+  if ! version.starts_with("1.5")
+  {
+    return Err(ah!("error: you should update to version {}", version));
+  } // if
+
+  Ok(())
+} // check_version() }}}
 
 // pub fn welcome() {{{
 pub fn welcome(tx: Sender<common::Msg>, title: &str)
@@ -115,6 +135,14 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
       Ok(code) => log!("Fetch exited with code {}", code),
       Err(e) => log!("Error to initialize build directory: {}", e)
     }; // match
+    // Check if version matches
+    if let Err(e) = check_version()
+    {
+      log!("{}", e);
+      fltk::dialog::message_default(&format!("{}", e));
+      clone_tx.send_awake(common::Msg::WindActivate);
+      return;
+    } // if
     // Draw creator frame
     clone_tx.send_awake(common::Msg::DrawCreator);
   });
