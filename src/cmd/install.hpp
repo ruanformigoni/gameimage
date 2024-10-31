@@ -69,14 +69,16 @@ void remove_files(ns_db::ns_project::Project& project
 } // remove_files() }}}
 
 // wine() {{{
-inline void wine(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
+inline void wine(fs::path const& path_file_image,
+  ns_db::ns_build::Metadata& db_metadata
+  , Op const& op, std::vector<std::string> args)
 {
   // Path to wine prefix
   fs::path path_wineprefix = db_metadata.path_dir_project / "wine";
 
   // Log
   ns_log::write('i', "application: ", db_metadata.name);
-  ns_log::write('i', "image: ", db_metadata.path_file_image);
+  ns_log::write('i', "image: ", path_file_image);
   ns_log::write('i', "prefix: ", path_wineprefix);
 
   // Export prefix
@@ -90,7 +92,7 @@ inline void wine(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vect
   {
     (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
       .with_piped_outputs()
-      .with_args(db_metadata.path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t))
+      .with_args(path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t))
       .spawn()
       .wait();
   };
@@ -99,7 +101,7 @@ inline void wine(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vect
   {
     (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
       .with_piped_outputs()
-      .with_args(db_metadata.path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t))
+      .with_args(path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t))
       .spawn()
       .wait();
   };
@@ -116,7 +118,9 @@ inline void wine(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vect
 } // wine() }}}
 
 // linux() {{{
-inline void linux(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vector<std::string> args)
+inline void linux(fs::path const& path_file_image
+  , ns_db::ns_build::Metadata& db_metadata
+  , Op const& op, std::vector<std::string> args)
 {
   // Validate op
   ethrow_if ( op != Op::ROM,  "Only ROM is valid for the linux platform");
@@ -128,7 +132,7 @@ inline void linux(ns_db::ns_build::Metadata& db_metadata, Op const& op, std::vec
   // Run selected file
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_metadata.path_file_image, "fim-exec", "env", "HOME={}"_fmt(path_dir_linux.c_str()), args)
+    .with_args(path_file_image, "fim-exec", "env", "HOME={}"_fmt(path_dir_linux.c_str()), args)
     .spawn()
     .wait();
 } // linux() }}}
@@ -185,7 +189,10 @@ void emulator_install_file(ns_db::ns_build::Metadata& db_metadata, Op const& op,
 } // emulator_install_file() }}}
 
 // emulator() {{{
-inline void emulator(ns_db::ns_build::Metadata& db_metadata, Op op, std::vector<std::string> args)
+inline void emulator(fs::path const& path_file_image
+  , ns_db::ns_build::Metadata& db_metadata
+  , Op op
+  , std::vector<std::string> args)
 {
   auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not read project '{}'"_fmt(ns_db::file_project()));
@@ -222,7 +229,7 @@ inline void emulator(ns_db::ns_build::Metadata& db_metadata, Op op, std::vector<
     {
       (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
         .with_piped_outputs()
-        .with_args(db_metadata.path_file_image)
+        .with_args(path_file_image)
         .spawn()
         .wait();
     }
@@ -287,13 +294,13 @@ inline void install(Op op, std::vector<std::string> args)
   // Install based on platform
   switch(db_metadata.platform)
   {
-    case ns_enum::Platform::LINUX: ns_install::linux(db_metadata, op, args);
+    case ns_enum::Platform::LINUX: ns_install::linux(db_build->path_file_image, db_metadata, op, args);
     break;
-    case ns_enum::Platform::WINE: ns_install::wine(db_metadata, op, args);
+    case ns_enum::Platform::WINE: ns_install::wine(db_build->path_file_image, db_metadata, op, args);
     break;
     case ns_enum::Platform::RETROARCH:
     case ns_enum::Platform::PCSX2:
-    case ns_enum::Platform::RPCS3: ns_install::emulator(db_metadata, op, args);
+    case ns_enum::Platform::RPCS3: ns_install::emulator(db_build->path_file_image, db_metadata, op, args);
     break;
   } // switch
 

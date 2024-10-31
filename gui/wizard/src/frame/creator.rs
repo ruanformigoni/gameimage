@@ -29,7 +29,7 @@ use crate::gameimage;
 fn create_entry(project : db::project::Entry
   , scroll : &mut shared::fltk::ScrollList
   , width: i32
-  , height: i32) -> anyhow::Result<(button::CheckButton, PathBuf)>
+  , height: i32) -> anyhow::Result<(button::CheckButton, db::project::Entry)>
 {
   //
   // Icon
@@ -86,8 +86,8 @@ fn create_entry(project : db::project::Entry
       if push_newline { let _ = frame_info.insert("\n"); }
     }
   }; // f_add_field
-  f_add_field("Project: ", &project.get_project().ok(), true);
-  f_add_field("Platform: ", &project.get_platform().ok(), true);
+  f_add_field("Project: ", &Some(project.get_project()), true);
+  f_add_field("Platform: ", &Some(project.get_platform()), true);
   f_add_field("Default rom: ", &project.get_path_relative(db::project::EntryName::PathFileRom).ok().map(|e| e.string()), true);
   f_add_field("Default core: ", &project.get_path_relative(db::project::EntryName::PathFileCore).ok().map(|e| e.string()), true);
   f_add_field("Default bios: ", &project.get_path_relative(db::project::EntryName::PathFileBios).ok().map(|e| e.string()), false);
@@ -102,7 +102,7 @@ fn create_entry(project : db::project::Entry
     .with_focus(false)
     .with_frame(FrameType::BorderBox);
 
-  Ok((btn_checkbox , project.get_dir_self()?))
+  Ok((btn_checkbox , project))
 } // }}}
 
 // pub fn creator() {{{
@@ -149,12 +149,12 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   };
 
   // Process entries if any
-  let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,PathBuf)>::new()));
+  let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
   for project in &projects
   {
     let width_entry = scroll.widget_ref().w() - dimm::border()*2;
     let height_entry = dimm::height_button_rec()*4;
-    let (button, path_dir_project) = match create_entry(project.clone(), &mut scroll, width_entry, height_entry)
+    let (button, project) = match create_entry(project.clone(), &mut scroll, width_entry, height_entry)
     {
       Ok(ret) => ret,
       Err(e) => { log!("Could not create entry for project with error: {}", e); continue; },
@@ -162,7 +162,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
     match vec_btn.lock()
     {
-      Ok(mut lock) => lock.push((button, path_dir_project)),
+      Ok(mut lock) => lock.push((button, project)),
       Err(e) => log!("Could not lock checkbox buttons with error: {}", e),
     }
   } // for
@@ -201,15 +201,15 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       Err(e) => { log!("Could not acquire lock for checkbutton: {}", e); return; },
     };
 
-    // Remove all currently selected projects
-    for (checkbutton, path_dir_project) in lock.iter()
-    {
-      if checkbutton.is_checked()
-      {
-        let _ = fs::remove_file(path_dir_project.with_extension("layer"));
-        let _ = fs::remove_dir_all(path_dir_project);
-      }
-    } // for
+    // // Remove all currently selected projects
+    // for (checkbutton, path_dir_project) in lock.iter()
+    // {
+    //   if checkbutton.is_checked()
+    //   {
+    //     let _ = fs::remove_file(path_dir_project.with_extension("layer"));
+    //     let _ = fs::remove_dir_all(path_dir_project);
+    //   }
+    // } // for
 
     // Refresh
     clone_tx.send_awake(common::Msg::DrawCreator);
@@ -263,14 +263,14 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         }
       }; // match
       // Transform projects in a ':' separated string to send to the backend
-      let str_path_dir_projects = lock.iter()
+      let vec_name_projects = lock.iter()
         .filter(|e| e.0.is_checked())
-        .map(|e| e.1.string())
+        .map(|e| e.1.get_project())
         .collect::<Vec<String>>()
         .join(":");
-      log!("Projects to include in the image: {}", str_path_dir_projects);
+      log!("Projects to include in the image: {}", vec_name_projects);
       // Wait for message & check return value
-      if let Err(e) = gameimage::package::package(&str_path_dir_projects)
+      if let Err(e) = gameimage::package::package(&vec_name_projects)
       {
         clone_tx.send_awake(common::Msg::WindActivate);
         clone_tx.send_awake(common::Msg::DrawCreator);

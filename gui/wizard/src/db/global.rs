@@ -11,6 +11,7 @@ pub struct Entry
 {
   pub project: String, // path to default project
   pub path_dir_build: PathBuf, // path to build dir
+  pub path_file_image: PathBuf, // path to main flatimage
   pub projects: HashMap<String, EntryDetails>,
 } // Entry }}}
 
@@ -19,7 +20,6 @@ pub struct Entry
 pub struct EntryDetails {
   pub path_dir_project: PathBuf,
   pub path_dir_project_root: PathBuf,
-  pub path_file_image: PathBuf,
   pub platform: String,
 } // EntryDetails }}}
 

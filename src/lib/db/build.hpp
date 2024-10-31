@@ -18,7 +18,6 @@ struct Metadata
   std::string name;
   fs::path path_dir_project;
   fs::path path_dir_project_root;
-  fs::path path_file_image;
   ns_enum::Platform platform;
 };
 
@@ -32,6 +31,7 @@ class Build
   public:
     fs::path path_dir_build;
     std::string project;
+    fs::path path_file_image;
     std::vector<Metadata> projects;
     Metadata& find(std::string_view name);
   friend Build read_impl(fs::path path_file_db);
@@ -41,7 +41,12 @@ class Build
 // find() {{{
 Metadata& Build::find(std::string_view name)
 {
-  auto search = std::ranges::find_if(projects, [&](auto&& e){ return e.name == name; });
+  auto search = std::ranges::find_if(projects, [&](auto&& e)
+  {
+    std::cout << "[" << name << "] project: " << e.name << std::endl;
+    std::cout << "[found]?" << std::boolalpha << (e.name == name) << std::endl;
+    return e.name == name;
+  });
   ethrow_if(search == std::ranges::end(projects), "Could not find project '{}'"_fmt(project));
   return *search;
 } // find() }}}
@@ -84,13 +89,13 @@ Build read_impl(fs::path path_file_db)
   {
     build.project = db["project"];
     build.path_dir_build = fs::path{db["path_dir_build"]};
+    build.path_file_image =  fs::path{db["path_file_image"]};;
     for( auto [name, obj] : db["projects"].items() )
     {
       Metadata metadata;
       metadata.name = name;
       metadata.path_dir_project =  fs::path{obj["path_dir_project"]};
       metadata.path_dir_project_root =  fs::path{obj["path_dir_project_root"]};
-      metadata.path_file_image =  fs::path{obj["path_file_image"]};
       metadata.platform =  ns_enum::from_string<ns_enum::Platform>(obj["platform"]);
       build.projects.push_back(metadata);
     } // for
@@ -104,12 +109,12 @@ void write_impl(Build const& build)
   ns_db::from_file(build.path_file_db, [&](auto&& db)
   {
     db("project") = build.project;
-    db("path_dir_build") = build.path_dir_build ;
+    db("path_dir_build") = build.path_dir_build;
+    db("path_file_image") = build.path_file_image;
     for( auto metadata : build.projects )
     {
       db("projects")(metadata.name)("path_dir_project") = metadata.path_dir_project;
       db("projects")(metadata.name)("path_dir_project_root") = metadata.path_dir_project_root;
-      db("projects")(metadata.name)("path_file_image") = metadata.path_file_image;
       db("projects")(metadata.name)("platform") = ns_enum::to_string(metadata.platform);
     } // for
   }, ns_db::Mode::CREATE);

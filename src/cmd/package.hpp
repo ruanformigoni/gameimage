@@ -47,16 +47,18 @@ inline void package_platforms(std::vector<std::string> const& vec_project
 } // package_platforms() }}}
 
 // package_project() {{{
-inline void package_projects(std::vector<std::string> const& vec_project, ns_db::ns_build::Metadata& db_metadata)
+inline void package_projects(std::vector<std::string> const& vec_project, ns_db::ns_build::Build& db_build)
 {
   for(auto&& project : vec_project)
   {
-    // Set project to current
-    ns_project::set(project);
+    // Get project metadata
+    auto db_metadata = db_build.find(project);
+    // Verify that image exists
+    ns_fs::ns_path::file_exists<true>(db_build.path_file_image);
     // Get path to the compressed layer to include in the image
     fs::path path_file_layer = ns_fs::ns_path::file_exists<true>(db_metadata.path_dir_project_root.string() + ".layer")._ret;
     // Include layer in the image
-    portal(db_metadata.path_file_image, "fim-layer", "add", path_file_layer);
+    portal(db_build.path_file_image, "fim-layer", "add", path_file_layer);
   } // for
 } // package_project() }}}
 
@@ -66,10 +68,6 @@ inline void package(std::string const& str_projects)
   // Open databases
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Could not open build database");
-  auto db_metadata = db_build->find(db_build->project);
-
-  // Verify that image exists
-  ns_fs::ns_path::file_exists<true>(db_metadata.path_file_image);
 
   // Verify that directory exists
   ns_fs::ns_path::dir_exists<true>(db_build->path_dir_build);
@@ -84,22 +82,22 @@ inline void package(std::string const& str_projects)
   auto vec_project = ns_vector::from_string(str_projects, ':');
 
   // Include platforms
-  package_platforms(vec_project, db_metadata.path_file_image, *db_build);
+  package_platforms(vec_project, db_build->path_file_image, *db_build);
 
   // Include projects
-  package_projects(vec_project, db_metadata);
+  package_projects(vec_project, *db_build);
 
   // Include launcher inside game image
-  portal(db_metadata.path_file_image, "fim-exec", "cp", path_file_launcher, "/fim/static/gameimage-launcher");
+  portal(db_build->path_file_image, "fim-exec", "cp", path_file_launcher, "/fim/static/gameimage-launcher");
 
   // Set boot command
-  portal(db_metadata.path_file_image, "fim-boot", "/bin/bash", "-c", R"(/fim/static/gameimage-launcher "$@")", "--");
+  portal(db_build->path_file_image, "fim-boot", "/bin/bash", "-c", R"(/fim/static/gameimage-launcher "$@")", "--");
 
   // Enable notify-send
-  portal(db_metadata.path_file_image, "fim-notify", "on");
+  portal(db_build->path_file_image, "fim-notify", "on");
 
   // Commit changes into the image
-  portal(db_metadata.path_file_image , "fim-commit");
+  portal(db_build->path_file_image , "fim-commit");
 
 } // package() }}}
 

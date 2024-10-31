@@ -22,7 +22,7 @@ inline decltype(auto) test()
   // Start application
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_metadata.path_file_image, "fim-exec", db_metadata.path_dir_project / "boot")
+    .with_args(db_build->path_file_image, "fim-exec", db_metadata.path_dir_project / "boot")
     .spawn()
     .wait();
 } // test() }}}

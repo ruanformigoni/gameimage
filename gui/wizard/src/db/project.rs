@@ -31,14 +31,14 @@ pub struct Entry
 impl Entry
 {
 
-pub fn get_project(&self) -> anyhow::Result<String>
+pub fn get_project(&self) -> String
 {
-  Ok(self.project.clone())
+  self.project.clone()
 } // project
 
-pub fn get_platform(&self) -> anyhow::Result<String>
+pub fn get_platform(&self) -> String
 {
-  Ok(self.platform.clone())
+  self.platform.clone()
 } // project
 
 pub fn get_dir_self(&self) -> anyhow::Result<PathBuf>
@@ -47,11 +47,7 @@ pub fn get_dir_self(&self) -> anyhow::Result<PathBuf>
   let db = global::read()?;
 
   // Get project name
-  let name_project = match self.get_project()
-  {
-    Ok(name_project) => name_project,
-    Err(e) => return Err(ah!("Could not get project name: {}", e)),
-  };
+  let name_project = self.get_project();
 
   // Return project dir
   Ok(db.get_project_dir(&name_project)?)

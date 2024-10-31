@@ -126,7 +126,7 @@ inline decltype(auto) compress()
 
   // Log
   ns_log::write('i', "project: ", db_metadata.name);
-  ns_log::write('i', "image: ", db_metadata.path_file_image);
+  ns_log::write('i', "image: ", db_build->path_file_image);
   ns_log::write('i', "layer: ", path_file_layer);
 
   // Execute portal
@@ -140,10 +140,10 @@ inline decltype(auto) compress()
   };
 
   // Commit
-  f_portal(db_metadata.path_file_image, "fim-commit");
+  f_portal(db_build->path_file_image, "fim-commit");
 
   // Compress
-  f_portal(db_metadata.path_file_image , "fim-layer" , "create" , db_metadata.path_dir_project_root , path_file_layer);
+  f_portal(db_build->path_file_image , "fim-layer" , "create" , db_metadata.path_dir_project_root , path_file_layer);
 
   ns_log::write('i', "Wrote file to '", path_file_layer, "'");
 } // compress() }}}

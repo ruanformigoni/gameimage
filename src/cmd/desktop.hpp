@@ -46,9 +46,9 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   throw_if(vec_items.empty(), "No integration items available");
 
   // Path to project
-  fs::path path_dir_project = db_metadata.path_dir_project;
-  fs::path path_file_desktop = path_dir_project / "desktop.json";
-  fs::path path_file_icon_resized = path_dir_project / "desktop.png";
+  fs::path path_dir_build = db_build->path_dir_build;
+  fs::path path_file_desktop = path_dir_build / "desktop.json";
+  fs::path path_file_icon_resized = path_dir_build / "desktop.png";
 
   // Resize icon
   ns_image::resize(path_file_icon, path_file_icon_resized, 300, 450);
@@ -65,14 +65,14 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   // Apply application data
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_metadata.path_file_image, "fim-desktop", "setup", path_file_desktop)
+    .with_args(db_build->path_file_image, "fim-desktop", "setup", path_file_desktop)
     .spawn()
     .wait();
 
   // Enable desktop integration
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_metadata.path_file_image
+    .with_args(db_build->path_file_image
       , "fim-desktop"
       , "enable"
       , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); }))
