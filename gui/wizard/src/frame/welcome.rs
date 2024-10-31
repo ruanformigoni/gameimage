@@ -109,6 +109,12 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
       Ok(()) => (),
       Err(e) => log!("Error to initialize build directory: {}", e)
     }; // match
+    // Fetch fetch list
+    match gameimage::fetch::fetchlist()
+    {
+      Ok(code) => log!("Fetch exited with code {}", code),
+      Err(e) => log!("Error to initialize build directory: {}", e)
+    }; // match
     // Draw creator frame
     clone_tx.send_awake(common::Msg::DrawCreator);
   });

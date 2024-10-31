@@ -22,7 +22,7 @@
 #include "../lib/db/fetch.hpp"
 #include "../lib/sha.hpp"
 
-inline constexpr const char* URL_FETCH = "https://192.168.0.16:1170/fetch.json";
+inline constexpr const char* URL_FETCH = "http://192.168.0.16:1170/fetch.json";
 
 namespace ns_fetch
 {
