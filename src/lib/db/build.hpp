@@ -42,12 +42,7 @@ class Build
 // find() {{{
 Metadata& Build::find(std::string_view name)
 {
-  auto search = std::ranges::find_if(projects, [&](auto&& e)
-  {
-    std::cout << "[" << name << "] project: " << e.name << std::endl;
-    std::cout << "[found]?" << std::boolalpha << (e.name == name) << std::endl;
-    return e.name == name;
-  });
+  auto search = std::ranges::find_if(projects, [&](auto&& e) { return e.name == name; });
   ethrow_if(search == std::ranges::end(projects), "Could not find project '{}'"_fmt(project));
   return *search;
 } // find() }}}
