@@ -152,17 +152,6 @@ inline decltype(auto) operator ""_try(const char* str, size_t)
 namespace ns_common
 {
 
-namespace ns_dir
-{
-
-// get_path_dir_cache() {{{
-inline decltype(auto) get_path_dir_cache()
-{
-  return std::filesystem::current_path() / "cache";
-} // get_path_dir_cache() }}}
-
-}
-
 // check_and() {{{
 template<ns_concept::Enum T, ns_concept::Enum... Args>
 constexpr bool check_and(T&& t, Args&&... flags)

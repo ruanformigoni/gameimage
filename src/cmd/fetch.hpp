@@ -20,6 +20,7 @@
 #include "../std/env.hpp"
 #include "../lib/log.hpp"
 #include "../lib/db/fetch.hpp"
+#include "../lib/db/build.hpp"
 #include "../lib/sha.hpp"
 
 inline constexpr const char* URL_FETCH = "http://192.168.0.16:1170/fetch.json";
@@ -57,12 +58,6 @@ struct fetchlist_layer_ret_t
 [[nodiscard]] inline fs::path get_path_file_image(ns_enum::Platform const& platform)
 {
   return fs::current_path() / ( ns_enum::to_string_lower(platform) + ".flatimage" );
-} // }}}
-
-// get_path_dir_cache() {{{
-[[nodiscard]] inline fs::path get_path_dir_cache()
-{
-  return fs::current_path() / "cache";
 } // }}}
 
 // fetch_file_from_url() {{{
@@ -235,9 +230,12 @@ inline void fetch(ns_enum::Platform platform)
 // installed() {{{
 inline std::vector<ns_enum::Platform> installed()
 {
-  // Gather
+  // Get path to cache directory
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build.has_value(), "Could not get cache directory: {}"_fmt(db_build.error()));
+  // Gather installed platforms
   std::error_code ec;
-  auto platforms = fs::directory_iterator(get_path_dir_cache(), ec)
+  auto platforms = fs::directory_iterator(db_build->path_dir_cache, ec)
     | std::views::filter([](auto&& e){ return fs::is_regular_file(e) and ns_enum::is_enum_entry<ns_enum::Platform>(e.path().stem()); })
     | std::views::transform([](auto&& e){ return ns_enum::from_string<ns_enum::Platform>(e.path().stem()); })
     | std::ranges::to<std::vector<ns_enum::Platform>>();

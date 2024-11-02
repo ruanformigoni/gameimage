@@ -9,7 +9,6 @@
 
 #include "../lib/subprocess.hpp"
 #include "../lib/db/build.hpp"
-#include "project.hpp"
 
 namespace ns_package
 {
@@ -41,7 +40,7 @@ inline void package_platforms(std::vector<std::string> const& vec_project
   // Include each platform in the image
   for(auto&& platform : vec_platforms)
   {
-    fs::path path_file_layer = ns_common::ns_dir::get_path_dir_cache() / "{}.layer"_fmt(ns_enum::to_string_lower(platform));
+    fs::path path_file_layer = db_build.path_dir_cache / "{}.layer"_fmt(ns_enum::to_string_lower(platform));
     portal(path_file_image, "fim-layer", "add", path_file_layer);
   } // for
 } // package_platforms() }}}

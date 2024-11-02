@@ -30,8 +30,9 @@ class Build
       : path_file_db(path_file_db)
     {};
   public:
-    fs::path path_dir_build;
     std::string project;
+    fs::path path_dir_build;
+    fs::path path_dir_cache;
     fs::path path_file_image;
     std::vector<Metadata> projects;
     Metadata& find(std::string_view name);
@@ -61,8 +62,12 @@ inline void init_impl(fs::path const& path_dir_build)
     // build dir
     db("path_dir_build") = path_dir_build;
 
+    // cache dir
+    fs::path path_dir_cache = path_dir_build / "cache";
+    db("path_dir_cache") = path_dir_cache;
+
     // Location of linux image
-    db("path_file_image") = path_dir_build / "cache/linux.flatimage";
+    db("path_file_image") = path_dir_cache / "linux.flatimage";
 
     // Set as default project
     if ( not db.contains("project") )
@@ -87,6 +92,7 @@ Build read_impl(fs::path path_file_db)
   {
     build.project = db["project"];
     build.path_dir_build = fs::path{db["path_dir_build"]};
+    build.path_dir_cache = fs::path{db["path_dir_cache"]};
     build.path_file_image =  fs::path{db["path_file_image"]};;
     for( auto [name, obj] : db["projects"].items() )
     {
@@ -108,6 +114,7 @@ void write_impl(Build const& build)
   {
     db("project") = build.project;
     db("path_dir_build") = build.path_dir_build;
+    db("path_dir_cache") = build.path_dir_cache;
     db("path_file_image") = build.path_file_image;
     for( auto metadata : build.projects )
     {
