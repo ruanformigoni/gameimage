@@ -11,7 +11,7 @@ use crate::log;
 // fn binary() {{{
 pub fn binary() -> anyhow::Result<std::path::PathBuf>
 {
-  Ok(std::path::PathBuf::from(env::var("GIMG_BACKEND")?))
+  Ok(which::which("gameimage-cli")?)
 } // }}}
 
 // pub fn dir_build() {{{
