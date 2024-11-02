@@ -12,6 +12,7 @@ pub struct Entry
   pub project: String, // path to default project
   pub path_dir_build: PathBuf, // path to build dir
   pub path_file_image: PathBuf, // path to main flatimage
+  pub path_file_output: PathBuf, // path to output file
   pub projects: HashMap<String, EntryDetails>,
 } // Entry }}}
 

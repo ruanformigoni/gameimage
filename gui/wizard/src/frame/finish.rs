@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 // Gui
 use fltk::prelude::*;
 use fltk::{
@@ -8,13 +6,25 @@ use fltk::{
   text,
 };
 
+use anyhow::anyhow as ah;
+
 use shared::fltk::WidgetExtExtra;
 
+use crate::db;
 use crate::dimm;
 use crate::frame;
 use crate::log;
 use crate::common;
 use shared::std::OsStrExt;
+use shared::std::PathBufExt;
+
+// fn: finish_file_location() {{{
+fn finish_file_location(output: &mut fltk::output::Output) -> anyhow::Result<String>
+{
+  let db_global = db::global::read()?;
+  let _ = output.insert(&db_global.path_file_output.string());
+  Ok(format!(".{}.config",  &db_global.path_file_output.file_name().ok_or(ah!("Could not get file stem"))?.string()))
+} // fn: finish_file_location() }}}
 
 // pub fn finish() {{{
 pub fn finish(tx: Sender<common::Msg>, title: &str)
@@ -46,16 +56,8 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
     .with_label("Your package was saved in this location")
     .with_focus(false);
 
-  let mut str_package_basename = String::new();
-  if let Ok(var) = std::env::var("GIMG_FINISH_LOCATION")
-  {
-    if let Some(stem) = PathBuf::from(&var).file_name()
-    {
-      str_package_basename = format!(".{}.config",  &stem.string());
-    } // if
-
-    let _ = output_saved_location.insert(&var);
-  } // if
+  // Retrieve output image file location
+  let str_package_basename = finish_file_location(&mut output_saved_location).unwrap_or_default();
 
   let mut output_info = text::TextDisplay::default()
     .with_width_of(&output_saved_location)

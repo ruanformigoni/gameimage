@@ -1,9 +1,10 @@
-use std::sync::{Arc,atomic::{AtomicBool, Ordering}};
+use std::sync::{Mutex,Arc,atomic::{AtomicBool, Ordering}};
 use fltk::
 {
   prelude::*,
   app::Sender,
 };
+use anyhow::anyhow as ah;
 
 use shared::fltk::SenderExt;
 use shared::fltk::WidgetExtExtra;
@@ -11,24 +12,75 @@ use shared::fltk::WidgetExtExtra;
 use crate::common;
 use crate::dimm;
 use crate::log;
-use crate::log_return_void;
 use crate::gameimage;
+use crate::frame;
+use clown::clown;
+
+// fn desktop_next() {{{
+fn desktop_next(tx: Sender<common::Msg>
+  , str_name: String
+  , arc_path_file_icon: Arc<Mutex<Option<std::path::PathBuf>>>
+  , arc_is_integrate_entry: Arc<AtomicBool>
+  , arc_is_integrate_icon: Arc<AtomicBool>) -> anyhow::Result<()>
+{
+  // Check if name field is valid
+  if str_name.is_empty() { return Err(ah!("No application name was selected")); } // if
+  // Check if an icon was selected
+  let path_file_icon = arc_path_file_icon.clone().lock()
+    .map_err(|_| ah!("Could not lock path_file_icon"))
+    .map(|mut e| e.take())?
+    .ok_or(ah!("No file selected as the icon"))?;
+  // Get projects to include
+  let str_name_projects = match frame::creator::PROJECTS.lock()
+  {
+    Ok(guard) => guard,
+    Err(e) => { return Err(ah!("Could not lock PROJECTS: {}", e)); }
+  }; // match
+  // Package projects
+  log!("Projects to include in the image: {}", str_name_projects);
+  // Wait for message & check return value
+  if let Err(e) = gameimage::package::package(&str_name, &str_name_projects)
+  {
+    return Err(ah!("Could not include projects into the image: {}", e));
+  } // match
+  // Desktop integration
+  let mut vec_integration_items = Vec::<String>::new();
+  if arc_is_integrate_entry.load(Ordering::SeqCst)
+  {
+    vec_integration_items.append(&mut vec!["entry".into(), "icon".into()]);
+  } // if
+  if arc_is_integrate_icon.load(Ordering::SeqCst)
+  {
+    vec_integration_items.push("mimetype".into());
+  } // if
+  // Setup integration
+  let integration_items = vec_integration_items.join(",");
+  if ! integration_items.is_empty()
+  {
+    match gameimage::desktop::desktop(&str_name, &path_file_icon, &integration_items)
+    {
+      Ok(()) => log!("Finished desktop configuration"),
+      Err(e) => { tx.send_awake(common::Msg::WindActivate); return Err(ah!("{}", e)) }
+    } // match
+  } // if
+  Ok(())
+} // fn desktop_next() }}}
 
 // pub fn desktop() {{{
 pub fn desktop(tx: Sender<common::Msg>, title: &str)
 {
-  let ret = crate::frame::icon::icon(tx
+  let ret_frame_icon = crate::frame::icon::icon(tx
     , title
     , common::Msg::DrawDesktop
     , common::Msg::DrawDesktop
   );
 
   // Hide prev button
-  ret.ret_frame_footer.btn_prev.clone().hide();
-  let frame_sep = ret.ret_frame_footer.sep.clone();
+  ret_frame_icon.ret_frame_footer.btn_prev.clone().hide();
+  let frame_sep = ret_frame_icon.ret_frame_footer.sep.clone();
 
   // Move icon frame to the left
-  let mut frame_icon = match ret.opt_frame_icon
+  let mut frame_icon = match ret_frame_icon.opt_frame_icon.clone()
   {
     Some(frame_icon) => frame_icon,
     None => { log!("Failed to retrieve icon frame"); return; }
@@ -61,74 +113,28 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
     (atomic_option.clone(), btn_check.clone())
   };
 
+  // Get integration items
   let (is_integrate_entry, btn_integrate_entry) = f_create_atomic_option("Show icon in the start menu?", &input_name.as_base_widget());
   let (is_integrate_icon, _) = f_create_atomic_option("Show icon file manager?", &btn_integrate_entry.as_base_widget());
 
-  // Callback to install icon
-  let clone_tx = tx.clone();
-  let clone_is_integrate_entry = is_integrate_entry.clone();
-  let clone_is_integrate_icon = is_integrate_icon.clone();
-  let clone_input_name = input_name.clone();
-  ret.ret_frame_footer.btn_next.clone().set_callback(move |_|
+  // Callback to install projects and configure desktop integration
+  let mut clone_btn_next = ret_frame_icon.ret_frame_footer.btn_next.clone();
+  let arc_path_file_icon = ret_frame_icon.arc_path_file_icon.clone();
+  clone_btn_next.set_callback(#[clown] move |_|
   {
-    let arc_path_file_icon = ret.arc_path_file_icon.clone();
-    let mut output_status = ret.ret_frame_footer.output_status.clone();
-
-    clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    // Check if name field is valid
-    let str_name = clone_input_name.value();
-    if str_name.is_empty()
+    tx.send_awake(common::Msg::WindDeactivate);
+    std::thread::spawn(#[clown] move ||
     {
-      output_status.set_value("No application name was selected");
-      clone_tx.send_awake(common::Msg::WindActivate);
-      log!("No application name was selected");
-      return;
-    } // if
-
-    // Check if an icon was selected
-    let path_file_icon = if let Ok(option_path_file_icon) = arc_path_file_icon.lock()
-    && let Some(path_file_icon) = option_path_file_icon.as_ref()
-    {
-      path_file_icon.clone()
-    }
-    else
-    {
-      output_status.set_value("No icon selected");
-      clone_tx.send_awake(common::Msg::WindActivate);
-      log!("No Icon selected");
-      return;
-    };
-
-    let clone_is_integrate_entry = clone_is_integrate_entry.clone();
-    let clone_is_integrate_icon = clone_is_integrate_icon.clone();
-    std::thread::spawn(move ||
-    {
-      // Fetch selected options
-      let mut vec_integration_items = Vec::<String>::new();
-      if clone_is_integrate_entry.load(Ordering::SeqCst)
+      match desktop_next(tx, honk!(input_name).value()
+        , honk!(arc_path_file_icon).clone()
+        , honk!(is_integrate_entry).clone()
+        , honk!(is_integrate_icon).clone())
       {
-        vec_integration_items.push("entry".into());
-        vec_integration_items.push("icon".into());
-      } // if
-      if clone_is_integrate_icon.load(Ordering::SeqCst)
-      {
-        vec_integration_items.push("mimetype".into());
-      } // if
-      // Setup integration
-      let integration_items = vec_integration_items.join(",");
-      if ! integration_items.is_empty()
-      {
-        match gameimage::desktop::desktop(&str_name, &path_file_icon, &integration_items)
-        {
-          Ok(()) => log!("Finished desktop configuration"),
-          Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
-        } // match
-      } // if
-      // Go to file name selection frame
-      clone_tx.send_awake(common::Msg::DrawFinish);
+        Ok(()) => (),
+        Err(e) => { log!("{}", e); tx.send_awake(common::Msg::WindActivate); return; },
+      }; // match
+      tx.send_awake(common::Msg::DrawFinish);
     });
-
   });
 } // }}}
 

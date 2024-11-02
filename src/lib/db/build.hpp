@@ -34,6 +34,7 @@ class Build
     fs::path path_dir_build;
     fs::path path_dir_cache;
     fs::path path_file_image;
+    fs::path path_file_output;
     std::vector<Metadata> projects;
     Metadata& find(std::string_view name);
   friend Build read_impl(fs::path path_file_db);
@@ -69,6 +70,12 @@ inline void init_impl(fs::path const& path_dir_build)
     // Location of linux image
     db("path_file_image") = path_dir_cache / "linux.flatimage";
 
+    // Location of the output file
+    if ( not db.contains("path_file_output") )
+    {
+      db("path_file_output") = "";
+    } // if
+
     // Set as default project
     if ( not db.contains("project") )
     {
@@ -94,6 +101,7 @@ Build read_impl(fs::path path_file_db)
     build.path_dir_build = fs::path{db["path_dir_build"]};
     build.path_dir_cache = fs::path{db["path_dir_cache"]};
     build.path_file_image =  fs::path{db["path_file_image"]};;
+    build.path_file_output =  fs::path{db["path_file_output"]};;
     for( auto [name, obj] : db["projects"].items() )
     {
       Metadata metadata;
@@ -116,6 +124,7 @@ void write_impl(Build const& build)
     db("path_dir_build") = build.path_dir_build;
     db("path_dir_cache") = build.path_dir_cache;
     db("path_file_image") = build.path_file_image;
+    db("path_file_output") = build.path_file_output;
     for( auto metadata : build.projects )
     {
       db("projects")(metadata.name)("path_dir_project") = metadata.path_dir_project;

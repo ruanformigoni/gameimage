@@ -339,6 +339,12 @@ class Package final : public Parser
       // Set stage
       m_enum_stage = ns_enum::Stage::PACKAGE;
 
+      // Output file
+      m_parser->add_argument("name")
+        .action([&](std::string const& s){ m_map_option_value["name"]=s; })
+        .required()
+        .help("Name of the target file");
+
       // Set args
       m_parser->add_argument("projects")
         .action([&](std::string const& s){ m_map_option_value["projects"]=s; })

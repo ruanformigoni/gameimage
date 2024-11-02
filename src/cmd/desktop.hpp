@@ -35,6 +35,9 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   ethrow_if(not db_build, "Could not open build database");
   auto db_metadata = db_build->find(db_build->project);
 
+  // Check if output file exists
+  db_build->path_file_output = ns_fs::ns_path::file_exists<true>(db_build->path_file_output)._ret;
+
   // Validate icon path
   path_file_icon = ns_fs::ns_path::file_exists<true>(path_file_icon)._ret;
 
@@ -65,14 +68,14 @@ inline void desktop(std::string str_name, fs::path path_file_icon, std::string s
   // Apply application data
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_build->path_file_image, "fim-desktop", "setup", path_file_desktop)
+    .with_args(db_build->path_file_output, "fim-desktop", "setup", path_file_desktop)
     .spawn()
     .wait();
 
   // Enable desktop integration
   (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
-    .with_args(db_build->path_file_image
+    .with_args(db_build->path_file_output
       , "fim-desktop"
       , "enable"
       , ns_string::from_container(vec_items , ',', [](auto&& e){ return ns_enum::to_string(e); }))

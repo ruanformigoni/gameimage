@@ -24,6 +24,12 @@ use crate::common;
 use crate::log;
 use crate::db;
 use crate::gameimage;
+use lazy_static::lazy_static;
+
+lazy_static!
+{
+  pub static ref PROJECTS: Mutex<String> = Mutex::new(String::new());
+}
 
 // fn create_entry() {{{
 fn create_entry(project : db::project::Entry
@@ -263,20 +269,17 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         }
       }; // match
       // Transform projects in a ':' separated string to send to the backend
-      let vec_name_projects = lock.iter()
+      let str_name_projects = lock.iter()
         .filter(|e| e.0.is_checked())
         .map(|e| e.1.get_project())
         .collect::<Vec<String>>()
         .join(":");
-      log!("Projects to include in the image: {}", vec_name_projects);
-      // Wait for message & check return value
-      if let Err(e) = gameimage::package::package(&vec_name_projects)
+      // Update projects list
+      match PROJECTS.lock()
       {
-        clone_tx.send_awake(common::Msg::WindActivate);
-        clone_tx.send_awake(common::Msg::DrawCreator);
-        log!("Could not include projects into the image: {}", e);
-        return;
-      } // match
+        Ok(mut guard) => *guard = str_name_projects.clone(),
+        Err(e) => log!("Could not lock PROJECTS: {}", e),
+      }; // match
       // Refresh
       clone_tx.send_awake(common::Msg::WindActivate);
       clone_tx.send_awake(common::Msg::DrawDesktop);

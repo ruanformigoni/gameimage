@@ -59,6 +59,7 @@ pub fn name(tx: Sender<common::Msg>
         if c.is_alphanumeric() { Some(c) }
         else if c == '-' { Some(c) }
         else if c == '_' { Some(c) }
+        else if c == ':' { Some('-') }
         else if c == ' ' { Some('-') }
         else { None }
       })

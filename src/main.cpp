@@ -196,7 +196,7 @@ void desktop(ns_parser::Parser const& parser)
 // package() {{{
 void package(ns_parser::Parser const& parser)
 {
-  ns_package::package(parser["projects"]);
+  ns_package::package(parser["name"], parser["projects"]);
 } // package() }}}
 
 // main() {{{

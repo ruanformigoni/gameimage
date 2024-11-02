@@ -1,4 +1,4 @@
-#![feature(let_chains)]
+#![feature(let_chains,proc_macro_hygiene, stmt_expr_attributes)]
 #![allow(special_module_name)]
 
 use fltk::{
