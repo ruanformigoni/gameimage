@@ -139,9 +139,6 @@ inline decltype(auto) compress()
       .wait();
   };
 
-  // Commit
-  f_portal(db_build->path_file_image, "fim-commit");
-
   // Compress
   f_portal(db_build->path_file_image , "fim-layer" , "create" , db_metadata.path_dir_project_root , path_file_layer);
 
