@@ -185,7 +185,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let mut btn_platform = shared::fltk::button::rect::joystick()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Blue);
-  btn_platform.emit(tx, common::wizard_by_platform().unwrap_or(common::Msg::DrawFetch));
+  btn_platform.emit(tx, common::Msg::DrawFetch);
 
   // Erase package
   let mut btn_del = shared::fltk::button::rect::del()

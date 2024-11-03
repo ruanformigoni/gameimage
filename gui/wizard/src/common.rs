@@ -235,22 +235,6 @@ pub fn log_fd<T: std::io::Read, F: FnMut(std::sync::mpsc::Sender<String>, String
   }; // return
 } // fn: log_fd() }}}
 
-// pub fn wizard_by_platform() {{{
-pub fn wizard_by_platform() -> anyhow::Result<Msg>
-{
-
-  match env::var("GIMG_PLATFORM")?.to_lowercase().as_str()
-  {
-    "linux"      => Ok(Msg::DrawLinuxName),
-    "wine"      => Ok(Msg::DrawWineName),
-    "retroarch" => Ok(Msg::DrawRetroarchName),
-    "pcsx2"     => Ok(Msg::DrawPcsx2Name),
-    "rpcs3"     => Ok(Msg::DrawRpcs3Name),
-    _           => Err(ah!("Unrecognized platform")),
-  } // match
-
-} // fn: wizard_by_platform }}}
-
 // pub fn dir_build() {{{
 pub fn dir_build() -> anyhow::Result<()>
 {
