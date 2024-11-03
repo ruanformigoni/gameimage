@@ -224,7 +224,7 @@ inline void fetch(ns_enum::Platform platform)
 {
   std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer;
   fetchlist_layer = fetch_layer(platform);
-  ereturn_if(not fetchlist_layer, fetchlist_layer.error());
+  ethrow_if(not fetchlist_layer, fetchlist_layer.error());
 } // fetch() }}}
 
 // installed() {{{

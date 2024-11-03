@@ -49,7 +49,11 @@ fn fetch_backend(tx: Sender<common::Msg>, platform: common::Platform)
     match gameimage::fetch::fetch(platform)
     {
       Ok(_) => log!("Successfully fetched file"),
-      Err(e) => log!("Failed to fetch file: {}", e),
+      Err(e) =>
+      {
+        fltk::dialog::alert_default(&format!("Failed to fetch file: {}", e));
+        log!("Failed to fetch file: {}", e);
+      },
     }; // match
     clone_tx.send_awake(common::Msg::WindActivate);
     clone_tx.send_awake(common::Msg::DrawFetch);

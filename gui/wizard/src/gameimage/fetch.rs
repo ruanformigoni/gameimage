@@ -3,6 +3,8 @@ use crate::common;
 use crate::gameimage;
 use crate::lib;
 
+use anyhow::anyhow as ah;
+
 // fetch() {{{
 pub fn fetch(platform: common::Platform) -> anyhow::Result<i32>
 {
@@ -10,7 +12,7 @@ pub fn fetch(platform: common::Platform) -> anyhow::Result<i32>
   match gameimage::gameimage::gameimage_sync(args)
   {
     0 => { log!("Fetch on backend finished successfully"); Ok(0) },
-    rc => { log!("Failed to execute fetch on backend with {}", rc); Ok(rc) },
+    rc => { return Err(ah!("Failed to execute fetch on backend with {}", rc)); },
   } // match
 } // fetch() }}}
 
