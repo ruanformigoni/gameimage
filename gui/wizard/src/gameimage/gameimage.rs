@@ -4,8 +4,6 @@ use std::
   sync::{Arc,Mutex,mpsc},
 };
 
-use anyhow::anyhow as ah;
-
 use crate::lib;
 use crate::common;
 use crate::log_err;
@@ -31,13 +29,6 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
   dir_build()?;
 
   let path_binary_gameimage = binary()?;
-
-  // Open ipc
-  let ipc = match lib::ipc::Ipc::new()
-  {
-    Ok(ipc) => ipc,
-    Err(e) => { return Err(ah!("Could not create ipc instance: {}", e)); },
-  }; // match
 
   let mut handle = std::process::Command::new(&path_binary_gameimage)
     .stdout(std::process::Stdio::piped())
@@ -65,7 +56,6 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
     while let Ok(msg) = rx_log.recv()
     {
       log!("{}", msg);
-      fltk::app::awake();
     } // while
 
     log_err!(handle_stdout.join());
@@ -85,14 +75,18 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
     {
       log_err!(tx_code.send(1));
     } // else
-
-    fltk::app::awake();
   });
 
   let (tx_ipc, rx_ipc) = mpsc::channel();
   // Write from ipc to channel
   std::thread::spawn(move ||
   {
+    // Open ipc
+    let ipc = match lib::ipc::Ipc::new()
+    {
+      Ok(ipc) => ipc,
+      Err(e) => { log!("Could not create ipc instance: {}", e); return; },
+    }; // match
     // Write received message to transmitter
     while let Ok(msg) = ipc.recv()
     {
@@ -128,9 +122,10 @@ pub fn gameimage_sync_ipc<F>(args : Vec<&str>, mut f: F) -> i32
     Err(e) => { log!("Could not start backend: {}", e); return 1; },
   }; // if
 
-  // Spawn message receiver thread
-  std::thread::spawn(move || { f(rx_ipc); });
+  // Receive messages
+  f(rx_ipc);
 
+  // Recover exit code
   rx_code.recv().unwrap_or(1)
 } // fn: gameimage_sync_ipc }}}
 
