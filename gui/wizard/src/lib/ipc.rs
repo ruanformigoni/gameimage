@@ -42,27 +42,27 @@ pub fn recv(&self) -> anyhow::Result<String>
 {
   let mut buf: MsgBuf = unsafe { std::mem::zeroed() };
 
-  unsafe
+  let ret = unsafe
   {
-    match libc::msgrcv(self.msgid
+    libc::msgrcv(self.msgid
       , &mut buf as *mut MsgBuf as *mut libc::c_void
-      , std::mem::size_of::<[libc::c_char; 1024]>() as libc::size_t
+      , buf.mtext.len() as libc::size_t
       , 0
       , libc::MSG_NOERROR)
-    {
-      -1 =>
-      {
-        let cstr_msg_err = CString::new("Could not recover message").unwrap_or_default();
-        log!("Could not recover message");
-        libc::perror(cstr_msg_err.as_ptr());
-        return Err(ah!("Could not recover message"));
-      },
-      _ => (),
-    };
   };
 
-  let c_str: &CStr = unsafe { CStr::from_ptr(buf.mtext.as_ptr() as *const libc::c_char) };
-  let str_slice: &str = c_str.to_str().unwrap_or("");
+  if ret == -1
+  {
+    return Err(ah!("Could not recover message: {}", std::io::Error::last_os_error()));
+  } // if
+
+  let ret = ret as usize;
+  let bytes = &buf.mtext[..ret];
+
+  let str_slice = match std::str::from_utf8(bytes) {
+    Ok(s) => s,
+    Err(e) => return Err(ah!("Received message is not valid UTF-8: {}", e)),
+  };
 
   Ok(str_slice.to_owned())
 } // }}}

@@ -73,12 +73,14 @@ template<ns_concept::AsString T>
 void Ipc::send(T&& t)
 {
   std::string data = ns_string::to_string(t);
+  // Limit data size
+  size_t data_length = std::min(data.size(), sizeof(m_buffer));
   // Copy the contents of std::string to the message_text buffer
-  strncpy(m_buffer.message_text, data.c_str(), sizeof(m_buffer.message_text));
+  strncpy(m_buffer.message_text, data.c_str(), data_length);
   // Ensure null termination
-  m_buffer.message_text[sizeof(m_buffer.message_text) - 1] = '\0';
+  m_buffer.message_text[data_length] = '\0';
   // Send message
-  if ( msgsnd(m_message_queue_id, &m_buffer, sizeof(m_buffer), 0) == -1 )
+  if ( msgsnd(m_message_queue_id, &m_buffer, data_length, 0) == -1 )
   {
     perror("Failure to send message");
   } // if
