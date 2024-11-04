@@ -50,7 +50,6 @@ fn create_entry(project : db::project::Entry
 
   if let Ok(path_file_icon) = project.get_path_absolute(db::project::EntryName::PathFileIcon)
   {
-    log!("Path to icon: {}", path_file_icon.string());
     let path_file_resized = PathBuf::from(path_file_icon.clone())
       .parent()
       .unwrap()
