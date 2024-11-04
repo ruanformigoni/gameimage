@@ -5,8 +5,6 @@ use std::
   path,
 };
 
-use anyhow::anyhow as ah;
-
 use crate::frame;
 use crate::dimm;
 
@@ -174,6 +172,22 @@ macro_rules! log
     {
       let output = format!($($arg)*);
       common::impl_log(output.as_str());
+      eprintln!("{}", output);
+    }
+  }
+}
+// }}}
+
+// macro_rules log_alert! {{{
+#[macro_export]
+macro_rules! log_alert
+{
+  ($($arg:tt)*) =>
+  {
+    {
+      let output = format!($($arg)*);
+      common::impl_log(output.as_str());
+      fltk::dialog::alert_default(output.as_str());
       eprintln!("{}", output);
     }
   }

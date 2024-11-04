@@ -1,6 +1,5 @@
 use std::sync::{Arc,Mutex};
 use std::path::PathBuf;
-use std::fs;
 
 // Gui
 use fltk::prelude::*;
@@ -18,12 +17,13 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 
+use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
+use crate::log_alert;
 use crate::db;
-use crate::gameimage;
 use lazy_static::lazy_static;
 
 lazy_static!
@@ -176,10 +176,23 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   scroll.end();
 
   // Add new package
-  let mut btn_add = shared::fltk::button::rect::add()
+  let clone_tx = tx.clone();
+  let btn_add = shared::fltk::button::rect::add()
     .right_of(scroll.widget_mut(), dimm::border())
-    .with_color(Color::Green);
-  btn_add.emit(tx, common::Msg::DrawPlatform);
+    .with_color(Color::Green)
+    .with_callback(move |_|
+    {
+      match gameimage::fetch::installed()
+      {
+        Ok(vec_installed) => if vec_installed.is_empty()
+        {
+          log_alert!("Please download a platform before proceeding");
+          return;
+        }
+        Err(e) => { log_alert!("Failed to query platforms: {}", e); return; },
+      }; // match
+      clone_tx.send_awake(common::Msg::DrawPlatform);
+    });
 
   // Add new platform
   let mut btn_platform = shared::fltk::button::rect::joystick()
