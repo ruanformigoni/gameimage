@@ -23,7 +23,6 @@
 #include "cmd/package.hpp"
 
 #include "std/env.hpp"
-#include "std/filesystem.hpp"
 
 #include "lib/log.hpp"
 #include "lib/parser.hpp"
@@ -35,8 +34,6 @@ INITIALIZE_EASYLOGGINGPP
 // fetch() {{{
 void fetch(ns_parser::Parser const& parser)
 {
-  // Use self as IPC reference
-  fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
   ns_enum::IpcQuery entry_ipc_query = parser.contains("--ipc")?
       ns_enum::from_string<ns_enum::IpcQuery>(*parser.optional("--ipc"))
     : ns_enum::IpcQuery::NONE;
@@ -52,11 +49,9 @@ void fetch(ns_parser::Parser const& parser)
   {
     // Get installed platforms
     auto vec_platform = ns_fetch::installed();
-    // Open IPC
-    ns_ipc::Ipc ipc(path_file_ipc, true);
     // Send platforms
     std::ranges::for_each(vec_platform | std::views::transform([](auto&& e){ return ns_enum::to_string_lower(e); })
-      , [&](auto&& e){ ipc.send(e); }
+      , [&](auto&& e) { ns_ipc::ipc().send(e); }
     );
     return;
   } // if
@@ -155,11 +150,11 @@ void search(ns_parser::Parser const& parser)
 {
   if ( parser.contains("--remote") )
   {
-    ns_search::search_remote(parser.optional("query"), parser.contains("--ipc"));
+    ns_search::search_remote(parser.optional("query"));
     return;
   } // if
 
-  ns_search::search_local(parser.optional("query"), parser.contains("--ipc"));
+  ns_search::search_local(parser.optional("query"));
 } // search() }}}
 
 // select() {{{

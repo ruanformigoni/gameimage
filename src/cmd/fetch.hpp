@@ -58,8 +58,7 @@ struct fetchlist_layer_ret_t
 
 // fetch_file_from_url() {{{
 [[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file
-  , cpr::Url const& url
-  , std::optional<std::string> key_ipc = std::nullopt)
+  , cpr::Url const& url)
 {
   ns_log::write('i', "Fetch file '", url.c_str(), "' to '", path_file, "'");
   // Create upper directories
@@ -68,9 +67,6 @@ struct fetchlist_layer_ret_t
   auto ofile = std::ofstream{path_file, std::ios::binary};
   // Check if file is open
   qreturn_if(not ofile.is_open(), std::unexpected("Failed to open file '{}' for writing"_fmt(path_file)));
-  // Initialize IPC
-  std::unique_ptr<ns_ipc::Ipc> ptr_ipc = nullptr;
-  ns_log::exception([&]{ ptr_ipc = std::make_unique<ns_ipc::Ipc>(key_ipc.value_or(path_file)); });
   // fetch_callback
   auto fetch_callback = [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow, cpr::cpr_off_t, cpr::cpr_off_t, intptr_t)
   {
@@ -84,7 +80,7 @@ struct fetchlist_layer_ret_t
       // Update progress
       int percentage = static_cast<int>((downloadNow * 100) / downloadTotal);
       // Send progress to watching processes
-      if ( ptr_ipc ){ ptr_ipc->send(percentage); }
+      ns_ipc::ipc().send(percentage);
       // Log
       ns_log::write('i', "Download progress: ", percentage, "%");
     }
@@ -95,7 +91,7 @@ struct fetchlist_layer_ret_t
   // Check for success
   qreturn_if(r.status_code != 200,  std::unexpected("Failure to fetch file '{}' with code '{}'"_fmt(path_file, r.status_code)));
   // Set to progress 100%
-  if ( ptr_ipc ){ ptr_ipc->send(100); }
+  ns_ipc::ipc().send(100);
   ns_log::write('i', "Download progress: 100%");
   // Make file executable
   using std::filesystem::perms;
@@ -136,14 +132,13 @@ struct fetchlist_layer_ret_t
 
 // fetch_on_failed_check() {{{
 [[nodiscard]] inline std::error<std::string> fetch_on_failed_check(fs::path const& path_file
-  , cpr::Url const& url
-  , std::optional<std::string> key_ipc = std::nullopt)
+  , cpr::Url const& url)
 {
   qreturn_if(check_file(path_file, url), std::nullopt);
 
   ns_log::write('i', "Failed to check SHA for file ", path_file);
 
-  if(auto expected_path_file = fetch_file_from_url(path_file, url, key_ipc); not expected_path_file )
+  if(auto expected_path_file = fetch_file_from_url(path_file, url); not expected_path_file )
   {
     return expected_path_file.error();
   } // if
@@ -184,7 +179,7 @@ struct fetchlist_layer_ret_t
   auto error_fetch = fetch_on_failed_check(path_target, url);
   qreturn_if(error_fetch, std::unexpected(*error_fetch));
   // Send 100% completion
-  ns_ipc::Ipc(path_target).send(100);
+  ns_ipc::ipc().send(100);
   // Return fetched path and url
   return *expected_path_and_url_layer;
 } // fetch() }}}
@@ -266,17 +261,9 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
 // ipc() {{{
 inline void ipc(ns_enum::Platform platform , ns_enum::IpcQuery entry_ipc_query)
 {
-  // Use self as IPC reference
-  fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
-
-  // Open IPC
-  ns_ipc::Ipc ipc(path_file_ipc, true);
-  ns_log::write('i', "Path to ipc reference file: '", path_file_ipc, "'");
-
-  // Send layer path or url
   auto expected_path_and_url_layer = fetchlist_layer(platform);
   ethrow_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
-  ipc.send((entry_ipc_query == ns_enum::IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
+  ns_ipc::ipc().send((entry_ipc_query == ns_enum::IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
 } // ipc() }}}
 
 } // namespace ns_fetch

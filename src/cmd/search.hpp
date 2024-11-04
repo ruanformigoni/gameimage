@@ -108,35 +108,19 @@ inline std::vector<std::string> search_remote()
 } // search_remote() }}}
 
 // send() {{{
-auto send(auto&& vec_paths, std::unique_ptr<ns_ipc::Ipc> const& ipc)
+auto send(auto&& vec_paths, ns_ipc::Ipc& ipc)
 {
-  if ( ipc != nullptr )
-  {
-    std::ranges::for_each(vec_paths, [&](auto&& e){ ipc->send(e); });
-    return;
-  } // if
-
-  std::ranges::for_each(vec_paths, [&](auto&& e){ ns_log::write('i', "Found: ", e); });
+  std::ranges::for_each(vec_paths, [&](auto&& e){ ipc.send(e); });
 } // send() }}}
 
 } // anonymous namespace
 
 // search_remote() {{{
-inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
+inline void search_remote(std::optional<std::string> opt_query)
 {
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Could not open build database");
   auto db_metadata = db_build->find(db_build->project);
-
-  std::unique_ptr<ns_ipc::Ipc> ipc;
-
-  if ( use_ipc )
-  {
-    // Use self as IPC reference
-    fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
-    // Create ipc
-    ipc = std::make_unique<ns_ipc::Ipc>(path_file_ipc, true);
-  } // if
 
   // Retrieve operation selected by user
   Op op;
@@ -156,7 +140,7 @@ inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
   // Handle fetch for each platform
   switch(db_metadata.platform)
   {
-    case ns_enum::Platform::RETROARCH: send(search_remote(), ipc);
+    case ns_enum::Platform::RETROARCH: send(search_remote(), ns_ipc::ipc());
     break;
     case ns_enum::Platform::LINUX:
     case ns_enum::Platform::WINE:
@@ -167,23 +151,13 @@ inline void search_remote(std::optional<std::string> opt_query, bool use_ipc)
 } // search_remote() }}}
 
 // search_local() {{{
-inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
+inline void search_local(std::optional<std::string> opt_query)
 {
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Could not open build database");
   auto db_metadata = db_build->find(db_build->project);
   auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not open project database");
-
-  std::unique_ptr<ns_ipc::Ipc> ipc;
-
-  if ( use_ipc )
-  {
-    // Use self as IPC reference
-    fs::path path_file_ipc = ns_fs::ns_path::file_self<true>()._ret;
-    // Create ipc
-    ipc = std::make_unique<ns_ipc::Ipc>(path_file_ipc, true);
-  } // if
 
   // Retrieve operation selected by user
   Op op;
@@ -215,7 +189,7 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
       // Get files iterator
       auto it_files = search_files(path_dir_search, R"(.*)", "");
       // Save files to json
-      send(it_files, ipc);
+      send(it_files, ns_ipc::ipc());
     } // case
     break;
     case ns_enum::Platform::WINE:
@@ -230,12 +204,12 @@ inline void search_local(std::optional<std::string> opt_query, bool use_ipc)
       std::vector<fs::path> paths_file_matches;
       std::ranges::for_each(it_files, [&](fs::path const& e){ paths_file_matches.push_back(fs::path("wine") / e); });
       // Save files to json
-      send(paths_file_matches, ipc);
+      send(paths_file_matches, ns_ipc::ipc());
     } // case
     break;
-    case ns_enum::Platform::RETROARCH: send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
-    case ns_enum::Platform::PCSX2    : send(search_files(path_dir_search, R"(.*)", ""), ipc); break;
-    case ns_enum::Platform::RPCS3    : send(search_dirs(path_dir_search), ipc);               break;
+    case ns_enum::Platform::RETROARCH: send(search_files(path_dir_search, R"(.*)", ""), ns_ipc::ipc()); break;
+    case ns_enum::Platform::PCSX2    : send(search_files(path_dir_search, R"(.*)", ""), ns_ipc::ipc()); break;
+    case ns_enum::Platform::RPCS3    : send(search_dirs(path_dir_search), ns_ipc::ipc());               break;
   } // switch
 
 } // search_local() }}}

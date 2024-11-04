@@ -7,7 +7,6 @@
 
 #include <cpr/cpr.h>
 
-#include "../../lib/ipc.hpp"
 #include "../../lib/log.hpp"
 #include "../../lib/sha.hpp"
 
