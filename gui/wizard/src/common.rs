@@ -54,7 +54,6 @@ pub enum Msg
 {
   DrawWelcome,
   DrawPlatform,
-  DrawFetch,
   DrawCreator,
   DrawDesktop,
 

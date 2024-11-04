@@ -13,6 +13,7 @@ use lazy_static::lazy_static;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
+use crate::db;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -31,7 +32,58 @@ lazy_static!
     m.insert(common::Platform::Rcps3, common::Msg::DrawRpcs3Name);
     m
   };
+
+  pub static ref HASH_PLATFORM_DESCR: HashMap<&'static str, &'static str> =
+  {
+    let mut m = HashMap::new();
+    m.insert("linux", " Linux - Play linux native games (required)");
+    m.insert("wine", " Wine - Play windows games");
+    m.insert("pcsx2", " Pcsx2 - Play playstation 2 games");
+    m.insert("rpcs3", " Rcps3 - Play playstation 3 games");
+    m.insert("retroarch", " Retroarch - Play games from retro consoles");
+    m
+  };
+  pub static ref HASH_DESC_PLATFORM: HashMap<&'static str, &'static str> =
+  {
+    let mut m = HashMap::new();
+    for (key, value) in HASH_PLATFORM_DESCR.iter() { m.insert(*value, *key); }
+    m
+  };
 }
+
+// fn fetch_backend() {{{
+fn fetch_backend(tx: Sender<common::Msg>
+  , platform: common::Platform
+  , mut widget_progress: fltk::misc::Progress)
+{
+  tx.send_awake(common::Msg::WindDeactivate);
+  let clone_tx = tx.clone();
+  let f_progress = move |rx: std::sync::mpsc::Receiver<String>|
+  {
+    while let Ok(msg) = rx.recv()
+    {
+      match msg.parse::<f64>()
+      {
+        Ok(progress) => widget_progress.set_value(progress),
+        Err(e) => { log!("Could not convert progress to float: {}", e); return; },
+      }; // match
+    }; // match
+  };
+  std::thread::spawn(move ||
+  {
+    match gameimage::fetch::fetch(platform, f_progress)
+    {
+      Ok(_) => log!("Successfully fetched file"),
+      Err(e) =>
+      {
+        fltk::dialog::alert_default(&format!("Failed to fetch file: {}", e));
+        log!("Failed to fetch file: {}", e);
+      },
+    }; // match
+    clone_tx.send_awake(common::Msg::WindActivate);
+    clone_tx.send_awake(common::Msg::DrawPlatform);
+  });
+} // fn fetch_backend() }}}
 
 // fn platform_add() {{{
 fn platform_add(tx: Sender<common::Msg>
@@ -47,31 +99,112 @@ fn platform_add(tx: Sender<common::Msg>
   row.set_type(PackType::Horizontal);
   row.set_spacing(dimm::border());
   // Create progress bar
-  let _ = fltk::frame::Frame::default()
-    .with_label(frame::fetch::HASH_PLATFORM_DESCR.get(platform.as_str()).unwrap_or(&""))
+  let mut prog = fltk::misc::Progress::default()
+    .with_label(HASH_PLATFORM_DESCR.get(platform.as_str()).unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
     .with_frame(FrameType::BorderBox)
-    .with_color(Color::BackGround);
+    .with_color(Color::BackGround)
+    .with_color_selected(Color::Blue);
+  if is_installed{ prog.set_value(100.0); }
   // Create start button
-  let mut btn_start = shared::fltk::button::rect::arrow_forward()
-    .with_color(if is_installed { Color::Green } else { Color::BackGround })
-    .with_focus(false);
-  let clone_tx = tx.clone();
-  btn_start.set_callback(move |_|
-  {
-    std::env::set_var("GIMG_PLATFORM", platform.as_str());
-    clone_tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
-  });
-  if ! is_installed { btn_start.deactivate(); }
-  row.fixed(&btn_start, dimm::width_button_rec());
+  let btn_platform = if is_installed { shared::fltk::button::rect::arrow_forward() } else {  shared::fltk::button::rect::cloud() }
+    .with_color(if is_installed { Color::Green } else { Color::Blue })
+    .with_focus(false)
+    .with_callback(move |_|
+    {
+      if is_installed
+      {
+        std::env::set_var("GIMG_PLATFORM", platform.as_str());
+        tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
+      }
+      else
+      {
+        fetch_backend(tx, platform.clone(), prog.clone());
+      } // else
+    });
+  row.fixed(&btn_platform, dimm::width_button_rec());
   row.end();
   row
 } // fn platform_add() }}}
+
+// fn platform_add_wine() {{{
+fn platform_add_wine(tx: Sender<common::Msg>
+  , widget: &fltk::widget::Widget, distributions: &HashMap<String,String>
+  , is_installed: bool) -> fltk::group::Flex
+{
+  let mut col = fltk::group::Flex::new(widget.x() + dimm::border()
+    , widget.y() + dimm::border()
+    , widget.w() - dimm::border()*2
+    , dimm::height_button_wide()*2 + dimm::border()
+    , ""
+  );
+  col.set_type(PackType::Vertical);
+  col.set_spacing(dimm::border());
+  // Row with platform description and fetch button
+  let mut row = fltk::group::Flex::new(col.x(), col.y(), col.w() , dimm::height_button_wide() , "");
+  row.set_type(PackType::Horizontal);
+  row.set_spacing(dimm::border());
+  // Create progress bar
+  let mut prog = fltk::misc::Progress::default()
+    .with_label(HASH_PLATFORM_DESCR.get("wine").unwrap_or(&""))
+    .with_align(Align::Left | Align::Inside)
+    .with_frame(FrameType::BorderBox)
+    .with_color(Color::BackGround)
+    .with_color_selected(Color::Blue);
+  if is_installed{ prog.set_value(100.0); }
+  // Create start button
+  let f_button = if is_installed { || { shared::fltk::button::rect::arrow_forward() } } else { || { shared::fltk::button::rect::cloud() } };
+  let btn_fetch = f_button()
+    .with_color(if is_installed { Color::Green } else { Color::Blue })
+    .with_focus(false)
+    .with_callback(move |_|
+    {
+      if is_installed
+      {
+        std::env::set_var("GIMG_PLATFORM", common::Platform::Wine.as_str());
+        tx.send_awake(*HASH_PLATFORM_MSG.get(&common::Platform::Wine).unwrap());
+      }
+      else
+      {
+        fetch_backend(tx, common::Platform::Wine, prog.clone());
+      } // else
+    });
+  row.fixed(&btn_fetch, dimm::width_button_rec());
+  row.end();
+  col.fixed(&row, dimm::height_button_wide());
+  // Create distribution dropdown menu
+  let mut menubutton = fltk::menu::MenuButton::default()
+    .with_frame(FrameType::BorderBox)
+    .with_color(Color::BackGround)
+    .with_color_selected(Color::Blue)
+    .with_focus(false)
+    .with_callback(|e|
+    {
+      let choice = if let Some(choice) = e.choice() { choice } else { return; };
+      std::env::set_var("GIMG_WINE_DIST", &choice);
+      e.set_label(&choice);
+    });
+  menubutton.add_choice(&distributions.keys().map(|e| e.clone()).collect::<Vec<String>>().join("|"));
+  // Init value for menubutton
+  match std::env::var("GIMG_WINE_DIST")
+  {
+    Ok(var) => menubutton.set_label(&var),
+    Err(_) =>
+    {
+      std::env::set_var("GIMG_WINE_DIST", "default");
+      menubutton.set_label("default");
+    }
+  } // match
+  col.fixed(&menubutton, dimm::height_button_wide());
+  col.end();
+  col
+} // fn platform_add_wine() }}}
 
 // fn platform_list() {{{
 fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyhow::Result<()>
 {
   let vec_platforms = gameimage::fetch::installed()?;
+  let db_fetch = db::fetch::read()?;
   let mut col = fltk::group::Flex::new(widget.x() + dimm::border()
     , widget.y() + dimm::border()
     , widget.w() - dimm::border()*2
@@ -82,16 +215,16 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyh
   col.set_frame(FrameType::BorderBox);
   col.set_spacing(dimm::border());
   col.set_margin(dimm::border());
-  let row_linux     = platform_add(tx, &col.as_base_widget(), common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
+  let row_linux         = platform_add(tx, &col.as_base_widget(), common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
   let mut row_rpcs3     = platform_add(tx, &col.as_base_widget(), common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
   let mut row_retroarch = platform_add(tx, &col.as_base_widget(), common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));
   let mut row_pcsx2     = platform_add(tx, &col.as_base_widget(), common::Platform::Pcsx2, vec_platforms.contains(&common::Platform::Pcsx2));
-  let mut row_wine      = platform_add(tx, &col.as_base_widget(), common::Platform::Wine, vec_platforms.contains(&common::Platform::Wine));
+  let mut row_wine      = platform_add_wine(tx, &col.as_base_widget(), &db_fetch.wine.layer, vec_platforms.contains(&common::Platform::Wine));
   col.fixed(&row_linux, dimm::height_button_wide());
   col.fixed(&row_rpcs3, dimm::height_button_wide());
   col.fixed(&row_retroarch, dimm::height_button_wide());
   col.fixed(&row_pcsx2, dimm::height_button_wide());
-  col.fixed(&row_wine, dimm::height_button_wide());
+  col.fixed(&row_wine, dimm::height_button_wide()*2 + dimm::border());
   if ! vec_platforms.contains(&common::Platform::Linux)
   {
     row_rpcs3.deactivate();

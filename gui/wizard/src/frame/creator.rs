@@ -17,12 +17,10 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 
-use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
-use crate::log_alert;
 use crate::db;
 use lazy_static::lazy_static;
 
@@ -175,34 +173,15 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   scroll.end();
 
   // Add new package
-  let clone_tx = tx.clone();
-  let btn_add = shared::fltk::button::rect::add()
+  let mut btn_add = shared::fltk::button::rect::add()
     .right_of(scroll.widget_mut(), dimm::border())
-    .with_color(Color::Green)
-    .with_callback(move |_|
-    {
-      match gameimage::fetch::installed()
-      {
-        Ok(vec_installed) => if vec_installed.is_empty()
-        {
-          log_alert!("Please download a platform before proceeding");
-          return;
-        }
-        Err(e) => { log_alert!("Failed to query platforms: {}", e); return; },
-      }; // match
-      clone_tx.send_awake(common::Msg::DrawPlatform);
-    });
-
-  // Add new platform
-  let mut btn_platform = shared::fltk::button::rect::joystick()
-    .below_of(&btn_add, dimm::border())
-    .with_color(Color::Blue);
-  btn_platform.emit(tx, common::Msg::DrawFetch);
+    .with_color(Color::Green);
+  btn_add.emit(tx, common::Msg::DrawPlatform);
 
   // Erase package
   let mut btn_del = shared::fltk::button::rect::del()
     .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_platform, dimm::border())
+    .below_of(&btn_add, dimm::border())
     .with_color(Color::Red);
   let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();
