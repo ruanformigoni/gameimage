@@ -170,7 +170,9 @@ macro_rules! log
   ($($arg:tt)*) =>
   {
     {
-      let output = format!($($arg)*);
+      let output = format!("{}:{}: "
+        , std::path::PathBuf::from(file!()).file_name().unwrap_or_default().to_str().unwrap_or("Unknown file")
+        , line!()) + &format!($($arg)*);
       common::impl_log(output.as_str());
       eprintln!("{}", output);
     }
