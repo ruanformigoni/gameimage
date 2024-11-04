@@ -286,16 +286,6 @@ inline void ipc(ns_enum::Platform platform , ns_enum::IpcQuery entry_ipc_query)
   ipc.send((entry_ipc_query == ns_enum::IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
 } // ipc() }}}
 
-// url_clear() {{{
-inline void url_clear(ns_enum::Platform platform)
-{
-  // Create image path
-  fs::path path_file_image = get_path_file_image(platform);
-  fs::path path_dir_image = path_file_image.parent_path();
-  fs::path path_file_json = path_dir_image / "gameimage.fetch.json";
-  fs::remove(path_file_json);
-} // url_clear() }}}
-
 } // namespace ns_fetch
 
 /* vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :*/
