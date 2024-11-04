@@ -58,7 +58,8 @@ struct fetchlist_layer_ret_t
 
 // fetch_file_from_url() {{{
 [[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file
-  , cpr::Url const& url)
+  , cpr::Url const& url
+  , bool send_ipc = true)
 {
   ns_log::write('i', "Fetch file '", url.c_str(), "' to '", path_file, "'");
   // Create upper directories
@@ -80,7 +81,7 @@ struct fetchlist_layer_ret_t
       // Update progress
       int percentage = static_cast<int>((downloadNow * 100) / downloadTotal);
       // Send progress to watching processes
-      ns_ipc::ipc().send(percentage);
+      if ( send_ipc ){  ns_ipc::ipc().send(percentage); }
       // Log
       ns_log::write('i', "Download progress: ", percentage, "%");
     }
@@ -91,7 +92,7 @@ struct fetchlist_layer_ret_t
   // Check for success
   qreturn_if(r.status_code != 200,  std::unexpected("Failure to fetch file '{}' with code '{}'"_fmt(path_file, r.status_code)));
   // Set to progress 100%
-  ns_ipc::ipc().send(100);
+  if ( send_ipc ) { ns_ipc::ipc().send(100); }
   ns_log::write('i', "Download progress: 100%");
   // Make file executable
   using std::filesystem::perms;
@@ -109,12 +110,12 @@ struct fetchlist_layer_ret_t
   ns_sha::SHA_TYPE sha_type;
 
   // Fetch SHA
-  if ( auto expected256 = fetch_file_from_url(path_file_src.string() + ".sha256sum", url.str() + ".sha256sum") )
+  if ( auto expected256 = fetch_file_from_url(path_file_src.string() + ".sha256sum", url.str() + ".sha256sum", false) )
   {
     path_file_sha = *expected256;
     sha_type = ns_sha::SHA_TYPE::SHA256;
   } // if
-  else if ( auto expected512 = fetch_file_from_url(path_file_src.string() + ".sha512sum", url.str() + ".sha512sum") )
+  else if ( auto expected512 = fetch_file_from_url(path_file_src.string() + ".sha512sum", url.str() + ".sha512sum", false) )
   {
     path_file_sha = *expected512;
     sha_type = ns_sha::SHA_TYPE::SHA512;
