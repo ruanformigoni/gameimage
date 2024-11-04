@@ -4,6 +4,8 @@ use std::
   sync::{Arc,Mutex,mpsc},
 };
 
+use anyhow::anyhow as ah;
+
 use crate::lib;
 use crate::common;
 use crate::log_err;
@@ -29,6 +31,13 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
   dir_build()?;
 
   let path_binary_gameimage = binary()?;
+
+  // Open ipc
+  let ipc = match lib::ipc::Ipc::new()
+  {
+    Ok(ipc) => ipc,
+    Err(e) => { return Err(ah!("Could not create ipc instance: {}", e)); },
+  }; // match
 
   let mut handle = std::process::Command::new(&path_binary_gameimage)
     .stdout(std::process::Stdio::piped())
@@ -84,12 +93,6 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
   // Write from ipc to channel
   std::thread::spawn(move ||
   {
-    // Open ipc
-    let ipc = match lib::ipc::Ipc::new()
-    {
-      Ok(ipc) => ipc,
-      Err(e) => { log!("Could not create ipc instance: {}", e); return; },
-    }; // match
     // Write received message to transmitter
     while let Ok(msg) = ipc.recv()
     {

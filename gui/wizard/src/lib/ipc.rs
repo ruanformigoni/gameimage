@@ -28,55 +28,11 @@ impl Ipc
 // pub fn new() {{{
 pub fn new() -> anyhow::Result<Ipc>
 {
-  log!("Starting ipc");
-
-  // Get path to backend binary
-  let path_file_backend = gameimage::gameimage::binary()?;
-
-  // Error out if file not exists
-  if ! path_file_backend.exists()
+  let msgid = match Ipc::get_msgid(libc::IPC_CREAT)
   {
-    return Err(ah!("File to create ipc communication does not exist"));
-  } // if
-
-  // Wait for backend to create fifo
-  let cstr_path = match CString::new(path_file_backend.string().clone())
-  {
-    Ok(cstr) => cstr,
-    Err(e) =>
-    {
-      log!("Could not create C string: {}", e);
-      return Err(ah!("Could not create C string: {}", e));
-    },
-  }; // match
-
-  log!("Create/Access message queue on {}", cstr_path.clone().into_string().unwrap_or(String::new()));
-
-  let key = match unsafe { libc::ftok(cstr_path.as_ptr(), 65) }
-  {
-    -1 =>
-    {
-      let cstr_msg_err = CString::new("Failed to get key from message queue").unwrap_or_default();
-      log!("Failed to get key from message queue: {}", errno::errno());
-      unsafe { libc::perror(cstr_msg_err.as_ptr()); }
-      return Err(ah!("Failed to get key from message queue: {}", errno::errno()));
-    },
-    key => key,
+    Ok(msgid) => msgid,
+    Err(e) => return Err(ah!("Failed to create message queue: {}", e)),
   };
-  log!("Frontend key is: {}", key);
-
-  let msgid = match unsafe { libc::msgget(key, 0o666 | libc::IPC_CREAT) }
-  {
-    -1 =>
-    {
-      let cstr_msg_err = CString::new("Failed to get message queue from key").unwrap_or_default();
-      log!("Failed to get message queue from key: {}", errno::errno());
-      unsafe { libc::perror(cstr_msg_err.as_ptr()); }
-      return Err(ah!("Failed to get message queue from key: {}", errno::errno()));
-    },
-    msgid => msgid,
-  };
-  log!("Frontend msgid is: {}", msgid);
 
   Ok(Ipc { msgid })
 } // }}}
@@ -112,7 +68,7 @@ pub fn recv(&self) -> anyhow::Result<String>
 } // }}}
 
 // fn get_msgid() {{{
-fn get_msgid() -> anyhow::Result<i32>
+fn get_msgid(flags: i32) -> anyhow::Result<i32>
 {
   let path_file_backend = match gameimage::gameimage::binary()
   {
@@ -132,8 +88,9 @@ fn get_msgid() -> anyhow::Result<i32>
     -1 => return Err(ah!("Failed to get key to check message queue: {}", errno::errno())),
     key => key,
   };
+  log!("Frontend key is: {}", key);
 
-  match unsafe { libc::msgget(key, 0o666) }
+  match unsafe { libc::msgget(key, 0o666 | flags) }
   {
     -1 => return Err(ah!("Message queue does not yet exist, no need to close: {}", errno::errno())),
     msgid => Ok(msgid),
@@ -143,7 +100,7 @@ fn get_msgid() -> anyhow::Result<i32>
 // pub fn close() {{{
 pub fn close()
 {
-  let msgid = match Ipc::get_msgid()
+  let msgid = match Ipc::get_msgid(0)
   {
     Ok(msgid) => msgid,
     Err(e) => { log!("Could not retrieve msgid: {}", e); return; }

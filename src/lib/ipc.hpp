@@ -36,7 +36,6 @@ class Ipc
     message_buffer m_buffer;
     Ipc();
   public:
-    ~Ipc();
     template<ns_concept::AsString T>
     void send(T&& t);
   friend Ipc& ipc();
@@ -61,24 +60,13 @@ inline Ipc::Ipc()
   ns_log::write('i', "Generated message_queue key: ", m_key);
 
   // Connect to the message queue
-  if (m_message_queue_id = msgget(m_key, 0666 | IPC_CREAT); m_message_queue_id == -1 )
+  if (m_message_queue_id = msgget(m_key, 0666); m_message_queue_id == -1 )
   {
     perror("Could not create message queue");
     "msgget failed, could not create message queue for identifier '{}': {}"_throw(identifier, strerror(errno));
   } // if
   ns_log::write('i', "Message queue id: ", m_message_queue_id);
 } // Ipc::Ipc() }}}
-
-// Ipc::~Ipc() {{{
-inline Ipc::~Ipc()
-{
-  // // Close
-  // if ( msgctl(m_message_queue_id, IPC_RMID, NULL) == -1 )
-  // {
-  //   ns_log::write('i', "Could not remove the message queue");
-  //   perror("Could not remove message queue");
-  // } // if
-} // Ipc::~Ipc() }}}
 
 // Ipc::send() {{{
 template<ns_concept::AsString T>
