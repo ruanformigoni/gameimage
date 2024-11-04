@@ -13,9 +13,7 @@ macro_rules! log_return
 // search() {{{
 fn search(str_type : &str, use_remote : bool) -> anyhow::Result<Vec<std::path::PathBuf>>
 {
-  let binary = gameimage::gameimage::binary()?;
-
-  let ipc = match lib::ipc::Ipc::new(binary, || {})
+  let ipc = match lib::ipc::Ipc::new()
   {
     Ok(ipc) => ipc,
     Err(e) => { log_return!("Could not create ipc instance: {}", e); },

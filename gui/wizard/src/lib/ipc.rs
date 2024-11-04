@@ -6,13 +6,14 @@ use shared::std::PathBufExt;
 
 use crate::log;
 use crate::common;
+use crate::gameimage;
 
 // struct MsgBuf {{{
 #[repr(C)]
 struct MsgBuf
 {
   mtype: libc::c_long,
-  mtext: [libc::c_char; 1024],
+  mtext: [u8; 1024],
 } // struct MsgBuf }}}
 
 // pub struct Ipc {{{
@@ -21,75 +22,25 @@ pub struct Ipc
   msgid : i32,
 } // struct Ipc }}}
 
-// impl Drop for Ipc {{{
-impl Drop for Ipc
-{
-  fn drop(&mut self)
-  {
-    unsafe
-    {
-      let rc = libc::msgctl(self.msgid, libc::IPC_RMID, std::ptr::null_mut());
-      // Success
-      if rc == 0 { log!("Successfully closed the message queue {}", self.msgid); return; }
-      // Fail
-      log!("Could not remove the message queue");
-      libc::perror(CString::new("Could not remove message queue").unwrap_or_default().as_ptr());
-    } // unsafe
-  } // drop
-} // Drop }}}
-
 impl Ipc
 {
 
-// fn close() {{{
-fn close(path : &std::path::PathBuf)
-{
-  // Wait for backend to create fifo
-  let cstr_path = match CString::new(path.string().clone())
-  {
-    Ok(cstr) => cstr,
-    Err(e) => { log!("Could not create C string: {}", e); return; },
-  }; // match
-
-  let key = match unsafe { libc::ftok(cstr_path.as_ptr(), 65) }
-  {
-    -1 => { log!("Failed to get key to check message queue: {}", errno::errno()); return; },
-    key => key,
-  };
-
-  let msgid = match unsafe { libc::msgget(key, 0o666) }
-  {
-    -1 => { log!("Message queue does not yet exist, no need to close: {}", errno::errno()); return; },
-    msgid => msgid,
-  };
-
-  match unsafe { libc::msgctl(msgid, libc::IPC_RMID, std::ptr::null_mut()) }
-  {
-    -1 => log!("Could not close existing message queue"),
-    _ => log!("Closed existing message queue"),
-  } // match
-} // close }}}
-
 // pub fn new() {{{
-pub fn new<F>(path : std::path::PathBuf, mut f_wait : F) -> anyhow::Result<Ipc>
-where F: FnMut() + 'static + Send + Sync
+pub fn new() -> anyhow::Result<Ipc>
 {
-  log!("Starting ipc for '{}", path.string());
+  log!("Starting ipc");
 
-  // Close existing queue
-  Ipc::close(&path);
-
-  // Wait for start condition
-  f_wait();
+  // Get path to backend binary
+  let path_file_backend = gameimage::gameimage::binary()?;
 
   // Error out if file not exists
-  if ! path.exists()
+  if ! path_file_backend.exists()
   {
     return Err(ah!("File to create ipc communication does not exist"));
   } // if
 
   // Wait for backend to create fifo
-  let cstr_path = match CString::new(path.string().clone())
+  let cstr_path = match CString::new(path_file_backend.string().clone())
   {
     Ok(cstr) => cstr,
     Err(e) =>
@@ -137,11 +88,11 @@ pub fn recv(&self) -> anyhow::Result<String>
 
   unsafe
   {
-    match libc::msgrcv(self.msgid,
-      &mut buf as *mut MsgBuf as *mut libc::c_void,
-      std::mem::size_of::<[libc::c_char; 1024]>() as libc::size_t,
-      0,
-      libc::MSG_NOERROR,)
+    match libc::msgrcv(self.msgid
+      , &mut buf as *mut MsgBuf as *mut libc::c_void
+      , std::mem::size_of::<[libc::c_char; 1024]>() as libc::size_t
+      , 0
+      , libc::MSG_NOERROR)
     {
       -1 =>
       {
@@ -150,17 +101,60 @@ pub fn recv(&self) -> anyhow::Result<String>
         libc::perror(cstr_msg_err.as_ptr());
         return Err(ah!("Could not recover message"));
       },
-      rc => rc,
-    }
+      _ => (),
+    };
   };
 
-  let c_str: &CStr = unsafe { CStr::from_ptr(buf.mtext.as_ptr()) };
+  let c_str: &CStr = unsafe { CStr::from_ptr(buf.mtext.as_ptr() as *const libc::c_char) };
   let str_slice: &str = c_str.to_str().unwrap_or("");
-
-  if str_slice == "IPC_QUIT" { return Err(ah!("Quit IPC with signal")); } // if
 
   Ok(str_slice.to_owned())
 } // }}}
+
+// fn get_msgid() {{{
+fn get_msgid() -> anyhow::Result<i32>
+{
+  let path_file_backend = match gameimage::gameimage::binary()
+  {
+    Ok(path_file_backend) => path_file_backend,
+    Err(e) => return Err(ah!("Could not get path to backend binary for ipc: {}", e)),
+  };
+
+  // Wait for backend to create fifo
+  let cstr_path = match CString::new(path_file_backend.string().clone())
+  {
+    Ok(cstr) => cstr,
+    Err(e) => return Err(ah!("Could not create C string: {}", e)),
+  }; // match
+
+  let key = match unsafe { libc::ftok(cstr_path.as_ptr(), 65) }
+  {
+    -1 => return Err(ah!("Failed to get key to check message queue: {}", errno::errno())),
+    key => key,
+  };
+
+  match unsafe { libc::msgget(key, 0o666) }
+  {
+    -1 => return Err(ah!("Message queue does not yet exist, no need to close: {}", errno::errno())),
+    msgid => Ok(msgid),
+  }
+} // fn get_msgid() }}}
+
+// pub fn close() {{{
+pub fn close()
+{
+  let msgid = match Ipc::get_msgid()
+  {
+    Ok(msgid) => msgid,
+    Err(e) => { log!("Could not retrieve msgid: {}", e); return; }
+  };
+
+  match unsafe { libc::msgctl(msgid, libc::IPC_RMID, std::ptr::null_mut()) }
+  {
+    -1 => log!("Could not close existing message queue"),
+    _ => log!("Closed existing message queue"),
+  } // match
+} // close }}}
 
 } // impl Ipc
 

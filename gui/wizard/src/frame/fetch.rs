@@ -13,6 +13,7 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
 use crate::db;
+use crate::lib;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -40,13 +41,26 @@ lazy_static!
 }
 
 // fn fetch_backend() {{{
-fn fetch_backend(tx: Sender<common::Msg>, platform: common::Platform)
+fn fetch_backend(tx: Sender<common::Msg>
+  , platform: common::Platform
+  , mut widget_progress: fltk::misc::Progress)
 {
   tx.send_awake(common::Msg::WindDeactivate);
   let clone_tx = tx.clone();
+  let f_progress = move |rx: std::sync::mpsc::Receiver<String>|
+  {
+    while let Ok(msg) = rx.recv()
+    {
+      match msg.parse::<f64>()
+      {
+        Ok(progress) => widget_progress.set_value(progress),
+        Err(e) => { log!("Could not convert progress to float: {}", e); return; },
+      }; // match
+    }; // match
+  };
   std::thread::spawn(move ||
   {
-    match gameimage::fetch::fetch(platform)
+    match gameimage::fetch::fetch(platform, f_progress)
     {
       Ok(_) => log!("Successfully fetched file"),
       Err(e) =>
@@ -91,7 +105,7 @@ fn fetch_add_wine(tx: Sender<common::Msg>
     let btn_fetch = f_button()
       .with_color(if is_installed { Color::Blue } else { Color::Green })
       .with_focus(false)
-      .with_callback(move |_| fetch_backend(tx, common::Platform::Wine));
+      .with_callback(move |_| fetch_backend(tx, common::Platform::Wine, prog.clone()));
     row.fixed(&btn_fetch, dimm::width_button_rec());
     row.end();
   }
@@ -150,7 +164,7 @@ fn fetch_add(tx: Sender<common::Msg>
   let btn_fetch = f_button()
     .with_color(if is_installed { Color::Blue } else { Color::Green })
     .with_focus(false)
-    .with_callback(move |_| fetch_backend(tx, platform.clone()));
+    .with_callback(move |_| fetch_backend(tx, platform.clone(), prog.clone()));
   row.fixed(&btn_fetch, dimm::width_button_rec());
   row.end();
   row
