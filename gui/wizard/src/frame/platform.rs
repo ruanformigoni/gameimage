@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Mutex,LazyLock};
 
 // Gui
 use fltk::prelude::*;
@@ -8,7 +9,7 @@ use fltk::{
   group::PackType,
 };
 
-use lazy_static::lazy_static;
+use clown::clown;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
@@ -20,36 +21,31 @@ use crate::common;
 use crate::log;
 use crate::gameimage;
 
-lazy_static!
+pub static HASH_PLATFORM_MSG: LazyLock<HashMap<common::Platform, common::Msg>> = LazyLock::new(||
 {
-  pub static ref HASH_PLATFORM_MSG: HashMap<common::Platform, common::Msg> =
-  {
-    let mut m = HashMap::new();
-    m.insert(common::Platform::Wine, common::Msg::DrawWineName);
-    m.insert(common::Platform::Linux, common::Msg::DrawLinuxName);
-    m.insert(common::Platform::Retroarch, common::Msg::DrawRetroarchName);
-    m.insert(common::Platform::Pcsx2, common::Msg::DrawPcsx2Name);
-    m.insert(common::Platform::Rcps3, common::Msg::DrawRpcs3Name);
-    m
-  };
+  let mut m = HashMap::new();
+  m.insert(common::Platform::Wine, common::Msg::DrawWineName);
+  m.insert(common::Platform::Linux, common::Msg::DrawLinuxName);
+  m.insert(common::Platform::Retroarch, common::Msg::DrawRetroarchName);
+  m.insert(common::Platform::Pcsx2, common::Msg::DrawPcsx2Name);
+  m.insert(common::Platform::Rcps3, common::Msg::DrawRpcs3Name);
+  m
+});
 
-  pub static ref HASH_PLATFORM_DESCR: HashMap<&'static str, &'static str> =
-  {
-    let mut m = HashMap::new();
-    m.insert("linux", " Linux - Play linux native games (required)");
-    m.insert("wine", " Wine - Play windows games");
-    m.insert("pcsx2", " Pcsx2 - Play playstation 2 games");
-    m.insert("rpcs3", " Rcps3 - Play playstation 3 games");
-    m.insert("retroarch", " Retroarch - Play games from retro consoles");
-    m
-  };
-  pub static ref HASH_DESC_PLATFORM: HashMap<&'static str, &'static str> =
-  {
-    let mut m = HashMap::new();
-    for (key, value) in HASH_PLATFORM_DESCR.iter() { m.insert(*value, *key); }
-    m
-  };
-}
+pub static HASH_PLATFORM_DESCR: LazyLock<HashMap<&'static str, &'static str>> =LazyLock::new(||
+{
+  let mut m = HashMap::new();
+  m.insert("linux", " Linux - Play linux native games (required)");
+  m.insert("wine", " Wine - Play windows games");
+  m.insert("pcsx2", " Pcsx2 - Play playstation 2 games");
+  m.insert("rpcs3", " Rcps3 - Play playstation 3 games");
+  m.insert("retroarch", " Retroarch - Play games from retro consoles");
+  m
+});
+
+pub static PLATFORM: LazyLock<Mutex<Option<common::Platform>>> = LazyLock::new(|| Mutex::new(None));
+
+pub static DIST_WINE: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
 
 // fn fetch_backend() {{{
 fn fetch_backend(tx: Sender<common::Msg>
@@ -114,7 +110,6 @@ fn platform_add(tx: Sender<common::Msg>
     {
       if is_installed
       {
-        std::env::set_var("GIMG_PLATFORM", platform.as_str());
         tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
       }
       else
@@ -130,8 +125,17 @@ fn platform_add(tx: Sender<common::Msg>
 // fn platform_add_wine() {{{
 fn platform_add_wine(tx: Sender<common::Msg>
   , widget: &fltk::widget::Widget, distributions: &HashMap<String,String>
-  , is_installed: bool) -> fltk::group::Flex
+  , mut is_installed: bool) -> fltk::group::Flex
 {
+  let dist_wine_db = db::global::read().map(|e| e.dist_wine).unwrap_or(String::from("default"));
+  {
+    let mut dist_wine_current = DIST_WINE.lock().unwrap();
+    // Initialize value
+    if *dist_wine_current == "" { *dist_wine_current = dist_wine_db.clone(); }
+    // Check if dropdown menu selection differs from database reference
+    is_installed = is_installed && *dist_wine_current == dist_wine_db;
+  }
+  // Build column
   let mut col = fltk::group::Flex::new(widget.x() + dimm::border()
     , widget.y() + dimm::border()
     , widget.w() - dimm::border()*2
@@ -153,19 +157,26 @@ fn platform_add_wine(tx: Sender<common::Msg>
     .with_color_selected(Color::Blue);
   if is_installed{ prog.set_value(100.0); }
   // Create start button
-  let f_button = if is_installed { || { shared::fltk::button::rect::arrow_forward() } } else { || { shared::fltk::button::rect::cloud() } };
-  let btn_fetch = f_button()
+  let btn_fetch = if is_installed { shared::fltk::button::rect::arrow_forward() } else { shared::fltk::button::rect::cloud() }
     .with_color(if is_installed { Color::Green } else { Color::Blue })
     .with_focus(false)
-    .with_callback(move |_|
+    .with_callback(#[clown] move |_|
     {
       if is_installed
       {
-        std::env::set_var("GIMG_PLATFORM", common::Platform::Wine.as_str());
+        match PLATFORM.lock()
+        {
+          Ok(mut guard) => *guard = Some(common::Platform::Wine),
+          Err(e) => log!("Could not lock platform: {}", e),
+        } // match
         tx.send_awake(*HASH_PLATFORM_MSG.get(&common::Platform::Wine).unwrap());
       }
       else
       {
+        if let Err(e) = db::global::update(#[clown] |mut db|{ db.dist_wine = DIST_WINE.lock().unwrap().clone(); db })
+        {
+          log!("Could not update wine distribution: {}", e);
+        } // if
         fetch_backend(tx, common::Platform::Wine, prog.clone());
       } // else
     });
@@ -178,23 +189,14 @@ fn platform_add_wine(tx: Sender<common::Msg>
     .with_color(Color::BackGround)
     .with_color_selected(Color::Blue)
     .with_focus(false)
-    .with_callback(|e|
+    .with_callback(move |e|
     {
       let choice = if let Some(choice) = e.choice() { choice } else { return; };
-      std::env::set_var("GIMG_WINE_DIST", &choice);
-      e.set_label(&choice);
+      *DIST_WINE.lock().unwrap() = choice;
+      tx.send(common::Msg::DrawPlatform);
     });
   menubutton.add_choice(&distributions.keys().map(|e| e.clone()).collect::<Vec<String>>().join("|"));
-  // Init value for menubutton
-  match std::env::var("GIMG_WINE_DIST")
-  {
-    Ok(var) => menubutton.set_label(&var),
-    Err(_) =>
-    {
-      std::env::set_var("GIMG_WINE_DIST", "default");
-      menubutton.set_label("default");
-    }
-  } // match
+  menubutton.set_label(&DIST_WINE.lock().unwrap().clone());
   col.fixed(&menubutton, dimm::height_button_wide());
   col.end();
   col

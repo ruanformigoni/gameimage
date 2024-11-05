@@ -154,12 +154,15 @@ struct fetchlist_layer_ret_t
   auto opt_path_file_fetchlist = get_path_fetchlist();
   qreturn_if(not opt_path_file_fetchlist, std::unexpected(opt_path_file_fetchlist.error()));
   // Open file as database
-  auto database = ns_db::ns_fetch::read(*opt_path_file_fetchlist);
-  ethrow_if(not database, database.error());
+  auto db_fetch = ns_db::ns_fetch::read(*opt_path_file_fetchlist);
+  ethrow_if(not db_fetch, db_fetch.error());
+  // Get wine distribution
+  auto db_build = ns_db::ns_build::read();
+  ethrow_if(not db_build, db_build.error());
   // Fetch layer url
-  std::string str_url_layer = database
+  std::string str_url_layer = db_fetch
       ->get_platform(platform)
-      ->get_layer((platform == ns_enum::Platform::WINE)? ns_env::get_or_else("GIMG_WINE_DIST", "umu-proton-ge") : "default");
+      ->get_layer((platform == ns_enum::Platform::WINE)? db_build->dist_wine : "default");
   // Show url
   ns_log::write('i', "url to fetch: ", str_url_layer);
   fs::path path_dir_dst = (platform == ns_enum::Platform::LINUX)?

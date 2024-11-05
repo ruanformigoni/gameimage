@@ -35,6 +35,7 @@ class Build
     fs::path path_dir_cache;
     fs::path path_file_image;
     fs::path path_file_output;
+    std::string dist_wine;
     std::vector<Metadata> projects;
     Metadata& find(std::string_view name);
   friend Build read_impl(fs::path path_file_db);
@@ -76,6 +77,12 @@ inline void init_impl(fs::path const& path_dir_build)
       db("path_file_output") = "";
     } // if
 
+    // Wine distribution
+    if ( not db.contains("dist_wine") )
+    {
+      db("dist_wine") = "default";
+    } // if
+
     // Set as default project
     if ( not db.contains("project") )
     {
@@ -102,6 +109,7 @@ Build read_impl(fs::path path_file_db)
     build.path_dir_cache = fs::path{db["path_dir_cache"]};
     build.path_file_image =  fs::path{db["path_file_image"]};;
     build.path_file_output =  fs::path{db["path_file_output"]};;
+    build.dist_wine =  fs::path{db["dist_wine"]};;
     for( auto [name, obj] : db["projects"].items() )
     {
       Metadata metadata;
@@ -125,6 +133,8 @@ void write_impl(Build const& build)
     db("path_dir_cache") = build.path_dir_cache;
     db("path_file_image") = build.path_file_image;
     db("path_file_output") = build.path_file_output;
+    db("dist_wine") = build.dist_wine;
+    if( build.projects.empty() ) { db("projects") = ns_db::object_t{}; }
     for( auto metadata : build.projects )
     {
       db("projects")(metadata.name)("path_dir_project") = metadata.path_dir_project;

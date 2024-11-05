@@ -11,8 +11,10 @@ pub struct Entry
 {
   pub project: String, // path to default project
   pub path_dir_build: PathBuf, // path to build dir
+  pub path_dir_cache: PathBuf, // path to build dir
   pub path_file_image: PathBuf, // path to main flatimage
   pub path_file_output: PathBuf, // path to output file
+  pub dist_wine: String, // Current wine distribution
   pub projects: HashMap<String, EntryDetails>,
 } // Entry }}}
 
@@ -48,15 +50,37 @@ pub fn read() -> anyhow::Result<Entry>
 {
   // GIMG_DIR should contain the path to the build dir
   let path_file_db : PathBuf = env::var("GIMG_DIR")?.into();
-
   // Try to open the gameimage.json file in it
   let file = File::open(path_file_db.join("gameimage.json"))?;
-
   // Parse
   let entry : Entry = serde_json::from_reader(file)?;
-
   // Return with absolute paths
   Ok(entry)
 } // fn: read }}}
+
+// write() {{{
+pub fn write(entry: &Entry) -> anyhow::Result<()>
+{
+  // GIMG_DIR should contain the path to the build dir
+  let path_file_db : PathBuf = env::var("GIMG_DIR")?.into();
+  // Try to open the gameimage.json file in it
+  let file = File::create(path_file_db.join("gameimage.json"))?;
+  // Parse
+  serde_json::to_writer_pretty(file, entry)?;
+  Ok(())
+} // fn: write }}}
+
+// update() {{{
+pub fn update<F>(f: F) -> anyhow::Result<()>
+  where F: FnOnce(Entry) -> Entry
+{
+  // Read
+  let entry = read()?;
+  // Update
+  let entry = f(entry);
+  // Write
+  write(&entry)?;
+  Ok(())
+} // fn: update }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

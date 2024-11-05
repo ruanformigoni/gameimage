@@ -9,6 +9,8 @@ use fltk::{
   enums::{Align,FrameType},
 };
 
+use anyhow::anyhow as ah;
+
 use shared::fltk::SenderExt;
 use shared::svg;
 
@@ -16,8 +18,36 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
-use crate::log_return_void;
 use crate::gameimage;
+
+// fn name_next() {{{
+fn name_next() -> anyhow::Result<()>
+{
+  // Check for name
+  let name = match env::var("GIMG_NAME")
+  {
+    Ok(name) => name,
+    Err(e) => return Err(ah!("Could not fetch GIMG_NAME: {}", e)),
+  };
+  // Check for platform
+  let platform = match frame::platform::PLATFORM.lock()
+  {
+    Ok(guard) => match guard.clone()
+    {
+      Some(platform) => platform,
+      None => return Err(ah!("No platform selected")),
+    },
+    Err(e) => return Err(ah!("Could not lock platform: {}", e)),
+  };
+  // Init project
+  match gameimage::init::project(name, platform.as_str().to_string())
+  {
+    Ok(_) => (),
+    Err(e) => return Err(ah!("Could not init project: {}", e)),
+  } // match
+
+  Ok(())
+} // fn name_next() }}}
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>
@@ -84,47 +114,25 @@ pub fn name(tx: Sender<common::Msg>
   ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
 
   // Callback to Next
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_output_status = ret_frame_footer.output_status.clone();
   let clone_tx = tx.clone();
   let clone_msg_next = msg_next.clone();
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
-    // Check for name
-    let name = if let Ok(name) = env::var("GIMG_NAME")
-    {
-      name
-    }
-    else
-    {
-      clone_output_status.set_value("Name field is empty");
-      log!("Could not fetch GIMG_NAME");
-      return;
-    }; // else
-
-    // Check for platform
-    let platform = if let Ok(platform) = env::var("GIMG_PLATFORM")
-    {
-      platform
-    }
-    else
-    {
-      clone_output_status.set_value("Could not fetch GIMG_PLATFORM");
-      log!("Could not fetch GIMG_PLATFORM");
-      return;
-    }; // else
-
-    // Init project
     clone_tx.send_awake(common::Msg::WindDeactivate);
+    let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
-      match gameimage::init::project(name, platform)
+      match name_next()
       {
-        Ok(_) => (),
-        Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_return_void!("{}", e); }
-      } // match
-
-      // Go to next frame
-      clone_tx.send_awake(clone_msg_next);
+        Ok(()) => tx.send(clone_msg_next),
+        Err(e) =>
+        {
+          clone_output_status.set_value(&e.to_string());
+          clone_tx.send_awake(common::Msg::WindActivate);
+          log!("{}", e);
+        } // match
+      }
     });
   });
 } // }}}

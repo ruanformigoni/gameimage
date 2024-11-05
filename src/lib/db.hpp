@@ -110,7 +110,7 @@ class Db
 
     // Access
     decltype(auto) items() const;
-    template<bool _throw = true, IsString T>
+    template<IsString T>
     bool contains(T&& t) const;
     template<typename T = std::string>
     std::vector<T> to_vector() const;
@@ -245,19 +245,10 @@ std::vector<T> Db::to_vector() const
 } // to_vector() }}}
 
 // contains() {{{
-template<bool _throw, IsString T>
+template<IsString T>
 bool Db::contains(T&& t) const
 {
-  auto&& json = data();
-
-  if ( json.contains(t) )
-  {
-    return true;
-  } // if
-
-  if constexpr ( _throw ) { "'{}' not found in json"_throw(t); } // if 
-
-  return false;
+  return data().contains(t);
 } // contains() }}}
 
 // empty() {{{
