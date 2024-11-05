@@ -17,6 +17,7 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 
+use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::common;
@@ -108,6 +109,24 @@ fn create_entry(project : db::project::Entry
   Ok((btn_checkbox , project))
 } // }}}
 
+// creator_del() {{{
+fn creator_del(vec_project: Vec<db::project::Entry>)
+{
+  if dialog::choice2_default("Erase the selected projects?", "No", "Yes", "") != Some(1)
+  {
+    return;
+  } // if
+
+  // Remove all currently selected projects
+  for str_name in vec_project.iter().map(|e| e.get_project())
+  {
+    if let Err(e) = gameimage::project::del(&str_name)
+    {
+      log!("Could not erase project '{}': {}", str_name, e)
+    }
+  } // for
+} // creator_del() }}}
+
 // pub fn creator() {{{
 pub fn creator(tx: Sender<common::Msg>, title: &str)
 {
@@ -187,29 +206,9 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
   {
-    if dialog::choice2_default("Erase the selected projects?", "No", "Yes", "") != Some(1)
-    {
-      return;
-    } // if
-
-    let lock = match clone_vec_checkbutton.lock()
-    {
-      Ok(lock) => lock,
-      Err(e) => { log!("Could not acquire lock for checkbutton: {}", e); return; },
-    };
-
-    // // Remove all currently selected projects
-    // for (checkbutton, path_dir_project) in lock.iter()
-    // {
-    //   if checkbutton.is_checked()
-    //   {
-    //     let _ = fs::remove_file(path_dir_project.with_extension("layer"));
-    //     let _ = fs::remove_dir_all(path_dir_project);
-    //   }
-    // } // for
-
-    // Refresh
-    clone_tx.send_awake(common::Msg::DrawCreator);
+    tx.send_awake(common::Msg::WindDeactivate);
+    creator_del(clone_vec_checkbutton.lock().unwrap().iter().filter(|e| e.0.is_checked()).map(|e| e.1.clone()).collect());
+    tx.send_awake(common::Msg::DrawCreator);
   });
 
   // Finish package creation on click next

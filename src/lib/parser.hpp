@@ -184,15 +184,19 @@ class Init final : public Parser
 class Project final : public Parser
 {
   public:
-    Project() : Parser("project", "Select the default project")
+    Project() : Parser("project", "Manage projects")
     {
       // Set stage
       m_enum_stage = ns_enum::Stage::PROJECT;
       // Set default project
+      m_parser->add_argument("op")
+        .action([&](std::string const& s){ m_map_option_value["op"]=s; })
+        .required()
+        .help("Operation: set or del");
       m_parser->add_argument("project")
         .action([&](std::string const& s){ m_map_option_value["project"]=s; })
         .required()
-        .help("Sets the current application to configure");
+        .help("Project name");
     } // Project
 }; // class: Project }}}
 

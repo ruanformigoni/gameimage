@@ -92,7 +92,14 @@ void init(ns_parser::Parser const& parser)
 // project() {{{
 void project(ns_parser::Parser const& parser)
 {
-  ns_project::set(parser["project"]);
+  auto op = ns_enum::from_string<ns_project::Op>(parser["op"]);
+  std::error<std::string> error = std::nullopt;
+  switch( op )
+  {
+    case ns_project::Op::SET: error =  ns_project::set(parser["project"]); break;
+    case ns_project::Op::DEL: error =  ns_project::del(parser["project"]); break;
+  } // switch
+  ethrow_if(error, *error);
 } // project() }}}
 
 // install() {{{

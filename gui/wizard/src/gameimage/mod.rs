@@ -7,3 +7,4 @@ pub mod install;
 pub mod select;
 pub mod init;
 pub mod test;
+pub mod project;
