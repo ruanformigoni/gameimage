@@ -83,7 +83,8 @@ fn fetch_backend(tx: Sender<common::Msg>
 
 // fn platform_add() {{{
 fn platform_add(tx: Sender<common::Msg>
-  , widget: &fltk::widget::Widget,platform: common::Platform
+  , widget: &fltk::widget::Widget
+  , platform: common::Platform
   , is_installed: bool) -> fltk::group::Flex
 {
   let mut row = fltk::group::Flex::new(widget.x() + dimm::border()
@@ -106,10 +107,15 @@ fn platform_add(tx: Sender<common::Msg>
   let btn_platform = if is_installed { shared::fltk::button::rect::arrow_forward() } else {  shared::fltk::button::rect::cloud() }
     .with_color(if is_installed { Color::Green } else { Color::Blue })
     .with_focus(false)
-    .with_callback(move |_|
+    .with_callback(#[clown] move |_|
     {
       if is_installed
       {
+        match PLATFORM.lock()
+        {
+          Ok(mut guard) => *guard = Some(honk!(platform).clone()),
+          Err(e) => log!("Could not lock platform: {}", e),
+        } // match
         tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
       }
       else
@@ -124,7 +130,8 @@ fn platform_add(tx: Sender<common::Msg>
 
 // fn platform_add_wine() {{{
 fn platform_add_wine(tx: Sender<common::Msg>
-  , widget: &fltk::widget::Widget, distributions: &HashMap<String,String>
+  , widget: &fltk::widget::Widget
+  , distributions: &HashMap<String,String>
   , mut is_installed: bool) -> fltk::group::Flex
 {
   let dist_wine_db = db::global::read().map(|e| e.dist_wine).unwrap_or(String::from("default"));
