@@ -126,6 +126,7 @@ fn redraw(&mut self, msg : Msg)
     Msg::DrawWineName => wizard::wine::name(self.tx, "Select the Application Name"),
     Msg::DrawWineIcon => wizard::wine::icon(self.tx, "Select the Application Icon"),
     Msg::DrawWineConfigure => wizard::wine::configure(self.tx, "Configure Wine"),
+    Msg::DrawWineTricks => wizard::wine::winetricks(self.tx, "Install Libraries"),
     Msg::DrawWineEnvironment => wizard::wine::environment(self.tx, "Configure the Environment"),
     Msg::DrawWineRom => wizard::wine::rom(self.tx, "Install/Test the Application(s)"),
     Msg::DrawWineCompress => wizard::wine::compress(self.tx, "Compress the Created Package"),
@@ -196,7 +197,7 @@ fn init(&mut self)
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   // self.tx.send(Msg::DrawWineRom);
-  self.tx.send_awake(Msg::DrawWelcome);
+  self.tx.send_awake(Msg::DrawWineTricks);
   while self.app.wait()
   {
     // Handle messages

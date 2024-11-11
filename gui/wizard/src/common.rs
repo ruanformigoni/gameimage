@@ -68,6 +68,7 @@ pub enum Msg
   DrawWineName,
   DrawWineIcon,
   DrawWineConfigure,
+  DrawWineTricks,
   DrawWineEnvironment,
   DrawWineRom,
   DrawWineCompress,

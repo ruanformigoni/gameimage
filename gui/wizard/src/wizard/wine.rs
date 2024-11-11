@@ -2,7 +2,7 @@
 use std::
 {
   path,
-  sync::{Arc,Mutex}
+  sync::{Arc,Mutex,LazyLock}
 };
 
 use fltk::prelude::*;
@@ -16,6 +16,8 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
+use clown::clown;
+
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::dimm;
@@ -28,6 +30,89 @@ use shared::std::PathBufExt;
 use crate::frame;
 use crate::wizard;
 use crate::gameimage;
+
+// fn library_common() {{{
+fn library_common() -> Vec<&'static str>
+{
+  vec![
+    "xact",
+    "xact_x64",
+    "xinput",
+    "binkw32",
+    "xaudio29",
+    "openal",
+  ]
+} // fn library_common() }}}
+
+// fn library_vcrun() {{{
+fn library_vcrun(year: u32) -> Vec<&'static str>
+{
+  match year
+  {
+    val if val < 2003 => vec!["vcrun6"],
+    2003..=2008       => vec!["vcrun2003", "vcrun2005", "vcrun2008"],
+    2009..=2011       => vec!["vcrun2005", "vcrun2008", "vcrun6sp6", "vcrun2010",],
+    2012..=2015       => vec!["vcrun2008", "vcrun2012", "vcrun2013",],
+    2016..=2019       => vec!["vcrun2013", "vcrun2015", "vcrun2017",],
+    _                 => vec!["vcrun2017", "vcrun2019", "vcrun2022",],
+  }
+} // fn library_vcrun() }}}
+
+// fn library_vbrun() {{{
+fn library_vbrun(year: u32) -> Vec<&'static str>
+{
+  match year
+  {
+    val if val <= 1993 => vec!["vb2run"],
+    1994..=1998 => vec!["vb2run","vb3run", "vb4run"],
+    1999..=2001 => vec!["vb3run", "vb4run", "dx8vb", "vb5run"],
+    _ => vec!["vb6run", "dx8vb"],
+  }
+} // fn library_vbrun() }}}
+
+// fn library_dotnet() {{{
+fn library_dotnet(year: u32) -> Vec<&'static str>
+{
+  match year
+  {
+    var if var <= 2004  => vec!["dotnet11","dotnet11sp1",],
+    2005..=2006         => vec!["dotnet11sp1","dotnet20","dotnet30",],
+    2007                => vec!["dotnet20","dotnet30sp1","dotnet35",],
+    2008                => vec!["dotnet20sp1","dotnet35sp1",],
+    2009..=2011         => vec!["dotnet20sp2","dotnet40","dotnet35sp1",],
+    2012                => vec!["dotnet45","dotnet452","dotnet35sp1",],
+    2013..=2015         => vec!["dotnet35sp1","dotnet461","dotnet46",],
+    2016                => vec!["dotnet35sp1","dotnet46","dotnet462",],
+    2017..=2018         => vec!["dotnet35sp1", "dotnet46", "dotnet471","dotnet472",],
+    2019                => vec!["dotnet471","dotnet472","dotnet48",],
+    2020                => vec!["dotnet471","dotnet472","dotnet48","dotnetcore2","dotnetcore3",],
+    2023                => vec!["dotnet48","dotnetcore2","dotnetcore3","dotnet6","dotnet7",],
+    _                   => vec!["dotnetcore2","dotnetcore3","dotnet6","dotnet7","dotnet8",],
+  }
+} // fn library_dotnet() }}}
+
+// fn library_wmp() {{{
+fn library_wmp(year: u32) -> Vec<&'static str>
+{
+  match year
+  {
+    val if val < 2006 => vec!["wmp9"],
+    val if val < 2007 => vec!["wmp10"],
+    _                 => vec!["wmp11"],
+  }
+} // fn library_wmp() }}}
+
+// fn get_recomends_winetricks() {{{
+fn get_recomends_winetricks(year: u32) -> Vec<&'static str>
+{
+  let mut libraries: Vec<&'static str> = vec![];
+  libraries.append(&mut library_common());
+  libraries.append(&mut library_vcrun(year));
+  libraries.append(&mut library_vbrun(year));
+  libraries.append(&mut library_dotnet(year));
+  libraries.append(&mut library_wmp(year));
+  libraries
+} // fn get_recomends_winetricks() }}}
 
 // pub fn name() {{{
 pub fn name(tx: Sender<common::Msg>, title: &str)
@@ -199,6 +284,47 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   });
 } // }}}
 
+// fn configure_entry() {{{
+fn configure_entry(tx: Sender<common::Msg>
+  , label: &str
+  , f_args: fn() -> Option<Vec<String>>) -> (fltk::group::Row, fltk::frame::Frame, fltk::button::Button)
+{
+  let mut row = fltk::group::Row::default();
+  // Label
+  let label = Frame::default()
+    .with_label(label)
+    .with_frame(FrameType::BorderBox);
+  row.add(&label);
+  // Button to the right
+  let mut btn = shared::fltk::button::rect::configure()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+    .with_color(Color::Green);
+  row.fixed(&btn, dimm::width_button_rec());
+  // Set callback
+  btn.set_callback(move |_|
+  {
+    // Check if arguments were passed
+    let args_owned : Vec<String> = match f_args() 
+    {
+      Some(args) => args.iter().map(|s| s.to_string()).collect(),
+      None => return,
+    };
+    tx.send_awake(common::Msg::WindDeactivate);
+    std::thread::spawn(move ||
+    {
+      let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
+      if gameimage::gameimage::gameimage_sync(slices) != 0
+      {
+        log!("Command exited with non-zero status");
+      } // else
+      tx.send_awake(common::Msg::WindActivate);
+    });
+  });
+  // Return row with label and button
+  row.end();
+  (row, label, btn)
+} // fn configure_entry() }}}
+
 // pub fn configure() {{{
 pub fn configure(tx: Sender<common::Msg>, title: &str)
 {
@@ -241,112 +367,110 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
           Err(e) => { clone_output_status.set_value("Failed to create wine prefix"); log!("{}", e); },
         } // else
 
-        clone_tx.send_awake(common::Msg::DrawWineRom);
+        clone_tx.send_awake(common::Msg::DrawWineTricks);
       }); // std::thread
       return;
     } // if
 
-    clone_tx.send_awake(common::Msg::DrawWineRom);
+    clone_tx.send_awake(common::Msg::DrawWineTricks);
   });
 
   // Create scrollbar
-  let mut scroll = shared::fltk::ScrollList::new(
-    frame_content.width() - dimm::border()*2
+  let mut col = fltk::group::Column::new(
+      frame_content.x() + dimm::border()
+    , frame_content.y() + dimm::border()
+    , frame_content.width() - dimm::border()*2
     , frame_content.height() - dimm::border()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
-  scroll.set_border(dimm::border(), dimm::border());
+    , ""
+  );
+  let (row,_,_) = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11", || Some(vec!["install".into(), "dxvk".into()]));
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Install VKD3D for directx 12", || Some(vec!["install".into(), "vkd3d".into()]));
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["install".into(), "wine".into(), "regedit".into()]));
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Run add/remove programs", || Some(vec!["install".into(), "wine".into(), "uninstaller".into()]));
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["install".into(), "winetricks".into(), "--gui".into()]));
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Run a custom winetricks command" , ||
+    dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), e])
+  );
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,_) = configure_entry(tx.clone(),  "Run a custom wine command" , ||
+    dialog::input_default("Enter the wine command to execute", "").map(|e| vec!["install".into(), "wine".into(), e])
+  );
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  let (row,_,mut btn) = configure_entry(tx.clone(),  "Configure environment", || None);
+  btn.emit(tx, common::Msg::DrawWineEnvironment);
+  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
+  col.end();
+} // fn: configure }}}
 
-  let clone_tx = tx.clone();
-  let mut f_add_entry = move |entry_label: &str , some_args: Option<Vec<&str>>| -> Button
+// pub fn winetricks() {{{
+pub fn winetricks(tx: Sender<common::Msg>, title: &str)
+{
+  static YEAR: LazyLock<Mutex<u32>> = LazyLock::new(|| Mutex::new(2024));
+  // Get header and footer
+  let ret_frame_header = frame::common::frame_header(title);
+  let ret_frame_footer = frame::common::frame_footer();
+  // Get frames
+  let frame_content = ret_frame_header.frame_content;
+  let frame_sep = ret_frame_header.sep;
+  // Create a column for the menu items
+  let mut col = fltk::group::Column::default()
+    .below_of(&frame_sep, dimm::border())
+    .with_size(frame_content.w() - dimm::border()*3 - dimm::width_button_rec()
+      , frame_content.h() - dimm::border()*2
+    );
+  // Select year
+  col.fixed(&fltk::frame::Frame::default().with_label("Select the Game Release Year"), dimm::height_text());
+  let mut menu_year = fltk::menu::MenuButton::default();
+  for i in 1993..2025 { menu_year.add_choice(&i.to_string()); }
+  menu_year.set_label(&YEAR.lock().unwrap().to_string());
+  col.fixed(&menu_year, dimm::height_button_wide());
+  menu_year.set_callback(#[clown] |e|
   {
-    let label = Frame::default()
-      .with_width(scroll.widget_ref().w() - dimm::border()*3 - dimm::width_button_rec())
-      .with_height(dimm::height_button_wide())
-      .with_label(entry_label)
-      .with_frame(FrameType::BorderBox);
-    scroll.add(&mut label.as_base_widget());
-
-    let mut btn = shared::fltk::button::rect::configure()
-      .right_of(&label, dimm::border())
-      .with_color(Color::Green);
-    let args = if let Some(args) = some_args { args } else { return btn; };
-    let args_owned : Vec<String> = args.iter().map(|s| s.to_string()).collect();
-    btn.set_callback(move |_|
+    if let Some(choice) = e.choice()
     {
-      clone_tx.send_awake(common::Msg::WindDeactivate);
-      let args_owned = args_owned.clone();
-      std::thread::spawn(move ||
+      *YEAR.lock().unwrap() = choice.parse().unwrap();
+      e.set_label(&choice);
+      honk!(tx).send(common::Msg::DrawWineTricks)
+    }
+  });
+  // Recommend libraries by year
+  let vec_lib = get_recomends_winetricks(*YEAR.lock().unwrap());
+  col.fixed(&fltk::frame::Frame::default().with_label("Recommended Libraries"), dimm::height_text());
+  let mut browser = fltk::browser::CheckBrowser::default();
+  for lib in vec_lib { browser.add(lib, true); }
+  col.end();
+  // Install button to the right
+  shared::fltk::button::rect::install()
+    .right_of(&col.as_base_widget(), dimm::border())
+    .with_color(Color::Green)
+    .with_callback(move |_|
+    {
+      // Function to get all checked items
+      let mut vec_cmd: Vec<String> = vec!["install".into(), "winetricks".into(), "-q".into()];
+      vec_cmd.append(&mut (1..=browser.size())
+        .filter(|e| browser.checked(*e as i32))
+        .map(|e| browser.text(e as i32).unwrap())
+        .collect()
+      );
+      tx.send_awake(common::Msg::WindDeactivate);
+      std::thread::spawn(#[clown] move ||
       {
-        let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-        if gameimage::gameimage::gameimage_sync(slices) != 0
+        if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).collect()) != 0
         {
           log!("Command exited with non-zero status");
         } // else
-        clone_tx.send_awake(common::Msg::WindActivate);
+        tx.send_awake(common::Msg::WindActivate);
       });
     });
-
-    btn
-  };
-
-  let _ = f_add_entry("Install DXVK for directx 9/10/11", Some(vec!["install", "dxvk"]));
-
-  let _ = f_add_entry("Install VKD3D for directx 12", Some(vec!["install", "vkd3d"]));
-
-  let _ = f_add_entry("Run regedit", Some(vec!["install", "wine", "regedit"]));
-
-  let _ = f_add_entry("Run add/remove programs", Some(vec!["install", "wine", "uninstaller"]));
-
-  let _ = f_add_entry("Run winetricks GUI", Some(vec!["install", "winetricks", "--gui"]));
-
-  let mut btn = f_add_entry("Run a custom winetricks command", None);
-  let clone_tx = tx.clone();
-  btn.set_callback(move |_|
-  {
-    let some_value = dialog::input_default("Enter the winetricks command to execute", "");
-    if let Some(value) = some_value
-    {
-      clone_tx.send_awake(common::Msg::WindDeactivate);
-      let clone_value = value.clone();
-      std::thread::spawn(move ||
-      {
-        match gameimage::install::winetricks(vec![clone_value])
-        {
-          Ok(_) => log!("winetricks command execute successfully"),
-          Err(e) => log!("winetricks command returned error: {}", e),
-        } // else
-
-        clone_tx.send_awake(common::Msg::WindActivate);
-      });
-    } // if
-  });
-
-  let mut btn = f_add_entry("Run a custom wine command", None);
-  let clone_tx = tx.clone();
-  btn.set_callback(move |_|
-  {
-    let some_value = dialog::input_default("Enter the wine command to execute", "");
-    if let Some(value) = some_value
-    {
-      clone_tx.send_awake(common::Msg::WindDeactivate);
-      let clone_value = value.clone();
-      std::thread::spawn(move ||
-      {
-        match gameimage::install::wine(vec![clone_value])
-        {
-          Ok(_) => log!("wine command exited successfully"),
-          Err(e) => log!("wine command returned error: {}", e),
-        } // else
-
-        clone_tx.send_awake(common::Msg::WindActivate);
-      });
-    } // if
-  });
-
-  let _ = f_add_entry("Configure environment", None).emit(tx, common::Msg::DrawWineEnvironment);
-
-} // fn: configure }}}
+  // Configure buttons
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
+  ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineRom);
+} // fn: winetricks }}}
 
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
@@ -369,7 +493,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
+  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineTricks);
 
   // List of the currently installed items
   let frame_list = Frame::default()
