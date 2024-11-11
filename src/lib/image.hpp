@@ -72,53 +72,56 @@ inline void resize(fs::path const& path_file_src
   } // switch
 
   // Resize
-  // Boost gil generates bad results when resizing, use magick for now
-  fs::path path_file_resized = path_file_dst.parent_path() / "cropped.png";
+  // Boost gil generates bad results when resizing (no bicubic sampler), use magick for now
+  // fs::path path_file_resized = path_file_dst.parent_path() / "cropped.png";
   auto optional_path_file_magick = ns_subprocess::search_path("magick");
+
+  // Resize image and crop to fit dimensions
   ereturn_if(not optional_path_file_magick, "Could not find magick binary");
   (void) ns_subprocess::Subprocess(*optional_path_file_magick)
     .with_piped_outputs()
-    .with_args(path_file_src, "-resize", "{}x{}"_fmt(width, height), path_file_resized)
+    .with_args(path_file_src, "-resize", "{0}x{1}^"_fmt(width, height))
+    .with_args("-gravity","center","-crop","{0}x{1}+0+0"_fmt(width, height),"+repage", path_file_dst)
     .spawn()
     .wait();
 
-  // Crop
-  gil::rgba8_image_t img;
-  gil::read_and_convert_image(path_file_resized, img, gil::png_tag());
-
-  ns_log::write('i', "Image width and height ", img.width(), "x", img.height());
-  ns_log::write('i', "Target width and height ", width, "x", height);
-
-  // Get greatest difference between dimmensions
-  int difference = std::min(width > img.width()? img.width() - width : 0
-    , (height > img.height())? img.height() - height : 0);
-
-  ns_log::write('i', "Difference: ", difference);
-
-  // Remove difference from both dimmensions (proportionally the same, but fits the image)
-  width  += difference;
-  height += difference;
-
-  ns_log::write('i', "Adjusted width and height to ", width, "x", height);
-
-  // Calculate desired and current aspected ratios
-  double src_aspect = static_cast<double>(img.width()) / img.height();
-  double dst_aspect = static_cast<double>(width) / height;
-
-  // Calculate novel dimensions that preserve the aspect ratio
-  int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
-  int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
-
-  // Calculate crop
-  int crop_x = (width_new - width) / 2;
-  int crop_y = (height_new - height) / 2;
-
-  // Crop the image
-  auto view_img_cropped = gil::subimage_view(gil::view(img), crop_x, crop_y, width, height);
-
-  // Save cropped image
-  ns_log::write('i', "Writing image to ", path_file_dst);
-  gil::write_view(path_file_dst, view_img_cropped, gil::png_tag());
+  // // Crop
+  // gil::rgba8_image_t img;
+  // gil::read_and_convert_image(path_file_resized, img, gil::png_tag());
+  //
+  // ns_log::write('i', "Image width and height ", img.width(), "x", img.height());
+  // ns_log::write('i', "Target width and height ", width, "x", height);
+  //
+  // // Get greatest difference between dimmensions
+  // int difference = std::min(width > img.width()? img.width() - width : 0
+  //   , (height > img.height())? img.height() - height : 0);
+  //
+  // ns_log::write('i', "Difference: ", difference);
+  //
+  // // Remove difference from both dimmensions (proportionally the same, but fits the image)
+  // width  += difference;
+  // height += difference;
+  //
+  // ns_log::write('i', "Adjusted width and height to ", width, "x", height);
+  //
+  // // Calculate desired and current aspected ratios
+  // double src_aspect = static_cast<double>(img.width()) / img.height();
+  // double dst_aspect = static_cast<double>(width) / height;
+  //
+  // // Calculate novel dimensions that preserve the aspect ratio
+  // int width_new  = (src_aspect >  dst_aspect)? static_cast<int>(src_aspect * height) : width;
+  // int height_new = (src_aspect <= dst_aspect)? static_cast<int>(width / src_aspect ) : height;
+  //
+  // // Calculate crop
+  // int crop_x = (width_new - width) / 2;
+  // int crop_y = (height_new - height) / 2;
+  //
+  // // Crop the image
+  // auto view_img_cropped = gil::subimage_view(gil::view(img), crop_x, crop_y, width, height);
+  //
+  // // Save cropped image
+  // ns_log::write('i', "Writing image to ", path_file_dst);
+  // gil::write_view(path_file_dst, view_img_cropped, gil::png_tag());
 } // resize() }}}
 
 // grayscale() {{{
