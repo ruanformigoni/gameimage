@@ -383,9 +383,13 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     , frame_content.height() - dimm::border()*2
     , ""
   );
-  let (row,_,_) = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11", || Some(vec!["install".into(), "dxvk".into()]));
+  let (row,_,_) = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11"
+    , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "dxvk".into()])
+  );
   col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Install VKD3D for directx 12", || Some(vec!["install".into(), "vkd3d".into()]));
+  let (row,_,_) = configure_entry(tx.clone(),  "Install VKD3D for directx 12"
+    , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "vkd3d".into()])
+  );
   col.fixed(&row.as_base_widget(), dimm::height_button_wide());
   let (row,_,_) = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["install".into(), "wine".into(), "regedit".into()]));
   col.fixed(&row.as_base_widget(), dimm::height_button_wide());
@@ -394,7 +398,7 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
   let (row,_,_) = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["install".into(), "winetricks".into(), "--gui".into()]));
   col.fixed(&row.as_base_widget(), dimm::height_button_wide());
   let (row,_,_) = configure_entry(tx.clone(),  "Run a custom winetricks command" , ||
-    dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), e])
+    dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), "-f".into(), e])
   );
   col.fixed(&row.as_base_widget(), dimm::height_button_wide());
   let (row,_,_) = configure_entry(tx.clone(),  "Run a custom wine command" , ||
@@ -451,19 +455,21 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
     .with_callback(move |_|
     {
       // Function to get all checked items
-      let mut vec_cmd: Vec<String> = vec!["install".into(), "winetricks".into(), "-q".into()];
-      vec_cmd.append(&mut (1..=browser.size())
-        .filter(|e| browser.checked(*e as i32))
-        .map(|e| browser.text(e as i32).unwrap())
-        .collect()
-      );
+      let vec_cmd: Vec<String> = vec!["install".into(), "winetricks".into(), "-f".into(), "-q".into()];
       tx.send_awake(common::Msg::WindDeactivate);
-      std::thread::spawn(#[clown] move ||
+      let clone_browser = browser.clone();
+      std::thread::spawn(move ||
       {
-        if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).collect()) != 0
+        // Must install one at the time, winetricks exits if at least one verb fails
+        for lib in &mut (1..=clone_browser.size())
+          .filter(|e| clone_browser.checked(*e as i32))
+          .map(|e| clone_browser.text(e as i32).unwrap())
         {
-          log!("Command exited with non-zero status");
-        } // else
+          if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).chain(vec![lib.as_str()]).collect()) != 0
+          {
+            log!("Command exited with non-zero status");
+          } // else
+        } // for
         tx.send_awake(common::Msg::WindActivate);
       });
     });
