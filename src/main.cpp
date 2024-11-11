@@ -192,7 +192,21 @@ void test()
 // desktop() {{{
 void desktop(ns_parser::Parser const& parser)
 {
-  ns_desktop::desktop(parser["name"], parser["icon"], parser["items"]);
+  ns_desktop::Op op = ns_enum::from_string<ns_desktop::Op>(parser.used_subparser_name().value());
+
+  switch(op)
+  {
+    case ns_desktop::Op::ICON:
+    {
+      ns_desktop::icon(parser["path"]);
+      break;
+    }
+    case ns_desktop::Op::SETUP:
+    {
+      ns_desktop::desktop(parser["name"], parser["items"]);
+      break;
+    }
+  }
 } // desktop() }}}
 
 // package() {{{
@@ -208,8 +222,12 @@ int main(int argc, char** argv)
   // Init log
   ns_log::init(argc, argv, "gameimage.log");
 
-  // Set layers directory
-  ns_env::set("FIM_DIRS_LAYER", fs::current_path() / "cache", ns_env::Replace::Y);
+  // Set layers directory if possible
+  auto db_build = ns_db::ns_build::read();
+  if ( db_build.has_value() )
+  {
+    ns_env::set("FIM_DIRS_LAYER", db_build->path_dir_cache, ns_env::Replace::Y);
+  } // if
 
   // Parse args
   ns_parser::Parser parser("GameImage", "Create portable single-file games that work across linux distributions");

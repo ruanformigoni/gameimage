@@ -57,7 +57,12 @@ fn desktop_next(tx: Sender<common::Msg>
   let integration_items = vec_integration_items.join(",");
   if ! integration_items.is_empty()
   {
-    match gameimage::desktop::desktop(&str_name, &path_file_icon, &integration_items)
+    match gameimage::desktop::icon(&path_file_icon)
+    {
+      Ok(()) => log!("Finished icon configuration"),
+      Err(e) => { tx.send_awake(common::Msg::WindActivate); return Err(ah!("{}", e)) }
+    } // match
+    match gameimage::desktop::desktop(&str_name, &integration_items)
     {
       Ok(()) => log!("Finished desktop configuration"),
       Err(e) => { tx.send_awake(common::Msg::WindActivate); return Err(ah!("{}", e)) }

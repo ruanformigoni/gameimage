@@ -11,6 +11,8 @@
 #include "../enum.hpp"
 #include "../common.hpp"
 
+#include "../cmd/desktop.hpp"
+
 namespace ns_parser
 {
 
@@ -64,13 +66,13 @@ class Parser
     } // parser
 
     // Get reference of subparser with provided name
-    Parser const& subparser(std::string const& name)
+    Parser const& subparser(std::string const& name) const
     {
       return *m_map_subparser.at(name);
     } // subparser
 
     // Check current stage
-    std::optional<std::reference_wrapper<Parser>> used_subparser()
+    std::optional<std::reference_wrapper<Parser>> used_subparser() const
     {
       auto it = std::ranges::find_if(m_map_subparser, [&](auto&& e){ return m_parser->is_subcommand_used(e.second->parser()); });
 
@@ -81,6 +83,14 @@ class Parser
       } // if
 
       return *(it->second);
+    } // used_subparser
+
+    // Check current stage
+    std::optional<std::string> used_subparser_name() const
+    {
+      auto subparser = used_subparser();
+      ereturn_if(not subparser, "Could not find used subparser", std::nullopt);
+      return subparser->get().name();
     } // used_subparser
 
     // Check if contains value
@@ -309,28 +319,34 @@ class Test final : public Parser
 class Desktop final : public Parser
 {
   public:
-    Desktop() : Parser("desktop", "Configure desktop integration")
+    Desktop()
+      : Parser("desktop", "Configure desktop integration")
     {
+      // Subparsers
+      std::unique_ptr<Parser> parser_icon = std::make_unique<Parser>("icon", "Desktop icon integration");
+      std::unique_ptr<Parser> parser_integrate = std::make_unique<Parser>("setup", "Desktop entry integration");
+
       // Set stage
       m_enum_stage = ns_enum::Stage::DESKTOP;
 
-      // Set args
-      m_parser->add_argument("name")
+      // Icon command
+      parser_icon->parser()
+        .add_argument("path")
+        .action([&](std::string const& s){ m_map_option_value["path"]=s; })
+        .required()
+        .help("Path for the icon to integrate");
+      this->add_subparser(std::move(parser_icon));
+
+      // Integrate command
+      parser_integrate->parser()
+        .add_argument("name")
         .action([&](std::string const& s){ m_map_option_value["name"]=s; })
-        .required()
         .help("Set the name of the game");
-
-      // Set args
-      m_parser->add_argument("icon")
-        .action([&](std::string const& s){ m_map_option_value["icon"]=s; })
-        .required()
-        .help("Path to the file to use as icon");
-
-      // Set args
-      m_parser->add_argument("items")
+      parser_integrate->parser()
+        .add_argument("items")
         .action([&](std::string const& s){ m_map_option_value["items"]=s; })
-        .required()
         .help("Items to enable in desktop integration [entry,mimetype,icon]");
+      this->add_subparser(std::move(parser_integrate));
     } // Desktop
 }; // class: Desktop }}}
 
