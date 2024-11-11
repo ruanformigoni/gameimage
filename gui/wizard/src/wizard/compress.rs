@@ -1,5 +1,4 @@
 use std::env;
-use std::path::PathBuf;
 
 // Gui
 use fltk::
@@ -11,12 +10,14 @@ use fltk::
 
 use shared::fltk::SenderExt;
 use shared::fltk::WidgetExtExtra;
+use shared::std::PathBufExt;
 
 use crate::dimm;
+use crate::gameimage;
 use crate::frame;
 use crate::common;
-use shared::std::PathBufExt;
 use crate::log;
+use crate::log_alert;
 
 // pub fn compress() {{{
 pub fn compress(tx: Sender<common::Msg>
@@ -76,28 +77,20 @@ pub fn compress(tx: Sender<common::Msg>
   ret_frame_footer.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
+    let backend = match gameimage::gameimage::binary()
     {
-      PathBuf::from(var)
-    } // if
-    else
+      Ok(backend) => backend,
+      Err(e) => { log_alert!("Error to execute backend: {}", e); return; }
+    };
+    let _ = term.dispatch(vec![&backend.string(), "compress"], move |code : i32|
     {
-      log!("Could not fetch GIMG_BACKEND var");
-      return;
-    }; // else
+      clone_tx.send_awake(common::Msg::WindActivate);
 
-    let _ = term.dispatch(vec![&path_gimg_backend.string(), "compress"]
-      , move |code : i32|
+      if code == 0
       {
-        clone_tx.send_awake(common::Msg::WindActivate);
-
-        if code == 0
-        {
-          clone_tx.send_awake(common::Msg::DrawCreator);
-        } // if
-      }
-    );
+        clone_tx.send_awake(common::Msg::DrawCreator);
+      } // if
+    });
   });
 } // fn compress() }}}
 

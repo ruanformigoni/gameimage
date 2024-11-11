@@ -13,10 +13,11 @@ use fltk::{
 
 use shared::fltk::SenderExt;
 
+use crate::gameimage;
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::log;
+use crate::log_alert;
 use shared::std::PathBufExt;
 
 // pub fn test() {{{
@@ -59,23 +60,15 @@ pub fn test(tx: Sender<common::Msg>
   btn_test.set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
-
-    let path_gimg_backend = if let Ok(var) = env::var("GIMG_BACKEND")
+    let backend = match gameimage::gameimage::binary()
     {
-      PathBuf::from(var)
-    } // if
-    else
+      Ok(backend) => backend,
+      Err(e) => { log_alert!("Error to execute backend: {}", e); return; }
+    };
+    let _ = term.dispatch(vec![&backend.string(), "test"], move |_|
     {
-      log!("Could not fetch GIMG_BACKEND var");
-      return;
-    }; // else
-
-    let _ = term.dispatch(vec![path_gimg_backend.string().as_str(), "test"]
-      , move |_|
-      {
-        clone_tx.send_awake(common::Msg::WindActivate);
-      }
-    );
+      clone_tx.send_awake(common::Msg::WindActivate);
+    });
   });
 } // fn test() }}}
 
