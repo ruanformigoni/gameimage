@@ -110,7 +110,7 @@ fn get_recomends_winetricks(year: u32) -> Vec<&'static str>
   libraries.append(&mut library_vcrun(year));
   libraries.append(&mut library_vbrun(year));
   libraries.append(&mut library_dotnet(year));
-  libraries.append(&mut library_wmp(year));
+  // libraries.append(&mut library_wmp(year));
   libraries
 } // fn get_recomends_winetricks() }}}
 
@@ -448,6 +448,12 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
   let mut browser = fltk::browser::CheckBrowser::default();
   for lib in vec_lib { browser.add(lib, true); }
   col.end();
+  // Thin line divisor
+  fltk::frame::Frame::default()
+    .with_size(2, col.h())
+    .right_of(&col.as_base_widget(), dimm::border() / 2)
+    .with_color(Color::Black)
+    .with_frame(FrameType::BorderBox);
   // Install button to the right
   shared::fltk::button::rect::install()
     .right_of(&col.as_base_widget(), dimm::border())
