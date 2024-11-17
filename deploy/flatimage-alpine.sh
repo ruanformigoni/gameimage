@@ -139,7 +139,7 @@ wget -O"$IMAGE" "$(wget -qO - "https://api.github.com/repos/ruanformigoni/flatim
 chmod +x "$IMAGE"
 
 # Set permissions
-"$IMAGE" fim-perms add home,media,network,xorg,wayland
+"$IMAGE" fim-perms add home,media,network,xorg,wayland,dbus_user
 
 # Install dependencies
 "$IMAGE" fim-root apk add libxkbcommon libxinerama libxcursor font-noto xz tar libssl3
