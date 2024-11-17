@@ -229,7 +229,7 @@ inline void emulator(fs::path const& path_file_image
     {
       (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
         .with_piped_outputs()
-        .with_args(path_file_image)
+        .with_args(path_file_image, "fim-exec", "/opt/rpcs3/boot")
         .spawn()
         .wait();
     }
