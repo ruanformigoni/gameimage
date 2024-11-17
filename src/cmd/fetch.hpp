@@ -23,7 +23,7 @@
 #include "../lib/db/build.hpp"
 #include "../lib/sha.hpp"
 
-inline constexpr const char* URL_FETCH = "http://192.168.0.16:1170/fetch.json";
+inline constexpr const char* URL_FETCH = "https://raw.githubusercontent.com/gameimage/runners/refs/heads/master/fetch/gameimage-1.5.x.json";
 
 namespace ns_fetch
 {
