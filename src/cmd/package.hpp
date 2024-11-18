@@ -82,6 +82,21 @@ inline void package(std::string const& str_name, std::string const& str_projects
   db_build->path_file_output = db_build->path_dir_build.parent_path() / (str_name + ".flatimage");
   ns_db::ns_build::write(*db_build);
 
+  // Copy data directory
+  fs::path path_dir_config_src = db_build->path_file_image.parent_path()
+    / (std::string{"."} + db_build->path_file_image.filename().string() + std::string{".config"});
+  fs::path path_dir_config_dst = db_build->path_file_output.parent_path()
+    / (std::string{"."} + db_build->path_file_output.filename().string() + std::string{".config"});
+  ns_log::write('i', "Copy ", path_dir_config_src, " to ", path_dir_config_dst);
+  for(auto&& path_file_src : fs::recursive_directory_iterator(path_dir_config_src)
+    | std::views::filter([](auto&& e){ return not fs::is_directory(e); })
+    | std::views::transform([](auto&& e){ return e.path(); }))
+  {
+    fs::path path_file_dst = path_dir_config_dst / fs::relative(path_file_src, path_dir_config_src);
+    ns_log::exception([&]{ fs::create_directories(path_file_dst.parent_path()); });
+    ns_log::exception([&]{ fs::copy(path_file_src, path_file_dst, fs::copy_options::overwrite_existing | fs::copy_options::copy_symlinks); });
+  } // for
+
   // Copy image to output location
   fs::copy_file(db_build->path_file_image, db_build->path_file_output, fs::copy_options::overwrite_existing);
 
