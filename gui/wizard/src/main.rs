@@ -197,7 +197,7 @@ fn init(&mut self)
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   // self.tx.send(Msg::DrawWineRom);
-  self.tx.send_awake(Msg::DrawWineTricks);
+  self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages
