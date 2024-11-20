@@ -28,7 +28,7 @@ inline std::string replace_substrings(std::string string
 
 // to_string() {{{
 template<typename T>
-inline std::string to_string(T&& t)
+inline std::string to_string(T&& t) noexcept
 {
   if constexpr ( ns_concept::StringConvertible<T> )
   {
@@ -42,16 +42,12 @@ inline std::string to_string(T&& t)
   {
     return std::to_string(t);
   } // else if 
-  else if constexpr ( ns_concept::StreamInsertable<T> )
+  else
   {
     std::stringstream ss;
     ss << t;
     return ss.str();
   } // else if 
-  
-  throw std::runtime_error(fmt::format("Cannot convert '{}' to a valid string"
-    , boost::typeindex::type_id_with_cvr<T>().pretty_name())
-  );
 } // to_string() }}}
 
 // to_lower() {{{

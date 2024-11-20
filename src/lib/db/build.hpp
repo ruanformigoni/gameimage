@@ -7,6 +7,7 @@
 
 #include "../db.hpp"
 #include "../../std/env.hpp"
+#include "../hope.hpp"
 
 namespace ns_db::ns_build
 {
@@ -38,7 +39,7 @@ class Build
     std::string dist_wine;
     std::vector<Metadata> projects;
     Metadata& find(std::string_view name);
-  friend Build read_impl(fs::path path_file_db);
+  friend std::expected<Build,std::string> read_impl(fs::path path_file_db);
   friend void write_impl(Build const& build);
 }; // Build
 
@@ -59,36 +60,21 @@ inline void init_impl(fs::path const& path_dir_build)
   fs::create_directories(path_dir_build);
   // Create database
   fs::path path_file_database = path_dir_build / "gameimage.json";
-  ns_db::from_file(path_file_database, [&](auto&& db)
+  std::ignore = ns_db::open(path_file_database, [&](ns_db::Db& db)
   {
     // build dir
     db("path_dir_build") = path_dir_build;
-
     // cache dir
     fs::path path_dir_cache = path_dir_build / "cache";
     db("path_dir_cache") = path_dir_cache;
-
     // Location of linux image
     db("path_file_image") = path_dir_cache / "linux.flatimage";
-
     // Location of the output file
-    if ( not db.contains("path_file_output") )
-    {
-      db("path_file_output") = "";
-    } // if
-
+    db("path_file_output") = db.template value_or_default<std::string>("path_file_output");
     // Wine distribution
-    if ( not db.contains("dist_wine") )
-    {
-      db("dist_wine") = "default";
-    } // if
-
+    db("dist_wine") = db.template value_or_default<std::string>("dist_wine", "default");
     // Set as default project
-    if ( not db.contains("project") )
-    {
-      db("project") = "";
-    } // if
-
+    db("project") = db.template value_or_default<std::string>("project");
     // Projects object
     if ( not db.contains("projects"))
     {
@@ -99,34 +85,36 @@ inline void init_impl(fs::path const& path_dir_build)
 } // init_impl() }}}
 
 // read_impl() {{{
-Build read_impl(fs::path path_file_db)
+std::expected<Build,std::string> read_impl(fs::path path_file_db)
 {
-  Build build(path_file_db);
-  ns_db::from_file(path_file_db, [&](auto&& db)
+  return ns_db::open<std::expected<Build,std::string>>(path_file_db, [&](auto&& db) -> std::expected<Build,std::string>
   {
-    build.project = db["project"];
-    build.path_dir_build = fs::path{db["path_dir_build"]};
-    build.path_dir_cache = fs::path{db["path_dir_cache"]};
-    build.path_file_image =  fs::path{db["path_file_image"]};;
-    build.path_file_output =  fs::path{db["path_file_output"]};;
-    build.dist_wine =  fs::path{db["dist_wine"]};;
-    for( auto [name, obj] : db["projects"].items() )
+    Build build(path_file_db);
+    build.project          = ehope(db.template value<std::string>("project"));
+    build.path_dir_build   = ehope(db.template value<fs::path>("path_dir_build"));
+    build.path_dir_cache   = ehope(db.template value<fs::path>("path_dir_cache"));
+    build.path_file_image  = ehope(db.template value<fs::path>("path_file_image"));
+    build.path_file_output = ehope(db.template value<fs::path>("path_file_output"));
+    build.dist_wine        = ehope(db.template value<std::string>("dist_wine"));
+    auto projects = ehope(db.value("projects"));
+    for(auto const& key : projects.keys())
     {
+      auto project = ehope(db.value("projects", key));
       Metadata metadata;
-      metadata.name = name;
-      metadata.path_dir_project =  fs::path{obj["path_dir_project"]};
-      metadata.path_dir_project_root =  fs::path{obj["path_dir_project_root"]};
-      metadata.platform =  ns_enum::from_string<ns_enum::Platform>(obj["platform"]);
+      metadata.name                  = key;
+      metadata.path_dir_project      = ehope(project.template value<fs::path>("path_dir_project"));
+      metadata.path_dir_project_root = ehope(project.template value<fs::path>("path_dir_project_root"));
+      metadata.platform              = ns_enum::from_string<ns_enum::Platform>(project.template value_or_default<std::string>("platform"));
       build.projects.push_back(metadata);
     } // for
-  }, ns_db::Mode::READ);
-  return build;
+    return build;
+  }, ns_db::Mode::READ).value_or(std::unexpected("Could not read build database"));
 } // read_impl() }}}
 
 // write_impl() {{{
 void write_impl(Build const& build)
 {
-  ns_db::from_file(build.path_file_db, [&](auto&& db)
+  std::ignore = ns_db::open(build.path_file_db, [&](auto&& db)
   {
     db("project") = build.project;
     db("path_dir_build") = build.path_dir_build;
@@ -158,10 +146,7 @@ void write_impl(Build const& build)
 // read() {{{
 inline std::expected<Build,std::string> read()
 {
-  return ns_exception::to_expected([&]
-  {
-    return read_impl(fs::path{ns_env::get_or_throw("GIMG_DIR")} / "gameimage.json");
-  });
+  return read_impl(fs::path{ns_env::get_or_throw("GIMG_DIR")} / "gameimage.json");
 } // read() }}}
 
 // write() {{{

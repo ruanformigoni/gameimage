@@ -14,12 +14,13 @@
 #include "../enum.hpp"
 #include "../macro.hpp"
 
-#include "../lib/log.hpp"
+#include "log.hpp"
 
 namespace ns_db
 {
 
 using object_t = nlohmann::basic_json<>::object_t;
+class Db;
 
 namespace
 {
@@ -34,36 +35,6 @@ template<typename T>
 concept IsString =
      std::convertible_to<std::decay_t<T>, std::string>
   or std::constructible_from<std::string, std::decay_t<T>>;
-
-// class JsonIterator {{{
-template<typename IteratorType>
-class JsonIterator
-{
-  private:
-    IteratorType m_it;
-
-  public:
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = typename IteratorType::value_type;
-    using difference_type = typename IteratorType::difference_type;
-    using pointer = typename IteratorType::pointer;
-    using reference = typename IteratorType::reference;
-
-    // Construct with an nlohmann::json iterator
-    explicit JsonIterator(IteratorType it) : m_it(it) {}
-
-    // Increment operators
-    JsonIterator& operator++() { ++m_it; return *this; }
-    JsonIterator operator++(int) { JsonIterator tmp = *this; ++(*this); return tmp; }
-
-    // Dereference operators
-    reference operator*() const { return *m_it; }
-    pointer operator->() const { return &(*m_it); }
-
-    // Comparison operators
-    bool operator==(const JsonIterator& other) const { return m_it == other.m_it; }
-    bool operator!=(const JsonIterator& other) const { return m_it != other.m_it; }
-}; // }}}
 
 } // anonymous namespace
 
@@ -82,133 +53,42 @@ class Db
   private:
     std::variant<json_t, std::reference_wrapper<json_t>> m_json;
     fs::path m_path_file_db;
-    Mode m_mode;
-
-    Db(std::reference_wrapper<json_t> json);
 
     json_t& data();
-    json_t& data() const;
+    json_t const& data() const;
   public:
-    // Iterators
-    using iterator = JsonIterator<json_t::iterator>;
-    using const_iterator = JsonIterator<json_t::const_iterator>;
-    const_iterator cbegin() const { return const_iterator(data().cbegin()); }
-    const_iterator cend() const { return const_iterator(data().cend()); }
-    iterator begin() { return iterator(data().begin()); }
-    iterator end() { return iterator(data().end()); }
-    const_iterator begin() const { return const_iterator(data().cbegin()); }
-    const_iterator end() const { return const_iterator(data().cend()); }
-
     // Constructors
-    Db() = delete;
-    Db(Db const&) = delete;
-    Db(Db&&) = delete;
-    Db(fs::path t, Mode mode);
-
-    // Destructors
-    ~Db();
-
-    // Access
-    decltype(auto) items() const;
+    Db(std::reference_wrapper<json_t> json) noexcept;
+    // Element access
+    [[nodiscard]] std::vector<std::string> keys() const noexcept;
+    template<typename V = Db, IsString... Ks>
+    [[nodiscard]] std::expected<V,std::string> value(Ks&&... ks) noexcept;
+    template<typename V>
+    [[nodiscard]] V value_or_default(IsString auto&& k, V&& v = V{}) const noexcept;
+    template<typename F, IsString Ks>
+    [[nodiscard]] decltype(auto) apply(F&& f, Ks&& ks);
+    // Capacity
+    [[nodiscard]] bool empty() const noexcept;
+    // Lookup
     template<IsString T>
-    bool contains(T&& t) const;
-    template<typename T = std::string>
-    std::vector<T> to_vector() const;
-    bool empty() const;
-
-    // Modifying
+    [[nodiscard]] bool contains(T&& t) const noexcept;
+    // Modifiers
     template<IsString T>
-    bool erase(T&& t);
-
+    [[nodiscard]] bool erase(T&& t);
     // Operators
-    operator std::string() const;
-    operator fs::path() const;
-    operator json_t() const;
-    Db operator=(Db const&) = delete;
-    Db operator=(Db&&) = delete;
-    template<IsString T>
-    Db const& operator[](T&& t) const;
-    template<IsString T>
-    Db operator()(T&& t);
-    template<IsString T>
+    template<typename T>
     T operator=(T&& t);
     template<IsString T>
-    std::vector<T> operator=(std::vector<T> const& t);
-    object_t operator=(object_t const& obj);
-    template<IsString T>
-    Db& operator|=(T&& t);
-
+    [[nodiscard]] Db operator()(T&& t);
+    // Friends
     friend std::ostream& operator<<(std::ostream& os, Db const& db);
 }; // class: Db }}}
 
 // Constructors {{{
-inline Db::Db(std::reference_wrapper<json_t> json)
+inline Db::Db(std::reference_wrapper<json_t> json) noexcept
 {
   m_json = json;
-} // Json
-
-inline Db::Db(fs::path t, Mode mode)
-  : m_path_file_db(t)
-  , m_mode(mode)
-{
-  ns_log::write('i', "Open file '", m_path_file_db, "'", " as ", ns_enum::to_string(mode));
-
-  auto f_parse_file = [](std::string const& name_file, std::ifstream const& f)
-  {
-    // Read to string
-    std::string contents = ns_string::to_string(f.rdbuf());
-    // Validate contents
-    if ( ! json_t::accept(contents) )
-    {
-      // Failed to parse
-      "Failed to parse db '{}', will create if mode is write"_throw(name_file);
-    } // if
-    // Parse contents
-    return json_t::parse(contents);
-  };
-
-  // Open file on read mode
-  if ( mode == Mode::READ or mode == Mode::UPDATE )
-  {
-    // Open target file as read
-    std::ifstream file(t, std::ios::in);
-    // Check for failure
-    "Failed to open '{}'"_throw_if([&]{ return ! file.good(); }, t);
-    // Try to parse
-    m_json = f_parse_file(t.string(), file);
-    // Close file
-    file.close();
-    return;
-  } // if
-
-  if ( mode == Mode::CREATE )
-  {
-    // Print file name
-    ns_log::write('i', "Creating db file '", t);
-    // Create empty json
-    m_json = json_t::parse("{}");
-    return;
-  } // else
-
-  "Invalid open mode in db"_throw();
-} // Db
-
-// }}}
-
-// Destructors {{{
-
-inline Db::~Db()
-{
-  if ( ( m_mode == Mode::UPDATE or m_mode == Mode::CREATE ) && std::holds_alternative<json_t>(m_json))
-  {
-    std::ofstream file(m_path_file_db, std::ios::trunc);
-    "Failed to open '{}' for writing"_throw_if([&]{ return ! file.good(); }, m_path_file_db);
-    file << std::setw(2) << std::get<json_t>(m_json);
-    file.close();
-  } // if
-} // Db
-
-// }}}
+} // Constructors }}}
 
 // data() {{{
 inline json_t& Db::data()
@@ -217,92 +97,117 @@ inline json_t& Db::data()
   {
     return std::get<std::reference_wrapper<json_t>>(m_json).get();
   } // if
-  
+
   return std::get<json_t>(m_json);
 } // data() }}}
 
 // data() const {{{
-inline json_t& Db::data() const
+inline json_t const& Db::data() const
 {
   return const_cast<Db*>(this)->data();
 } // data() const }}}
 
-// items() {{{
-inline decltype(auto) Db::items() const
+// keys() {{{
+inline std::vector<std::string> Db::keys() const noexcept
 {
-  return data().items();
-} // items() }}}
-
-// to_vector() {{{
-template<typename T>
-std::vector<T> Db::to_vector() const
-{
-  json_t& json = data();
-  ethrow_if(not json.is_array(), "Tried to access non-array as array in DB");
-  std::vector<T> vector;
-  std::for_each(json.begin(), json.end(), [&](std::string e){ vector.push_back(T{e}); });
-  return vector;
-} // to_vector() }}}
+  return data().items()
+    | std::views::transform([](auto&& e){ return e.key(); })
+    | std::ranges::to<std::vector<std::string>>();
+} // keys() }}}
 
 // contains() {{{
 template<IsString T>
-bool Db::contains(T&& t) const
+bool Db::contains(T&& t) const noexcept
 {
   return data().contains(t);
 } // contains() }}}
 
 // empty() {{{
-inline bool Db::empty() const
+inline bool Db::empty() const noexcept
 {
   return data().empty();
 } // empty() }}}
 
-// operator::string() {{{
-inline Db::operator std::string() const
+// value() {{{
+template<typename V, IsString... Ks>
+std::expected<V, std::string> Db::value(Ks&&... ks) noexcept
 {
-  return data();
-} // operator::string() }}}
-
-// operator::fs::path() {{{
-inline Db::operator fs::path() const
-{
-  return data();
-} // operator::fs::path() }}}
-
-// operator::json_t() {{{
-inline Db::operator json_t() const
-{
-  return data();
-} // operator::fs::path() }}}
-
-// operator[] {{{
-// Key exists and is accessed
-template<IsString T>
-Db const& Db::operator[](T&& t) const
-{
-  static std::unique_ptr<Db> db;
-
   json_t& json = data();
-
-  // Check if key is present
-  if ( ! json.contains(t) )
+  if constexpr ( sizeof...(ks) == 0 )
   {
-    "Key '{}' not present in db file"_throw(t);
+    return ( json.is_string() )? std::expected<V,std::string>(std::string{json})
+      : std::unexpected("Json element is not a string");
   } // if
-
-  // Access key
-  try
+  else
   {
-    db = std::unique_ptr<Db>(new Db{std::reference_wrapper<json_t>(json[t])});
-  } // try
-  catch(std::exception const& e)
-  {
-    "Failed to parse key '{}': {}"_throw(t, e.what());
-  } // catch
+    // Use keys to access nested json elements
+    auto f_access_impl = [&]<typename T, typename U>(T& value, U&& u)
+    {
+      ns_log::write('i', "Access '{}'"_fmt(u));
+      // Check if json is still valid
+      qreturn_if(not value.has_value());
+      // Get json database
+      json_t& db = value->get();
+      // Access value
+      value = ( db.contains(u) )?
+          std::expected<std::reference_wrapper<json_t>,std::string>(std::reference_wrapper(db[u]))
+        : std::unexpected("Could not access key '{}' in database"_fmt(u));
+    }; // f_access
+    auto f_access = [&]<typename T, typename... U>(T& value, U&&... u)
+    {
+      ( f_access_impl(value, std::forward<U>(u)), ... );
+    }; // f_access
+    std::expected<std::reference_wrapper<json_t>,std::string> expected_json = std::reference_wrapper(json);
+    f_access(expected_json, std::forward<Ks>(ks)...);
+    // Check if access was successful
+    qreturn_if(not expected_json, std::unexpected(expected_json.error()));
+    // Return a novel db with a non-owning view over the accessed data or use to create a type V
+    if constexpr ( std::same_as<V,Db> )
+    {
+      return Db{*expected_json};
+    } // if
+    else
+    {
+      return ns_exception::to_expected([&]{ return V{expected_json->get()}; });
+    } // else
+  } // else
+} // value() }}}
 
-  // Unreachable, used to suppress no return warning
-  return *db;
-} // operator[] }}}
+// value_or_default() {{{
+template<typename V>
+V Db::value_or_default(IsString auto&& k, V&& v) const noexcept
+{
+  // Read current json
+  json_t json = data();
+  // Check if has value
+  ereturn_if(not json.contains(k), "Could not find '{}' in database"_fmt(k), v);
+  // Access value
+  json = json[k];
+  // Return range or string type
+  if constexpr ( ns_concept::IsVector<V> )
+  {
+    ereturn_if(not json.is_array(), "Tried to access non-array as array in DB with key '{}'"_fmt(k), v);
+    return std::ranges::subrange(json.begin(), json.end())
+      | std::views::transform([](auto&& e){ return typename std::remove_cvref_t<V>::value_type(e); })
+      | std::ranges::to<V>();
+  } // if
+  else
+  {
+    return V{json};
+  } // else
+} // value_or_default() }}}
+
+// apply() {{{
+// Key exists or is created, and is accessed
+template<typename F, IsString Ks>
+decltype(auto) Db::apply(F&& f, Ks&& ks)
+{
+  if (auto access = value(std::forward<Ks>(ks)))
+  {
+    return ns_exception::to_expected([&]{ return f(*access); });
+  } // if
+  return std::unexpected("Could not apply function");
+} // apply() }}}
 
 // operator() {{{
 // Key exists or is created, and is accessed
@@ -342,47 +247,17 @@ bool Db::erase(T&& t)
     return true;
   }
 
-  // When key was found, returns 1
-  return json.erase(key) == 1;
+  // Erase returns the number of elements removed
+  return json.erase(key) > 1;
 } // erase() }}}
 
-// operator=(IsString) {{{
-template<IsString T>
+// operator= {{{
+template<typename T>
 T Db::operator=(T&& t)
 {
   data() = t;
   return t;
-} // operator=(IsString) }}}
-
-// operator=(vector<path>) {{{
-template<IsString T>
-inline std::vector<T> Db::operator=(std::vector<T> const& t)
-{
-  data() = t;
-  return t;
-} // operator=(vector<path>) }}}
-
-// operator=(object_t) {{{
-inline object_t Db::operator=(object_t const& obj)
-{
-  data() = obj;
-  return obj;
-} // operator=(vector<path>) }}}
-
-// operator|= {{{
-template<IsString T>
-Db& Db::operator|=(T&& t)
-{
-  auto& json = data();
-  if ( std::find_if(json.cbegin()
-    , json.cend()
-    , [&](auto&& e){ return std::string{e} == t; }) == json.cend() )
-  {
-    json.push_back(std::forward<T>(t));
-  } // if
-  return *this;
-  // else
-} // operator|= }}}
+} // operator= }}}
 
 // operator<< {{{
 inline std::ostream& operator<<(std::ostream& os, Db const& db)
@@ -391,55 +266,66 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
   return os;
 } // operator<< }}}
 
-// from_file() {{{
-template<IsString T, typename F>
-void from_file(T&& t, F&& f, Mode mode)
+// open() {{{
+template<typename Ret = void>
+auto open(IsString auto&& t, auto&& f, Mode mode) -> std::expected<Ret, std::string>
 {
+  fs::path path_file_db{ns_string::to_string(t)};
+  // Parse a file
+  auto f_parse_file = [](std::ifstream const& f) -> std::optional<json_t>
+  {
+    // Read to string
+    std::string contents = ns_string::to_string(f.rdbuf());
+    // Validate contents
+    qreturn_if (json_t::accept(contents),  json_t::parse(contents));
+    // Failed to parse
+    return std::nullopt;
+  };
+  // Write a file
+  auto f_write_file = [](fs::path const& path_file_db, json_t const& json, Mode const& mode)
+  {
+    if ( mode == Mode::READ ) { return; }
+    std::ofstream file(path_file_db, std::ios::trunc);
+    ereturn_if(not file.is_open(), "Failed to open '{}' for writing");
+    file << std::setw(2) << json;
+  };
+  // Create json object
+  json_t json;
+  if ( mode == Mode::READ or mode == Mode::UPDATE )
+  {
+    // Open target file as read
+    std::ifstream file(path_file_db, std::ios::in);
+    // Check for failure
+    qreturn_if(not file.is_open(), std::unexpected("Failed to open '{}'"_fmt(path_file_db)));
+    // Try to parse
+    auto optional_json = f_parse_file(file);
+    qreturn_if(not optional_json, std::unexpected("Failed to parse db '{}'"_fmt(path_file_db)));
+    json = *optional_json;
+  } // if
+  else
+  {
+    // Print file name
+    ns_log::write('i', "Creating db file '", path_file_db);
+    // Create empty json
+    json = json_t::parse("{}");
+  } // else
   // Create DB
-  Db db = Db(std::forward<T>(t), mode);
+  Db db = Db(std::reference_wrapper(json));
   // Access
-  f(db);
-} // function: from_file }}}
-
-// to_file() {{{
-template<IsString T>
-void to_file(Db const& json, T&& t)
-{
-  std::ofstream ofile_json{t};
-  ofile_json << std::setw(2) << json;
-  ofile_json.close();
-} // function: to_file }}}
-
-// query() {{{
-template<typename F, typename... Args>
-inline std::string query(F&& file, Args... args)
-{
-  std::string ret;
-
-  auto f_access_impl = [&]<typename T, typename U>(T& ref_db, U&& u)
+  if constexpr ( std::same_as<Ret,void> )
   {
-    ref_db = std::reference_wrapper(ref_db.get()[u]);
-  }; // f_access
-
-  auto f_access = [&]<typename T, typename... U>(T& ref_db, U&&... u)
+    f(db);
+    f_write_file(path_file_db, json, mode);
+    return std::expected<void,std::string>{};
+  } // if
+  else
   {
-    ( f_access_impl(ref_db, std::forward<U>(u)), ... );
-  }; // f_access
+    auto ret = f(db);
+    f_write_file(path_file_db, json, mode);
+    return ret;
+  } // else
 
-  from_file(file, [&]<typename T>(T&& db)
-  {
-    // Get a ref to db
-    auto ref_db = std::reference_wrapper<Db const>(db);
-
-    // Update the ref to the selected query object
-    f_access(ref_db, std::forward<Args>(args)...);
-
-    // Assign result
-    ret = ref_db.get();
-  }, Mode::READ);
-
-  return ret;
-} // query() }}}
+} // function: open }}}
 
 } // namespace ns_db
 

@@ -103,33 +103,40 @@ std::vector<std::string> wine_args(fs::path const& path_dir_self, fs::path const
   fs::path path_file_args = path_dir_self / "gameimage.wine.args.json";
 
   // Query if the executable has any arguments
-  auto opt_str_args = ns_common::catch_to_optional([]<typename... T>(T&&... t){ return ns_db::query(std::forward<T>(t)...); }
-    , path_file_args
-    , path_file_executable
-  );
+  auto expected_arguments = ns_db::open<std::string>(path_file_args, [&](auto&& db)
+  {
+    return db.template value<std::string>(path_file_executable);
+  }, ns_db::Mode::READ);
 
   // Check if has any argument
-  return_if(not opt_str_args.has_value() or opt_str_args->empty()
+  return_if(not expected_arguments.has_value() or expected_arguments->empty()
     , (ns_log::write('i', "No arguments for ", path_file_executable), std::vector<std::string>{})
   )
 
   // Split arguments by space
-  return ns_string::split(*opt_str_args, ' ');
+  return ns_string::split(*expected_arguments, ' ');
 } // wine_args() }}}
 
 // env() {{{
 void env(fs::path const& path_dir_self)
 {
-  // Standard path for env var list
+  // Default path for env var list
   fs::path path_file_env = path_dir_self / "gameimage.env.json";
 
   // Set variables
-  ns_db::from_file(path_file_env, [&](auto&& db)
+  std::ignore = ns_db::open(path_file_env, [&](auto&& db)
   {
-    for(auto&& e : db.items())
+    for(auto&& e : db.keys())
     {
-      ns_env::set(e.key(), e.value(), ns_env::Replace::Y);
-      ns_log::write('i', "Set environment variable '", e.key(), "' to '", e.value(), "'");
+      if ( auto value = db.template value<std::string>(e) )
+      {
+        ns_env::set(e, *value, ns_env::Replace::Y);
+        ns_log::write('i', "Set environment variable '", e, "' to '", *value, "'");
+      } // if
+      else
+      {
+        ns_log::write('e', "Failed to get value for key '", e, "'");
+      } // else
     }
   }
   , ns_db::Mode::READ);
@@ -257,22 +264,12 @@ void boot(int argc, char** argv)
   // Flatimage distribution
   ns_log::write('i', "FlatImage distribution: ", ns_env::get_or_throw("FIM_DIST"));
 
-  // Get platform
-  ns_enum::Platform platform;
-
-  fs::path path_file_database = path_dir_self / "gameimage.json";
-
   // Open db
-  auto db_project = ns_db::ns_project::read(path_file_database);
+  auto db_project = ns_db::ns_project::read(path_dir_self / "gameimage.json");
   ethrow_if(not db_project, "Could not open build database");
 
   // Database file
-  ns_db::from_file(path_file_database
-  , [&](auto&& db)
-  {
-    platform = ns_enum::from_string<ns_enum::Platform>(std::string(db["platform"]));
-  }
-  , ns_db::Mode::READ);
+  ns_enum::Platform platform = db_project->platform;
 
   switch(platform)
   {

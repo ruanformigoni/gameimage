@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "../hope.hpp"
 #include "../db.hpp"
 #include "../../macro.hpp"
 
@@ -16,7 +17,7 @@ namespace
 
 // Forward declarations
 class Fetch;
-Fetch read_impl(fs::path const& path_file_db);
+std::expected<Fetch, std::string> read_impl(fs::path const& path_file_db);
 
 // platforms() {{{
 struct CoreUrl { std::string core; std::string url; };
@@ -33,7 +34,7 @@ struct Platform
     };
     virtual std::vector<CoreUrl> get_cores() const { return m_vec_core_url; };
     virtual ~Platform() {};
-  friend Fetch read_impl(fs::path const& path_file_db);
+  friend std::expected<Fetch, std::string> read_impl(fs::path const& path_file_db);
 };
 struct Linux     : public Platform {};
 struct Retroarch : public Platform {};
@@ -67,34 +68,43 @@ class Fetch
       throw std::runtime_error("Unknown platform");
     } // get_platform
 
-  friend Fetch read_impl(fs::path const& path_file_db);
+  friend std::expected<Fetch, std::string> read_impl(fs::path const& path_file_db);
 }; // class Fetch }}}
 
 // read_impl() {{{
-inline Fetch read_impl(fs::path const& path_file_db)
+inline std::expected<Fetch, std::string> read_impl(fs::path const& path_file_db)
 {
-  Fetch fetch;
-  ns_db::from_file(path_file_db,[&](auto&& db)
+  return ns_db::open<std::expected<Fetch, std::string>>(path_file_db, [&](auto&& db) -> std::expected<Fetch, std::string>
   {
+    Fetch fetch;
     // Linux
-    fetch.m_linux->m_url_layer["default"] = db["linux"]["layer"];
+    fetch.m_linux->m_url_layer["default"] = ehope(db.template value<std::string>("linux", "layer"));
     // Pcsx2
-    fetch.m_pcsx2->m_url_layer["default"] = db["pcsx2"]["layer"];
+    fetch.m_pcsx2->m_url_layer["default"] = ehope(db.template value<std::string>("pcsx2", "layer"));
     // Rpcs3
-    fetch.m_rpcs3->m_url_layer["default"] = db["rpcs3"]["layer"];
+    fetch.m_rpcs3->m_url_layer["default"] = ehope(db.template value<std::string>("rpcs3", "layer"));
     // Wine
-    for( auto [key, val] : db["wine"]["layer"].items() )
+    auto layers = ehope(db.value("wine", "layer"));
+    for(auto const& key : layers.keys())
     {
-      fetch.m_wine->m_url_layer[key] = val;
+      fetch.m_wine->m_url_layer[key] = ehope(db.template value<std::string>("wine", "layer", key));
     } // for
     // Retroarch
-    fetch.m_retroarch->m_url_layer["default"] = db["retroarch"]["layer"];
-    for(auto [name, url] : db["retroarch"]["core"].items())
+    fetch.m_retroarch->m_url_layer["default"] = ehope(db.template value<std::string>("retroarch", "layer"));
+    auto cores = ehope(db.value("retroarch", "core"));
+    for(auto const& key : cores.keys())
     {
-      fetch.m_retroarch->m_vec_core_url.push_back(CoreUrl{ name, url });
+      if (auto value = db.template value<std::string>("retroarch", "core", key))
+      {
+        fetch.m_retroarch->m_vec_core_url.push_back(CoreUrl{ key, *value });
+      } // if
+      else
+      {
+        ns_log::write('e', "Could not get value for key '", key, "'");
+      } // else
     } // for
-  }, ns_db::Mode::READ);
-  return fetch;
+    return fetch;
+  }, ns_db::Mode::READ).value_or(std::unexpected("Could not read 'fetch' database"));
 } // read_impl() }}}
 
 } // namespace
@@ -102,7 +112,7 @@ inline Fetch read_impl(fs::path const& path_file_db)
 // read() {{{
 inline std::expected<Fetch, std::string> read(fs::path const& path_file_db)
 {
-  return ns_exception::to_expected([&]{ return read_impl(path_file_db); });
+  return read_impl(path_file_db);
 } // read() }}}
 
 } // namespace ns_db::ns_fetch

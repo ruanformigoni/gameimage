@@ -9,9 +9,14 @@
 #include <string>
 #include <type_traits>
 #include <concepts>
+#include <vector>
+#include <variant>
 
 namespace ns_concept
 {
+template <typename T>
+concept Variant = requires(T){ std::variant_size_v<T>; };
+
 template<typename T>
 concept Enum = std::is_enum_v<T>;
 
@@ -28,6 +33,18 @@ concept IterableConst = requires(T t)
   { t.cbegin() } -> std::input_iterator;
   { t.cend() } -> std::input_iterator;
 };
+
+
+// Helper to check if a type is a specialization of std::vector
+template <typename>
+struct is_vector : std::false_type {};
+
+template <typename T, typename Allocator>
+struct is_vector<std::vector<T, Allocator>> : std::true_type {};
+
+// Define a concept based on the helper trait
+template <typename T>
+concept IsVector = is_vector<T>::value;
 
 template<typename T>
 concept IterableForward = std::forward_iterator<T>;

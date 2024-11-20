@@ -72,7 +72,7 @@ inline void desktop(std::string str_name, std::string str_items)
   fs::path path_file_icon = ns_fs::ns_path::file_exists<true>(path_dir_build / "desktop.png")._ret;
 
   // Create application data
-  ns_db::from_file(path_file_desktop
+  std::ignore = ns_db::open(path_file_desktop
   , [&](auto&& db)
   {
     db("name") = str_name;
@@ -81,14 +81,14 @@ inline void desktop(std::string str_name, std::string str_items)
   }, ns_db::Mode::CREATE);
 
   // Apply application data
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+  std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
     .with_args(db_build->path_file_output, "fim-desktop", "setup", path_file_desktop)
     .spawn()
     .wait();
 
   // Enable desktop integration
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+  std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
     .with_args(db_build->path_file_output
       , "fim-desktop"

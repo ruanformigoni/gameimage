@@ -88,7 +88,10 @@ void write(char level, T&&... t)
 {
   std::stringstream ss;
 
-  ( ss << ... << t );
+  if constexpr ( sizeof...(t) > 0 )
+  {
+    ( ss << ... << t );
+  } // if
 
   switch (level)
   {

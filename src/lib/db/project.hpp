@@ -179,7 +179,7 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
 
 
   // Set project data
-  ns_db::from_file(path_dir_project / "gameimage.json", [&](auto&& db_project)
+  std::ignore = ns_db::open(path_dir_project / "gameimage.json", [&](auto&& db_project)
   {
     db_project("project")         = path_dir_project.filename();
     db_project("platform")        = ns_enum::to_string(platform);
@@ -190,13 +190,13 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
     db_project("path_dir_core")   = path_dir_core;
     db_project("path_dir_keys")   = path_dir_keys;
     db_project("path_dir_linux")  = path_dir_linux;
-    db_project("path_file_bios")  = "";
-    db_project("path_file_core")  = "";
-    db_project("path_file_icon")  = "";
-    db_project("path_file_rom")   = "";
-    db_project("paths_file_bios") = std::vector<fs::path>();
-    db_project("paths_file_core") = std::vector<fs::path>();
-    db_project("paths_file_rom")  = std::vector<fs::path>();
+    db_project("path_file_bios")  = db_project.template value_or_default<std::string>("path_file_bios");
+    db_project("path_file_core")  = db_project.template value_or_default<std::string>("path_file_core");
+    db_project("path_file_icon")  = db_project.template value_or_default<std::string>("path_file_icon");
+    db_project("path_file_rom")   = db_project.template value_or_default<std::string>("path_file_rom");
+    db_project("paths_file_bios") = db_project.template value_or_default<std::vector<fs::path>>("paths_file_bios");
+    db_project("paths_file_core") = db_project.template value_or_default<std::vector<fs::path>>("paths_file_bios");
+    db_project("paths_file_rom")  = db_project.template value_or_default<std::vector<fs::path>>("paths_file_bios");
   }
   , ns_db::Mode::CREATE);
 } // init_impl() }}}
@@ -205,24 +205,24 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
 Project read_impl(fs::path path_file_db)
 {
   Project project(path_file_db);
-  ns_db::from_file(path_file_db, [&](auto&& db)
+  std::ignore = ns_db::open(path_file_db, [&](auto&& db)
   {
-    project.project         = fs::path{db["project"]};
-    project.platform        = ns_enum::from_string<ns_enum::Platform>(fs::path{db["platform"]});
-    project.path_dir_config = fs::path{db["path_dir_config"]};
-    project.path_dir_data   = fs::path{db["path_dir_data"]};
-    project.path_dir_bios   = fs::path{db["path_dir_bios"]};
-    project.path_dir_rom    = fs::path{db["path_dir_rom"]};
-    project.path_dir_core   = fs::path{db["path_dir_core"]};
-    project.path_dir_keys   = fs::path{db["path_dir_keys"]};
-    project.path_dir_linux  = fs::path{db["path_dir_linux"]};
-    project.path_file_bios  = fs::path{db["path_file_bios"]};
-    project.path_file_core  = fs::path{db["path_file_core"]};
-    project.path_file_icon  = fs::path{db["path_file_icon"]};
-    project.path_file_rom   = fs::path{db["path_file_rom"]};
-    project.paths_file_bios = db["paths_file_bios"].template to_vector<fs::path>();
-    project.paths_file_core = db["paths_file_core"].template to_vector<fs::path>();
-    project.paths_file_rom  = db["paths_file_rom"].template to_vector<fs::path>();
+    project.project         = db.template value_or_default<fs::path>("project");
+    project.platform        = ns_enum::from_string<ns_enum::Platform>(db.template value_or_default<std::string>("platform"));
+    project.path_dir_config = db.template value_or_default<fs::path>("path_dir_config");
+    project.path_dir_data   = db.template value_or_default<fs::path>("path_dir_data");
+    project.path_dir_bios   = db.template value_or_default<fs::path>("path_dir_bios");
+    project.path_dir_rom    = db.template value_or_default<fs::path>("path_dir_rom");
+    project.path_dir_core   = db.template value_or_default<fs::path>("path_dir_core");
+    project.path_dir_keys   = db.template value_or_default<fs::path>("path_dir_keys");
+    project.path_dir_linux  = db.template value_or_default<fs::path>("path_dir_linux");
+    project.path_file_bios  = db.template value_or_default<fs::path>("path_file_bios");
+    project.path_file_core  = db.template value_or_default<fs::path>("path_file_core");
+    project.path_file_icon  = db.template value_or_default<fs::path>("path_file_icon");
+    project.path_file_rom   = db.template value_or_default<fs::path>("path_file_rom");
+    project.paths_file_bios = db.template value_or_default<std::vector<fs::path>>("paths_file_bios");
+    project.paths_file_core = db.template value_or_default<std::vector<fs::path>>("paths_file_core");
+    project.paths_file_rom  = db.template value_or_default<std::vector<fs::path>>("paths_file_rom");
   }, ns_db::Mode::READ);
   return project;
 } // read_impl() }}}
@@ -230,7 +230,7 @@ Project read_impl(fs::path path_file_db)
 // write_impl() {{{
 void write_impl(Project const& project)
 {
-  ns_db::from_file(project.m_path_file_db, [&](auto&& db)
+  std::ignore = ns_db::open(project.m_path_file_db, [&](auto&& db)
   {
     db("project") = project.project;
     db("platform") = ns_enum::to_string(project.platform);
@@ -265,23 +265,20 @@ inline std::error<std::string> init(fs::path const& path_dir_project, ns_enum::P
 // read() {{{
 inline std::expected<Project,std::string> read(std::optional<fs::path> opt_path_file_database = std::nullopt)
 {
-  return ns_exception::to_expected([&]
+  if ( opt_path_file_database )
   {
-    if ( opt_path_file_database )
-    {
-      return read_impl(*opt_path_file_database);
-    } // if
-    else
-    {
-      // Get build database
-      auto db_build = ns_db::ns_build::read();
-      ethrow_if(not db_build, "Could not open build database");
-      // Get current project
-      auto db_metadata = db_build->find(db_build->project);
-      // Read json file
-      return read_impl(db_metadata.path_dir_project / "gameimage.json");
-    } // else
-  });
+    return read_impl(*opt_path_file_database);
+  } // if
+  else
+  {
+    // Get build database
+    auto db_build = ns_db::ns_build::read();
+    qreturn_if(not db_build, std::unexpected("Could not open build database"));
+    // Get current project
+    auto db_metadata = db_build->find(db_build->project);
+    // Read json file
+    return read_impl(db_metadata.path_dir_project / "gameimage.json");
+  } // else
 } // read() }}}
 
 // write() {{{
