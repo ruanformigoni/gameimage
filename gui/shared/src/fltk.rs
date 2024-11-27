@@ -1,6 +1,7 @@
 #![allow(special_module_name)]
 
 use fltk::prelude::*;
+use fltk::enums::*;
 
 use crate::dimm;
 
@@ -334,5 +335,28 @@ impl ScrollList
   } // widget_mut()
 
 } // impl ScrollList }}}
+
+// pub fn search_column() {{{
+pub fn search_column(x: i32, y: i32, w: i32, h: i32, label: &str) -> (fltk::group::Flex, fltk_evented::Listener<fltk::input::Input>)
+{
+  // Main column
+  let mut col = fltk::group::Flex::default()
+    .with_pos(x, y)
+    .with_size(w, h);
+  col.set_spacing(dimm::border());
+  col.set_type(fltk::group::FlexType::Column);
+  // Create label
+  col.fixed(&fltk::frame::Frame::default()
+    .with_size(col.w(), dimm::height_text())
+    .with_align(Align::Inside | Align::Left)
+    .with_label(label), dimm::height_text());
+  // Input widget
+  let mut input_query : fltk_evented::Listener<_> = fltk::input::Input::default()
+    .with_size(col.w(), dimm::height_button_wide())
+    .into();
+  let _ = input_query.take_focus();
+  col.fixed(&input_query.as_base_widget(), dimm::height_button_wide());
+  (col, input_query)
+} // pub fn search_column() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
