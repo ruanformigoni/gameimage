@@ -179,7 +179,8 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
 
 
   // Set project data
-  std::ignore = ns_db::open(path_dir_project / "gameimage.json", [&](auto&& db_project)
+  fs::path path_file_database = path_dir_project / "gameimage.json";
+  std::ignore = ns_db::open(path_file_database, [&](auto&& db_project)
   {
     db_project("project")         = path_dir_project.filename();
     db_project("platform")        = ns_enum::to_string(platform);
@@ -198,7 +199,7 @@ void init_impl(fs::path const& path_dir_project, ns_enum::Platform const& platfo
     db_project("paths_file_core") = db_project.template value_or_default<std::vector<fs::path>>("paths_file_bios");
     db_project("paths_file_rom")  = db_project.template value_or_default<std::vector<fs::path>>("paths_file_bios");
   }
-  , ns_db::Mode::CREATE);
+  , fs::exists(path_file_database)? ns_db::Mode::UPDATE : ns_db::Mode::CREATE);
 } // init_impl() }}}
 
 // read_impl() {{{
