@@ -119,8 +119,7 @@ fn redraw(&mut self, msg : Msg)
     Msg::DrawLinuxIcon => wizard::linux::icon(self.tx, "Select the Application Icon"),
     Msg::DrawLinuxMethod => wizard::linux::method(self.tx, "Select How to Install the Application"),
     Msg::DrawLinuxRom => wizard::linux::rom(self.tx, "Install the Application"),
-    Msg::DrawLinuxDefault => wizard::linux::default(self.tx, "Select the Main Binary"),
-    Msg::DrawLinuxTest => wizard::linux::test(self.tx, "Test the Application"),
+    Msg::DrawLinuxDefault(is_update) => wizard::linux::default(self.tx, "Select the Main Binary", is_update),
     Msg::DrawLinuxCompress => wizard::linux::compress(self.tx, "Compress the Created Package"),
     // Wine
     Msg::DrawWineName => wizard::wine::name(self.tx, "Select the Application Name"),
@@ -196,13 +195,27 @@ fn init(&mut self)
   // Set log window to the left of the main window
   self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
-  // self.tx.send(Msg::DrawWineRom);
+  let clone_tx = self.tx.clone();
+  std::thread::spawn(move ||
+  { 
+    loop
+    {
+      clone_tx.send(common::Msg::WindUpdate);
+      std::thread::sleep(std::time::Duration::from_millis(50));
+    } // while
+  });
+
   self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages
     match self.rx.recv()
     {
+      Some(common::Msg::WindUpdate) =>
+      {
+        app::flush();
+        app::awake();
+      }
       Some(common::Msg::WindActivate) =>
       {
         ( 0..self.wind_main.children() )
