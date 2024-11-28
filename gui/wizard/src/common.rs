@@ -61,8 +61,7 @@ pub enum Msg
   DrawLinuxIcon,
   DrawLinuxMethod,
   DrawLinuxRom,
-  DrawLinuxDefault,
-  DrawLinuxTest,
+  DrawLinuxDefault(bool),
   DrawLinuxCompress,
 
   DrawWineName,
@@ -99,6 +98,7 @@ pub enum Msg
 
   WindActivate,
   WindDeactivate,
+  WindUpdate,
 
   Quit,
 } // }}}
