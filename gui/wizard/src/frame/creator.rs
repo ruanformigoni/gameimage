@@ -6,11 +6,12 @@ use fltk::prelude::*;
 use fltk::{
   app::Sender,
   button,
+  group,
   button::CheckButton,
   frame::Frame,
   output,
   dialog,
-  enums::{FrameType,Color},
+  enums::{FrameType,Color,Align},
 };
 
 use shared::fltk::WidgetExtExtra;
@@ -31,11 +32,13 @@ lazy_static!
 }
 
 // fn create_entry() {{{
-fn create_entry(project : db::project::Entry
-  , scroll : &mut shared::fltk::ScrollList
-  , width: i32
-  , height: i32) -> anyhow::Result<(button::CheckButton, db::project::Entry)>
+fn create_entry(project : db::project::Entry, height: i32)
+  -> anyhow::Result<(group::Flex, button::CheckButton, db::project::Entry)>
 {
+  let mut row = fltk::group::Flex::default()
+    .with_type(fltk::group::FlexType::Row)
+    .with_size(0, height);
+
   //
   // Icon
   //
@@ -43,10 +46,7 @@ fn create_entry(project : db::project::Entry
   let mut frame_icon = Frame::default()
     .with_focus(false)
     .with_size(width_icon, height);
-
-  // Include in scroll list
-  scroll.add(&mut frame_icon.as_base_widget());
-
+  row.fixed(&frame_icon, width_icon);
   if let Ok(path_file_icon) = project.get_path_absolute(db::project::EntryName::PathFileIcon)
   {
     let path_file_resized = PathBuf::from(path_file_icon.clone())
@@ -73,40 +73,43 @@ fn create_entry(project : db::project::Entry
   //
   // Info
   //
-  let mut frame_info = output::MultilineOutput::default()
-    .with_size(width - width_icon - dimm::width_checkbutton(), height)
-    .right_of(&frame_icon, 0)
+  let mut frame_info = fltk::group::Flex::default()
+    .column()
     .with_frame(FrameType::BorderBox)
-    .with_color(Color::Background);
-  frame_info.set_text_size(dimm::height_text());
-
-  // Include fields in entry
-  let mut f_add_field = |title: &str, field : &Option<String>, push_newline: bool|
+    .with_size(0, height);
+  frame_info.set_margins(dimm::border()/2, dimm::border()/2, dimm::border()/2, 0);
+  let mut f_add_field = |title: &str, field : &str|
   {
-    if let Some(value) = field
-    {
-      let _ = frame_info.insert(title);
-      let _ = frame_info.insert(value.as_str());
-      if push_newline { let _ = frame_info.insert("\n"); }
-    }
+    let mut frame_entry = fltk::group::Flex::default().column();
+    frame_entry.set_spacing(dimm::border()/2);
+    let label = Frame::default()
+      .with_label(title)
+      .with_size(0, dimm::height_text())
+      .with_align(Align::Inside | Align::Left);
+    frame_entry.fixed(&label, dimm::height_text());
+    let mut output = output::Output::default();
+    output.set_value(field);
+    frame_entry.fixed(&output, dimm::height_button_wide());
+    frame_entry.end();
+    frame_info.add(&frame_entry);
   }; // f_add_field
-  f_add_field("Project: ", &Some(project.get_project()), true);
-  f_add_field("Platform: ", &Some(project.get_platform()), true);
-  f_add_field("Default rom: ", &project.get_path_relative(db::project::EntryName::PathFileRom).ok().map(|e| e.string()), true);
-  f_add_field("Default core: ", &project.get_path_relative(db::project::EntryName::PathFileCore).ok().map(|e| e.string()), true);
-  f_add_field("Default bios: ", &project.get_path_relative(db::project::EntryName::PathFileBios).ok().map(|e| e.string()), false);
-  let _ = frame_info.set_position(0);
+  f_add_field("PROJECT", &project.get_project());
+  f_add_field("PLATFORM", &project.get_platform());
+  frame_info.end();
+  row.add(&frame_info);
 
   //
   // CheckButton
   //
   let btn_checkbox = CheckButton::default()
     .with_size(dimm::width_checkbutton(), height)
-    .right_of(&frame_info, 0)
     .with_focus(false)
     .with_frame(FrameType::BorderBox);
+  row.fixed(&btn_checkbox, btn_checkbox.w());
 
-  Ok((btn_checkbox , project))
+  row.end();
+
+  Ok((row, btn_checkbox , project))
 } // }}}
 
 // creator_del() {{{
@@ -138,9 +141,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
-
   let frame_content = ret_frame_header.frame_content.clone();
-
 
   // Configure bottom buttons
   let clone_tx = tx.clone();
@@ -152,16 +153,16 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     } // if
   });
 
-  let mut scroll = shared::fltk::ScrollList::new(
-    frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-    , frame_content.height() - dimm::border()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border()
-  );
-  scroll.set_frame(FrameType::BorderBox);
-  scroll.set_border(dimm::border(), dimm::border());
+  let mut row_content = fltk::group::Flex::default()
+    .with_type(fltk::group::FlexType::Row)
+    .with_size(frame_content.w(), frame_content.h())
+    .with_pos(frame_content.x(), frame_content.y());
+  row_content.set_spacing(dimm::border() / 2);
 
-  scroll.begin();
+  let mut scroll = fltk::group::Scroll::default()
+    .with_size(row_content.w() - dimm::border()*2 - dimm::width_button_rec(), row_content.h());
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
+  scroll.set_scrollbar_size(dimm::border());
 
   // Fetch entries
   let projects = match db::project::list()
@@ -170,17 +171,20 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     Err(e) => { log!("Could not get project list: {}", e); vec![] },
   };
 
+  let mut col_projects = fltk::group::Pack::default_fill()
+    .with_type(fltk::group::PackType::Vertical);
+  col_projects.set_spacing(dimm::border());
+
   // Process entries if any
   let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
   for project in &projects
   {
-    let width_entry = scroll.widget_ref().w() - dimm::border()*2;
-    let height_entry = dimm::height_button_rec()*4;
-    let (button, project) = match create_entry(project.clone(), &mut scroll, width_entry, height_entry)
+    let (row_project, button, project) = match create_entry(project.clone(), dimm::height_button_rec()*4)
     {
       Ok(ret) => ret,
       Err(e) => { log!("Could not create entry for project with error: {}", e); continue; },
     }; // match
+    col_projects.add(&row_project);
 
     match vec_btn.lock()
     {
@@ -189,19 +193,23 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     }
   } // for
 
+  col_projects.end();
+  scroll.add(&col_projects);
   scroll.end();
+  row_content.add(&scroll);
+
+  let mut col_buttons = fltk::group::Flex::default_fill()
+    .with_type(fltk::group::FlexType::Column)
+    .with_size(dimm::width_button_rec(), row_content.h());
+  col_buttons.set_spacing(dimm::border());
 
   // Add new package
-  let mut btn_add = shared::fltk::button::rect::add()
-    .right_of(scroll.widget_mut(), dimm::border())
-    .with_color(Color::Green);
+  let mut btn_add = shared::fltk::button::rect::add().with_color(Color::Green);
   btn_add.emit(tx, common::Msg::DrawPlatform);
+  col_buttons.fixed(&btn_add, dimm::height_button_rec());
 
   // Erase package
-  let mut btn_del = shared::fltk::button::rect::del()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .below_of(&btn_add, dimm::border())
-    .with_color(Color::Red);
+  let mut btn_del = shared::fltk::button::rect::del().with_color(Color::Red);
   let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
@@ -210,6 +218,8 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     creator_del(clone_vec_checkbutton.lock().unwrap().iter().filter(|e| e.0.is_checked()).map(|e| e.1.clone()).collect());
     tx.send_awake(common::Msg::DrawCreator);
   });
+  col_buttons.fixed(&btn_del, dimm::height_button_rec());
+  row_content.fixed(&col_buttons, dimm::width_button_rec());
 
   // Finish package creation on click next
   let clone_vec_btn = vec_btn.clone();
@@ -275,8 +285,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       clone_tx.send_awake(common::Msg::DrawDesktop);
     });
   });
-
-
+  row_content.end();
 }
 // }}}
 
