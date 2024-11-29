@@ -72,11 +72,10 @@ pub fn name(tx: Sender<common::Msg>
   // Game name
   //
   let mut input_name = Input::default()
-    .with_size(frame_content.w() - dimm::border()*2, dimm::height_button_wide())
+    .with_size(frame_content.w(), dimm::height_button_wide())
     .below_of(&frame_content, 0)
     .with_align(Align::Top | Align::Left);
-  input_name.set_pos(frame_content.x() + dimm::border()
-    , input_name.y() - input_name.h() - dimm::border());
+  input_name.set_pos(frame_content.x(), input_name.y() - input_name.h());
   let _ = input_name.take_focus();
 
   // Sanitize game name

@@ -188,14 +188,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Show the running process stdout/stderr
   let term = frame::term::Term::new(dimm::border()
-    , frame_content.w() - dimm::border()*2
-    , frame_content.h() - dimm::border()*4 - dimm::height_button_wide() - height_input_script - dimm::height_text()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
+    , frame_content.w()
+    , frame_content.h() - dimm::border()*2 - dimm::height_button_wide() - height_input_script - dimm::height_text()*2
+    , frame_content.x()
+    , frame_content.y());
 
   // Field that shows the currently selected file
   let mut input_script = fltk::input::FileInput::default()
-    .with_width_of(&term.term)
+    .with_width_of(&frame_content)
     .with_height(height_input_script)
     .below_of(&term.term, dimm::border() + dimm::height_text())
     .with_align(fltk::enums::Align::Top | fltk::enums::Align::Left)
@@ -275,7 +275,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // Dispatch the process & clone into the global arc
     // The dispatch command kills the previous process in the terminal
     let mut clone_input_cmd = clone_input_cmd.clone();
-    match clone_term.dispatch(vec![&path::PathBuf::from(env::var("GIMG_BACKEND").unwrap_or(String::new())).string()
+    
+    match clone_term.dispatch(vec![&crate::gameimage::gameimage::binary().unwrap_or_default().string()
       , "install"
       , "rom"
       , str_choice.as_str()]
@@ -336,10 +337,10 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
   ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawLinuxMethod);
 
   let (mut col_search, mut input_search) = shared::fltk::search_column(
-      frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border()
-    , frame_content.w() - dimm::border()*2
-    , frame_content.h() - dimm::border()*2
+      frame_content.x()
+    , frame_content.y()
+    , frame_content.w()
+    , frame_content.h()
     , "Input a search term to filter executables, press enter to confirm"
   );
 
@@ -361,12 +362,13 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
   // Create a scroll list
   let mut scroll = fltk::group::Scroll::default()
     .with_size(col_search.w(), 0);
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
   scroll.set_scrollbar_size(dimm::border());
 
   // Create a column for the element entries
   let mut col_entries = fltk::group::Column::default()
     .with_pos_of(&scroll)
-    .with_size(scroll.w() - dimm::border()*2
+    .with_size(scroll.w() - (dimm::border() as f32 * 1.5) as i32
       , (dimm::height_button_wide() + dimm::border()) * RESULTS.lock().unwrap().len() as i32
     );
   col_entries.set_spacing(dimm::border());

@@ -214,16 +214,10 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyh
 {
   let vec_platforms = gameimage::fetch::installed()?;
   let db_fetch = db::fetch::read()?;
-  let mut col = fltk::group::Flex::new(widget.x() + dimm::border()
-    , widget.y() + dimm::border()
-    , widget.w() - dimm::border()*2
-    , widget.h() - dimm::border()*2
-    , ""
-  );
+  let mut col = fltk::group::Flex::new(widget.x(), widget.y(), widget.w(), widget.h(), "");
   col.set_type(PackType::Vertical);
   col.set_frame(FrameType::BorderBox);
   col.set_spacing(dimm::border());
-  col.set_margin(dimm::border());
   let row_linux         = platform_add(tx, &col.as_base_widget(), common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
   let mut row_rpcs3     = platform_add(tx, &col.as_base_widget(), common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
   let mut row_retroarch = platform_add(tx, &col.as_base_widget(), common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));

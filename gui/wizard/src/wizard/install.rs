@@ -47,9 +47,8 @@ pub fn install(tx: Sender<common::Msg>
 
   // List of the currently installed items
   let mut frame_list = MultiBrowser::default()
-    .with_size(frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-      , frame_content.height() - dimm::border()*2)
-    .with_pos(frame_content.x() + dimm::border(), frame_content.y() + dimm::border());
+    .with_size(frame_content.width() - dimm::border() - dimm::width_button_rec(), frame_content.height())
+    .with_pos_of(&frame_content);
   frame_list.set_frame(FrameType::BorderBox);
   frame_list.set_text_size(dimm::height_text());
 

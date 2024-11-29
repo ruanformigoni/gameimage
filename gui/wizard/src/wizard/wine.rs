@@ -190,10 +190,10 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
 
   // Create scrollbar
   let mut scroll = shared::fltk::ScrollList::new(
-    frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-    , frame_content.height() - dimm::border()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
+      frame_content.w() - dimm::border() - dimm::width_button_rec()
+    , frame_content.h()
+    , frame_content.x()
+    , frame_content.y());
   scroll.set_border(dimm::border(), dimm::border());
 
   //
@@ -259,8 +259,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
 
   // Add var button
   let mut btn_add = shared::fltk::button::rect::add()
-    .top_right_of(&frame_content, - dimm::border())
-    .with_border(0, dimm::border())
+    .right_of(scroll.widget_ref(), dimm::border())
     .with_color(Color::Green);
   let clone_tx = tx.clone();
   btn_add.set_callback(move |_|
@@ -379,10 +378,10 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 
   // Create scrollbar
   let mut col = fltk::group::Column::new(
-      frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border()
-    , frame_content.width() - dimm::border()*2
-    , frame_content.height() - dimm::border()*2
+      frame_content.x()
+    , frame_content.y()
+    , frame_content.w()
+    , frame_content.h()
     , ""
   );
   let (row,_,_) = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11"
@@ -426,9 +425,7 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
   // Create a column for the menu items
   let mut col = fltk::group::Column::default()
     .below_of(&frame_sep, dimm::border())
-    .with_size(frame_content.w() - dimm::border()*3 - dimm::width_button_rec()
-      , frame_content.h() - dimm::border()*2
-    );
+    .with_size(frame_content.w() - dimm::border() - dimm::width_button_rec(), frame_content.h());
   // Select year
   col.fixed(&fltk::frame::Frame::default().with_label("Select the Game Release Year"), dimm::height_text());
   let mut menu_year = fltk::menu::MenuButton::default();
@@ -683,10 +680,10 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     .collect();
 
   let (mut col_search, mut input_query) = shared::fltk::search_column(
-      frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border()
-    , frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-    , frame_content.height() - dimm::border()*2
+      frame_content.x()
+    , frame_content.y()
+    , frame_content.width() - dimm::border() - dimm::width_button_rec()
+    , frame_content.height()
     , "Input a search term to filter executables, press enter to confirm"
   );
 
@@ -705,6 +702,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   // Create scrollbar
   let mut scroll = fltk::group::Scroll::default()
     .with_size(col_search.w(), 0);
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
   scroll.set_scrollbar_size(dimm::border());
 
   // Insert items in list of currently installed items

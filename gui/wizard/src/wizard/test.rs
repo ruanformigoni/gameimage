@@ -51,10 +51,10 @@ pub fn test(tx: Sender<common::Msg>
   btn_test.set_color(Color::Green);
 
   let mut term = frame::term::Term::new(dimm::border()
-    , frame_content.w() - dimm::border()*2
-    , frame_content.h() - dimm::border()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
+    , frame_content.w()
+    , frame_content.h()
+    , frame_content.x()
+    , frame_content.y());
 
   let clone_tx = tx.clone();
   btn_test.set_callback(move |_|

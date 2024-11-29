@@ -29,6 +29,7 @@ use crate::frame;
 use crate::common;
 use crate::log;
 use crate::log_return_void;
+use crate::log_err;
 use crate::gameimage;
 
 // resize_draw_image() {{{
@@ -121,9 +122,6 @@ pub fn icon(tx: Sender<common::Msg>
   , msg_prev : common::Msg
   , msg_curr : common::Msg) -> Icon
 {
-  // Keep track of which frame to draw (search web or local)
-  static ICON_FRAME : once_cell::sync::Lazy<Mutex<IconFrame>> = once_cell::sync::Lazy::new(|| Mutex::new(IconFrame::Local));
-
   // Save previously selected icon path
   static OPTION_PATH_FILE_ICON : once_cell::sync::Lazy<Arc<Mutex<Option<PathBuf>>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
 
@@ -140,297 +138,74 @@ pub fn icon(tx: Sender<common::Msg>
 
   let frame_content = ret_frame_header.frame_content.clone();
 
+  let mut col = fltk::group::Flex::default()
+    .column()
+    .with_size_of(&frame_content)
+    .with_pos_of(&frame_content);
+
   // Footer callbacks
   ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
 
-  // Select source
-  let clone_tx = tx.clone();
-  let mut menu_source = menu::MenuButton::default()
-    .with_width(frame_content.w() - dimm::border()*2)
-    .with_height(dimm::height_button_wide())
-    .with_pos_of(&frame_content)
-    .with_focus(false)
-    .with_border(dimm::border(), dimm::border())
-    .with_callback(move |e|
-    {
-      let label = e.text(e.value()).unwrap_or(String::new());
-      e.set_label(label.as_str());
-      clone_tx.send_awake(msg_curr);
-      if let Ok(mut lock)  = ICON_FRAME.lock()
-      {
-        *lock = lock.from_str(label.as_str());
-      } // if
-    });
-  // menu_source.add_choice(IconFrame::Web.as_str());
-  menu_source.add_choice(IconFrame::Local.as_str());
-  menu_source.set_label(ICON_FRAME.lock().unwrap().as_str());
+  // Spacer
+  col.add(&Frame::default());
 
-  if let Ok(lock) = ICON_FRAME.lock() && *lock == IconFrame::Local
+  // Create icon box
+  let mut row = fltk::group::Flex::default().row();
+  row.add(&Frame::default());
+  let frame_icon = Frame::default()
+    .with_size(150, 225)
+    .with_frame(FrameType::BorderBox);
+  ret.opt_frame_icon = Some(frame_icon.clone());
+  row.fixed(&frame_icon,150);
+  row.add(&Frame::default());
+  row.end();
+  col.fixed(&row, 225);
+
+  // Spacer
+  col.add(&Frame::default());
+
+  // Icon
+  let mut row = fltk::group::Flex::default().row();
+  let mut input_icon = FileInput::default();
+  input_icon.set_readonly(true);
+  input_icon.deactivate();
+  ret.opt_input_icon = Some(input_icon.clone());
+  row.add(&input_icon);
+  let mut btn_search = shared::fltk::button::rect::search()
+    .with_color(Color::Green);
+  row.fixed(&btn_search, dimm::width_button_rec());
+  row.end();
+  col.fixed(&row, dimm::height_button_wide() + dimm::border()/2);
+
+  // Check path cache
+  if let Some(path_file_icon) = OPTION_PATH_FILE_ICON.lock().unwrap().clone()
   {
-
-    // Create icon box
-    let frame_icon = Frame::default()
-      .with_size(150, 225)
-      .center_of(&frame_content)
-      .with_frame(FrameType::BorderBox);
-    ret.opt_frame_icon = Some(frame_icon.clone());
-
-    // Icon
-    let mut input_icon = FileInput::default()
-      .with_size(frame_content.w() - dimm::border()*2, dimm::height_button_wide() + dimm::border())
-      .bottom_of(&frame_content, - dimm::border())
-      .with_posx_of(&menu_source)
-      .with_align(Align::Top | Align::Left);
-    input_icon.set_readonly(true);
-    ret.opt_input_icon = Some(input_icon.clone());
-
-    if let Ok(option_path_file_icon) = OPTION_PATH_FILE_ICON.lock()
-    && let Some(path_file_icon) = option_path_file_icon.as_ref()
-    {
-      // Set value of select field
-      input_icon.set_value(&path_file_icon.string());
-      // Update preview
-      if let Err(e) = resize_draw_image(frame_icon.clone(), path_file_icon.clone())
-      {
-        ret_frame_footer.output_status
-          .clone()
-          .set_value(format!("Failed to load preview: {}", e.to_string()).as_str());
-      } // if
-    } // if
-
-    // // Set input_icon callback
-    let mut clone_output_status = ret_frame_footer.output_status.clone();
-    input_icon.set_callback(move |e|
-    {
-      let str_choice = if let Some(str_choice) = file_chooser("Select the icon", "*.{jpg,png}", ".", false)
-      {
-        str_choice
-      } // if
-      else
-      {
-        clone_output_status.set_value("No file selected");
-        log!("No file selected");
-        return;
-      }; // else
-
-      // Update static icon
-      match OPTION_PATH_FILE_ICON.lock()
-      {
-        Ok(mut guard) => *guard = Some(PathBuf::from(&str_choice)),
-        Err(e) => log!("Failed to set static with error: {}", e),
-      } // match
-
-      // Show file path on selector
-      e.set_value(str_choice.as_str());
-
-      // Set preview image
-      match resize_draw_image(frame_icon.clone(), str_choice.into())
-      {
-        Ok(_) => clone_output_status.set_value("Set preview image"),
-        Err(_) => clone_output_status.set_value("Failed to load icon image into preview"),
-      } // match
-    });
+    input_icon.set_value(&path_file_icon.string());
+    log_err!(resize_draw_image(frame_icon.clone(), path_file_icon.clone()));
   } // if
-  else
+
+  // // Set input_icon callback
+  let mut clone_input_icon = input_icon.clone();
+  btn_search.set_callback(move |_|
   {
-    // search input
-    // Keep track of the last text the user entered
-    static STR_INPUT : once_cell::sync::Lazy<Mutex<String>> = once_cell::sync::Lazy::new(|| Mutex::new(String::new()));
-    let mut input_search = input::Input::default()
-      .with_size_of(&menu_source)
-      .with_width(menu_source.w() - dimm::border() - dimm::width_button_wide())
-      .below_of(&menu_source, dimm::border());
-    input_search.set_value(STR_INPUT.lock().unwrap().as_str());
-
-    // search button
-    let mut btn_search = button::Button::default()
-      .with_size(dimm::width_button_wide(), dimm::height_button_wide())
-      .right_of(&input_search, dimm::border())
-      .with_label("Search")
-      .with_focus(false)
-      .with_color(Color::Green);
-
-    // Temporary images path
-    let path_dir_images = if let Ok(str_dir_projects) = env::var("GIMG_DIR")
+    let str_choice = match file_chooser("Select the icon", "*.{jpg,png}", ".", false)
     {
-      let path_dir_images = PathBuf::from(str_dir_projects).join("thumbnails");
-      let _  = std::fs::create_dir_all(&path_dir_images);
-      path_dir_images
-    } // if
-    else
+      Some(str_choice) => str_choice,
+      None => { log!("No file selected"); return; }
+    }; // match
+    // Update static icon
+    *OPTION_PATH_FILE_ICON.lock().unwrap() = Some(PathBuf::from(&str_choice));
+    // Show file path on selector
+    clone_input_icon.set_value(str_choice.as_str());
+    // Set preview image
+    match resize_draw_image(frame_icon.clone(), str_choice.into())
     {
-      log!("Could not determine directory to download temporary images into");
-      return ret;
-    }; // else
+      Ok(_) => log!("Set preview image"),
+      Err(_) => log!("Failed to load icon image into preview"),
+    } // match
+  });
 
-    let mut scroll = fltk::group::Scroll::default()
-      .with_width_of(&menu_source)
-      .with_height(frame_content.h() - dimm::height_button_wide()*2 - dimm::border()*4)
-      .below_of(&input_search, dimm::border())
-      .with_frame(FrameType::BorderBox);
-    scroll.set_scrollbar_size(dimm::border());
-
-    scroll.begin();
-
-    let count_row : i32 = 5;
-    let count_col : i32 = 4;
-
-    let mut grid = fltk_grid::Grid::default()
-      .with_width(menu_source.w() - dimm::border())
-      .with_height((( menu_source.w() - dimm::border() ) as f32 * 1.5) as i32)
-      .below_of(&input_search, dimm::border())
-      .with_frame(FrameType::BorderBox);
-    // grid.show_grid(true);
-    grid.set_layout(count_row, count_col);
-
-    let mut iter_dir = if let Ok(iter_dir) = std::fs::read_dir(&path_dir_images)
-    {
-      iter_dir
-    } // if
-    else
-    {
-      log!("Failed to grab directory iterator to {}", path_dir_images.string());
-      return ret;
-    }; // else
-
-    let width_tile = grid.w() / count_col;
-    let height_tile = grid.h() / count_row;
-    let mut curr_row : i32 = 0;
-    let mut curr_col : i32 = 0;
-
-    let arc_vec_radio : Arc<Mutex<Vec<button::RadioButton>>> = Arc::new(Mutex::new(Vec::new()));
-
-    for result_path_file_image in iter_dir
-      .borrow_mut()
-      .filter(|e| { e.as_ref().is_ok_and(|e|{ e.file_type().is_ok_and(|e| e.is_file()) }) })
-      .filter(|e| { e.as_ref().is_ok_and(|e|
-      {
-        e.path().string().ends_with(".jpg") || e.path().string().ends_with(".png")
-      }) })
-    {
-      let path_file_image = if let Ok(path_file_image) = result_path_file_image
-      {
-        path_file_image.path()
-      } // if
-      else
-      {
-        return ret;
-      }; // else
-
-      let arc_path_file_image = Arc::new(Mutex::new(path_file_image.clone()));
-      let mut btn_image = button::RadioButton::default()
-        .with_width(width_tile - dimm::border())
-        .with_height(height_tile - dimm::border())
-        .with_focus(false)
-        .with_shared_image(path_file_image)
-        .with_pos_of(&grid)
-        .with_callback(move |_|
-        {
-          let clone_arc_path_file_image = arc_path_file_image.clone();
-          std::thread::spawn(move ||
-          {
-            if let Ok(lock) = clone_arc_path_file_image.lock()
-            {
-              // Update last selected icon
-              match OPTION_PATH_FILE_ICON.lock()
-              {
-                Ok(mut guard) => *guard = Some(PathBuf::from(lock.clone())),
-                Err(e) => log!("Failed to set static with error: {}", e),
-              } // match
-            } // if
-            else
-            {
-              log!("Could not install selected image");
-            } // else
-          });
-        });
-      btn_image.set_selection_color(Color::Blue);
-
-      if let Ok(mut lock) = arc_vec_radio.lock()
-      {
-        lock.push(btn_image.clone());
-      } // if
-
-      let _ = grid.set_widget(&mut btn_image, curr_row as usize, curr_col as usize);
-
-      if curr_row == count_row-1 && curr_col == count_col-1 { break; }
-      else if curr_col == count_col-1 { curr_row += 1; curr_col = 0; }
-      else { curr_col += 1; }
-    } // for
-
-    scroll.end();
-
-    let clone_input_search = input_search.clone();
-    let clone_path_dir_images = path_dir_images.clone();
-    let mut clone_output_status = ret_frame_footer.output_status.clone();
-
-    let f_callback_search = move ||
-    {
-      let args = image_search::Arguments::new(clone_input_search.value().as_str(), 15)
-        .directory(&clone_path_dir_images);
-
-      if let Ok(mut lock) = STR_INPUT.lock()
-      {
-        *lock = clone_input_search.value();
-      } // if
-
-      tx.send_awake(common::Msg::WindDeactivate);
-
-      clone_output_status.set_value("Downloading images from the provided query...");
-
-      let clone_args = args.clone();
-      let clone_path_dir_images = clone_path_dir_images.clone();
-      let mut clone_output_status = clone_output_status.clone();
-      std::thread::spawn(move ||
-      {
-        let _  = std::fs::remove_dir_all(&clone_path_dir_images);
-        let _  = std::fs::create_dir_all(&clone_path_dir_images);
-        // Try this 10 times, sometimes it doesnt work, idk why
-        for _ in 1..10
-        {
-          // Returns the urls of the search results
-          let _image_urls = match image_search::blocking::urls(clone_args.clone())
-          {
-            Ok(e) => e,
-            Err(e) => { log!("Could not fetch image url with error: {}", e); continue; }
-          }; // match
-
-          // Returns the search results as Image structs
-          let _images = match image_search::blocking::search(clone_args.clone())
-          {
-            Ok(e) => e,
-            Err(e) => { log!("Could not search images with error: {}", e); continue; }
-          }; // match
-
-          // Downloads the search results and returns  the paths to the files
-          let _paths = match image_search::blocking::download(clone_args.clone())
-          {
-            Ok(e) => { clone_output_status.set_value("Download successful"); e }
-            Err(e) => { log!("Failure to download with error {}", e); continue }
-          }; // if
-        } // for
-
-        tx.send_awake(msg_curr);
-      });
-    };
-
-    // Set search callbacks
-    let mut input_search_listener : fltk_evented::Listener<_> = input_search.clone().into();
-    let mut clone_f_callback_search = f_callback_search.clone();
-    input_search_listener.on_keydown(move |_|
-    {
-      if fltk::app::event_key() == fltk::enums::Key::Enter
-      {
-        clone_f_callback_search();
-        fltk::app::awake();
-      }
-    });
-
-    let mut clone_f_callback_search = f_callback_search.clone();
-    btn_search.set_callback(move |_| { clone_f_callback_search(); fltk::app::awake(); });
-
-
-  } // else
+  col.end();
 
   ret
 } // }}}

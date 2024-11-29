@@ -18,6 +18,8 @@ pub fn button<T>() -> T
     .with_frame(fltk::enums::FrameType::BorderBox)
 }
 
+pub fn search() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_search(1.0).as_str()) }
+
 pub fn terminal() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_terminal(1.0).as_str()) }
 
 pub fn filter() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_filter(1.0).as_str()) }

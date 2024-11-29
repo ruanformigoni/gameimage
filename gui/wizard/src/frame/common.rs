@@ -5,6 +5,7 @@ use fltk::{
   group::PackType,
   button::Button,
   frame::Frame,
+  group::Flex,
   enums::{Align,FrameType,Color},
 };
 
@@ -65,10 +66,9 @@ pub fn frame_header(title: &str) -> RetFrameHeader
     .below_of(&row, dimm::border());
   sep.set_frame(FrameType::BorderBox);
 
-  let mut frame_content = Frame::default()
-    .with_size(dimm::width_wizard(), dimm::height_wizard() - dimm::height_header() - dimm::height_footer())
-    .below_of(&sep, 0);
-  frame_content.set_pos(0, frame_content.y());
+  let frame_content = Frame::default()
+    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
+    .below_of(&sep, dimm::border());
 
   RetFrameHeader{ frame, frame_content, header, sep }
 } // }}}

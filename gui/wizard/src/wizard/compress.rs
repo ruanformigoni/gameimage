@@ -38,15 +38,15 @@ pub fn compress(tx: Sender<common::Msg>
   ret_frame_footer.btn_next.clone().set_label("Start");
 
   let mut term = frame::term::Term::new(dimm::border()
-    , frame_content.w() - dimm::border()*2
-    , frame_content.h() - dimm::border()*2
-    , frame_content.x() + dimm::border()
-    , frame_content.y() + dimm::border());
+    , frame_content.w()
+    , frame_content.h()
+    , frame_content.x()
+    , frame_content.y());
 
   // Open space for compress level button
   let mut widget_term = term.term.clone();
   widget_term.set_size(term.term.w()
-    , term.term.h() - dimm::border()*2 - dimm::height_button_wide()
+    , term.term.h() - dimm::border() - dimm::height_button_wide()
   );
   let mut btn_level = menu::MenuButton::default()
     .with_size(dimm::width_button_wide(), dimm::height_button_wide())

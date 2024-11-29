@@ -12,6 +12,13 @@ const ICON_TERMINAL: &str = r##"
 </svg>
 "##;
 
+const ICON_SEARCH: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-search" viewBox="0 0 16 16">
+  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+</svg>
+"##;
+
+
 const ICON_RESIZE_DOWN: &str = r##"
 <svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-fullscreen-exit" viewBox="0 0 16 16">
   <path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/>
@@ -333,6 +340,7 @@ macro_rules! icon_with_size
 }
 
 
+icon!(icon_search, ICON_SEARCH, 16, 16);
 icon!(icon_arrow_forward, ICON_ARROW_FORWARD, 16, 16);
 icon!(icon_terminal, ICON_TERMINAL, 16, 16);
 icon!(icon_resize_down, ICON_RESIZE_DOWN, 16, 16);

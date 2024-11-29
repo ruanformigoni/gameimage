@@ -48,21 +48,20 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
   ret_frame_footer.btn_next.clone().set_label("Finish");
 
   // Show where the package was saved into
-  let mut output_saved_location = output::Output::default()
-    .with_width(frame_content.w() - dimm::border()*2)
-    .with_height(dimm::height_button_wide())
-    .with_align(fltk::enums::Align::Top | fltk::enums::Align::Left)
-    .top_center_of(&frame_content, dimm::border()*3)
-    .with_label("Your package was saved in this location")
-    .with_focus(false);
-
+  let mut col = fltk::group::Flex::default()
+    .column()
+    .with_size_of(&frame_content)
+    .with_pos_of(&frame_content);
+  // Label
+  col.fixed(&fltk::frame::Frame::default()
+    .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left)
+    .with_label("Your package was saved in this location"), dimm::height_text());
+  // Saved file path
+  let mut output_saved_location = output::Output::default().with_focus(false);
+  col.fixed(&output_saved_location, dimm::height_button_wide());
   // Retrieve output image file location
   let str_package_basename = finish_file_location(&mut output_saved_location).unwrap_or_default();
-
   let mut output_info = text::TextDisplay::default()
-    .with_width_of(&output_saved_location)
-    .with_height(dimm::height_button_wide()*8)
-    .below_of(&output_saved_location, dimm::border())
     .with_color(fltk::enums::Color::BackGround)
     .with_frame(fltk::enums::FrameType::NoBox);
   output_info.wrap_mode(text::WrapMode::AtColumn, 0);
@@ -79,6 +78,8 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
   output_info.insert("If you encounter any issues or have suggestions for new features,");
   output_info.insert(" I encourage you to create an issue on GitHub or GitLab.");
   output_info.insert(" Your feedback is invaluable to help project improve.");
+  col.add(&output_info);
+  col.end();
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
