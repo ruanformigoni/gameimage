@@ -52,6 +52,8 @@ impl Platform
 #[derive(Debug, Clone, Copy)]
 pub enum Msg
 {
+  ToggleTerminal,
+
   DrawWelcome,
   DrawPlatform,
   DrawCreator,

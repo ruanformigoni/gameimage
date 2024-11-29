@@ -1,6 +1,8 @@
 #![feature(let_chains,proc_macro_hygiene, stmt_expr_attributes)]
 #![allow(special_module_name)]
 
+use std::sync::{Mutex,LazyLock};
+
 use fltk::{
   app,
   app::{Sender,Receiver},
@@ -27,8 +29,10 @@ mod gameimage;
 
 use common::Msg;
 
+static GUI: LazyLock<Mutex<Gui>> = LazyLock::new(|| Mutex::new(Gui::new()));
+
 // struct: Gui {{{
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Gui
 {
   app       : App,
@@ -90,14 +94,7 @@ impl Gui
 
     let (tx, rx) = fltk::app::channel();
 
-    Gui
-    {
-      app,
-      wind_main,
-      wind_log,
-      tx,
-      rx,
-    }
+    Gui { app, wind_main, wind_log, tx, rx, }
   } // fn: new }}}
 
 // fn redraw() {{{
@@ -187,7 +184,6 @@ fn init(&mut self)
   self.wind_log.begin();
   log!("Initialized logging!");
   self.wind_log.end();
-  self.wind_log.show();
 
   // Show main window
   self.wind_main.show();
@@ -211,6 +207,14 @@ fn init(&mut self)
     // Handle messages
     match self.rx.recv()
     {
+      Some(common::Msg::ToggleTerminal) =>
+      {
+        match self.wind_log.shown()
+        {
+          true => self.wind_log.hide(),
+          false => self.wind_log.show(),
+        } // match
+      }
       Some(common::Msg::WindUpdate) =>
       {
         app::flush();
@@ -242,7 +246,8 @@ fn init(&mut self)
 
 // fn: main {{{
 fn main() {
-  let _ = Gui::new().init();
+  let mut gui = GUI.lock().unwrap().clone();
+  gui.init();
 } // fn: main }}}
 
 // cmd: !GIMG_PKG_TYPE=flatimage cargo run --release

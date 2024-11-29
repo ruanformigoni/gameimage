@@ -8,6 +8,8 @@ use fltk::{
   enums::{Align,FrameType,Color},
 };
 
+use shared::fltk::WidgetExtExtra;
+
 use crate::dimm;
 
 #[derive(Clone)]
@@ -32,24 +34,35 @@ pub struct RetFrameFooter
 // pub fn frame_header() {{{
 pub fn frame_header(title: &str) -> RetFrameHeader
 {
+  let tx = crate::GUI.lock().unwrap().tx.clone();
+
   let mut frame = Frame::default()
     .with_size(dimm::width_wizard(), dimm::height_header())
     .with_pos(0,0);
   frame.set_type(PackType::Vertical);
 
+  let mut row = fltk::group::Flex::default()
+    .with_size(frame.w() - dimm::border()*2, dimm::height_button_wide())
+    .with_pos(dimm::border(), dimm::border())
+    .with_type(fltk::group::FlexType::Row);
+  // Show terminal button
+  let mut btn_term = shared::fltk::button::rect::terminal()
+    .with_color(Color::Blue);
+  btn_term.emit(tx, crate::common::Msg::ToggleTerminal);
+  row.fixed(&btn_term, btn_term.w());
   // Header
-  let mut header = Frame::new(dimm::border()
-    , dimm::border()
-    , dimm::width_wizard()-dimm::border()*2
-    , dimm::height_button_wide()
-    , title);
-  header.set_frame(FrameType::NoBox);
+  let mut header = Frame::default()
+    .with_size(0, dimm::height_button_wide())
+    .with_align(Align::Inside | Align::Center)
+    .with_label(title);
   header.set_label_size((dimm::height_text() as f32 * 1.5) as i32);
+  row.add_resizable(&header);
+  row.end();
 
   // Separator
   let mut sep = Frame::default()
     .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_sep())
-    .below_of(&header, dimm::border());
+    .below_of(&row, dimm::border());
   sep.set_frame(FrameType::BorderBox);
 
   let mut frame_content = Frame::default()
