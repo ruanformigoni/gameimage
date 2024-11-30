@@ -104,9 +104,14 @@ pub fn name(tx: Sender<common::Msg>
   } // if
 
   // // Set input_name callback
-  input_name.set_callback(move |e|
+  input_name.handle(move |input,ev|
   {
-    env::set_var("GIMG_NAME", f_sanitize(e.value()));
+    if ev == fltk::enums::Event::KeyUp
+    {
+      env::set_var("GIMG_NAME", f_sanitize(input.value()));
+      return true;
+    } // if
+    return false;
   });
 
   // Callback to previous
