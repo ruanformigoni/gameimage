@@ -59,8 +59,7 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 fn method_explore(widget: fltk::widget::Widget, width: i32) -> fltk::widget::Widget
 {
   // Dialog
-  let frame_text = fltk::frame::Frame::default()
-    .with_frame(fltk::enums::FrameType::BorderBox)
+  let frame_text = shared::fltk::frame::bordered()
     .with_size(width - dimm::border() - dimm::width_button_rec(), dimm::height_button_wide())
     .below_of(&widget, dimm::border())
     .with_align(fltk::enums::Align::Center | fltk::enums::Align::Inside)
@@ -103,8 +102,7 @@ fn method_explore(widget: fltk::widget::Widget, width: i32) -> fltk::widget::Wid
 fn method_install(tx: Sender<common::Msg>, widget: fltk::widget::Widget, width: i32)
 {
   // Dialog
-  let frame_text = fltk::frame::Frame::default()
-    .with_frame(fltk::enums::FrameType::BorderBox)
+  let frame_text = shared::fltk::frame::bordered()
     .with_size(width - dimm::border() - dimm::width_button_rec(), dimm::height_button_wide())
     .below_of(&widget, dimm::border())
     .with_align(fltk::enums::Align::Center | fltk::enums::Align::Inside)

@@ -1,82 +1,152 @@
-pub mod rect
+use fltk::{
+  draw,
+  enums::{Align,Color},
+};
+
+use crate::dimm;
+use crate::fltk::WidgetExtExtra;
+
+fn button<T>() -> T
+  where T : Clone
+  + Send
+  + Sync
+  + std::default::Default
+  + fltk::prelude::WidgetExt
+  + fltk::prelude::WidgetBase
+  + fltk::prelude::ButtonExt
+{
+  let mut btn = T::default()
+    .with_align(Align::Inside | Align::Center)
+    .with_color(Color::BackGround.lighter())
+    .with_color_selected(Color::BackGround.darker())
+    .with_focus(false)
+    .with_frame(fltk::enums::FrameType::NoBox);
+
+  btn.draw(move |b|
+  {
+    let (x,y,w,h) = (b.x(),b.y(),b.w(),b.h());
+    let c = if ! b.active() { b.color().darker() } else if b.is_set() { b.selection_color() } else { b.color() };
+    draw::set_draw_color(c);
+    draw::draw_rounded_rectf(x, y, w, h, 3);
+    if let Some(mut image) = b.image() {
+      let img_w = image.width();
+      let img_h = image.height();
+      let img_x = x + (w - img_w) / 2; // Center horizontally
+      let img_y = y + (h - img_h) / 2; // Center vertically
+      image.draw(img_x, img_y, img_w, img_h);
+    }
+    // Label (change color if pressed)
+    draw::set_draw_color(b.label_color());
+    draw::draw_text2(&b.label(), x, y, w, h, b.align());
+  });
+
+  btn
+}
+
+pub mod wide
 {
 
 use fltk::prelude::*;
-use fltk::enums::Align;
-use crate::dimm;
-use crate::svg;
-use crate::fltk::WidgetExtExtra;
 
-
-pub fn button<T>() -> T
-  where T : Clone + Send + Sync + std::default::Default + fltk::prelude::WidgetExt
+pub fn default() -> fltk::button::Button
 {
-  T::default()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_align(Align::Inside | Align::Center)
-    .with_focus(false)
-    .with_frame(fltk::enums::FrameType::BorderBox)
+  crate::fltk::button::button::<fltk::button::Button>()
+    .with_size(crate::dimm::width_button_wide(), crate::dimm::height_button_wide())
 }
 
-pub fn search() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_search(1.0).as_str()) }
+} // pub mod rect
 
-pub fn terminal() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_terminal(1.0).as_str()) }
+pub mod rect
+{
 
-pub fn filter() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_filter(1.0).as_str()) }
+use fltk::{
+  draw,
+  prelude::*,
+  enums::Color,
+};
 
-pub fn install() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_install(1.0).as_str()) }
+use crate::dimm;
+use crate::svg;
+use crate::svg::*;
+use crate::fltk::WidgetExtExtra;
+use crate::fltk::button;
 
-pub fn home() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_home(1.0).as_str()) }
+macro_rules! create_buttons
+{
+  ($($name:ident),*) =>
+  {
+    $(
+      pub fn $name() -> fltk::button::Button
+      {
+        button::button::<fltk::button::Button>()
+            .with_svg((concat_idents!(icon_,$name)(1.0).as_str()))
+            .with_size(dimm::width_button_rec(), dimm::height_button_rec())
+      }
+    )*
+  };
+}
 
-pub fn back() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_back(1.0).as_str()) }
+create_buttons!(search, terminal, filter, install , home, back, configure, list, switch, add, del,
+  folder, save, check, cloud, refresh, joystick, arrow_forward, play
+);
 
-pub fn configure() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_configure(1.0).as_str()) }
+pub fn checkbutton() -> fltk::button::CheckButton
+{
+  let mut btn  = button::button::<fltk::button::CheckButton>()
+    .with_frame(fltk::enums::FrameType::NoBox);
 
-pub fn list() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_list(1.0).as_str()) }
+  // Set image
+  btn.draw(move |e|
+  {
+    fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), e.color());
+    // -1 on w and h because if is drawn with the same size as the button it leaves a weird border when updated
+    let w = 18;
+    let h = 18;
+    let x = e.x();
+    let y = e.y() + (e.h() / 2) - (h / 2);
+    match e.is_checked()
+    {
+      true =>
+      {
+        fltk::draw::set_draw_color(Color::Blue);
+        fltk::draw::draw_rounded_rectf(x, y, w, h, 4);
+        fltk::draw::draw_rounded_rect(x, y, w, h, 4);
+      },
+      false =>
+      {
+        fltk::draw::set_draw_color(Color::BackGround2);
+        fltk::draw::draw_rounded_rectf(x, y, w, h, 4);
+        fltk::draw::draw_rounded_rect(x, y, w, h, 4);
+      },
+    } // match
+    // Draw label
+    draw::set_draw_color(Color::White);
+    draw::draw_text2(&e.label(), e.x() + w, e.y(), e.w(), e.h(), e.align());
+  });
 
-pub fn switch() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_switch(1.0).as_str()) }
-
-pub fn play() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_play(1.0).as_str()) }
-
-pub fn add() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_add(1.0).as_str()) }
-
-pub fn del() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_del(1.0).as_str()) }
-
-pub fn folder() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_folder(1.0).as_str()) }
-
-pub fn save() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_save(1.0).as_str()) }
-
-pub fn check() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_check(1.0).as_str()) }
-
-pub fn cloud() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_cloud(1.25).as_str()) }
-
-pub fn refresh() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_refresh(1.0).as_str()) }
-
-pub fn joystick() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_joystick(1.0).as_str()) }
-
-pub fn arrow_forward() -> fltk::button::Button { button::<fltk::button::Button>().with_svg(svg::icon_arrow_forward(2.0).as_str()) }
+  btn
+} // toggle()
 
 pub fn toggle(value : bool) -> fltk::button::ToggleButton
 {
-  let mut btn  = button::<fltk::button::ToggleButton>()
+  let mut btn  = button::button::<fltk::button::ToggleButton>()
     .with_frame(fltk::enums::FrameType::FlatBox);
 
   // Set image
   btn.draw(move |e|
   {
-    fltk::draw::draw_rect_fill(e.x()+2, e.y()+2, e.w()-4, e.h()-4, fltk::enums::Color::from_hex_str("#ffffff").unwrap());
-    // -1 on w and h because if is drawn with the same size as the button it leaves a weird border when updated
+    fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::BackGround);
     match e.value()
     {
       true =>
       {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec()-1, dimm::height_button_rec()-1))
+        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
       },
       false =>
       {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec()-1, dimm::height_button_rec()-1))
+        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
       },
@@ -90,24 +160,26 @@ pub fn toggle(value : bool) -> fltk::button::ToggleButton
 
 pub fn radio() -> fltk::button::RadioButton
 {
-  let mut btn  = button::<fltk::button::RadioButton>()
+  let mut btn  = button::button::<fltk::button::RadioButton>()
     .with_frame(fltk::enums::FrameType::FlatBox);
 
   // Set image
   btn.draw(move |e|
   {
-    fltk::draw::draw_rect_fill(e.x()+2, e.y()+2, e.w()-4, e.h()-4, fltk::enums::Color::from_hex_str("#ffffff").unwrap());
+    fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::BackGround);
     match e.value()
     {
       true =>
       {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec()-1, dimm::height_button_rec()-1))
+        fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::Green);
+        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
       },
       false =>
       {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec()-1, dimm::height_button_rec()-1))
+        fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::BackGround.lighter());
+        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
       },

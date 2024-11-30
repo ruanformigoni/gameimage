@@ -152,9 +152,8 @@ pub fn icon(tx: Sender<common::Msg>
   // Create icon box
   let mut row = fltk::group::Flex::default().row();
   row.add(&Frame::default());
-  let frame_icon = Frame::default()
-    .with_size(150, 225)
-    .with_frame(FrameType::BorderBox);
+  let frame_icon = shared::fltk::frame::bordered()
+    .with_size(150, 225);
   ret.opt_frame_icon = Some(frame_icon.clone());
   row.fixed(&frame_icon,150);
   row.add(&Frame::default());

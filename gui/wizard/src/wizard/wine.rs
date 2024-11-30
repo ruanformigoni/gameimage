@@ -241,7 +241,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
       .below_of(&output_val, dimm::border())
       .with_size(clone_scroll.widget_ref().width() - dimm::border()*3, dimm::height_sep())
       .with_frame(FrameType::FlatBox)
-      .with_color(Color::Black);
+      .with_color(Color::BackGround.lighter());
     clone_scroll.add(&mut sep.as_base_widget());
   };
 
@@ -448,11 +448,8 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
   for lib in vec_lib { browser.add(lib, true); }
   col.end();
   // Thin line divisor
-  fltk::frame::Frame::default()
-    .with_size(2, col.h())
-    .right_of(&col.as_base_widget(), dimm::border() / 2)
-    .with_color(Color::Black)
-    .with_frame(FrameType::BorderBox);
+  shared::fltk::separator::vertical(col.h())
+    .right_of(&col.as_base_widget(), dimm::border() / 2);
   // Install button to the right
   shared::fltk::button::rect::install()
     .right_of(&col.as_base_widget(), dimm::border())
@@ -550,7 +547,7 @@ fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,std::path::PathBuf)>)
 fn rom_entry(tx: Sender<common::Msg>
   , executable_arguments: &std::collections::HashMap<String, String>
   , item: &std::path::PathBuf
-  , group: &mut fltk::group::Flex
+  , group: &mut fltk::group::Pack
   , vec_radio_path: &mut Vec<(fltk::button::RadioButton,std::path::PathBuf)>)
 {
   // Create a row
@@ -585,13 +582,13 @@ fn rom_entry(tx: Sender<common::Msg>
     });
   row.fixed(&btn_run, dimm::width_button_rec());
   row.end();
-  group.fixed(&row.as_base_widget(), row.h());
+  group.add(&row.as_base_widget());
   // Retrieve or set executable arguments
   let label_input = fltk::frame::Frame::default()
     .with_size(group.w(), dimm::height_text())
     .with_align(Align::Inside | Align::Left)
     .with_label("Executable arguments");
-  group.fixed(&label_input, label_input.h());
+  group.add(&label_input);
   // Arguments input
   let clone_item = item.clone();
   let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default()
@@ -617,11 +614,11 @@ fn rom_entry(tx: Sender<common::Msg>
   {
     input_arguments.set_value(executable_arguments[&item.string()].as_str());
   } // if
-  group.fixed(&input_arguments.as_base_widget(), input_arguments.h());
+  group.add(&input_arguments.as_base_widget());
   // Checkbutton for "selectable in launcher"
-  let mut btn_selectable = fltk::button::CheckButton::default()
-    .with_size(dimm::width_checkbutton(), dimm::width_checkbutton())
+  let mut btn_selectable = shared::fltk::button::rect::checkbutton()
     .with_align(Align::Inside | Align::Left)
+    .with_color(Color::BackGround)
     .with_focus(false)
     .with_label(" Make this executable selectable in the launcher");
   let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
@@ -645,12 +642,13 @@ fn rom_entry(tx: Sender<common::Msg>
       } // if
     }
   });
-  group.fixed(&btn_selectable, dimm::height_button_wide());
+  group.add(&btn_selectable);
   // Entry separator
   let sep = fltk::frame::Frame::default()
     .with_size(input_arguments.w(), dimm::height_sep())
-    .with_frame(FrameType::BorderBox);
-  group.fixed(&sep, dimm::height_sep());
+    .with_frame(FrameType::BorderBox)
+    .with_color(Color::BackGround.lighter());
+  group.add(&sep);
 } // rom_entry() }}}
 
 // pub fn rom() {{{
@@ -715,11 +713,10 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   }; // match
 
   // Create a column for the element entries
-  let col_entries = fltk::group::Column::default()
+  let mut col_entries = fltk::group::Pack::default()
     .with_pos_of(&scroll)
-    .with_size(scroll.w() - dimm::border()*2
-      , (dimm::height_button_wide() * 3 + dimm::height_sep() + dimm::height_text()) * vec_roms.len() as i32 + dimm::border()
-    );
+    .with_size(scroll.w() - dimm::border()*2 , 0);
+  col_entries.set_spacing(dimm::border());
   for path in vec_roms
   {
     rom_entry(tx.clone(), &hash_argument_executable, &path, &mut col_entries.clone(), &mut vec_radio_path.lock().unwrap())

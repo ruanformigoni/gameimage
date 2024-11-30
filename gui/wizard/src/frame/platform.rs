@@ -96,7 +96,7 @@ fn platform_add(tx: Sender<common::Msg>
   row.set_type(PackType::Horizontal);
   row.set_spacing(dimm::border());
   // Create progress bar
-  let mut prog = fltk::misc::Progress::default()
+  let mut prog = shared::fltk::progress::progress()
     .with_label(HASH_PLATFORM_DESCR.get(platform.as_str()).unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
     .with_frame(FrameType::BorderBox)
@@ -156,7 +156,7 @@ fn platform_add_wine(tx: Sender<common::Msg>
   row.set_type(PackType::Horizontal);
   row.set_spacing(dimm::border());
   // Create progress bar
-  let mut prog = fltk::misc::Progress::default()
+  let mut prog = shared::fltk::progress::progress()
     .with_label(HASH_PLATFORM_DESCR.get("wine").unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
     .with_frame(FrameType::BorderBox)
@@ -216,7 +216,6 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyh
   let db_fetch = db::fetch::read()?;
   let mut col = fltk::group::Flex::new(widget.x(), widget.y(), widget.w(), widget.h(), "");
   col.set_type(PackType::Vertical);
-  col.set_frame(FrameType::BorderBox);
   col.set_spacing(dimm::border());
   let row_linux         = platform_add(tx, &col.as_base_widget(), common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
   let mut row_rpcs3     = platform_add(tx, &col.as_base_widget(), common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));

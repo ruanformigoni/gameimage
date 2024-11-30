@@ -144,14 +144,14 @@ const ICON_CHECK: &str = r#"
 "#;
 
 const ICON_BOX_SELECTED: &str = r##"
-<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="#006D00" class="bi bi-check-square-fill" viewBox="0 0 16 16">
-  <path d="M 0,0 -0.0077,0.005731 V 16 H -0.0113 15.99234 V 16.000193 0 h 9.68e-4 z m 12.022255,4.97 c 0.288934,0.2886287 0.293824,0.7553814 0.011,1.05 l -3.992,4.99 c -0.289263,0.311563 -0.7794,0.32064 -1.08,0.02 l -2.645,-2.646 c -0.757891,-0.7062104 0.35379,-1.8178912 1.06,-1.06 l 2.094,2.093 3.473,-4.425 c 0.288689,-0.3121252 0.778839,-0.3221097 1.08,-0.022 z" id="path1" sodipodi:nodetypes="ccccccccccccccccccc" />
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-check" viewBox="0 0 16 16">
+  <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/>
 </svg>
 "##;
 
 const ICON_BOX_DESELECTED: &str = r##"
-<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="#8E3838" class="bi bi-x-square-fill" viewBox="0 0 16 16">
-  <path d="m 0,0 -0.0023,0.002837 v 15.998933 -0.0018 h 15.996765 l 0.0032,-0.0098 V 0.00369266 l -0.003,-0.003693 z M 5.351742,4.646 7.9977415,7.293 10.643742,4.646 c 0.471999,-0.4719998 1.179999,0.2360002 0.707999,0.708 L 8.7047415,8 11.351742,10.646 c 0.47165,0.472 -0.23635,1.18 -0.708,0.708 L 7.9977415,8.707 5.351742,11.354 c -0.472,0.471651 -1.18,-0.236349 -0.708,-0.708 L 7.290742,8 4.643742,5.354 c -0.472,-0.4719998 0.236,-1.1799998 0.708,-0.708" id="path1" sodipodi:nodetypes="cccccccccccccccccccccc" />
+<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}" fill="white" class="bi bi-x" viewBox="0 0 16 16">
+  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
 </svg>
 "##;
 
@@ -339,9 +339,8 @@ macro_rules! icon_with_size
   }
 }
 
-
 icon!(icon_search, ICON_SEARCH, 16, 16);
-icon!(icon_arrow_forward, ICON_ARROW_FORWARD, 16, 16);
+icon!(icon_arrow_forward, ICON_ARROW_FORWARD, 32, 32);
 icon!(icon_terminal, ICON_TERMINAL, 16, 16);
 icon!(icon_resize_down, ICON_RESIZE_DOWN, 16, 16);
 icon!(icon_filter, ICON_FILTER, 16, 16);

@@ -7,6 +7,9 @@ use crate::dimm;
 
 pub mod button;
 pub mod dialog;
+pub mod progress;
+pub mod separator;
+pub mod frame;
 
 // pub trait WidgetExtExtra {{{
 #[allow(warnings)]

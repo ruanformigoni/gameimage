@@ -72,14 +72,42 @@ impl Gui
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
     theme.apply();
+    app::set_visible_focus(false);
     app::set_font_size(dimm::height_text());
-    app::set_color(Color::White, 230, 230, 230);
-    app::set_color(Color::Blue, 55, 113, 200);
+    let set_color = |c: Color, hex: &str|
+    {
+      let r = Color::from_hex_str(hex).unwrap();
+      let r = Color::darker(&r).to_rgb();
+      app::set_color(c, r.0, r.1, r.2);
+    };
+    let str_black = "#35353A";
+    let str_white = "#eeeeee";
+    set_color(Color::White       , str_white);
+    set_color(Color::Black       , str_black);
+    set_color(Color::ForeGround  , str_white);
+    set_color(Color::Foreground  , str_white);
+    set_color(Color::BackGround  , str_black);
+    set_color(Color::Background  , str_black);
+    set_color(Color::BackGround2 , &Color::from_hex_str(str_black).unwrap().darker().to_hex_str());
+    set_color(Color::Background2 , &Color::from_hex_str(str_black).unwrap().darker().to_hex_str());
+    set_color(Color::Red         , "#F05090");
+    set_color(Color::Blue        , "#00A0F0");
+    set_color(Color::Green       , "#60F080");
+    set_color(Color::Yellow      , "#F0F080");
+    set_color(Color::Magenta     , "#D080F0");
+    set_color(Color::Cyan        , "#70D0F0");
+    set_color(Color::DarkRed     , &Color::darker(&Color::DarkRed).to_hex_str());
+    set_color(Color::DarkBlue    , &Color::darker(&Color::DarkBlue).to_hex_str());
+    set_color(Color::DarkGreen   , &Color::darker(&Color::DarkGreen).to_hex_str());
+    set_color(Color::DarkYellow  , &Color::darker(&Color::DarkYellow).to_hex_str());
+    set_color(Color::DarkMagenta , &Color::darker(&Color::DarkMagenta).to_hex_str());
+    set_color(Color::DarkCyan    , &Color::darker(&Color::DarkCyan).to_hex_str());
     app::set_frame_color(Color::White);
     app::foreground(230,230,230);
     let color = Color::from_hex_str("#5294e2").unwrap().to_rgb();
     app::set_selection_color(color.0, color.1, color.2);
     app::set_frame_type(FrameType::BorderBox);
+    fltk_theme::WidgetScheme::new(fltk_theme::SchemeType::Clean).apply();
 
     // Window icon
     if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()

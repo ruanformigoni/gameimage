@@ -106,8 +106,7 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
   {
     let atomic_option = Arc::new(AtomicBool::new(true));
     let clone_atomic_option = atomic_option.clone();
-    let mut btn_check = fltk::button::CheckButton::default()
-      .with_size(dimm::width_checkbutton(), dimm::width_checkbutton())
+    let mut btn_check = shared::fltk::button::rect::checkbutton()
       .below_of(widget_parent, dimm::border())
       .with_align(fltk::enums::Align::Right)
       .with_focus(false)

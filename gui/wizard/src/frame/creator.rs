@@ -37,7 +37,9 @@ fn create_entry(project : db::project::Entry, height: i32)
   -> anyhow::Result<(group::Flex, button::CheckButton, db::project::Entry)>
 {
   let mut row = fltk::group::Flex::default()
-    .with_type(fltk::group::FlexType::Row)
+    .row()
+    .with_color(Color::lighter(&Color::BackGround))
+    .with_frame(FrameType::FlatBox)
     .with_size(0, height);
 
   //
@@ -76,7 +78,6 @@ fn create_entry(project : db::project::Entry, height: i32)
   //
   let mut frame_info = fltk::group::Flex::default()
     .column()
-    .with_frame(FrameType::BorderBox)
     .with_size(0, height);
   frame_info.set_margins(dimm::border()/2, dimm::border()/2, dimm::border()/2, 0);
   let mut f_add_field = |title: &str, field : &str|
@@ -102,10 +103,10 @@ fn create_entry(project : db::project::Entry, height: i32)
   //
   // CheckButton
   //
-  let btn_checkbox = CheckButton::default()
+  let btn_checkbox = shared::fltk::button::rect::checkbutton()
     .with_size(dimm::width_checkbutton(), height)
     .with_focus(false)
-    .with_frame(FrameType::BorderBox);
+    .with_frame(FrameType::NoBox);
   row.fixed(&btn_checkbox, btn_checkbox.w());
 
   row.end();

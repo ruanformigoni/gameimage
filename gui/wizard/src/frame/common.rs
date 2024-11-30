@@ -61,10 +61,9 @@ pub fn frame_header(title: &str) -> RetFrameHeader
   row.end();
 
   // Separator
-  let mut sep = Frame::default()
-    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_sep())
+  let mut sep = shared::fltk::separator::horizontal(dimm::width_wizard() - dimm::border()*2)
     .below_of(&row, dimm::border());
-  sep.set_frame(FrameType::BorderBox);
+  sep.set_pos(dimm::border(), sep.y());
 
   let frame_content = Frame::default()
     .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
@@ -91,26 +90,23 @@ pub fn frame_footer() -> RetFrameFooter
   output_status.deactivate();
 
   // Continue
-  let mut btn_next = Button::default()
-    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+  let mut btn_next = shared::fltk::button::wide::default()
     .with_label("Next")
     .above_of(&output_status, dimm::border());
   btn_next.set_pos(dimm::width_wizard() - dimm::width_button_wide() - dimm::border(), btn_next.y());
   btn_next.set_color(Color::Blue);
+  btn_next.set_selection_color(Color::lighter(&btn_next.color()));
 
   // Prev
-  let mut btn_prev = Button::default()
-    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+  let mut btn_prev = shared::fltk::button::wide::default()
     .with_label("Prev")
     .above_of(&output_status, dimm::border());
   btn_prev.set_pos(dimm::border(), btn_prev.y());
-  btn_prev.set_color(Color::Background);
+  btn_prev.set_selection_color(Color::lighter(&btn_prev.color()));
 
   // Separator
-  let mut sep = Frame::default()
-    .above_of(&btn_next, dimm::border())
-    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_sep());
-  sep.set_frame(FrameType::BorderBox);
+  let mut sep = shared::fltk::separator::horizontal(dimm::width_wizard() - dimm::border()*2)
+    .above_of(&btn_next, dimm::border());
   sep.set_pos(dimm::border(), sep.y());
 
   RetFrameFooter { frame, output_status, btn_next, btn_prev, sep }
