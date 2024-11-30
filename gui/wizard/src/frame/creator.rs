@@ -23,6 +23,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
+use crate::log_err;
 use crate::db;
 use lazy_static::lazy_static;
 
@@ -134,24 +135,14 @@ fn creator_del(vec_project: Vec<db::project::Entry>)
 pub fn creator(tx: Sender<common::Msg>, title: &str)
 {
   // Enter the build directory
-  if let Err(e) = common::dir_build()
-  {
-    log!("Err: {}", e.to_string());
-  } // if
+  log_err!(common::dir_build());
 
   let ret_frame_header = frame::common::frame_header(title);
   let ret_frame_footer = frame::common::frame_footer();
   let frame_content = ret_frame_header.frame_content.clone();
 
   // Configure bottom buttons
-  let clone_tx = tx.clone();
-  ret_frame_footer.btn_prev.clone().set_callback(move |_|
-  {
-    if dialog::choice2_default("This will reset the image, are you sure?", "No", "Yes", "") == Some(1)
-    {
-      clone_tx.send_awake(common::Msg::DrawWelcome);
-    } // if
-  });
+  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
 
   let mut row_content = fltk::group::Flex::default()
     .with_type(fltk::group::FlexType::Row)

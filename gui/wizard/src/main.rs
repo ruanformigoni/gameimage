@@ -178,7 +178,6 @@ fn init(&mut self)
   };
 
   self.wind_main.set_callback(f_callback_close.clone());
-  self.wind_log.set_callback(f_callback_close.clone());
 
   // Create & show logging window
   self.wind_log.begin();
