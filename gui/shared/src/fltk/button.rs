@@ -3,7 +3,6 @@ use fltk::{
   enums::{Align,Color},
 };
 
-use crate::dimm;
 use crate::fltk::WidgetExtExtra;
 
 fn button<T>() -> T
@@ -25,7 +24,7 @@ fn button<T>() -> T
   btn.draw(move |b|
   {
     let (x,y,w,h) = (b.x(),b.y(),b.w(),b.h());
-    let c = if ! b.active() { b.color().darker() } else if b.is_set() { b.selection_color() } else { b.color() };
+    let c = if ! b.active() { b.color().darker() } else if b.is_set() { b.color().lighter() } else { b.color() };
     draw::set_draw_color(c);
     draw::draw_rounded_rectf(x, y, w, h, 3);
     if let Some(mut image) = b.image() {

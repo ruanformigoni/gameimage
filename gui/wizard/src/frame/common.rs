@@ -95,14 +95,12 @@ pub fn frame_footer() -> RetFrameFooter
     .above_of(&output_status, dimm::border());
   btn_next.set_pos(dimm::width_wizard() - dimm::width_button_wide() - dimm::border(), btn_next.y());
   btn_next.set_color(Color::Blue);
-  btn_next.set_selection_color(Color::lighter(&btn_next.color()));
 
   // Prev
   let mut btn_prev = shared::fltk::button::wide::default()
     .with_label("Prev")
     .above_of(&output_status, dimm::border());
   btn_prev.set_pos(dimm::border(), btn_prev.y());
-  btn_prev.set_selection_color(Color::lighter(&btn_prev.color()));
 
   // Separator
   let mut sep = shared::fltk::separator::horizontal(dimm::width_wizard() - dimm::border()*2)

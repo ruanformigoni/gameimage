@@ -192,10 +192,8 @@ fn platform_add_wine(tx: Sender<common::Msg>
   col.fixed(&row, dimm::height_button_wide());
   // Create distribution dropdown menu
   let mut menubutton = fltk::menu::MenuButton::default()
-    .with_frame(FrameType::BorderBox)
-    .with_color(Color::BackGround)
-    .with_color_selected(Color::Blue)
-    .with_focus(false)
+    .with_frame(FrameType::FlatBox)
+    .with_color(Color::BackGround.lighter())
     .with_callback(move |e|
     {
       let choice = if let Some(choice) = e.choice() { choice } else { return; };
