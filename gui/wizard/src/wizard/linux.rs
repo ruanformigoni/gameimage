@@ -25,9 +25,9 @@ use shared::std::PathBufExt;
 use shared::dimm;
 
 use crate::log_alert;
-use crate::log_err;
+use crate::log_status;
+use crate::log_err_status;
 use crate::common;
-use crate::log;
 use crate::db;
 use crate::frame;
 use crate::wizard;
@@ -72,7 +72,7 @@ fn method_explore(col: &mut fltk::group::Flex)
       let project = match db::global::get_current_project()
       {
         Ok(project) => project,
-        Err(e) => { log!("Error to get current project '{}'", e); return; }
+        Err(e) => { log_status!("Error to get current project '{}'", e); return; }
       }; // match
 
       let _ = std::process::Command::new("fim_portal")
@@ -135,13 +135,13 @@ fn method_next(tx: Sender<common::Msg>, mut button: fltk::button::Button, mut ou
     let vec_roms = match gameimage::search::search_local("rom")
     {
       Ok(result) => result,
-      Err(e) => { log!("{}", e); vec![] },
+      Err(e) => { log_status!("{}", e); vec![] },
     }; // match
 
     // Check if is not empty
     if vec_roms.is_empty()
     {
-      output.set_value("No installed file was found");
+      output.set_value("No file found, either install or copy");
       return;
     } // if
 
@@ -215,22 +215,21 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       return false;
     } // if
 
-    let arc_inner = if let Ok(lock_outer) = clone_arc_process.lock()
-    && let Some(arc_inner) = lock_outer.as_ref()
+    let arc_inner = if let Some(arc_inner) = clone_arc_process.lock().unwrap().as_ref()
     {
       arc_inner.clone()
     } // if
     else
     {
       input.deactivate();
-      log!("Could not get lock to inner arc");
+      log_status!("No process running?");
       return false;
     }; // else
 
     let mut lock = match arc_inner.lock()
     {
       Ok(lock) => lock,
-      Err(e) => { input.deactivate(); log!("Could not get lock to currently running process: {}", e); return false; },
+      Err(e) => { input.deactivate(); log_status!("Could not get lock to currently running process: {}", e); return false; },
     };
 
     match lock.stdin.as_mut()
@@ -256,7 +255,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     let str_choice = match fltk::dialog::file_chooser("Select the script to execute", "*.{sh}", ".", false)
     {
       Some(str_choice) => str_choice,
-      None => { log!("No file selected"); return; },
+      None => { log_status!("No file selected"); return; },
     }; // if
 
     // Set displayed path
@@ -287,7 +286,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
         clone_input_cmd.activate();
         fltk::app::awake();
       } // Ok
-      Err(e) => log!("Could not spawn new process: {}", e),
+      Err(e) => log_status!("Could not spawn new process: {}", e),
     } // match
   }); // set_callback
 } // }}}
@@ -390,7 +389,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
         tx.send_awake(common::Msg::WindDeactivate);
         std::thread::spawn(#[clown] move ||
         {
-          log_err!(default_play(&rom));
+          log_err_status!(default_play(&rom));
           tx.send_awake(common::Msg::WindActivate);
         });
       });
@@ -399,7 +398,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
     match arc_items.lock()
     {
       Ok(mut guard) => guard.push((btn_radio, rom.clone())),
-      Err(e) => log!("Could not save items to list with error {}", e),
+      Err(e) => log_status!("Could not save items to list with error {}", e),
     }; // match
     col_entries.fixed(&row, dimm::height_button_wide());
     row.end();
@@ -425,11 +424,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
   ui.btn_next.clone().set_callback(move |_|
   {
     // Get the vector
-    let vec_items = match clone_arc_items.lock()
-    {
-      Ok(vec) => vec,
-      Err(e) => { log!("Could not get lock to vector: {}", e); return; },
-    }; // match
+    let vec_items = clone_arc_items.lock().unwrap();
 
     // Get the selected button label (it contains the path to the default binary)
     let path_file_rom = match vec_items.iter().find(|x| x.0.is_set() )
@@ -439,7 +434,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
     }; // match
 
     // Select rom
-    log_err!(gameimage::select::select("rom", &path_file_rom));
+    log_err_status!(gameimage::select::select("rom", &path_file_rom));
 
     // Draw test
     clone_tx.send_awake(common::Msg::DrawLinuxCompress);

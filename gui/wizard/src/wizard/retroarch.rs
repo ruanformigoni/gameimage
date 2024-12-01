@@ -17,6 +17,7 @@ use crate::frame;
 use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
+use crate::log_status;
 use crate::db;
 use crate::gameimage;
 
@@ -43,14 +44,12 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
-  let install = wizard::install::install(tx.clone()
+  let (_, install) = wizard::install::install(tx.clone()
     , title
     , "rom"
     , common::Msg::DrawRetroarchIcon
     , common::Msg::DrawRetroarchRom
     , common::Msg::DrawRetroarchCore);
-
-  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   let mut frame_list = install.frame_list.clone();
   let btn_add = install.btn_add.clone();
@@ -75,7 +74,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Update default rom
   let clone_frame_list = frame_list.clone();
-  let mut clone_output_status = ui.status.clone();
   let clone_tx = tx.clone();
   let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
@@ -86,13 +84,13 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
       if vec_indices.len() == 0
       {
-        clone_output_status.set_value("No item selected to set as default");
+        log_status!("No item selected to set as default");
         return;
       } // if
 
       if vec_indices.len() != 1
       {
-        clone_output_status.set_value("Only one item can be set as the default");
+        log_status!("Only one item can be set as the default");
         return;
       } // if
 
@@ -121,14 +119,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 // pub fn core() {{{
 pub fn core(tx: Sender<common::Msg>, title: &str)
 {
-  let install = wizard::install::install(tx.clone()
+  let (ui, install) = wizard::install::install(tx.clone()
     , title
     , "core"
     , common::Msg::DrawRetroarchRom
     , common::Msg::DrawRetroarchCore
     , common::Msg::DrawRetroarchBios);
-
-  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Clone data from preset
   let mut frame_list_installed = install.frame_list.clone();
@@ -199,7 +195,6 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
   // Update default core
   let clone_frame_list_installed = frame_list_installed.clone();
-  let mut clone_output_status = ui.status.clone();
   let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Blue)
@@ -209,13 +204,13 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
       if vec_indices.len() == 0
       {
-        clone_output_status.set_value("No item selected to set as default");
+        log_status!("No item selected to set as default");
         return;
       } // if
 
       if vec_indices.len() != 1
       {
-        clone_output_status.set_value("Only one item can be set as the default");
+        log_status!("Only one item can be set as the default");
         return;
       } // if
 
@@ -240,7 +235,6 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
   // Erase package
   let clone_frame_list_installed = frame_list_installed.clone();
-  let mut clone_output_status = ui.status.clone();
   btn_del
     .below_of(&btn_default, dimm::border())
     .with_callback(move |_|
@@ -249,7 +243,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
     if vec_indices.len() == 0
     {
-      clone_output_status.set_value("No item selected for deletion");
+      log_status!("No item selected for deletion");
       clone_tx.send_awake(common::Msg::DrawRetroarchCore);
       return;
     } // if

@@ -17,7 +17,7 @@ use shared::svg;
 use crate::dimm;
 use crate::frame;
 use crate::common;
-use crate::log;
+use crate::log_status;
 use crate::gameimage;
 
 // fn name_next() {{{
@@ -115,24 +115,17 @@ pub fn name(tx: Sender<common::Msg>
   ui.btn_prev.clone().emit(tx, msg_prev);
 
   // Callback to Next
-  let clone_output_status = ui.status.clone();
   let clone_tx = tx.clone();
   let clone_msg_next = msg_next.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
-    let mut clone_output_status = clone_output_status.clone();
     std::thread::spawn(move ||
     {
       match name_next()
       {
         Ok(()) => tx.send_activate(clone_msg_next),
-        Err(e) =>
-        {
-          clone_output_status.set_value(&e.to_string());
-          clone_tx.send_awake(common::Msg::WindActivate);
-          log!("{}", e);
-        } // match
+        Err(e) => { clone_tx.send_awake(common::Msg::WindActivate); log_status!("{}", e); }
       }
     });
   });

@@ -19,6 +19,7 @@ use crate::dimm;
 use crate::frame;
 use crate::common;
 use crate::log;
+use crate::log_err_status;
 use crate::gameimage;
 
 pub static HASH_PLATFORM_MSG: LazyLock<HashMap<common::Platform, common::Msg>> = LazyLock::new(||
@@ -241,12 +242,12 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
   // Enter the build directory
-  if let Err(e) = common::dir_build() { log!("{}", e); }
+  log_err_status!(common::dir_build());
   // Configure buttons
   ui.btn_prev.clone().emit(tx, common::Msg::DrawCreator);
   ui.btn_next.clone().hide();
   // List platforms to fetch
-  if let Err(e) = platform_list(tx, &ui.group) { log!("{}", e); };
+  log_err_status!(platform_list(tx, &ui.group));
 }
 // }}}
 

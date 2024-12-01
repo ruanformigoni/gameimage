@@ -18,7 +18,7 @@ use shared::dimm;
 
 use crate::common;
 use shared::std::PathBufExt;
-use crate::log;
+use crate::log_status;
 use crate::frame;
 use crate::gameimage;
 use crate::wizard;
@@ -88,7 +88,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // Check if choice is valid
     if chooser.value(1).is_none()
     {
-      log!("No file selected");
+      log_status!("No file selected");
       return;
     } // if
 
@@ -105,8 +105,8 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       // Install directory with backend
       match gameimage::install::install("rom", vec![str_choice])
       {
-        Ok(_) => log!("Successfully installed rom"),
-        Err(e) => log!("Failed to install rom: {}", e),
+        Ok(_) => log_status!("Successfully installed rom"),
+        Err(e) => log_status!("Failed to install rom: {}", e),
       } // match
       clone_tx.send_activate(common::Msg::DrawRpcs3Rom);
     });
@@ -116,14 +116,13 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let mut btn_del = shared::fltk::button::rect::del()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Red);
-  let mut clone_output_status = ui.status.clone();
   btn_del.set_callback(move |_|
   {
     let vec_indices = frame_list.selected_items();
 
     if vec_indices.len() == 0
     {
-      clone_output_status.set_value("No item selected for deletion");
+      log_status!("No item selected for deletion");
       return;
     } // if
 
@@ -133,11 +132,11 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // Run backend
     match gameimage::install::remove("rom", vec_items)
     {
-      Ok(_) => log!("Removed rom(s) successfully"),
-      Err(e) => log!("Could not remove rom(s): '{}'", e),
+      Ok(_) => log_status!("Removed rom(s) successfully"),
+      Err(e) => log_status!("Could not remove rom(s): '{}'", e),
     } // match
 
-    clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
+    clone_tx.send_activate(common::Msg::DrawRpcs3Rom);
   });
 } // }}}
 
@@ -164,8 +163,7 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
   let _ = frame_text.append("Go to 'File -> Install Firmware' for the BIOS\n");
 
   // Button to launch rpcs3 and install files
-  let _btn_launch = button::Button::default()
-    .with_size(dimm::width_button_wide(), dimm::height_button_wide())
+  let _btn_launch = shared::fltk::button::wide::default()
     .below_center_of(&frame_text, dimm::border())
     .with_color(Color::Green)
     .with_label("Open")
@@ -176,8 +174,8 @@ pub fn bios(tx: Sender<common::Msg>, title: &str)
       {
         match gameimage::install::gui()
         {
-          Ok(_) => log!("Gui exited successfully"),
-          Err(e) => log!("Install gui exited with error: {}", e),
+          Ok(_) => log_status!("Gui exited successfully"),
+          Err(e) => log_status!("Install gui exited with error: {}", e),
         }; // match
 
         tx.send_awake(common::Msg::WindActivate);

@@ -35,6 +35,8 @@ pub struct Term
   pub tx : mpsc::Sender<String>,
   // Save button
   pub btn_save : fltk::button::Button,
+  // Group
+  pub group : fltk::group::Group,
 } // struct Term }}}
 
 impl Drop for Term
@@ -54,6 +56,10 @@ impl Term
 // pub fn new() {{{
 pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
 {
+  let group = fltk::group::Group::default()
+    .with_size(width, height)
+    .with_pos(x,y);
+
   let mut term = SimpleTerminal::new(border
     , border
     , width - dimm::border() - dimm::width_button_rec()
@@ -108,8 +114,10 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
     } // while
   });
 
+  group.end();
+
   // Return new term
-  Term{ term, opt_proc_thread: None, tx, btn_save }
+  Term{ term, opt_proc_thread: None, tx, btn_save, group }
 } // new() }}}
 
 // kill() {{{

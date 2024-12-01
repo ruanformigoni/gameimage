@@ -120,7 +120,7 @@ pub fn checkbutton() -> fltk::button::CheckButton
     } // match
     // Draw label
     draw::set_draw_color(Color::White);
-    draw::draw_text2(&e.label(), e.x() + w, e.y(), e.w(), e.h(), e.align());
+    draw::draw_text2(&format!(" {}", e.label()), e.x() + w, e.y(), e.w(), e.h(), e.align());
   });
 
   btn

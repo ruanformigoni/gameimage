@@ -213,6 +213,41 @@ macro_rules! log_err
 }
 // }}}
 
+// macro_rules log_status! {{{
+#[macro_export]
+macro_rules! log_status
+{
+  ($($arg:tt)*) =>
+  {
+    {
+      let output = format!($($arg)*);
+      common::impl_log(output.as_str());
+      let mut status: fltk::output::Output = fltk::app::widget_from_id("footer_status").unwrap();
+      status.set_value(&output);
+      eprintln!("{}", output);
+    }
+  }
+}
+// }}}
+
+// macro_rules log_err_status! {{{
+#[macro_export]
+macro_rules! log_err_status
+{
+  ($result:expr) =>
+  {
+    if let Err(e) = $result
+    {
+      let err = e.to_string();
+      common::impl_log(err.as_str());
+      let mut status: fltk::output::Output = fltk::app::widget_from_id("footer_status").unwrap();
+      status.set_value(&err);
+      eprintln!("{}", err);
+    }
+  }
+}
+// }}}
+
 // macro_rules log_return_err! {{{
 #[macro_export]
 macro_rules! log_return_err

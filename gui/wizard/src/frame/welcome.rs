@@ -18,7 +18,7 @@ use crate::db;
 use crate::gameimage;
 use crate::dimm;
 use crate::common;
-use crate::log;
+use crate::log_status;
 use shared::svg;
 use shared::std::PathBufExt;
 use shared::fltk::WidgetExtExtra;
@@ -59,7 +59,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
   } // if
   else
   {
-    log!("Failed to load icon image");
+    log_status!("Failed to load icon image");
   } // else
 
   let mut input_dir = FileInput::default()
@@ -117,24 +117,24 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
     match std::fs::create_dir_all(&path_dir_build)
     {
       Ok(()) => (),
-      Err(e) => log!("Could not create build directory: {}", e),
+      Err(e) => log_status!("Could not create build directory: {}", e),
     }
     // Init project build directory
     match gameimage::init::build(path_dir_build)
     {
       Ok(()) => (),
-      Err(e) => log!("Error to initialize build directory: {}", e)
+      Err(e) => log_status!("Error to initialize build directory: {}", e)
     }; // match
     // Fetch fetch list
     match gameimage::fetch::fetchlist()
     {
-      Ok(code) => log!("Fetch exited with code {}", code),
-      Err(e) => log!("Error to initialize build directory: {}", e)
+      Ok(code) => log_status!("Fetch exited with code {}", code),
+      Err(e) => log_status!("Error to initialize build directory: {}", e)
     }; // match
     // Check if version matches
     if let Err(e) = check_version()
     {
-      log!("{}", e);
+      log_status!("{}", e);
       fltk::dialog::message_default(&format!("{}", e));
       clone_tx.send_awake(common::Msg::WindActivate);
       return;

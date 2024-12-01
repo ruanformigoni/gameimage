@@ -35,7 +35,7 @@ use common::Msg;
 
 static GUI: LazyLock<Mutex<Gui>> = LazyLock::new(|| Mutex::new(Gui::new()));
 
-struct Ui
+pub struct Ui
 {
   title: Frame,
   group: Group,
@@ -138,15 +138,17 @@ impl Gui
     {
       let mut ui =  Ui
       {
-        title:  fltk::app::widget_from_id("header_title").unwrap(),
-        group:  fltk::app::widget_from_id("content").unwrap(),
-        btn_next:  fltk::app::widget_from_id("footer_next").unwrap(),
-        btn_prev:  fltk::app::widget_from_id("footer_prev").unwrap(),
-        status:  fltk::app::widget_from_id("footer_status").unwrap(),
+        title    : fltk::app::widget_from_id("header_title").unwrap(),
+        group    : fltk::app::widget_from_id("content").unwrap(),
+        btn_next : fltk::app::widget_from_id("footer_next").unwrap(),
+        btn_prev : fltk::app::widget_from_id("footer_prev").unwrap(),
+        status   : fltk::app::widget_from_id("footer_status").unwrap(),
       };
       ui.title.set_label(title);
       ui.btn_prev.set_callback(|_|{});
       ui.btn_next.set_callback(|_|{});
+      ui.btn_next.set_label("Next");
+      ui.btn_prev.set_label("Prev");
       ui.btn_next.show();
       ui.btn_prev.show();
       ui.btn_next.show();
@@ -264,7 +266,7 @@ fn init(&mut self)
     } // while
   });
 
-  self.tx.send_awake(Msg::DrawWineRom);
+  self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {
     // Handle messages

@@ -41,7 +41,7 @@ fn desktop_next(tx: Sender<common::Msg>
   let path_file_icon = arc_path_file_icon.clone().lock()
     .map_err(|_| ah!("Could not lock path_file_icon"))
     .map(|mut e| e.take())?
-    .ok_or(ah!("No file selected as the icon"))?;
+    .ok_or(ah!("No icon selected"))?;
   // Get projects to include
   let str_name_projects = match frame::creator::PROJECTS.lock()
   {

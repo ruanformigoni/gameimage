@@ -14,7 +14,7 @@ use shared::fltk::SenderExt;
 use crate::dimm;
 use crate::common;
 use shared::std::PathBufExt;
-use crate::log;
+use crate::log_status;
 use crate::gameimage;
 
 // struct Install {{{
@@ -31,7 +31,7 @@ pub fn install(tx: Sender<common::Msg>
   , label: &str
   , msg_prev: common::Msg
   , msg_curr: common::Msg
-  , msg_next: common::Msg) -> Install
+  , msg_next: common::Msg) -> ( crate::Ui, Install )
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
@@ -50,7 +50,7 @@ pub fn install(tx: Sender<common::Msg>
   match gameimage::search::search_local(label)
   {
     Ok(vec_items) => for item in vec_items { frame_list.add(&item.string()); },
-    Err(e) => log!("Could not get items to insert: {}", e),
+    Err(e) => log_status!("Could not get items to insert: {}", e),
   }; // match
 
   // Add new item
@@ -76,7 +76,7 @@ pub fn install(tx: Sender<common::Msg>
       // Check if choice is valid
       if chooser.value(1).is_none()
       {
-        log!("No file selected");
+        log_status!("No file selected");
         return;
       } // if
 
@@ -91,8 +91,8 @@ pub fn install(tx: Sender<common::Msg>
       {
         match gameimage::install::install(&clone_label, vec_entries.clone())
         {
-          Ok(_) => log!("Files installed"),
-          Err(e) => log!("Failed to install files: {}", e),
+          Ok(_) => log_status!("Installed selected files"),
+          Err(e) => log_status!("Failed to install files: {}", e),
         }; // match
         clone_tx.send_activate(msg_curr);
       });
@@ -130,15 +130,15 @@ pub fn install(tx: Sender<common::Msg>
       // Run backend
       match gameimage::install::remove(&clone_label, vec_items.clone())
       {
-        Ok(_) => log!("Successfully removed files"),
-        Err(e) => log!("Failed to remove files: {}", e),
+        Ok(_) => log_status!("Successfully removed files"),
+        Err(e) => log_status!("Failed to remove files: {}", e),
       }; // match
       // Redraw GUI
       clone_tx.send_activate(msg_curr);
     }); // std::thread
   }); // set_callback
 
-  Install{ frame_list, btn_add, btn_del }
+  (ui, Install{ frame_list, btn_add, btn_del })
 }
 // }}}
 

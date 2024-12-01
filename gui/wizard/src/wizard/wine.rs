@@ -24,10 +24,12 @@ use shared::std::PathBufExt;
 use shared::dimm;
 
 use crate::log;
-use crate::log_return_void;
-use crate::db;
 use crate::log_alert;
 use crate::log_err;
+use crate::log_status;
+use crate::log_err_status;
+use crate::log_return_void;
+use crate::db;
 use crate::common;
 use crate::frame;
 use crate::wizard;
@@ -173,7 +175,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   let path_file_db = match get_path_db_env()
   {
     Ok(e) => e,
-    Err(e) => { log!("Could not retrieve path to db file: {}", e); return; }
+    Err(e) => { log_status!("Could not retrieve path to db file: {}", e); return; }
   }; // match
 
   //
@@ -315,7 +317,7 @@ fn configure_entry(tx: Sender<common::Msg>
       let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
       if gameimage::gameimage::gameimage_sync(slices) != 0
       {
-        log!("Command exited with non-zero status");
+        log_status!("Command exited with non-zero status");
       } // else
       tx.send_awake(common::Msg::WindActivate);
     });
@@ -351,14 +353,14 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 
     if ! path_dir_wine_prefix.exists()
     {
-      log!("Wine prefix does not exist, creating...");
+      log_status!("Wine prefix does not exist, creating...");
       tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||
       {
         match gameimage::install::winetricks(vec!["fontsmooth=rgb".into()])
         {
-          Ok(_) => log!("Created wine prefix"),
-          Err(e) => log!("{}", e),
+          Ok(_) => log_status!("Created wine prefix"),
+          Err(e) => log_status!("{}", e),
         } // else
 
         clone_tx.send_activate(common::Msg::DrawWineTricks);
@@ -457,7 +459,7 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
         {
           if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).chain(vec![lib.as_str()]).collect()) != 0
           {
-            log!("Command exited with non-zero status");
+            log_status!("Command exited with non-zero status");
           } // else
         } // for
         tx.send_awake(common::Msg::WindActivate);
@@ -474,8 +476,8 @@ fn rom_folder(path_file_item: std::path::PathBuf) -> anyhow::Result<()>
   // Get executable directory
   let mut path_dir_executable = db::global::get_current_project()?.path_dir_project.join(&path_file_item);
   // Get executable directory
-  if ! path_dir_executable.pop() { log!("Could not open executable: {}", path_dir_executable.string()); } // if
-  log!("Open '{}'", path_dir_executable.string());
+  if ! path_dir_executable.pop() { log_status!("Could not open executable: {}", path_dir_executable.string()); } // if
+  log_status!("Open '{}'", path_dir_executable.string());
   // Open with xdg-open
   let _ = std::process::Command::new("fim_portal")
       .stderr(std::process::Stdio::inherit())
@@ -565,7 +567,7 @@ fn rom_entry(tx: Sender<common::Msg>
       tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(#[clown] move ||
       {
-        log_err!(rom_exec(item));
+        log_err_status!(rom_exec(item));
         tx.send_awake(common::Msg::WindActivate);
       });
     });
@@ -595,7 +597,7 @@ fn rom_entry(tx: Sender<common::Msg>
     match shared::db::kv::write(&path_file_db_args, &clone_item.string(), &e.value())
     {
       Ok(()) => (),
-      Err(e) => log!("Could not write to db: {}", e),
+      Err(e) => log_status!("Could not write to db: {}", e),
     };
   });
   // Initial value
@@ -649,7 +651,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let path_file_db_args = match get_path_db_args()
   {
     Ok(e) => e,
-    Err(e) => { log!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+    Err(e) => { log_status!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
 
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
@@ -695,7 +697,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   let hash_argument_executable = match shared::db::kv::read(&path_file_db_args)
   {
     Ok(hash_argument_executable) => hash_argument_executable,
-    Err(e) => { log!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
+    Err(e) => { log_status!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
   }; // match
 
   // Create a column for the element entries

@@ -12,7 +12,7 @@ use shared::fltk::WidgetExtExtra;
 
 use crate::db;
 use crate::dimm;
-use crate::log;
+use crate::log_status;
 use crate::common;
 use shared::std::OsStrExt;
 use shared::std::PathBufExt;
@@ -31,7 +31,7 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
   // Enter the build directory
   if let Err(e) = common::dir_build()
   {
-    log!("Err: {}", e.to_string());
+    log_status!("Err: {}", e.to_string());
   } // if
 
   let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);

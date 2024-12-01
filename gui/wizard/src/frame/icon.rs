@@ -1,19 +1,14 @@
-use std::env;
 use std::path::PathBuf;
 use std::sync::{Arc,Mutex};
-use std::borrow::BorrowMut;
 
 // Gui
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  menu,
-  button,
-  input,
   input::FileInput,
   frame::Frame,
   dialog::file_chooser,
-  enums::{Align,FrameType,Color},
+  enums::Color,
 };
 
 use shared::fltk::WidgetExtExtra;
@@ -25,9 +20,9 @@ use shared::std::PathBufExt;
 
 use crate::dimm;
 use crate::db;
-use crate::frame;
 use crate::common;
 use crate::log;
+use crate::log_status;
 use crate::log_return_void;
 use crate::log_err;
 use crate::gameimage;
@@ -74,36 +69,6 @@ pub fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow:
 
   Ok(())
 } // resize_draw_image() }}}
-
-// enum IconFrame {{{
-#[derive(PartialEq)]
-enum IconFrame
-{
-  Web,
-  Local,
-} // enum }}}
-
-// impl IconFrame {{{
-impl IconFrame
-{
-  fn as_str(&self) -> &'static str
-  {
-    match self
-    {
-      IconFrame::Local => "Local File",
-      IconFrame::Web => "Web Search",
-    } // match
-  } // as_str
-
-  fn from_str(&self, src : &str) -> IconFrame
-  {
-    match src
-    {
-      "Local File" => IconFrame::Local,
-      _ => IconFrame::Web,
-    } // match
-  } // as_str
-} // impl IconFrame }}}
 
 // pub struct Icon {{{
 #[derive(Clone)]
@@ -184,7 +149,7 @@ pub fn icon(tx: Sender<common::Msg>
     let str_choice = match file_chooser("Select the icon", "*.{jpg,png}", ".", false)
     {
       Some(str_choice) => str_choice,
-      None => { log!("No file selected"); return; }
+      None => { log_status!("No file selected"); return; }
     }; // match
     // Update static icon
     *OPTION_PATH_FILE_ICON.lock().unwrap() = Some(PathBuf::from(&str_choice));
@@ -193,8 +158,8 @@ pub fn icon(tx: Sender<common::Msg>
     // Set preview image
     match resize_draw_image(frame_icon.clone(), str_choice.into())
     {
-      Ok(_) => log!("Set preview image"),
-      Err(_) => log!("Failed to load icon image into preview"),
+      Ok(_) => log_status!("Set preview image"),
+      Err(_) => log_status!("Failed to load icon image into preview"),
     } // match
   });
 
@@ -241,11 +206,11 @@ pub fn project(tx: Sender<common::Msg>
     std::thread::spawn(move ||
     {
       // Try to install icon
-      log!("Installing icon...");
+      log_status!("Installing icon...");
 
       match gameimage::install::icon(&path_file_icon)
       {
-        Ok(_) => log!("Successfully installed icon"),
+        Ok(_) => log_status!("Successfully installed icon"),
         Err(e) => { clone_tx.send_activate(msg_curr); log_return_void!("Could not install icon with error: {}", e); },
       } // match
 

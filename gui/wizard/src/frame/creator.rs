@@ -21,6 +21,7 @@ use crate::gameimage;
 use crate::dimm;
 use crate::common;
 use crate::log;
+use crate::log_status;
 use crate::log_err;
 use crate::db;
 use lazy_static::lazy_static;
@@ -125,7 +126,7 @@ fn creator_del(vec_project: Vec<db::project::Entry>)
   {
     if let Err(e) = gameimage::project::del(&str_name)
     {
-      log!("Could not erase project '{}': {}", str_name, e)
+      log_status!("Could not erase project '{}': {}", str_name, e)
     }
   } // for
 } // creator_del() }}}
@@ -158,7 +159,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let projects = match db::project::list()
   {
     Ok(mut projects) => { projects.sort_by_key(|e| e.get_project()); projects},
-    Err(e) => { log!("Could not get project list: {}", e); vec![] },
+    Err(e) => { log_status!("Could not get project list: {}", e); vec![] },
   };
 
   let mut col_projects = fltk::group::Pack::default_fill()
@@ -172,14 +173,14 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     let (row_project, button, project) = match create_entry(project.clone(), dimm::height_button_rec()*4)
     {
       Ok(ret) => ret,
-      Err(e) => { log!("Could not create entry for project with error: {}", e); continue; },
+      Err(e) => { log_status!("Could not create entry for project with error: {}", e); continue; },
     }; // match
     col_projects.add(&row_project);
 
     match vec_btn.lock()
     {
       Ok(mut lock) => lock.push((button, project)),
-      Err(e) => log!("Could not lock checkbox buttons with error: {}", e),
+      Err(e) => log_status!("Could not lock checkbox buttons with error: {}", e),
     }
   } // for
 
@@ -230,17 +231,17 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     {
       Ok(e) => if e.is_empty()
       {
-        log!("No project to include");
+        log_status!("No project to include");
         clone_output_status.set_value("No project to include");
         return;
       } // if
       else if ! e.iter().any(|e| e.0.is_set())
       {
-        log!("No project was selected");
+        log_status!("No project was selected");
         clone_output_status.set_value("No project was selected");
         return;
       } // else if
-      Err(e) => { log!("Could not lock projects vector: {}", e); return; }
+      Err(e) => { log_status!("Could not lock projects vector: {}", e); return; }
     }
 
     // Set status
@@ -260,7 +261,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         Err(e) =>
         {
           clone_tx.send_awake(common::Msg::WindActivate);
-          log!("Failed to lock checkbutton vector with: {}", e); return;
+          log_status!("Failed to lock checkbutton vector with: {}", e); return;
         }
       }; // match
       // Transform projects in a ':' separated string to send to the backend
@@ -273,7 +274,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       match PROJECTS.lock()
       {
         Ok(mut guard) => *guard = str_name_projects.clone(),
-        Err(e) => log!("Could not lock PROJECTS: {}", e),
+        Err(e) => log_status!("Could not lock PROJECTS: {}", e),
       }; // match
       // Refresh
       clone_tx.send_activate(common::Msg::DrawDesktop);
