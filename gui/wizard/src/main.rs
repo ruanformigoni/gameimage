@@ -10,6 +10,10 @@ use fltk::{
   app::App,
   window::Window,
   dialog,
+  group::Group,
+  button::Button,
+  output::Output,
+  frame::Frame,
   enums::{FrameType,Color,Font},
 };
 use fltk_theme::{ColorTheme, color_themes};
@@ -31,6 +35,15 @@ use common::Msg;
 
 static GUI: LazyLock<Mutex<Gui>> = LazyLock::new(|| Mutex::new(Gui::new()));
 
+struct Ui
+{
+  title: Frame,
+  group: Group,
+  btn_prev: Button,
+  btn_next: Button,
+  status: Output,
+}
+
 // struct: Gui {{{
 #[derive(Debug, Clone)]
 struct Gui
@@ -40,6 +53,7 @@ struct Gui
   wind_log  : Window,
   tx        : Sender<Msg>,
   rx        : Receiver<Msg>,
+  ui        : fn(&str) -> Ui
 } // struct: Gui }}}
 
 // impl: Gui {{{
@@ -53,7 +67,6 @@ impl Gui
       .with_label("GameImage")
       .with_size(dimm::width_wizard(), dimm::height_wizard())
       .center_screen();
-    wind_main.begin();
     wind_main.end();
 
     if let Ok(font) = Font::load_font("/usr/share/fonts/noto/NotoSans-Regular.ttf")
@@ -67,7 +80,6 @@ impl Gui
       .with_label("Logger")
       .with_size(dimm::width_wizard(), dimm::height_wizard())
       .left_of(&wind_main, 0);
-    wind_log.begin();
     wind_log.end();
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
@@ -92,8 +104,8 @@ impl Gui
     set_color(Color::Background2 , &Color::from_hex_str(str_black).unwrap().darker().to_hex_str());
     set_color(Color::Red         , "#F05090");
     set_color(Color::Blue        , "#00A0F0");
-    set_color(Color::Green       , "#60F080");
-    set_color(Color::Yellow      , "#F0F080");
+    set_color(Color::Green       , "#60F070");
+    set_color(Color::Yellow      , "#F0F070");
     set_color(Color::Magenta     , "#D080F0");
     set_color(Color::Cyan        , "#70D0F0");
     set_color(Color::DarkRed     , &Color::darker(&Color::DarkRed).to_hex_str());
@@ -122,14 +134,34 @@ impl Gui
 
     let (tx, rx) = fltk::app::channel();
 
-    Gui { app, wind_main, wind_log, tx, rx, }
+    let ui = |title: &str|
+    {
+      let mut ui =  Ui
+      {
+        title:  fltk::app::widget_from_id("header_title").unwrap(),
+        group:  fltk::app::widget_from_id("content").unwrap(),
+        btn_next:  fltk::app::widget_from_id("footer_next").unwrap(),
+        btn_prev:  fltk::app::widget_from_id("footer_prev").unwrap(),
+        status:  fltk::app::widget_from_id("footer_status").unwrap(),
+      };
+      ui.title.set_label(title);
+      ui.btn_prev.set_callback(|_|{});
+      ui.btn_next.set_callback(|_|{});
+      ui.btn_next.show();
+      ui.btn_prev.show();
+      ui.btn_next.show();
+      ui
+    };
+
+    Gui { app, wind_main, wind_log, tx, rx, ui }
   } // fn: new }}}
 
 // fn redraw() {{{
 fn redraw(&mut self, msg : Msg)
 {
-  self.wind_main.clear();
-  self.wind_main.begin();
+  let mut content: Group = fltk::app::widget_from_id("content").unwrap();
+  content.clear();
+  content.begin();
 
   match msg
   {
@@ -185,7 +217,8 @@ fn redraw(&mut self, msg : Msg)
     _ => (),
   } // match
 
-  self.wind_main.end();
+  content.end();
+  content.redraw();
   app::redraw();
   app::flush();
   app::awake();
@@ -212,7 +245,10 @@ fn init(&mut self)
   log!("Initialized logging!");
   self.wind_log.end();
 
-  // Show main window
+  self.wind_main.begin();
+  frame::common::frame_header("Header");
+  frame::common::frame_footer();
+  self.wind_main.end();
   self.wind_main.show();
 
   // Set log window to the left of the main window
@@ -220,7 +256,7 @@ fn init(&mut self)
 
   let clone_tx = self.tx.clone();
   std::thread::spawn(move ||
-  { 
+  {
     loop
     {
       clone_tx.send(common::Msg::WindUpdate);
@@ -228,7 +264,7 @@ fn init(&mut self)
     } // while
   });
 
-  self.tx.send_awake(Msg::DrawWelcome);
+  self.tx.send_awake(Msg::DrawWineRom);
   while self.app.wait()
   {
     // Handle messages

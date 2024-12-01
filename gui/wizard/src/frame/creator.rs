@@ -7,7 +7,6 @@ use fltk::{
   app::Sender,
   button,
   group,
-  button::CheckButton,
   frame::Frame,
   output,
   dialog,
@@ -20,7 +19,6 @@ use shared::std::PathBufExt;
 
 use crate::gameimage;
 use crate::dimm;
-use crate::frame;
 use crate::common;
 use crate::log;
 use crate::log_err;
@@ -138,17 +136,17 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   // Enter the build directory
   log_err!(common::dir_build());
 
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-  let frame_content = ret_frame_header.frame_content.clone();
+  let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Configure bottom buttons
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
+  ui.btn_prev.show();
+  ui.btn_next.show();
+  ui.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
 
   let mut row_content = fltk::group::Flex::default()
     .with_type(fltk::group::FlexType::Row)
-    .with_size(frame_content.w(), frame_content.h())
-    .with_pos(frame_content.x(), frame_content.y());
+    .with_size(ui.group.w(), ui.group.h())
+    .with_pos(ui.group.x(), ui.group.y());
   row_content.set_spacing(dimm::border() / 2);
 
   let mut scroll = fltk::group::Scroll::default()
@@ -207,16 +205,21 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   btn_del.set_callback(move |_|
   {
     tx.send_awake(common::Msg::WindDeactivate);
-    creator_del(clone_vec_checkbutton.lock().unwrap().iter().filter(|e| e.0.is_checked()).map(|e| e.1.clone()).collect());
-    tx.send_awake(common::Msg::DrawCreator);
+    let clone_tx = tx.clone();
+    let clone_vec_checkbutton = clone_vec_checkbutton.clone();
+    std::thread::spawn(move ||
+    {
+      creator_del(clone_vec_checkbutton.lock().unwrap().iter().filter(|e| e.0.is_checked()).map(|e| e.1.clone()).collect());
+      clone_tx.send_activate(common::Msg::DrawCreator);
+    });
   });
   col_buttons.fixed(&btn_del, dimm::height_button_rec());
   row_content.fixed(&col_buttons, dimm::width_button_rec());
 
   // Finish package creation on click next
   let clone_vec_btn = vec_btn.clone();
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  let mut clone_output_status = ui.status.clone();
+  ui.btn_next.clone().set_callback(move |_|
   {
     if dialog::choice2_default("Include selected projects in the image?", "No", "Yes", "") != Some(1)
     {
@@ -273,8 +276,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
         Err(e) => log!("Could not lock PROJECTS: {}", e),
       }; // match
       // Refresh
-      clone_tx.send_awake(common::Msg::WindActivate);
-      clone_tx.send_awake(common::Msg::DrawDesktop);
+      clone_tx.send_activate(common::Msg::DrawDesktop);
     });
   });
   row_content.end();

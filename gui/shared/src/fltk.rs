@@ -238,12 +238,28 @@ impl<T: WidgetExt + Clone> WidgetExtExtra for T
 pub trait SenderExt<T>
 {
   fn send_awake(&self, value: T);
+  fn send_activate(&self, value: T);
 } // pub trait SenderExt 
 
 impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
 {
   fn send_awake(&self, value: T)
   {
+    // Send
+    self.send(value);
+    // Awake app
+    fltk::app::awake();
+  } // send_awake
+
+  fn send_activate(&self, value: T)
+  {
+    // Activate
+    for w in fltk::app::windows().unwrap_or_default()
+    {
+      ( 0..w.children() )
+        .into_iter()
+        .for_each(|e| { w.child(e).unwrap().clone().activate() });
+    } // for
     // Send
     self.send(value);
     // Awake app

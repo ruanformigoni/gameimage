@@ -3,37 +3,17 @@ use fltk::prelude::*;
 use fltk::{
   output::Output,
   group::PackType,
-  button::Button,
   frame::Frame,
-  group::Flex,
-  enums::{Align,FrameType,Color},
+  group::Group,
+  enums::{Align,Color},
 };
 
 use shared::fltk::WidgetExtExtra;
 
 use crate::dimm;
 
-#[derive(Clone)]
-pub struct RetFrameHeader
-{
-  pub frame: Frame,
-  pub frame_content : Frame,
-  pub header: Frame,
-  pub sep: Frame,
-} // struct RetFrameHeader
-
-#[derive(Clone)]
-pub struct RetFrameFooter
-{
-  pub frame: Frame,
-  pub output_status: Output,
-  pub btn_next: Button,
-  pub btn_prev: Button,
-  pub sep: Frame,
-} // struct RetFrameHeader
-
 // pub fn frame_header() {{{
-pub fn frame_header(title: &str) -> RetFrameHeader
+pub fn frame_header(str_title: &str)
 {
   let tx = crate::GUI.lock().unwrap().tx.clone();
 
@@ -43,21 +23,22 @@ pub fn frame_header(title: &str) -> RetFrameHeader
   frame.set_type(PackType::Vertical);
 
   let mut row = fltk::group::Flex::default()
+    .row()
     .with_size(frame.w() - dimm::border()*2, dimm::height_button_wide())
-    .with_pos(dimm::border(), dimm::border())
-    .with_type(fltk::group::FlexType::Row);
+    .with_pos(dimm::border(), dimm::border());
   // Show terminal button
   let mut btn_term = shared::fltk::button::rect::terminal()
     .with_color(Color::Blue);
   btn_term.emit(tx, crate::common::Msg::ToggleTerminal);
   row.fixed(&btn_term, btn_term.w());
   // Header
-  let mut header = Frame::default()
+  let mut title = Frame::default()
+    .with_id("header_title")
     .with_size(0, dimm::height_button_wide())
     .with_align(Align::Inside | Align::Center)
-    .with_label(title);
-  header.set_label_size((dimm::height_text() as f32 * 1.5) as i32);
-  row.add_resizable(&header);
+    .with_label(str_title);
+  title.set_label_size((dimm::height_text() as f32 * 1.5) as i32);
+  row.add_resizable(&title);
   row.end();
 
   // Separator
@@ -65,17 +46,22 @@ pub fn frame_header(title: &str) -> RetFrameHeader
     .below_of(&row, dimm::border());
   sep.set_pos(dimm::border(), sep.y());
 
+  let mut group_content = Group::default()
+    .with_id("content")
+    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
+    .below_of(&sep, dimm::border());
   let frame_content = Frame::default()
     .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
     .below_of(&sep, dimm::border());
-
-  RetFrameHeader{ frame, frame_content, header, sep }
+  group_content.add(&frame_content);
+  group_content.end();
 } // }}}
 
 // pub fn frame_footer() {{{
-pub fn frame_footer() -> RetFrameFooter
+pub fn frame_footer()
 {
   let mut frame = Frame::default()
+    .with_id("footer_frame")
     .with_size(dimm::width_wizard(), dimm::height_footer())
     .with_pos(0, dimm::posy_footer());
   // frame.set_color(Color::Green);
@@ -83,6 +69,7 @@ pub fn frame_footer() -> RetFrameFooter
 
   // Status bar
   let mut output_status = Output::default()
+    .with_id("footer_status")
     .with_size(dimm::width_wizard(), dimm::height_status())
     .with_align(Align::Left)
     .with_pos(0, dimm::height_wizard() - dimm::height_status());
@@ -91,6 +78,7 @@ pub fn frame_footer() -> RetFrameFooter
 
   // Continue
   let mut btn_next = shared::fltk::button::wide::default()
+    .with_id("footer_next")
     .with_label("Next")
     .above_of(&output_status, dimm::border());
   btn_next.set_pos(dimm::width_wizard() - dimm::width_button_wide() - dimm::border(), btn_next.y());
@@ -98,6 +86,7 @@ pub fn frame_footer() -> RetFrameFooter
 
   // Prev
   let mut btn_prev = shared::fltk::button::wide::default()
+    .with_id("footer_prev")
     .with_label("Prev")
     .above_of(&output_status, dimm::border());
   btn_prev.set_pos(dimm::border(), btn_prev.y());
@@ -106,9 +95,6 @@ pub fn frame_footer() -> RetFrameFooter
   let mut sep = shared::fltk::separator::horizontal(dimm::width_wizard() - dimm::border()*2)
     .above_of(&btn_next, dimm::border());
   sep.set_pos(dimm::border(), sep.y());
-
-  RetFrameFooter { frame, output_status, btn_next, btn_prev, sep }
-
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

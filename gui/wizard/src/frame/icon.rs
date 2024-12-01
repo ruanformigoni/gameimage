@@ -109,8 +109,6 @@ impl IconFrame
 #[derive(Clone)]
 pub struct Icon
 {
-  pub ret_frame_header   : crate::frame::common::RetFrameHeader,
-  pub ret_frame_footer   : crate::frame::common::RetFrameFooter,
   pub arc_path_file_icon : Arc<Mutex<Option<PathBuf>>>,
   pub opt_frame_icon     : Option<Frame>,
   pub opt_input_icon     : Option<FileInput>
@@ -125,26 +123,22 @@ pub fn icon(tx: Sender<common::Msg>
   // Save previously selected icon path
   static OPTION_PATH_FILE_ICON : once_cell::sync::Lazy<Arc<Mutex<Option<PathBuf>>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
 
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   let mut ret = Icon
-  {   ret_frame_header: ret_frame_header.clone()
-    , ret_frame_footer: ret_frame_footer.clone()
-    , arc_path_file_icon: OPTION_PATH_FILE_ICON.clone()
+  {
+      arc_path_file_icon: OPTION_PATH_FILE_ICON.clone()
     , opt_frame_icon: None
     , opt_input_icon: None
   };
 
-  let frame_content = ret_frame_header.frame_content.clone();
-
   let mut col = fltk::group::Flex::default()
     .column()
-    .with_size_of(&frame_content)
-    .with_pos_of(&frame_content);
+    .with_size_of(&ui.group)
+    .with_pos_of(&ui.group);
 
   // Footer callbacks
-  ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
+  ui.btn_prev.clone().emit(tx, msg_prev);
 
   // Spacer
   col.add(&Frame::default());
@@ -216,15 +210,17 @@ pub fn project(tx: Sender<common::Msg>
   , msg_curr : common::Msg
   , msg_next : common::Msg)
 {
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
+
   let ret = icon(tx, title, msg_prev, msg_curr);
-  let mut btn_next = ret.ret_frame_footer.btn_next.clone();
+  let mut btn_next = ui.btn_next.clone();
 
   // Callback to install the selected icon with the backend
   let clone_tx = tx.clone();
   btn_next.set_callback(move |_|
   {
     let arc_path_file_icon = ret.arc_path_file_icon.clone();
-    let mut output_status = ret.ret_frame_footer.output_status.clone();
+    let mut output_status = ui.status.clone();
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Check if an icon was selected
@@ -236,7 +232,7 @@ pub fn project(tx: Sender<common::Msg>
     else
     {
       output_status.set_value("No icon selected");
-      clone_tx.send_awake(msg_curr);
+      clone_tx.send_activate(msg_curr);
       log_return_void!("No Icon selected");
     };
 
@@ -250,10 +246,10 @@ pub fn project(tx: Sender<common::Msg>
       match gameimage::install::icon(&path_file_icon)
       {
         Ok(_) => log!("Successfully installed icon"),
-        Err(e) => { clone_tx.send_awake(msg_curr); log_return_void!("Could not install icon with error: {}", e); },
+        Err(e) => { clone_tx.send_activate(msg_curr); log_return_void!("Could not install icon with error: {}", e); },
       } // match
 
-      clone_tx.send_awake(msg_next);
+      clone_tx.send_activate(msg_next);
     });
   });
 } // }}}

@@ -76,8 +76,7 @@ fn fetch_backend(tx: Sender<common::Msg>
         log!("Failed to fetch file: {}", e);
       },
     }; // match
-    clone_tx.send_awake(common::Msg::WindActivate);
-    clone_tx.send_awake(common::Msg::DrawPlatform);
+    clone_tx.send_activate(common::Msg::DrawPlatform);
   });
 } // fn fetch_backend() }}}
 
@@ -208,7 +207,7 @@ fn platform_add_wine(tx: Sender<common::Msg>
 } // fn platform_add_wine() }}}
 
 // fn platform_list() {{{
-fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyhow::Result<()>
+fn platform_list(tx: Sender<common::Msg>, widget: &fltk::group::Group) -> anyhow::Result<()>
 {
   let vec_platforms = gameimage::fetch::installed()?;
   let db_fetch = db::fetch::read()?;
@@ -240,18 +239,14 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::widget::Widget) -> anyh
 // pub fn platform() {{{
 pub fn platform(tx: Sender<common::Msg>, title: &str)
 {
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
   // Enter the build directory
   if let Err(e) = common::dir_build() { log!("{}", e); }
-  // Create frame from template
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
   // Configure buttons
-  ret_frame_footer.btn_prev.clone().emit(tx, common::Msg::DrawCreator);
-  ret_frame_footer.btn_next.clone().hide();
-  // Clone content frame
-  let frame_content = ret_frame_header.frame_content.clone();
+  ui.btn_prev.clone().emit(tx, common::Msg::DrawCreator);
+  ui.btn_next.clone().hide();
   // List platforms to fetch
-  if let Err(e) = platform_list(tx, &frame_content.as_base_widget()) { log!("{}", e); };
+  if let Err(e) = platform_list(tx, &ui.group) { log!("{}", e); };
 }
 // }}}
 

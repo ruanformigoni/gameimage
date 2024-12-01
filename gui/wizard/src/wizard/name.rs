@@ -55,15 +55,12 @@ pub fn name(tx: Sender<common::Msg>
   , msg_prev: common::Msg
   , msg_next: common::Msg)
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Create icon box
   let mut frame_icon = Frame::default()
     .with_size(150, 225)
-    .center_of(&frame_content);
+    .center_of(&ui.group);
   frame_icon.set_pos(frame_icon.x(), frame_icon.y() - dimm::height_button_wide());
   frame_icon.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_joystick(10.0).as_str()).unwrap()));
   frame_icon.set_frame(FrameType::NoBox);
@@ -72,10 +69,10 @@ pub fn name(tx: Sender<common::Msg>
   // Game name
   //
   let mut input_name = Input::default()
-    .with_size(frame_content.w(), dimm::height_button_wide())
-    .below_of(&frame_content, 0)
+    .with_size(ui.group.w(), dimm::height_button_wide())
+    .below_of(&ui.group, 0)
     .with_align(Align::Top | Align::Left);
-  input_name.set_pos(frame_content.x(), input_name.y() - input_name.h());
+  input_name.set_pos(ui.group.x(), input_name.y() - input_name.h());
   let _ = input_name.take_focus();
 
   // Sanitize game name
@@ -115,13 +112,13 @@ pub fn name(tx: Sender<common::Msg>
   });
 
   // Callback to previous
-  ret_frame_footer.btn_prev.clone().emit(tx, msg_prev);
+  ui.btn_prev.clone().emit(tx, msg_prev);
 
   // Callback to Next
-  let clone_output_status = ret_frame_footer.output_status.clone();
+  let clone_output_status = ui.status.clone();
   let clone_tx = tx.clone();
   let clone_msg_next = msg_next.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  ui.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
     let mut clone_output_status = clone_output_status.clone();
@@ -129,7 +126,7 @@ pub fn name(tx: Sender<common::Msg>
     {
       match name_next()
       {
-        Ok(()) => tx.send(clone_msg_next),
+        Ok(()) => tx.send_activate(clone_msg_next),
         Err(e) =>
         {
           clone_output_status.set_value(&e.to_string());

@@ -26,22 +26,19 @@ pub fn compress(tx: Sender<common::Msg>
   , _msg_curr: common::Msg
   , _msg_next: common::Msg)
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), msg_prev);
+  ui.btn_prev.clone().emit(tx.clone(), msg_prev);
 
   // Rename 'next' to 'compress'
-  ret_frame_footer.btn_next.clone().set_label("Start");
+  ui.btn_next.clone().set_label("Start");
 
   let mut term = frame::term::Term::new(dimm::border()
-    , frame_content.w()
-    , frame_content.h()
-    , frame_content.x()
-    , frame_content.y());
+    , ui.group.w()
+    , ui.group.h()
+    , ui.group.x()
+    , ui.group.y());
 
   // Open space for compress level button
   let mut widget_term = term.term.clone();
@@ -51,7 +48,7 @@ pub fn compress(tx: Sender<common::Msg>
   let mut btn_level = menu::MenuButton::default()
     .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .with_focus(false)
-    .above_of(&ret_frame_footer.sep.clone(), dimm::border())
+    .bottom_left_of(&ui.group, 0)
     .with_callback(|e|
     {
       let str_level = e.choice().unwrap_or(String::from("7"));
@@ -74,7 +71,7 @@ pub fn compress(tx: Sender<common::Msg>
   btn_level.set_label("7");
 
   let clone_tx = tx.clone();
-  ret_frame_footer.btn_next.clone().set_callback(move |_|
+  ui.btn_next.clone().set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
     let backend = match gameimage::gameimage::binary()
@@ -88,7 +85,7 @@ pub fn compress(tx: Sender<common::Msg>
 
       if code == 0
       {
-        clone_tx.send_awake(common::Msg::DrawCreator);
+        clone_tx.send_activate(common::Msg::DrawCreator);
       } // if
     });
   });

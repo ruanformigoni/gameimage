@@ -12,7 +12,6 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 
 use crate::dimm;
-use crate::frame;
 use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
@@ -21,8 +20,6 @@ use crate::gameimage;
 // struct Install {{{
 pub struct Install
 {
-  pub ret_frame_header : frame::common::RetFrameHeader,
-  pub ret_frame_footer : frame::common::RetFrameFooter,
   pub frame_list : MultiBrowser,
   pub btn_add : Button,
   pub btn_del : Button,
@@ -36,19 +33,16 @@ pub fn install(tx: Sender<common::Msg>
   , msg_curr: common::Msg
   , msg_next: common::Msg) -> Install
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), msg_prev);
-  ret_frame_footer.btn_next.clone().emit(tx.clone(), msg_next);
+  ui.btn_prev.clone().emit(tx.clone(), msg_prev);
+  ui.btn_next.clone().emit(tx.clone(), msg_next);
 
   // List of the currently installed items
   let mut frame_list = MultiBrowser::default()
-    .with_size(frame_content.width() - dimm::border() - dimm::width_button_rec(), frame_content.height())
-    .with_pos_of(&frame_content);
+    .with_size(ui.group.width() - dimm::border() - dimm::width_button_rec(), ui.group.height())
+    .with_pos_of(&ui.group);
   frame_list.set_frame(FrameType::BorderBox);
   frame_list.set_text_size(dimm::height_text());
 
@@ -100,7 +94,7 @@ pub fn install(tx: Sender<common::Msg>
           Ok(_) => log!("Files installed"),
           Err(e) => log!("Failed to install files: {}", e),
         }; // match
-        clone_tx.send_awake(msg_curr);
+        clone_tx.send_activate(msg_curr);
       });
     });
 
@@ -108,7 +102,7 @@ pub fn install(tx: Sender<common::Msg>
   let mut btn_del = shared::fltk::button::rect::del()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Red);
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let mut clone_output_status = ui.status.clone();
   let clone_label = label.to_string();
   let clone_frame_list = frame_list.clone();
   let clone_tx = tx.clone();
@@ -140,11 +134,11 @@ pub fn install(tx: Sender<common::Msg>
         Err(e) => log!("Failed to remove files: {}", e),
       }; // match
       // Redraw GUI
-      clone_tx.send(msg_curr);
+      clone_tx.send_activate(msg_curr);
     }); // std::thread
   }); // set_callback
 
-  Install{ ret_frame_header, ret_frame_footer, frame_list, btn_add, btn_del }
+  Install{ frame_list, btn_add, btn_del }
 }
 // }}}
 

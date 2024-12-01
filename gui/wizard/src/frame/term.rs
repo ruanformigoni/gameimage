@@ -64,6 +64,7 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   term.set_text_size(dimm::height_text());
   term.wrap_mode(fltk::text::WrapMode::None, 0);
   term.set_history_lines(std::i32::MAX);
+  term.set_scrollbar_size(dimm::border());
 
   let mut clone_term = term.clone();
   let btn_save = shared::fltk::button::rect::save()

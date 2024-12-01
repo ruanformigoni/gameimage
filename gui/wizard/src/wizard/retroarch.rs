@@ -50,8 +50,9 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     , common::Msg::DrawRetroarchRom
     , common::Msg::DrawRetroarchCore);
 
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
+
   let mut frame_list = install.frame_list.clone();
-  let output_status = install.ret_frame_footer.output_status.clone();
   let btn_add = install.btn_add.clone();
   let btn_del = install.btn_del.clone();
 
@@ -74,7 +75,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 
   // Update default rom
   let clone_frame_list = frame_list.clone();
-  let mut clone_output_status = output_status.clone();
+  let mut clone_output_status = ui.status.clone();
   let clone_tx = tx.clone();
   let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
@@ -109,7 +110,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
           Ok(_) => log!("Selected rom successfully"),
           Err(e) => log!("Could not select rom file '{}': '{}'", selected.string(), e),
         } // match
-        clone_tx.send_awake(common::Msg::DrawRetroarchRom);
+        clone_tx.send_activate(common::Msg::DrawRetroarchRom);
       }); // std::thread
     }); // with_callback
 
@@ -127,23 +128,23 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
     , common::Msg::DrawRetroarchCore
     , common::Msg::DrawRetroarchBios);
 
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
+
   // Clone data from preset
   let mut frame_list_installed = install.frame_list.clone();
-  let frame_content = install.ret_frame_header.frame_content.clone();
-  let output_status = install.ret_frame_footer.output_status.clone();
   let mut btn_add = install.btn_add.clone();
   let btn_del = install.btn_del.clone();
 
   // Adjust size
   frame_list_installed.set_size(
-      frame_content.width() - dimm::border()*3 - dimm::width_button_rec()
-    , frame_content.height() / 2 - ( ( dimm::border()*4 + dimm::height_button_wide() + dimm::height_text() ) / 2 )
+      ui.group.width() - dimm::border()*3 - dimm::width_button_rec()
+    , ui.group.height() / 2 - ( ( dimm::border()*4 + dimm::height_button_wide() + dimm::height_text() ) / 2 )
   );
 
   // Show default item below all items
   let mut output_default = fltk::output::Output::default()
     .with_size(frame_list_installed.w(), dimm::height_button_wide())
-    .center_of(&frame_content)
+    .center_of(&ui.group)
     .with_posx_of(&frame_list_installed)
     .with_border(0, dimm::border())
     .with_align(Align::Top | Align::Left)
@@ -192,13 +193,13 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
         Err(e) => log!("Failed to install one or more cores: {}", e),
       }; // match
       // Redraw window
-      clone_tx.send_awake(common::Msg::DrawRetroarchCore);
+      clone_tx.send_activate(common::Msg::DrawRetroarchCore);
     });
   });
 
   // Update default core
   let clone_frame_list_installed = frame_list_installed.clone();
-  let mut clone_output_status = output_status.clone();
+  let mut clone_output_status = ui.status.clone();
   let btn_default = shared::fltk::button::rect::check()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Blue)
@@ -233,13 +234,13 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           Err(e) => log!("Could not select core file '{}': '{}'", selected.string(), e),
         } // match
 
-        clone_tx.send_awake(common::Msg::DrawRetroarchCore);
+        clone_tx.send_activate(common::Msg::DrawRetroarchCore);
       }); // std::thread
     }); // with_callback
 
   // Erase package
   let clone_frame_list_installed = frame_list_installed.clone();
-  let mut clone_output_status = output_status.clone();
+  let mut clone_output_status = ui.status.clone();
   btn_del
     .below_of(&btn_default, dimm::border())
     .with_callback(move |_|
@@ -271,7 +272,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   let mut frame_list_remote = MultiBrowser::default()
     .with_size_of(&frame_list_installed)
     .with_posx_of(&frame_list_installed)
-    .bottom_of(&frame_content, - dimm::border())
+    .bottom_of(&ui.group, - dimm::border())
     .with_frame(FrameType::BorderBox);
   frame_list_remote.set_text_size(dimm::height_text());
 
@@ -307,7 +308,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
           Err(e) => log!("Failed to install remote cores: {}", e),
         } // match
 
-        clone_tx.send_awake(common::Msg::DrawRetroarchCore);
+        clone_tx.send_activate(common::Msg::DrawRetroarchCore);
       });
     });
 } // }}}

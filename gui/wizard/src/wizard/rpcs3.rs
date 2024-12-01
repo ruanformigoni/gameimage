@@ -46,19 +46,16 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Set previous frame
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Icon);
-  ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawRpcs3Bios);
+  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Icon);
+  ui.btn_next.clone().emit(tx.clone(), common::Msg::DrawRpcs3Bios);
 
   // List of the currently installed items
   let mut frame_list = MultiBrowser::default()
-    .with_size(frame_content.width() - dimm::border() - dimm::width_button_rec(), frame_content.height())
-    .with_pos_of(&frame_content);
+    .with_size(ui.group.width() - dimm::border() - dimm::width_button_rec(), ui.group.height())
+    .with_pos_of(&ui.group);
   frame_list.set_frame(FrameType::BorderBox);
   frame_list.set_text_size(dimm::height_text());
 
@@ -101,22 +98,25 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // Fetch choice
     let str_choice = chooser.value(1).unwrap();
 
-    // Install directory with backend
-    match gameimage::install::install("rom", vec![str_choice])
+    // Install
+    let clone_tx = clone_tx.clone();
+    std::thread::spawn(move ||
     {
-      Ok(_) => log!("Successfully installed rom"),
-      Err(e) => log!("Failed to install rom: {}", e),
-    } // match
-
-    clone_tx.send_awake(common::Msg::WindActivate);
-    clone_tx.send_awake(common::Msg::DrawRpcs3Rom);
+      // Install directory with backend
+      match gameimage::install::install("rom", vec![str_choice])
+      {
+        Ok(_) => log!("Successfully installed rom"),
+        Err(e) => log!("Failed to install rom: {}", e),
+      } // match
+      clone_tx.send_activate(common::Msg::DrawRpcs3Rom);
+    });
   });
 
   // Erase package
   let mut btn_del = shared::fltk::button::rect::del()
     .below_of(&btn_add, dimm::border())
     .with_color(Color::Red);
-  let mut clone_output_status = ret_frame_footer.output_status.clone();
+  let mut clone_output_status = ui.status.clone();
   btn_del.set_callback(move |_|
   {
     let vec_indices = frame_list.selected_items();
@@ -144,19 +144,16 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 // pub fn bios() {{{
 pub fn bios(tx: Sender<common::Msg>, title: &str)
 {
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Set bottom callbacks
-  ret_frame_footer.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Rom);
-  ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawRpcs3Test);
+  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawRpcs3Rom);
+  ui.btn_next.clone().emit(tx.clone(), common::Msg::DrawRpcs3Test);
 
   // Box with explanation text
   let mut frame_text = output::MultilineOutput::default()
-    .with_size(frame_content.w(), frame_content.h() - dimm::border() - dimm::height_button_wide())
-    .with_pos_of(&frame_content);
+    .with_size(ui.group.w(), ui.group.h() - dimm::border() - dimm::height_button_wide())
+    .with_pos_of(&ui.group);
   frame_text.set_color(Color::BackGround);
   frame_text.set_frame(FrameType::BorderBox);
   frame_text.set_text_size(dimm::height_text());

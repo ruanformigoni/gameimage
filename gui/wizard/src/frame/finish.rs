@@ -12,7 +12,6 @@ use shared::fltk::WidgetExtExtra;
 
 use crate::db;
 use crate::dimm;
-use crate::frame;
 use crate::log;
 use crate::common;
 use shared::std::OsStrExt;
@@ -35,23 +34,20 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
     log!("Err: {}", e.to_string());
   } // if
 
-  let ret_frame_header = frame::common::frame_header(title);
-  let ret_frame_footer = frame::common::frame_footer();
-
-  let frame_content = ret_frame_header.frame_content.clone();
+  let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
   // Hide prev button
-  ret_frame_footer.btn_prev.clone().hide();
+  ui.btn_prev.hide();
 
   // Set next button to start over
-  ret_frame_footer.btn_next.clone().emit(tx, common::Msg::DrawWelcome);
-  ret_frame_footer.btn_next.clone().set_label("Finish");
+  ui.btn_next.emit(tx, common::Msg::DrawWelcome);
+  ui.btn_next.set_label("Finish");
 
   // Show where the package was saved into
   let mut col = fltk::group::Flex::default()
     .column()
-    .with_size_of(&frame_content)
-    .with_pos_of(&frame_content);
+    .with_size_of(&ui.group)
+    .with_pos_of(&ui.group);
   // Label
   col.fixed(&fltk::frame::Frame::default()
     .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left)
