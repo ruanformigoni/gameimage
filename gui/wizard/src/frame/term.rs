@@ -58,6 +58,8 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
 {
   let group = fltk::group::Group::default()
     .with_size(width, height)
+    .with_frame(fltk::enums::FrameType::FlatBox)
+    .with_color(Color::BackGround)
     .with_pos(x,y);
 
   let mut term = SimpleTerminal::new(border
@@ -119,6 +121,14 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
   // Return new term
   Term{ term, opt_proc_thread: None, tx, btn_save, group }
 } // new() }}}
+
+// pub fn new_with_id() {{{
+pub fn new_with_id(id: &str, border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
+{
+  let mut term = Self::new(border, width, height, x, y);
+  term.term.set_id(id);
+  term
+} // new_with_id() }}}
 
 // kill() {{{
 fn kill(&mut self, opt_proc_thread : Option<(Arc<Mutex<std::process::Child>>, Arc<Mutex<Option<std::thread::JoinHandle<()>>>>)>)

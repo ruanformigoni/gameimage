@@ -83,7 +83,7 @@ pub struct Icon
 pub fn icon(tx: Sender<common::Msg>
   , title: &str
   , msg_prev : common::Msg
-  , msg_curr : common::Msg) -> Icon
+  , _msg_curr : common::Msg) -> (crate::Ui, Icon)
 {
   // Save previously selected icon path
   static OPTION_PATH_FILE_ICON : once_cell::sync::Lazy<Arc<Mutex<Option<PathBuf>>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
@@ -165,7 +165,7 @@ pub fn icon(tx: Sender<common::Msg>
 
   col.end();
 
-  ret
+  (ui, ret)
 } // }}}
 
 // pub fn project() {{{
@@ -175,9 +175,7 @@ pub fn project(tx: Sender<common::Msg>
   , msg_curr : common::Msg
   , msg_next : common::Msg)
 {
-  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-
-  let ret = icon(tx, title, msg_prev, msg_curr);
+  let (ui,ret) = icon(tx, title, msg_prev, msg_curr);
   let mut btn_next = ui.btn_next.clone();
 
   // Callback to install the selected icon with the backend
@@ -185,23 +183,21 @@ pub fn project(tx: Sender<common::Msg>
   btn_next.set_callback(move |_|
   {
     let arc_path_file_icon = ret.arc_path_file_icon.clone();
-    let mut output_status = ui.status.clone();
-    clone_tx.send_awake(common::Msg::WindDeactivate);
 
     // Check if an icon was selected
-    let path_file_icon = if let Ok(option_path_file_icon) = arc_path_file_icon.lock()
-    && let Some(path_file_icon) = option_path_file_icon.as_ref()
+    let path_file_icon = if let Some(path_file_icon) = arc_path_file_icon.lock().unwrap().as_ref()
     {
       path_file_icon.clone()
     }
     else
     {
-      output_status.set_value("No icon selected");
+      log_status!("No icon selected");
       clone_tx.send_activate(msg_curr);
-      log_return_void!("No Icon selected");
+      return;
     };
 
     // Set selected icon as icon
+    clone_tx.send_awake(common::Msg::WindDeactivate);
     let clone_tx = clone_tx.clone();
     std::thread::spawn(move ||
     {

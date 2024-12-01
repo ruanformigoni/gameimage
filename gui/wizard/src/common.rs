@@ -1,12 +1,9 @@
 use std::
 {
-  sync::{Mutex,OnceLock},
+  sync::OnceLock,
   env,
   path,
 };
-
-use crate::frame;
-use crate::dimm;
 
 // pub enum Platform {{{
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -52,8 +49,6 @@ impl Platform
 #[derive(Debug, Clone, Copy)]
 pub enum Msg
 {
-  ToggleTerminal,
-
   DrawWelcome,
   DrawPlatform,
   DrawCreator,
@@ -128,30 +123,21 @@ pub fn impl_log(value : &str)
     // Create a channel for log messages
     let (tx, rx) = std::sync::mpsc::channel::<String>();
 
-    // Create a new terminal to append logs (shared between threads)
-    let term = std::sync::Arc::new(Mutex::new(frame::term::Term::new(
-      dimm::border(),
-      dimm::width_wizard() - dimm::border() * 2,
-      dimm::height_wizard() - dimm::border() * 2,
-      dimm::border(),
-      dimm::border(),
-    )));
-
     // Spawn a singleton logger thread that will consume messages and append them to the terminal
-    let term_clone = std::sync::Arc::clone(&term);
     std::thread::spawn(move ||
     {
-      while let Ok(log_message) = rx.recv()
+      // Fetch terminal
+      let mut term: Option<fltk::text::SimpleTerminal>;
+      loop
       {
-        // Lock the terminal and append the log message
-        if let Ok(term) = term_clone.try_lock()
-        {
-          term.append(&log_message);
-        } // if
-        else
-        {
-          eprintln!("Failed to acquire terminal lock");
-        } // else
+        let widget: Option<fltk::text::SimpleTerminal> = fltk::app::widget_from_id("term_log");
+        if widget.is_some() { term = widget; break; }
+      }
+
+      while let Ok(mut log_message) = rx.recv()
+      {
+        if ! log_message.ends_with("\n") { log_message = format!("{}\n", log_message); }
+        term.as_mut().unwrap().append(&log_message);
       }
     }); // std::thread
 
@@ -161,7 +147,7 @@ pub fn impl_log(value : &str)
 
   // Send the log message to the logger thread
   if let Err(e) = sender.send(value.to_string()) {
-      println!("Failed to send log message: {}", e);
+    println!("Failed to send log message: {}", e);
   }
 } // impl_log() }}}
 

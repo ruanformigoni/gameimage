@@ -219,7 +219,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
   // Finish package creation on click next
   let clone_vec_btn = vec_btn.clone();
-  let mut clone_output_status = ui.status.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
     if dialog::choice2_default("Include selected projects in the image?", "No", "Yes", "") != Some(1)
@@ -232,20 +231,18 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       Ok(e) => if e.is_empty()
       {
         log_status!("No project to include");
-        clone_output_status.set_value("No project to include");
         return;
       } // if
       else if ! e.iter().any(|e| e.0.is_set())
       {
         log_status!("No project was selected");
-        clone_output_status.set_value("No project was selected");
         return;
       } // else if
       Err(e) => { log_status!("Could not lock projects vector: {}", e); return; }
     }
 
     // Set status
-    clone_output_status.set_value("Inserting projects in the image");
+    log_status!("Inserting projects in the image");
 
     // Disable window
     clone_tx.send_awake(common::Msg::WindDeactivate);
@@ -254,18 +251,10 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     let clone_vec_checkbutton = clone_vec_btn.clone();
     std::thread::spawn(move ||
     {
-      // Get lock to vector of checkbuttons
-      let lock = match clone_vec_checkbutton.lock()
-      {
-        Ok(lock) => lock,
-        Err(e) =>
-        {
-          clone_tx.send_awake(common::Msg::WindActivate);
-          log_status!("Failed to lock checkbutton vector with: {}", e); return;
-        }
-      }; // match
+      // Vector of checkbuttons
+      let vec_btn = clone_vec_checkbutton.lock().unwrap();
       // Transform projects in a ':' separated string to send to the backend
-      let str_name_projects = lock.iter()
+      let str_name_projects = vec_btn.iter()
         .filter(|e| e.0.is_checked())
         .map(|e| e.1.get_project())
         .collect::<Vec<String>>()

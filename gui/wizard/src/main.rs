@@ -50,7 +50,6 @@ struct Gui
 {
   app       : App,
   wind_main : Window,
-  wind_log  : Window,
   tx        : Sender<Msg>,
   rx        : Receiver<Msg>,
   ui        : fn(&str) -> Ui
@@ -75,12 +74,6 @@ impl Gui
       app::set_font(Font::Helvetica);
       app::set_font_size(12);
     } // if
-
-    let mut wind_log = Window::default()
-      .with_label("Logger")
-      .with_size(dimm::width_wizard(), dimm::height_wizard())
-      .left_of(&wind_main, 0);
-    wind_log.end();
 
     let theme = ColorTheme::new(color_themes::BLACK_THEME);
     theme.apply();
@@ -125,7 +118,6 @@ impl Gui
     if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
     {
       wind_main.set_icon(Some(image.clone()));
-      wind_log.set_icon(Some(image));
     } // if
     else
     {
@@ -155,7 +147,7 @@ impl Gui
       ui
     };
 
-    Gui { app, wind_main, wind_log, tx, rx, ui }
+    Gui { app, wind_main, tx, rx, ui }
   } // fn: new }}}
 
 // fn redraw() {{{
@@ -242,19 +234,11 @@ fn init(&mut self)
 
   self.wind_main.set_callback(f_callback_close.clone());
 
-  // Create & show logging window
-  self.wind_log.begin();
-  log!("Initialized logging!");
-  self.wind_log.end();
-
   self.wind_main.begin();
   frame::common::frame_header("Header");
   frame::common::frame_footer();
   self.wind_main.end();
   self.wind_main.show();
-
-  // Set log window to the left of the main window
-  self.wind_log.set_pos(self.wind_main.x() - self.wind_main.w(), self.wind_main.y());
 
   let clone_tx = self.tx.clone();
   std::thread::spawn(move ||
@@ -272,14 +256,6 @@ fn init(&mut self)
     // Handle messages
     match self.rx.recv()
     {
-      Some(common::Msg::ToggleTerminal) =>
-      {
-        match self.wind_log.shown()
-        {
-          true => self.wind_log.hide(),
-          false => self.wind_log.show(),
-        } // match
-      }
       Some(common::Msg::WindUpdate) =>
       {
         app::flush();

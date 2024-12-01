@@ -11,12 +11,11 @@ use fltk::{
 use shared::fltk::WidgetExtExtra;
 
 use crate::dimm;
+use crate::frame;
 
 // pub fn frame_header() {{{
 pub fn frame_header(str_title: &str)
 {
-  let tx = crate::GUI.lock().unwrap().tx.clone();
-
   let mut frame = Frame::default()
     .with_size(dimm::width_wizard(), dimm::height_header())
     .with_pos(0,0);
@@ -29,7 +28,6 @@ pub fn frame_header(str_title: &str)
   // Show terminal button
   let mut btn_term = shared::fltk::button::rect::terminal()
     .with_color(Color::Blue);
-  btn_term.emit(tx, crate::common::Msg::ToggleTerminal);
   row.fixed(&btn_term, btn_term.w());
   // Header
   let mut title = Frame::default()
@@ -46,15 +44,38 @@ pub fn frame_header(str_title: &str)
     .below_of(&row, dimm::border());
   sep.set_pos(dimm::border(), sep.y());
 
+  let (w,h) = (dimm::width_wizard() - dimm::border()*2
+      , dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2
+  );
+
   let mut group_content = Group::default()
     .with_id("content")
-    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
+    .with_size(w,h)
     .below_of(&sep, dimm::border());
   let frame_content = Frame::default()
-    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_wizard() - dimm::height_header() - dimm::height_footer() - dimm::border()*2)
+    .with_size(w,h)
     .below_of(&sep, dimm::border());
   group_content.add(&frame_content);
   group_content.end();
+
+  let mut term = frame::term::Term::new_with_id("term_log", 0, w, h, sep.x(), sep.y() + sep.h() + dimm::border());
+  term.group.hide();
+  let mut clone_term = term.group.clone();
+  let mut clone_group_content = group_content.clone();
+  btn_term.set_callback(move |_|
+  {
+    if clone_term.visible()
+    {
+      clone_term.hide();
+      clone_group_content.show();
+    } // if
+    else
+    {
+      clone_group_content.hide();
+      clone_term.show();
+    } // else
+  });
+
 } // }}}
 
 // pub fn frame_footer() {{{

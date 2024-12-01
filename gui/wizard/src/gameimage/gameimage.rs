@@ -55,7 +55,10 @@ pub fn gameimage_async(args : Vec<&str>) -> anyhow::Result<(mpsc::Receiver<Strin
     let handle_stderr = std::thread::spawn(common::log_fd(stderr.unwrap(), tx_log, f_callback));
     while let Ok(msg) = rx_log.recv()
     {
-      log!("{}", msg);
+      for line in msg.split('\n')
+      {
+        log!("{}", line);
+      }
     } // while
 
     log_err!(handle_stdout.join());

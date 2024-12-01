@@ -253,6 +253,8 @@ impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
 
   fn send_activate(&self, value: T)
   {
+    // Send
+    self.send(value);
     // Activate
     for w in fltk::app::windows().unwrap_or_default()
     {
@@ -260,9 +262,7 @@ impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
         .into_iter()
         .for_each(|e| { w.child(e).unwrap().clone().activate() });
     } // for
-    // Send
-    self.send(value);
-    // Awake app
+    fltk::app::redraw();
     fltk::app::awake();
   } // send_awake
 } // impl }}}
