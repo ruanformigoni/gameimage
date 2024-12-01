@@ -151,7 +151,7 @@ impl Gui
   } // fn: new }}}
 
 // fn redraw() {{{
-fn redraw(&mut self, msg : Msg)
+fn redraw(&mut self, tx: Sender<common::Msg>, msg : Msg)
 {
   let mut content: Group = fltk::app::widget_from_id("content").unwrap();
   content.clear();
@@ -216,6 +216,7 @@ fn redraw(&mut self, msg : Msg)
   app::redraw();
   app::flush();
   app::awake();
+  tx.send_awake(Msg::WindActivate);
 } // }}}
 
 // init() {{{
@@ -277,7 +278,7 @@ fn init(&mut self)
         app::flush();
         app::awake();
       }
-      Some(value) => self.redraw(value),
+      Some(value) => self.redraw(self.tx, value),
       None => (),
     } // match
   } // while
