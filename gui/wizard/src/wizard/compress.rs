@@ -18,6 +18,7 @@ use crate::frame;
 use crate::common;
 use crate::log;
 use crate::log_alert;
+use crate::log_err;
 
 // pub fn compress() {{{
 pub fn compress(tx: Sender<common::Msg>
@@ -79,14 +80,16 @@ pub fn compress(tx: Sender<common::Msg>
       Ok(backend) => backend,
       Err(e) => { log_alert!("Error to execute backend: {}", e); return; }
     };
-    let _ = term.dispatch(vec![&backend.string(), "compress"], move |code : i32|
+    let mut term = term.clone();
+    std::thread::spawn(move ||
     {
-      clone_tx.send_awake(common::Msg::WindActivate);
-
-      if code == 0
+      let handle = term.dispatch(vec![&backend.string(), "compress"], |_| {});
+      match handle
       {
-        clone_tx.send_activate(common::Msg::DrawCreator);
-      } // if
+        Ok(handle) => log_err!(handle.lock().unwrap().wait().map(|_|{})),
+        Err(e) => log!("{}", e),
+      };
+      clone_tx.send_activate(common::Msg::DrawCreator);
     });
   });
 } // fn compress() }}}
