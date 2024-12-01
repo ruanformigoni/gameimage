@@ -159,7 +159,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   // Fetch entries
   let projects = match db::project::list()
   {
-    Ok(projects) => projects,
+    Ok(mut projects) => { projects.sort_by_key(|e| e.get_project()); projects},
     Err(e) => { log!("Could not get project list: {}", e); vec![] },
   };
 
