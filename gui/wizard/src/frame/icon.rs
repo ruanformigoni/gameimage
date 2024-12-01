@@ -33,7 +33,7 @@ use crate::log_err;
 use crate::gameimage;
 
 // resize_draw_image() {{{
-fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
+pub fn resize_draw_image(mut frame : Frame, path_file_icon : PathBuf) -> anyhow::Result<()>
 {
   // Get path to project directory
   let db_global = match db::global::read()

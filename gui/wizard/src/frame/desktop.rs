@@ -1,17 +1,29 @@
-use std::sync::{Mutex,Arc,atomic::{AtomicBool, Ordering}};
+use std::{
+  path::PathBuf,
+  sync::{Mutex,Arc,atomic::{AtomicBool, Ordering}},
+};
+
 use fltk::
 {
   prelude::*,
   app::Sender,
+  frame::Frame,
+  group::Flex,
+  enums::{Color,Align},
+  input::FileInput,
+  dialog::file_chooser,
 };
 use anyhow::anyhow as ah;
 
 use shared::fltk::SenderExt;
 use shared::fltk::WidgetExtExtra;
+use shared::std::PathBufExt;
 
 use crate::common;
 use crate::dimm;
 use crate::log;
+use crate::log_err;
+use crate::log_status;
 use crate::gameimage;
 use crate::frame;
 use clown::clown;
@@ -74,42 +86,46 @@ fn desktop_next(tx: Sender<common::Msg>
 // pub fn desktop() {{{
 pub fn desktop(tx: Sender<common::Msg>, title: &str)
 {
-  let ret_frame_icon = crate::frame::icon::icon(tx
-    , title
-    , common::Msg::DrawDesktop
-    , common::Msg::DrawDesktop
-  );
+  // Save previously selected icon path
+  static OPTION_PATH_FILE_ICON : once_cell::sync::Lazy<Arc<Mutex<Option<PathBuf>>>>
+    = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
 
-  // Hide prev button
-  ret_frame_icon.ret_frame_footer.btn_prev.clone().hide();
-  let frame_sep = ret_frame_icon.ret_frame_footer.sep.clone();
+  let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
-  // Move icon frame to the left
-  let mut frame_icon = match ret_frame_icon.opt_frame_icon.clone()
-  {
-    Some(frame_icon) => frame_icon,
-    None => { log!("Failed to retrieve icon frame"); return; }
-  }; // match
+  let mut col = Flex::default()
+    .column()
+    .with_size_of(&ui.group)
+    .with_pos_of(&ui.group);
 
-  frame_icon.set_pos(frame_sep.x(), frame_icon.y());
+  // Spacer
+  col.add(&Frame::default());
+
+  // Create icon box
+  let mut row = Flex::default().row();
+  row.set_spacing(dimm::border());
+  let frame_icon = shared::fltk::frame::bordered()
+    .with_size(150, 225);
+  row.fixed(&frame_icon,150);
+
+  let mut col_options = Flex::default().column();
 
   // Select application name with an input field
-  let input_name = fltk::input::Input::default()
-    .with_size(frame_sep.w() - frame_icon.w() - dimm::border(), dimm::height_button_wide())
-    .with_align(fltk::enums::Align::Top | fltk::enums::Align::Left)
-    .with_pos(frame_icon.x() + frame_icon.w() + dimm::border(), frame_icon.y() + dimm::height_text())
-    .with_label("Select the application name");
+  // l
+  col_options.fixed(
+      &Frame::default().with_label("Select the application name").with_align(Align::Inside | Align::Left)
+    , dimm::height_text()
+  );
+  let input_name = fltk::input::Input::default();
+  col_options.fixed(&input_name, dimm::height_button_wide());
 
   // Button to enable desktop entry
-  let f_create_atomic_option = move |label: &str, widget_parent: &fltk::widget::Widget|
-    -> (Arc<AtomicBool>, fltk::button::CheckButton)
+  let f_create_atomic_option = move |label: &str| -> (Arc<AtomicBool>, fltk::button::CheckButton)
   {
     let atomic_option = Arc::new(AtomicBool::new(true));
     let clone_atomic_option = atomic_option.clone();
     let mut btn_check = shared::fltk::button::rect::checkbutton()
-      .below_of(widget_parent, dimm::border())
-      .with_align(fltk::enums::Align::Right)
-      .with_focus(false)
+      .with_align(Align::Inside | Align::Left)
+      .with_color(Color::BackGround)
       .with_label(label);
     btn_check.set_checked(true);
     let f_clone_atomic_option = move |val: bool| { clone_atomic_option.store(val, Ordering::SeqCst); };
@@ -118,13 +134,62 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
   };
 
   // Get integration items
-  let (is_integrate_entry, btn_integrate_entry) = f_create_atomic_option("Show icon in the start menu?", &input_name.as_base_widget());
-  let (is_integrate_icon, _) = f_create_atomic_option("Show icon file manager?", &btn_integrate_entry.as_base_widget());
+  let (is_integrate_entry, btn_integrate_entry) = f_create_atomic_option("Show icon in the start menu?");
+  let (is_integrate_icon, btn_show) = f_create_atomic_option("Show icon file manager?");
+  col_options.fixed(&btn_integrate_entry, dimm::width_checkbutton());
+  col_options.fixed(&btn_show, dimm::width_checkbutton());
+  col_options.end();
+  row.add(&col_options);
+  row.end();
+  col.fixed(&row, 225);
+
+  // Spacer
+  col.add(&Frame::default());
+
+  // Icon
+  let mut row = Flex::default().row();
+  let mut input_icon = FileInput::default();
+  input_icon.set_readonly(true);
+  input_icon.deactivate();
+  row.add(&input_icon);
+  let mut btn_search = shared::fltk::button::rect::search()
+    .with_color(Color::Green);
+  row.fixed(&btn_search, dimm::width_button_rec());
+  row.end();
+  col.fixed(&row, dimm::height_button_wide() + dimm::border()/2);
+
+  // Check path cache
+  if let Some(path_file_icon) = OPTION_PATH_FILE_ICON.lock().unwrap().clone()
+  {
+    input_icon.set_value(&path_file_icon.string());
+    log_err!(crate::frame::icon::resize_draw_image(frame_icon.clone(), path_file_icon.clone()));
+  } // if
+
+  // // Set input_icon callback
+  let mut clone_input_icon = input_icon.clone();
+  btn_search.set_callback(move |_|
+  {
+    let str_choice = match file_chooser("Select the icon", "*.{jpg,png}", ".", false)
+    {
+      Some(str_choice) => str_choice,
+      None => { log_status!("No file selected"); return; }
+    }; // match
+    // Update static icon
+    *OPTION_PATH_FILE_ICON.lock().unwrap() = Some(PathBuf::from(&str_choice));
+    // Show file path on selector
+    clone_input_icon.set_value(str_choice.as_str());
+    // Set preview image
+    match crate::frame::icon::resize_draw_image(frame_icon.clone(), str_choice.into())
+    {
+      Ok(_) => log_status!("Set preview image"),
+      Err(_) => log_status!("Failed to load icon image into preview"),
+    } // match
+  });
 
   // Callback to install projects and configure desktop integration
-  let mut clone_btn_next = ret_frame_icon.ret_frame_footer.btn_next.clone();
-  let arc_path_file_icon = ret_frame_icon.arc_path_file_icon.clone();
-  clone_btn_next.set_callback(#[clown] move |_|
+  let arc_path_file_icon = OPTION_PATH_FILE_ICON.clone();
+  ui.btn_prev.emit(tx, common::Msg::DrawCreator);
+  ui.btn_next.set_callback(#[clown] move |_|
   {
     tx.send_awake(common::Msg::WindDeactivate);
     std::thread::spawn(#[clown] move ||
@@ -135,11 +200,13 @@ pub fn desktop(tx: Sender<common::Msg>, title: &str)
         , honk!(is_integrate_icon).clone())
       {
         Ok(()) => (),
-        Err(e) => { log!("{}", e); tx.send_awake(common::Msg::WindActivate); return; },
+        Err(e) => { log_status!("{}", e); tx.send_awake(common::Msg::WindActivate); return; },
       }; // match
-      tx.send_awake(common::Msg::DrawFinish);
+      tx.send_activate(common::Msg::DrawFinish);
     });
   });
+
+  col.end();
 } // }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
