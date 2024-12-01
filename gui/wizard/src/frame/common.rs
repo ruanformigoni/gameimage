@@ -95,7 +95,6 @@ pub fn frame_footer()
     .with_align(Align::Left)
     .with_pos(0, dimm::height_wizard() - dimm::height_status());
   output_status.set_text_size(dimm::height_text());
-  output_status.deactivate();
 
   // Continue
   let mut btn_next = shared::fltk::button::wide::default()
