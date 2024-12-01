@@ -34,7 +34,7 @@ pub struct Term
   // Terminal message sender
   pub tx : mpsc::Sender<String>,
   // Save button
-  pub btn_save : fltk::button::Button,
+  #[allow(dead_code)] pub btn_save : fltk::button::Button,
   // Group
   pub group : fltk::group::Group,
 } // struct Term }}}
@@ -212,7 +212,7 @@ pub fn dispatch<F>(&mut self, args : Vec<&str>, mut callback : F) -> anyhow::Res
 } // dispatch() }}}
 
 // pub fn append() {{{
-pub fn append(&self, value: &str)
+#[allow(dead_code)] pub fn append(&self, value: &str)
 {
   let _ = self.tx.send(value.to_string());
 } // fn: append }}}

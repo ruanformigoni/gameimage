@@ -8,6 +8,7 @@ use crate::common;
 use shared::std::PathBufExt;
 use crate::log;
 
+#[allow(dead_code)]
 pub enum EntryName
 {
   PathFileIcon,

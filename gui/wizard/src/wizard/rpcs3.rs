@@ -6,7 +6,6 @@ use fltk::
     Color,
   },
   browser::MultiBrowser,
-  button,
   dialog,
   output,
   prelude::*,

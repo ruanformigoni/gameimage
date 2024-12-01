@@ -96,7 +96,7 @@ fn library_dotnet(year: u32) -> Vec<&'static str>
 } // fn library_dotnet() }}}
 
 // fn library_wmp() {{{
-fn library_wmp(year: u32) -> Vec<&'static str>
+#[allow(dead_code)] fn library_wmp(year: u32) -> Vec<&'static str>
 {
   match year
   {

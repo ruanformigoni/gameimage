@@ -16,7 +16,6 @@ use shared::fltk::SenderExt;
 
 use crate::db;
 use crate::dimm;
-use crate::frame;
 use crate::common;
 use crate::log;
 use crate::log_err_status;

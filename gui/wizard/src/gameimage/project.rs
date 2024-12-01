@@ -3,7 +3,7 @@ use anyhow::anyhow as ah;
 use crate::gameimage::gameimage;
 
 // pub fn set() {{{
-pub fn set(str_name: &str) -> anyhow::Result<()>
+#[allow(dead_code)] pub fn set(str_name: &str) -> anyhow::Result<()>
 {
   match gameimage::gameimage_sync(vec!["project", "set", str_name])
   {
