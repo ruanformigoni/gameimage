@@ -15,14 +15,8 @@ use crate::games;
 use crate::common;
 use common::Msg;
 
-pub struct RetFrameSelector
-{
-  pub frame : Frame,
-} // Ret
-
-
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
+pub fn new(tx : Sender<Msg>, x : i32, y : i32)
 {
   //
   // Main
@@ -99,13 +93,11 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameSelector
   shared::fltk::button::rect::home()
     .bottom_center_of(&frame, - dimm::border())
     .emit(tx, Msg::DrawCover);
-
-  RetFrameSelector{ frame }
 } // fn: new }}}
 
 // fn: from {{{
 #[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameSelector
+pub fn from(tx : Sender<Msg>, w : Widget)
 {
   new(tx, w.x(), w.y())
 } // fn: from }}}

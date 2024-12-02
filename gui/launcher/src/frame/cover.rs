@@ -26,13 +26,6 @@ use crate::common;
 use crate::games;
 use common::Msg;
 
-pub struct RetFrameCover
-{
-  pub frame : Frame,
-  pub btn_left : Button,
-  pub btn_right : Button,
-} // Ret
-
 // fn: get_path_db_executable() {{{
 fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
 {
@@ -102,7 +95,7 @@ fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
 } // fn: new_menu_entries() }}}
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
+pub fn new(tx : Sender<Msg>, x : i32, y : i32)
 {
   let mut frame_base = Frame::default().with_size(dimm::width_launcher(), dimm::height_launcher());
   frame_base.set_type(PackType::Vertical);
@@ -199,13 +192,11 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameCover
     Ok(()) => (),
     Err(e) => eprintln!("{}", e),
   };
-
-  RetFrameCover{ frame, btn_left, btn_right }
 } // fn: new }}}
 
 // fn: from {{{
 #[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameCover
+pub fn from(tx : Sender<Msg>, w : Widget)
 {
   new(tx, w.x(), w.y())
 } // fn: from }}}

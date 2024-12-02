@@ -84,26 +84,11 @@ fn redraw(&mut self, msg: Msg)
 
   match Some(msg)
   {
-    Some(Msg::DrawCover) =>
-    {
-      frame::cover::new(self.tx, 0, 0);
-    }
-    Some(Msg::DrawSelector) =>
-    {
-      frame::selector::new(self.tx, 0, 0);
-    }
-    Some(Msg::DrawExecutables) =>
-    {
-      frame::menu::executables::new(self.tx, 0, 0);
-    }
-    Some(Msg::DrawEnv) =>
-    {
-      frame::menu::environment::new(self.tx, 0, 0);
-    }
-    Some(Msg::DrawMenu) =>
-    {
-      frame::menu::new(self.tx, 0, 0);
-    }
+    Some(Msg::DrawCover) => frame::cover::new(self.tx, 0, 0),
+    Some(Msg::DrawSelector) => frame::selector::new(self.tx, 0, 0),
+    Some(Msg::DrawExecutables) => frame::menu::executables::new(self.tx, 0, 0),
+    Some(Msg::DrawEnv) => frame::menu::environment::new(self.tx, 0, 0),
+    Some(Msg::DrawMenu) => frame::menu::new(self.tx, 0, 0),
     _ => (),
   }
   self.wind.end();

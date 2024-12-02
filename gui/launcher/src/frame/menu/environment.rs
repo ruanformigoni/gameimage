@@ -16,11 +16,6 @@ use shared::fltk::WidgetExtExtra;
 use crate::svg;
 use crate::common::Msg;
 
-pub struct RetFrameEnv
-{
-  pub frame : Frame,
-} // Ret
-
 // get_path_db_env() {{{
 fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
 {
@@ -31,7 +26,7 @@ fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
 } // get_path_db_env() }}}
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
+pub fn new(tx : Sender<Msg>, x : i32, y : i32)
 {
   let path_file_db = match get_path_db_env()
   {
@@ -184,13 +179,11 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameEnv
   shared::fltk::button::rect::back()
     .bottom_left_of(&frame, - dimm::border())
     .emit(tx, Msg::DrawMenu);
-
-  RetFrameEnv{ frame }
 } // fn: new }}}
 
 // fn: from {{{
 #[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameEnv
+pub fn from(tx : Sender<Msg>, w : Widget)
 {
   new(tx, w.x(), w.y())
 } // fn: from }}}

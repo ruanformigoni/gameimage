@@ -17,11 +17,6 @@ use shared::fltk::WidgetExtExtra;
 
 use crate::common::Msg;
 
-pub struct RetFrameExecutable
-{
-  pub frame : Frame,
-} // Ret
-
 // fn find_executables() {{{
 fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
 {
@@ -78,7 +73,7 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 } // get_path_db_args() }}}
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
+pub fn new(tx : Sender<Msg>, x : i32, y : i32)
 {
   let path_file_db_args = match get_path_db_args()
   {
@@ -235,13 +230,11 @@ pub fn new(tx : Sender<Msg>, x : i32, y : i32) -> RetFrameExecutable
   shared::fltk::button::rect::back()
     .bottom_left_of(&frame, - dimm::border())
     .emit(tx, Msg::DrawMenu);
-
-  RetFrameExecutable{ frame }
 } // fn: new }}}
 
 // fn: from {{{
 #[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget) -> RetFrameExecutable
+pub fn from(tx : Sender<Msg>, w : Widget)
 {
   new(tx, w.x(), w.y())
 } // fn: from }}}
