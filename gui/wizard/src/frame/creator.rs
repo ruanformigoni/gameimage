@@ -176,6 +176,22 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
 
   // Process entries if any
   let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
+  // Select all button
+  let mut row_btn_sel = fltk::group::Flex::default()
+    .with_size(0, dimm::width_checkbutton() + dimm::border()/2)
+    .row()
+    .with_frame(FrameType::FlatBox)
+    .with_color(Color::BackGround.lighter());
+  row_btn_sel.add(&Frame::default().with_label("Select all").with_align(Align::Inside | Align::Left));
+  let mut btn_sel_all = shared::fltk::button::rect::checkbutton();
+  btn_sel_all.set_callback(#[clown] move |e|
+  {
+    honk!(vec_btn).lock().unwrap().iter().for_each(|f| f.0.set_checked(e.is_checked()))
+  });
+  row_btn_sel.fixed(&btn_sel_all, dimm::width_checkbutton());
+  row_btn_sel.end();
+  // Include select all button and projects in the column
+  col_projects.add(&row_btn_sel);
   for project in &projects
   {
     let (row_project, button, project) = match create_entry(project.clone(), dimm::height_button_rec()*4)
