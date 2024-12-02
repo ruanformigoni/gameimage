@@ -133,7 +133,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
 
   // Adjust size
   frame_list_installed.set_size(
-      ui.group.width() - dimm::border()*3 - dimm::width_button_rec()
+      ui.group.width() - dimm::border() - dimm::width_button_rec()
     , ui.group.height() / 2 - ( ( dimm::border()*4 + dimm::height_button_wide() + dimm::height_text() ) / 2 )
   );
 
@@ -266,7 +266,7 @@ pub fn core(tx: Sender<common::Msg>, title: &str)
   let mut frame_list_remote = MultiBrowser::default()
     .with_size_of(&frame_list_installed)
     .with_posx_of(&frame_list_installed)
-    .bottom_of(&ui.group, - dimm::border())
+    .bottom_of(&ui.group, 0)
     .with_frame(FrameType::BorderBox);
   frame_list_remote.set_text_size(dimm::height_text());
 
