@@ -3,6 +3,7 @@ const WIDTH_WIZARD  : i32 = 500;
 const HEIGHT_LAUNCHER : i32 = 450;
 const WIDTH_LAUNCHER  : i32 = 300;
 const BORDER : i32 = 10;
+const BORDER_HALF : i32 = BORDER / 2;
 
 const HEIGHT_BUTTON_WIDE : i32 = 30;
 const WIDTH_BUTTON_WIDE  : i32 = HEIGHT_BUTTON_WIDE*2;
@@ -39,6 +40,7 @@ function_scale!(width_wizard, WIDTH_WIZARD);
 function_scale!(height_launcher, HEIGHT_LAUNCHER);
 function_scale!(width_launcher, WIDTH_LAUNCHER);
 function_scale!(border, BORDER);
+function_scale!(border_half, BORDER_HALF);
 
 function_scale!(height_button_wide, HEIGHT_BUTTON_WIDE);
 function_scale!(width_button_wide, WIDTH_BUTTON_WIDE);
@@ -46,6 +48,7 @@ function_scale!(width_button_wide, WIDTH_BUTTON_WIDE);
 function_scale!(height_button_rec, HEIGHT_BUTTON_REC);
 function_scale!(width_button_rec, WIDTH_BUTTON_REC);
 
+function_scale!(height_text_header, HEIGHT_TEXT*2);
 function_scale!(height_text, HEIGHT_TEXT);
 
 function_scale!(height_status, HEIGHT_STATUS);
