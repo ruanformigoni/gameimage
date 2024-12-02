@@ -13,6 +13,8 @@ use fltk::{
   enums::{FrameType,Color,Align},
 };
 
+use clown::clown;
+
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
@@ -151,7 +153,7 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   row_content.set_spacing(dimm::border() / 2);
 
   let mut scroll = fltk::group::Scroll::default()
-    .with_size(row_content.w() - dimm::border()*2 - dimm::width_button_rec(), row_content.h());
+    .with_size(0, row_content.h());
   scroll.set_type(fltk::group::ScrollType::VerticalAlways);
   scroll.set_scrollbar_size(dimm::border());
 
@@ -165,6 +167,12 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   let mut col_projects = fltk::group::Pack::default_fill()
     .with_type(fltk::group::PackType::Vertical);
   col_projects.set_spacing(dimm::border());
+
+  scroll.resize_callback(#[clown] move |_s,x,y,w,_h|
+  {
+    let mut col = honk!(col_projects).clone();
+    col.resize(x,y,w-dimm::border_half()*3,col.h());
+  });
 
   // Process entries if any
   let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
