@@ -241,9 +241,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       Err(e) => { log_status!("Could not lock projects vector: {}", e); return; }
     }
 
-    // Set status
-    log_status!("Inserting projects in the image");
-
     // Disable window
     clone_tx.send_awake(common::Msg::WindDeactivate);
 
