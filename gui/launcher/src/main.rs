@@ -5,7 +5,7 @@ use fltk::{
   app,
   prelude::*,
   window::Window,
-  enums::{FrameType,Font},
+  enums::FrameType,
 };
 
 use shared::svg;
@@ -46,14 +46,9 @@ pub fn new() -> Self
     .with_label("GameImage")
     .with_size(dimm::width_launcher(), dimm::height_launcher())
     .center_screen();
+  wind.make_resizable(true);
 
-  // Font
-  if let Ok(font) = Font::load_font("/usr/share/fonts/noto/NotoSans-Regular.ttf")
-  {
-    Font::set_font(Font::Helvetica, &font);
-    app::set_font(Font::Helvetica);
-    app::set_font_size(12);
-  } // if
+  shared::fltk::theme();
 
   // Window icon
   if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
@@ -84,11 +79,11 @@ fn redraw(&mut self, msg: Msg)
 
   match Some(msg)
   {
-    Some(Msg::DrawCover) => frame::cover::new(self.tx, 0, 0),
-    Some(Msg::DrawSelector) => frame::selector::new(self.tx, 0, 0),
-    Some(Msg::DrawExecutables) => frame::menu::executables::new(self.tx, 0, 0),
-    Some(Msg::DrawEnv) => frame::menu::environment::new(self.tx, 0, 0),
-    Some(Msg::DrawMenu) => frame::menu::new(self.tx, 0, 0),
+    Some(Msg::DrawCover) => frame::cover::new(self.tx),
+    Some(Msg::DrawSelector) => frame::selector::new(self.tx),
+    Some(Msg::DrawExecutables) => frame::menu::executables::new(self.tx),
+    Some(Msg::DrawEnv) => frame::menu::environment::new(self.tx),
+    Some(Msg::DrawMenu) => frame::menu::new(self.tx),
     _ => (),
   }
   self.wind.end();
@@ -100,13 +95,13 @@ fn init(&mut self)
   let vec_games = match games::games()
   {
     Ok(vec_games) => vec_games,
-    Err(_) => { frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border()); vec![] }
+    Err(_) => { frame::fail::new(); vec![] }
   }; // match
 
   // Fetch game entries
   if vec_games.is_empty()
   {
-    frame::fail::new(dimm::width_launcher(), dimm::height_launcher(), dimm::border());
+    frame::fail::new();
   } // if
   else
   {
@@ -117,7 +112,6 @@ fn init(&mut self)
   } // else
 
   // Show window
-  self.wind.make_resizable(false);
   self.wind.end();
   self.wind.show();
 

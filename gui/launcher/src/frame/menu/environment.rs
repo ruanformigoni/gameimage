@@ -2,18 +2,14 @@ use fltk::prelude::*;
 use fltk::{
   output::Output,
   app::Sender,
-  widget::Widget,
-  button::Button,
-  group::{PackType,Scroll},
-  enums::{Align,FrameType,Color},
+  enums::Color,
   frame::Frame,
-  group::Group,
+  group,
 };
 
 use shared::dimm;
-use shared::fltk::WidgetExtExtra;
+use shared::{add,fixed,row,column,hpack,scroll,hover_blink,hseparator,hseparator_fixed,rescope};
 
-use crate::svg;
 use crate::common::Msg;
 
 // get_path_db_env() {{{
@@ -25,167 +21,131 @@ fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
   Ok(path_db)
 } // get_path_db_env() }}}
 
-// fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32)
+// fn: new_entry {{{
+fn new_entry(tx: Sender<crate::common::Msg>, mut col: group::Pack, key: &str, val: &str)
+{
+  add!(col, output_key, Output::default().with_size(0, dimm::height_button_wide()));
+  output_key.clone().insert(key).map_err(|e| eprintln!("{}", e)).ok();
+  row!(row,
+    add!(row, output_val, Output::default());
+    output_val.clone().insert(val).map_err(|e| eprintln!("{}", e)).ok();
+    fixed!(row, btn_del, shared::fltk::button::rect::del(), dimm::width_button_rec());
+    row.resize(row.x(), row.y(), row.w(), dimm::height_button_wide());
+  );
+  col.add(&row);
+  hseparator!(col, row.w());
+  hover_blink!(btn_del);
+  let clone_key: String = key.into();
+  let mut btn_del = btn_del.clone();
+  btn_del.set_color(Color::Red);
+  btn_del.set_callback(move |_|
+  {
+    let path_file_db = match get_path_db_env()
+    {
+      Ok(e) => e,
+      Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+    }; // match
+    match shared::db::kv::erase(&path_file_db, clone_key.clone())
+    {
+      Ok(_) => println!("Erased key '{}'", clone_key),
+      Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
+    } // if
+    tx.send(Msg::DrawEnv);
+  });
+} // new_entry }}}
+
+// fn: new_dialog {{{
+fn new_dialog(tx: Sender<crate::common::Msg>)
 {
   let path_file_db = match get_path_db_env()
   {
     Ok(e) => e,
     Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
-
-  //
-  // Main
-  //
-  let mut frame = Frame::default()
-    .with_size(dimm::width_launcher(), dimm::height_launcher())
-    .with_pos(x, y);
-  frame.set_type(PackType::Vertical);
-  frame.set_frame(FrameType::FlatBox);
-
-  let mut frame_title = Frame::default()
-    .with_label("Environment Variables")
-    .with_size(frame.width() - dimm::border()*2, dimm::height_button_rec() / 2)
-    .with_pos(dimm::border(), dimm::border());
-  frame_title.set_frame(FrameType::FlatBox);
-  frame_title.set_label_size(dimm::height_text());
-
-  // Create scrollbar
-  let mut scroll = Scroll::default()
-    .below_of(&frame_title, dimm::border())
-    .with_size(frame.w() - dimm::border()*2, frame.h() - dimm::bar() - frame_title.h() - dimm::border() * 3);
-  scroll.set_frame(FrameType::BorderBox);
-  scroll.set_scrollbar_size(dimm::width_button_rec() / 4);
-
-
-  //
-  // Create entries
-  //
-  let mut parent = scroll.as_base_widget();
-  let clone_scroll = scroll.clone();
+  let dialog = shared::fltk::dialog::key_value();
+  let clone_dialog = dialog.clone();
   let clone_tx = tx.clone();
   let clone_path_file_db = path_file_db.clone();
-  let mut f_make_entry = move |key : String, val : String|
+  dialog.btn_ok.clone().set_callback(move |_|
   {
-    let mut group = Group::default()
-      .with_size(clone_scroll.w(), dimm::height_button_wide()*2 + dimm::border() * 3)
-      .with_pos(clone_scroll.x(), clone_scroll.y());
-    // Position below parent
-    if parent.is_same(&clone_scroll.as_base_widget())
+    clone_dialog.wind.clone().hide();
+    let key = clone_dialog.input_key.value();
+    let value = clone_dialog.input_value.value();
+    if key.is_empty() { return; }
+    match shared::db::kv::write(&clone_path_file_db, &key.clone(), &value.clone())
     {
-      group.clone().above_of(&parent, -group.h());
-      group.set_pos(group.x(), group.y());
+      Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
+      Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
     } // if
-    else
-    {
-      group.clone().above_of(&parent, -group.h() * 2 - dimm::border());
-    } // else
-
-    group.begin();
-
-    // Setup key widget
-    let mut btn_key = Output::default()
-      .with_size(clone_scroll.width() - dimm::width_button_rec() - dimm::border()*3, dimm::height_button_wide())
-      .with_align(Align::Left | Align::Inside)
-      .with_pos(group.x() + dimm::border(), group.y() + dimm::border());
-    btn_key.set_value(key.as_str());
-    btn_key.set_frame(FrameType::BorderBox);
-    btn_key.set_text_size(dimm::height_text());
-    // Setup val widget
-    let mut btn_val = Output::default()
-      .with_size(clone_scroll.width() - dimm::border()*2, dimm::height_button_wide())
-      .with_align(Align::Left | Align::Inside)
-      .below_of(&btn_key, dimm::border());
-    btn_val.set_value(val.as_str());
-    btn_val.set_frame(FrameType::BorderBox);
-    btn_val.set_text_size(dimm::height_text());
-    // Erase button
-    let mut btn_del = Button::default()
-      .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-      .with_focus(false)
-      .right_of(&btn_key, dimm::border());
-    btn_del.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_del(1.0).as_str()).unwrap()));
-    btn_del.set_color(Color::Red);
-    let clone_key = key.clone();
-    let clone_tx = clone_tx.clone();
-    let clone_path_file_db = clone_path_file_db.clone();
-    btn_del.set_callback(move |_|
-    {
-      match shared::db::kv::erase(&clone_path_file_db, clone_key.clone())
-      {
-        Ok(_) => println!("Erased key '{}'", clone_key),
-        Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
-      } // if
-      clone_tx.send(Msg::DrawEnv);
-    });
-    // Separator
-    let mut sep = Frame::default()
-      .below_of(&btn_val, dimm::border())
-      .with_size(clone_scroll.width() - dimm::border()*2, 2);
-    sep.set_frame(FrameType::FlatBox);
-    sep.set_color(Color::Black);
-
-    group.end();
-
-    // Update parent
-    parent = group.as_base_widget().clone();
-  };
-
-  // Get current database entries
-  if let Ok(entries) = shared::db::kv::read(&path_file_db)
-  {
-    for (key, val) in entries
-    {
-      f_make_entry(key, val);
-    } // for
-  } // if
-
-  scroll.end();
-
-  // Add var button
-  let mut btn_add = shared::fltk::button::rect::add()
-    .with_focus(false)
-    .with_color(Color::Green)
-    .right_bottom_of(&frame, - dimm::border());
-  let clone_tx = tx.clone();
-  btn_add.set_callback(move |_|
-  {
-    let dialog = shared::fltk::dialog::key_value();
-    let clone_dialog = dialog.clone();
-    let clone_tx = clone_tx.clone();
-    let clone_path_file_db = path_file_db.clone();
-    dialog.btn_ok.clone().set_callback(move |_|
-    {
-      clone_dialog.wind.clone().hide();
-      let key = clone_dialog.input_key.value();
-      let value = clone_dialog.input_value.value();
-      if key.is_empty() { return; }
-      match shared::db::kv::write(&clone_path_file_db, &key.clone(), &value.clone())
-      {
-        Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
-        Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
-      } // if
-      clone_tx.send(Msg::DrawEnv);
-    });
-    dialog.wind.clone().show();
+    clone_tx.send(Msg::DrawEnv);
   });
+  dialog.wind.clone().show();
+} // new_dialog }}}
 
-  // Back to home
-  shared::fltk::button::rect::home()
-    .bottom_center_of(&frame, - dimm::border())
-    .emit(tx, Msg::DrawCover);
-
-  // Back to menu
-  shared::fltk::button::rect::back()
-    .bottom_left_of(&frame, - dimm::border())
-    .emit(tx, Msg::DrawMenu);
-} // fn: new }}}
-
-// fn: from {{{
-#[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget)
+// fn: new {{{
+pub fn new(tx : Sender<Msg>)
 {
-  new(tx, w.x(), w.y())
-} // fn: from }}}
+  // Layout
+  column!(col,
+    col.set_margin(dimm::border_half());
+    fixed!(col, frame_title, Frame::default(), dimm::height_text());
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    // Content
+    scroll!(scroll,
+      hpack!(col_scroll,);
+      col_scroll.set_spacing(dimm::border());
+      col_scroll.set_size(0,0);
+    );
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    column!(col_bottom,
+      row!(row_bottom,
+        fixed!(row_bottom, btn_back, &shared::fltk::button::rect::back(), dimm::width_button_rec());
+        row_bottom.add(&Frame::default());
+        fixed!(row_bottom, btn_home, &shared::fltk::button::rect::home(), dimm::width_button_rec());
+        row_bottom.add(&Frame::default());
+        fixed!(row_bottom, btn_add, &shared::fltk::button::rect::add(), dimm::width_button_rec());
+      );
+      col_bottom.fixed(&row_bottom, dimm::height_button_rec());
+    );
+    col.fixed(&col_bottom, dimm::height_button_rec());
+  );
+
+  // Title
+  let mut frame_title = frame_title.clone();
+  frame_title.set_label("Environment Variables");
+
+  // Scroll resize callback
+  scroll.resize_callback({let mut c = col_scroll.clone(); move |_,_,_,w,_|
+  {
+    c.resize(c.x(),c.y(),w-dimm::border_half()*3,c.h());
+  }});
+  scroll.set_type(group::ScrollType::VerticalAlways);
+
+  // Configure buttons
+  let mut btn_back = btn_back.clone();
+  btn_back.emit(tx, Msg::DrawMenu);
+  hover_blink!(btn_back);
+  let mut btn_home = btn_home.clone();
+  btn_home.set_color(Color::Blue);
+  btn_home.emit(tx, Msg::DrawCover);
+  hover_blink!(btn_home);
+  let mut btn_add = btn_add.clone();
+  btn_add.set_color(Color::Green);
+  btn_add.set_callback(move |_| new_dialog(tx));
+  hover_blink!(btn_add);
+
+  let path_file_db = match get_path_db_env()
+  {
+    Ok(e) => e,
+    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
+  }; // match
+
+  rescope!(col_scroll,
+    if let Some(entries) = shared::db::kv::read(&path_file_db).map_err(|e| eprintln!("{}", e)).ok()
+    {
+      entries.iter().for_each(|(k,v)| { new_entry(tx, col_scroll.clone(), &k, &v); });
+    } // if
+  );
+} // fn: new }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

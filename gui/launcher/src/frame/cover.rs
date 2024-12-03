@@ -4,11 +4,8 @@ use std::sync::Mutex;
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  group::Group,
-  button::Button,
-  widget::Widget,
-  group::PackType,
-  enums::FrameType,
+  group::Flex,
+  enums,
   frame::Frame,
   image::SharedImage,
 };
@@ -16,10 +13,10 @@ use fltk::{
 use anyhow::anyhow as ah;
 
 use shared::dimm;
-use shared::svg;
 use shared::std::PathBufExt;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
+use shared::{hover_blink,column,row,add,fixed};
 
 use crate::db;
 use crate::common;
@@ -44,7 +41,7 @@ fn get_default_executable() -> anyhow::Result<std::path::PathBuf>
 } // fn: get_default_executable()}}}
 
 // fn: new_menu_entries() {{{
-fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
+fn new_menu_entries(frame: Flex) -> anyhow::Result<()>
 {
   // Keep track of the currently selected item
   static PATH_CURRENT_EXECUTABLE : once_cell::sync::Lazy<Mutex<Option<std::path::PathBuf>>>
@@ -61,7 +58,7 @@ fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
   let mut btn_executable = fltk::menu::Choice::default()
     .with_size(frame.w(), dimm::height_button_rec())
     .top_left_of(&frame, 0)
-    .with_frame(FrameType::BorderBox)
+    .with_frame(enums::FrameType::BorderBox)
     .with_focus(false);
   for executable in db_executables.keys().into_iter().chain(vec![path_default_executable.clone()].iter())
   {
@@ -95,110 +92,98 @@ fn new_menu_entries(frame: Frame) -> anyhow::Result<()>
 } // fn: new_menu_entries() }}}
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32)
+pub fn new(tx : Sender<Msg>)
 {
-  let mut frame_base = Frame::default().with_size(dimm::width_launcher(), dimm::height_launcher());
-  frame_base.set_type(PackType::Vertical);
-  frame_base.set_frame(FrameType::FlatBox);
-
-  let mut group_content = Group::default()
-    .with_size(dimm::width_launcher() - dimm::border()*2, dimm::height_launcher() - (dimm::height_button_wide() + dimm::border() * 2) - dimm::border()*2)
-    .with_pos(dimm::border(), dimm::border());
-  group_content.set_type(PackType::Vertical);
-  group_content.set_frame(FrameType::FlatBox);
-  group_content.begin();
-
-  let mut frame = Frame::default()
-    .with_size(dimm::width_launcher(), dimm::height_launcher())
-    .with_pos(x,y);
-  frame.set_type(PackType::Vertical);
-  frame.set_frame(FrameType::FlatBox);
-
-  // Cover image
+  // Layout
+  let mut frame_background = Frame::default_fill();
   if let Ok(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG")
   && let Ok(shared_image) = SharedImage::load(env_image_launcher)
   {
-    frame.set_image_scaled(Some(shared_image));
+    frame_background.set_image_scaled(Some(shared_image.clone()));
+    frame_background.resize_callback(move |s,_,_,_,_| { s.set_image_scaled(Some(shared_image.clone())); });
   } // if
   else
   {
     println!("Failed to set launcher image");
   } // else
+  // Buttons
+  column!(col,
+    col.add(&Frame::default());
+    row!(row,
+      row.set_margin(dimm::border_half());
+      fixed!(row, btn_menu, shared::fltk::button::rect::list(), dimm::width_button_rec());
+      add!(row, _spacer, Frame::default());
+      fixed!(row, btn_switch, shared::fltk::button::rect::switch(), dimm::width_button_rec());
+      add!(row, _spacer, Frame::default());
+      fixed!(row, btn_play, shared::fltk::button::rect::play().with_color(enums::Color::Blue), dimm::width_button_rec());
+    );
+    col.fixed(&row, dimm::height_button_rec() + dimm::border());
+  );
 
-  group_content.end();
-
-  // Set bottom background
-  let mut btn_bottom = Button::default()
-    .with_size(frame_base.width(), dimm::bar())
-    .with_focus(false)
-    .center_x(&frame_base);
-  btn_bottom.set_pos(btn_bottom.x(), frame_base.h() - dimm::bar());
-  btn_bottom.set_frame(FrameType::NoBox);
-  btn_bottom.set_image(Some(fltk::image::SvgImage::from_data(svg::icon_background(1.0).as_str()).unwrap()));
-  btn_bottom.deactivate();
+  let mut fb: Vec<u8> = vec![0u8; (dimm::width_launcher() * dimm::height_launcher() * 4) as usize];
+  // Fill with required color
+  for (_, pixel) in fb.chunks_exact_mut(4).enumerate() {
+    pixel.copy_from_slice(&[0, 0, 0, 96]);
+  }
+  let image = fltk::image::RgbImage::new(&fb, dimm::width_launcher(), dimm::height_button_rec() + dimm::border(), enums::ColorDepth::Rgba8).unwrap();
+  // Bottom background
+  let mut row = row.clone();
+  row.set_align(enums::Align::Inside | enums::Align::Center);
+  row.set_frame(enums::FrameType::NoBox);
+  row.set_image(Some(image));
+  row.resize_callback(move |s,_,_,w,_|
+  {
+    let image = fltk::image::RgbImage::new(&fb, w, dimm::height_button_rec() + dimm::border(), enums::ColorDepth::Rgba8).unwrap();
+    s.set_image(Some(image));
+  });
 
   // Button left aligned
-  let mut btn_left = shared::fltk::button::rect::list()
-    .bottom_left_of(&frame, - dimm::border());
-  btn_left.emit(tx, Msg::DrawMenu);
-
-  // Button in the middle
-  let mut btn_middle = shared::fltk::button::rect::switch()
-    .bottom_center_of(&frame, - dimm::border());
-  btn_middle.emit(tx, Msg::DrawSelector);
-  btn_middle.hide();
+  btn_menu.clone().emit(tx, Msg::DrawMenu);
+  btn_switch.clone().emit(tx, Msg::DrawSelector);
+  btn_switch.clone().hide();
+  hover_blink!(btn_menu);
+  hover_blink!(btn_switch);
+  hover_blink!(btn_play);
 
   // Only show switch button in case there is more than one game
   if let Ok(vec_entry) = games::games() && vec_entry.len() > 1
   {
-    btn_middle.show();
+    btn_switch.clone().show();
   } // if
 
   // Button right aligned
-  let mut btn_right = shared::fltk::button::rect::play()
-    .bottom_right_of(&frame_base, - dimm::border())
-    .with_focus(false)
-    .with_color(fltk::enums::Color::Green);
   let clone_tx = tx.clone();
-  let mut clone_frame = frame.clone();
-  btn_right.set_callback(move |_|
+  let mut clone_frame_background = frame_background.clone();
+  btn_play.clone().set_callback(move |_|
   {
     // Cover image black and white
     if let Ok(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG_GRAYSCALE")
     && let Ok(shared_image) = SharedImage::load(env_image_launcher)
     {
-      clone_frame.set_image_scaled(Some(shared_image));
+      clone_frame_background.set_image_scaled(Some(shared_image));
     } // if
     else
     {
       println!("Failed to set launcher image");
     } // else
     fltk::app::redraw();
+    // Deactivate window
+    clone_tx.send_awake(common::Msg::WindDeactivate);
     // Reference to spawned process
     std::thread::spawn(move ||
     {
-      // Deactivate window
-      clone_tx.send_awake(common::Msg::WindDeactivate);
       // Launch game
       games::launch();
       // Redraw
-      clone_tx.send_awake(Msg::WindActivate);
-      clone_tx.send_awake(Msg::DrawCover);
+      clone_tx.send_activate(Msg::DrawCover);
     });
   });
 
-  match new_menu_entries(frame.clone())
+  match new_menu_entries(col.clone())
   {
     Ok(()) => (),
     Err(e) => eprintln!("{}", e),
   };
 } // fn: new }}}
-
-// fn: from {{{
-#[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget)
-{
-  new(tx, w.x(), w.y())
-} // fn: from }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

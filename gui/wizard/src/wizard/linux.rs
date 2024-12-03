@@ -373,7 +373,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str, is_update: bool)
       .with_size(col_entries.w(), dimm::height_button_wide());
     row.set_type(fltk::group::FlexType::Row);
     // Checkbutton
-    let btn_radio = shared::fltk::button::rect::radio();
+    let btn_radio = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
     row.fixed(&btn_radio, dimm::width_button_rec());
     // Rom name
     let mut frame_label = output::Output::default()

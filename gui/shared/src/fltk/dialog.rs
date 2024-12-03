@@ -48,7 +48,7 @@ pub fn key_value() -> KeyValue
     .left_of(&input_value, dimm::border())
     .with_align(Align::Inside | Align::Left)
     .with_label("Value");
-  let mut btn_ok = fltk::button::Button::default()
+  let mut btn_ok = crate::fltk::button::wide::default()
     .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .below_of(&label_value, dimm::border())
     .with_label("OK");

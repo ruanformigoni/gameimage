@@ -17,14 +17,25 @@ fn button<T>() -> T
   let mut btn = T::default()
     .with_align(Align::Inside | Align::Center)
     .with_color(Color::BackGround.lighter())
-    .with_color_selected(Color::BackGround.darker())
+    .with_color_selected(Color::BackGround.lighter().lighter())
     .with_focus(false)
     .with_frame(fltk::enums::FrameType::NoBox);
 
   btn.draw(move |b|
   {
     let (x,y,w,h) = (b.x(),b.y(),b.w(),b.h());
-    let c = if ! b.active() { b.color().darker() } else if b.is_set() { b.color().lighter() } else { b.color() };
+    let c = if ! b.active()
+    {
+      b.color().darker().darker()
+    }
+    else if b.is_set()
+    {
+      b.color().lighter().lighter()
+    }
+    else
+    {
+      b.color()
+    };
     draw::set_draw_color(c);
     draw::draw_rounded_rectf(x, y, w, h, 3);
     if let Some(mut image) = b.image() {
@@ -34,7 +45,7 @@ fn button<T>() -> T
       let img_y = y + (h - img_h) / 2; // Center vertically
       image.draw(img_x, img_y, img_w, img_h);
     }
-    // Label (change color if pressed)
+    // Label
     draw::set_draw_color(b.label_color());
     draw::draw_text2(&b.label(), x, y, w, h, b.align());
   });
@@ -92,6 +103,7 @@ create_buttons!(search, terminal, filter, install , home, back, configure, list,
 pub fn checkbutton() -> fltk::button::CheckButton
 {
   let mut btn  = button::button::<fltk::button::CheckButton>()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_frame(fltk::enums::FrameType::NoBox);
 
   // Set image
@@ -126,40 +138,17 @@ pub fn checkbutton() -> fltk::button::CheckButton
   btn
 } // toggle()
 
-pub fn toggle(value : bool) -> fltk::button::ToggleButton
+pub fn checkmark<T>() -> T
+  where T : Clone
+  + Send
+  + Sync
+  + std::default::Default
+  + fltk::prelude::WidgetExt
+  + fltk::prelude::WidgetBase
+  + fltk::prelude::ButtonExt
 {
-  let mut btn  = button::button::<fltk::button::ToggleButton>()
-    .with_frame(fltk::enums::FrameType::FlatBox);
-
-  // Set image
-  btn.draw(move |e|
-  {
-    fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::BackGround);
-    match e.value()
-    {
-      true =>
-      {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()))
-          .unwrap()
-          .draw(e.x(), e.y(), e.w(), e.h());
-      },
-      false =>
-      {
-        fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()))
-          .unwrap()
-          .draw(e.x(), e.y(), e.w(), e.h());
-      },
-    } // match
-  });
-
-  btn.set_value(value);
-
-  btn
-} // toggle()
-
-pub fn radio() -> fltk::button::RadioButton
-{
-  let mut btn  = button::button::<fltk::button::RadioButton>()
+  let mut btn  = button::button::<T>()
+    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
     .with_frame(fltk::enums::FrameType::FlatBox);
 
   // Set image

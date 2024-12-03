@@ -1,10 +1,10 @@
 use fltk::prelude::*;
 use fltk::{
-  output::Output,
+  output,
   app::Sender,
-  widget::Widget,
-  group::PackType,
-  enums::{Align,FrameType,Color},
+  group,
+  button,
+  enums::{Align,Color},
   frame::Frame,
 };
 
@@ -13,7 +13,7 @@ use anyhow::anyhow as ah;
 use shared::dimm;
 use shared::std::PathBufExt;
 use shared::std::OsStrExt;
-use shared::fltk::WidgetExtExtra;
+use shared::{fixed,row,column,hpack,scroll,hover_blink,hseparator,hseparator_fixed,rescope};
 
 use crate::common::Msg;
 
@@ -72,171 +72,169 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
   Ok(path_db)
 } // get_path_db_args() }}}
 
-// fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32)
+// fn: new_layout_entry {{{
+fn new_layout_entry(mut col: group::Pack, str_output: &str, is_use: bool)
+  -> (output::Output,button::CheckButton,fltk_evented::Listener<fltk::input::Input>)
 {
+  row!(row,
+    row.resize(row.x(), row.y(), 0, dimm::height_button_rec() + dimm::height_text());
+    column!(col_output,
+      fixed!(col_output
+        , label
+        , Frame::default().with_label("Executable").with_align(Align::Inside | Align::Left)
+        , dimm::height_text()
+      );
+      fixed!(col_output, output_executable, output::Output::default(), dimm::height_button_rec());
+      let _ = output_executable.clone().insert(str_output);
+    );
+    row.add(&col_output);
+    column!(col_btn,
+      fixed!(col_btn
+        , label
+        , Frame::default().with_label("Use").with_align(Align::Inside | Align::Left)
+        , dimm::height_text()
+      );
+      fixed!(col_btn, btn_use, shared::fltk::button::rect::checkmark::<fltk::button::CheckButton>(), dimm::height_button_rec());
+      btn_use.clone().set_value(is_use);
+    );
+    row.fixed(&col_btn, dimm::width_button_rec());
+  );
+  col.add(&row);
+  column!(col_input,
+    fixed!(col_input
+      , label
+      , Frame::default().with_label("Arguments").with_align(Align::Inside | Align::Left)
+      , dimm::height_text()
+    );
+    let input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+    col_input.fixed(&input_arguments.as_base_widget(), dimm::height_button_wide());
+  );
+  col_input.resize(col_input.x(), col_input.y(), 0, dimm::height_button_wide() + dimm::height_text());
+  col.add(&col_input);
+  hseparator!(col, row.w());
+
+  (output_executable, btn_use, input_arguments)
+} // fn: new_layout_entry }}}
+
+// fn: new_callback {{{
+fn new_callback(output: output::Output
+  , mut btn_use: button::CheckButton
+  , mut input: fltk_evented::Listener<fltk::input::Input>
+  , key: String
+  , path_file_db_executable: std::path::PathBuf)
+{
+  // Setup 'use button' callback
+  let clone_output_executable = output.clone();
+  btn_use.set_callback({
+    let output = output.clone();
+    let path_file_db_executable = path_file_db_executable.clone();
+    move |e|
+    {
+      if e.is_checked()
+      {
+        shared::db::kv::write(&path_file_db_executable, &output.value(), &"1".to_string())
+          .map_err(|e| eprintln!("Could not insert key '{}' in db: {}", output.value(), e)).ok();
+      } // if
+      else
+      {
+        shared::db::kv::erase(&path_file_db_executable, output.value())
+          .map_err(|e| eprintln!("Could not remove key '{}' from db: {}", output.value(), e)).ok();
+      } // else
+    } // fn
+  });
+
   let path_file_db_args = match get_path_db_args()
   {
     Ok(e) => e,
     Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
 
+  if let Ok(db) = shared::db::kv::read(&path_file_db_args) && db.contains_key(&key)
+  {
+    let _ = input.insert(&db[&key]);
+  } // if
+  input.on_keyup(move |e|
+  {
+    if e.value().is_empty()
+    {
+      shared::db::kv::erase(&path_file_db_args, clone_output_executable.value())
+        .map_err(|e| eprintln!("{}",e)).ok();
+      return;
+    } // if
+    shared::db::kv::write(&path_file_db_args, &clone_output_executable.value(), &e.value())
+      .map_err(|e| eprintln!("{}",e)).ok();
+  });
+
+} // fn: new_callback }}}
+
+// fn: new {{{
+pub fn new(tx : Sender<Msg>)
+{
   let path_file_db_executable = match get_path_db_executable()
   {
     Ok(e) => e,
     Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
 
-  //
-  // Main
-  //
-  let mut frame = Frame::default()
-    .with_size(dimm::width_launcher(), dimm::height_launcher())
-    .with_pos(x, y);
-  frame.set_type(PackType::Vertical);
-  frame.set_frame(FrameType::FlatBox);
-
-  let mut frame_title = Frame::default()
-    .with_label("Executable Configuration")
-    .with_size(frame.width() - dimm::border()*2, dimm::height_button_rec() / 2)
-    .with_pos(dimm::border(), dimm::border());
-  frame_title.set_frame(FrameType::FlatBox);
-  frame_title.set_label_size(dimm::height_text());
-
-  // Create scrollbar
-  let mut scroll = shared::fltk::ScrollList::new(
-    frame.w() - dimm::border()*2
-    , frame.h() - dimm::bar() - frame_title.h() - dimm::border()*3
-    , frame_title.x()
-    , frame_title.y() + frame_title.h() + dimm::border()
+  // Layout
+  column!(col,
+    col.set_margin(dimm::border_half());
+    fixed!(col, frame_title, Frame::default(), dimm::height_text());
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    scroll!(scroll,
+      hpack!(col_scroll,);
+      col_scroll.set_spacing(dimm::border());
+      col_scroll.set_size(0,0);
+    );
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    column!(col_bottom,
+      row!(row_bottom,
+        fixed!(row_bottom, btn_back, &shared::fltk::button::rect::back(), dimm::width_button_rec());
+        row_bottom.add(&Frame::default());
+        fixed!(row_bottom, btn_home, &shared::fltk::button::rect::home(), dimm::width_button_rec());
+        row_bottom.add(&Frame::default());
+        row_bottom.fixed(&Frame::default(), dimm::width_button_rec());
+      );
+      col_bottom.fixed(&row_bottom, dimm::height_button_rec());
+    );
+    col.fixed(&col_bottom, dimm::height_button_rec());
   );
-  scroll.set_frame(FrameType::BorderBox);
-  scroll.set_border(dimm::border(), dimm::border() + dimm::height_text());
-
-  //
+  // Title
+  let mut frame_title = frame_title.clone();
+  frame_title.set_label("Executable Configuration");
+  // Auto resize column to scroll width
+  scroll.resize_callback({let mut c = col_scroll.clone(); move |_,_,_,w,_|
+  {
+    c.resize(c.x(),c.y(),w-dimm::border_half()*3,c.h());
+  }});
+  scroll.set_type(group::ScrollType::VerticalAlways);
   // Create entries
-  //
-  let mut clone_scroll = scroll.clone();
-  // let clone_tx = tx.clone();
-  let clone_path_file_db_executable = path_file_db_executable.clone();
-  let db_executables = shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default();
-  let mut f_make_entry = move |key : String|
+  let f_make_entry =
   {
-    // Setup output for executable path
-    let mut output_executable = Output::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*4 - dimm::width_button_rec(), dimm::height_button_wide())
-      .with_align(Align::TopLeft)
-      .with_label("Executable");
-    let _ = output_executable.insert(key.as_str());
-    output_executable.set_frame(FrameType::BorderBox);
-    output_executable.set_text_size(dimm::height_text());
-    clone_scroll.add(&mut output_executable.as_base_widget());
-
-    // Use button
-    let clone_path_file_db_executable = clone_path_file_db_executable.clone();
-    let mut btn_use = shared::fltk::button::rect::toggle(db_executables.contains_key(&output_executable.value()))
-      .right_of(&output_executable, dimm::border());
-
-    // Label for use button
-    let _ = fltk::frame::Frame::default()
-      .with_size(btn_use.w(), dimm::height_text())
-      .above_of(&btn_use, 2)
-      .with_align(Align::Inside)
-      .with_label("Use")
-      .with_color(Color::BackGround)
-      .with_frame(FrameType::NoBox);
-
-
-    // Setup 'use button' callback
-    let clone_output_executable = output_executable.clone();
-    btn_use.set_callback(move |e|
+    let path_file_db_executable = path_file_db_executable.clone();
+    let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
+    move |col: group::Pack, key : String|
     {
-      if e.value()
-      {
-        if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &clone_output_executable.value(), &"1".to_string())
-        {
-          eprintln!("Could not insert key '{}' in db: {}", clone_output_executable.value(), e);
-        } // if
-      }
-      else
-      {
-        if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, clone_output_executable.value())
-        {
-          eprintln!("Could not remove key '{}' from db: {}", clone_output_executable.value(), e);
-        } // if
-      }
-    });
-
-
-    // Setup input for arguments
-    let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_button_wide())
-      .with_label("Arguments")
-      .with_align(Align::TopLeft)
-      .below_of(&output_executable, dimm::border() + dimm::height_text())
-      .into();
-    input_arguments.set_frame(FrameType::BorderBox);
-    input_arguments.set_text_size(dimm::height_text());
-    if let Ok(db) = shared::db::kv::read(&path_file_db_args) && db.contains_key(&key)
-    {
-      let _ = input_arguments.insert(&db[&key]);
-    } // if
-    let clone_output_executable = output_executable.clone();
-    let clone_path_file_db = path_file_db_args.clone();
-    input_arguments.on_keyup(move |e|
-    {
-      if e.value().is_empty()
-      {
-        match shared::db::kv::erase(&clone_path_file_db, clone_output_executable.value())
-        {
-          Ok(()) => (),
-          Err(e) => eprintln!("{}", e),
-        };
-        return;
-      }
-      match shared::db::kv::write(&clone_path_file_db, &clone_output_executable.value(), &e.value())
-      {
-        Ok(()) => (),
-        Err(e) => eprintln!("{}", e),
-      }
-    });
-    clone_scroll.add(&mut input_arguments.as_base_widget());
-
-    // Separator
-    let mut sep = Frame::default()
-      .below_of(&input_arguments.as_base_widget(), dimm::border())
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*3, dimm::height_sep());
-    sep.set_frame(FrameType::FlatBox);
-    sep.set_color(Color::Black);
-    clone_scroll.set_border(dimm::border(), dimm::border());
-    clone_scroll.add(&mut sep.as_base_widget());
-    clone_scroll.set_border(dimm::border(), dimm::border() + dimm::height_text());
+      let (output,btn,input) = new_layout_entry(col.clone()
+        , key.as_str()
+        , db_executables.contains_key(key.as_str())
+      );
+      new_callback(output, btn, input, key, path_file_db_executable);
+    }
   };
-
-  // Get current database entries
-  scroll.begin();
-  for path in find_executables().unwrap_or_default()
-  {
-    f_make_entry(path.string());
-  } // for
-  scroll.end();
-
-  // Back to home
-  shared::fltk::button::rect::home()
-    .bottom_center_of(&frame, - dimm::border())
-    .emit(tx, Msg::DrawCover);
-
-  // Back to menu
-  shared::fltk::button::rect::back()
-    .bottom_left_of(&frame, - dimm::border())
-    .emit(tx, Msg::DrawMenu);
+  rescope!(col_scroll,
+    let mut vec_executables = find_executables().unwrap_or_default();
+    vec_executables.sort();
+    vec_executables.iter().for_each(|e| f_make_entry.clone()(col_scroll.clone(), e.string()));
+  );
+  // Configure buttons
+  let mut btn_home = btn_home.clone();
+  btn_home.set_color(Color::Blue);
+  btn_home.emit(tx, Msg::DrawCover);
+  hover_blink!(btn_home);
+  let mut btn_back = btn_back.clone();
+  btn_back.emit(tx, Msg::DrawMenu);
+  hover_blink!(btn_back);
 } // fn: new }}}
-
-// fn: from {{{
-#[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget)
-{
-  new(tx, w.x(), w.y())
-} // fn: from }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

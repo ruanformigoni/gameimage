@@ -1,94 +1,73 @@
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  widget::Widget,
-  button::Button,
-  group::PackType,
-  enums::{Align,FrameType},
+  enums::{Align,FrameType,Color},
   frame::Frame,
 };
 
+use clown::clown;
+use common::Msg;
 use shared::dimm;
 use shared::fltk::WidgetExtExtra;
+use shared::{fixed,hover_blink,hseparator_fixed,column,row,rescope};
+use fltk::prelude::ButtonExt;
 
 use crate::common;
-use common::Msg;
 
 pub mod executables;
 pub mod environment;
 
 // fn: new {{{
-pub fn new(tx : Sender<Msg>, x : i32, y : i32)
+pub fn new(tx : Sender<Msg>)
 {
-  //
-  // Main
-  //
-  let mut frame = Frame::default()
-    .with_size(dimm::width_launcher(), dimm::height_launcher())
-    .with_pos(x, y);
-  frame.set_type(PackType::Vertical);
-  frame.set_frame(FrameType::FlatBox);
-
-  let mut frame_title = Frame::default()
-    .with_label("Menu")
-    .with_size(frame.width() - dimm::border()*2, dimm::height_button_rec() / 2)
-    .with_pos(dimm::border(), dimm::border());
-  frame_title.set_frame(FrameType::FlatBox);
-  frame_title.set_label_size(dimm::height_text());
-
-  // Create scrollbar
-  let mut scroll = shared::fltk::ScrollList::new(
-    frame.w() - dimm::border()*2
-    , frame.h() - dimm::bar() - frame_title.h() - dimm::border()*3
-    , frame_title.x()
-    , frame_title.y() + frame_title.h() + dimm::border()
-  );
-  scroll.set_frame(FrameType::BorderBox);
-  // scroll.widget_mut().set_color(fltk::enums::Color::Blue);
-  scroll.set_border(dimm::border(), dimm::border());
-
-  //
   // Layout
-  //
-  let mut clone_scroll = scroll.clone();
-  let mut f_make_entry = move |label : &str|
-  {
-    let entry = Button::default()
-      .with_size(clone_scroll.widget_ref().width() - dimm::border()*2, dimm::height_button_wide())
-      .with_frame(FrameType::BorderBox)
-      .with_align(Align::Left | Align::Inside)
-      .with_focus(false)
-      .with_label(label);
-      // .with_color(fltk::enums::Color::Yellow);
-    clone_scroll.add(&mut entry.as_base_widget());
-    entry
-  };
-
-  let mut btn_env = f_make_entry("Environment");
-  btn_env.emit(tx, Msg::DrawEnv);
-
-  // Enable executable list only for wine
-  if let Ok(str_platform) = std::env::var("GIMG_PLATFORM")
-  && let Ok(platform) = common::Platform::from_str(&str_platform)
-  && platform == common::Platform::WINE
-  {
-    let mut btn_executables = f_make_entry("Executable Configuration");
-    btn_executables.emit(tx, Msg::DrawExecutables);
-  }
-
-  scroll.end();
-
-  // Back to home
-  shared::fltk::button::rect::home()
-    .bottom_center_of(&frame, - dimm::border())
-    .emit(tx, Msg::DrawCover);
+  column!(col,
+    col.set_margin(dimm::border_half());
+    fixed!(col, frame_title, Frame::default(), dimm::height_text());
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    column!(col_content, );
+    col_content.set_spacing(0);
+    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    column!(col_bottom,
+      row!(row_bottom,
+        fixed!(row_bottom, btn_back, shared::fltk::button::rect::back(), dimm::width_button_rec());
+      );
+      col_bottom.fixed(&row_bottom, dimm::height_button_rec());
+    );
+    col.fixed(&col_bottom, dimm::height_button_rec());
+  );
+  // Title
+  let mut frame_title = frame_title.clone();
+  frame_title.set_label("Menu");
+  // Footer button
+  let mut btn_back = btn_back.clone();
+  btn_back.emit(tx, Msg::DrawCover);
+  hover_blink!(btn_back);
+  // Entries
+  rescope!(col_content,
+    let f_make_entry = #[clown] move |label : &str|
+    {
+      let entry = fltk::button::ToggleButton::default()
+        .with_size(0, dimm::height_button_wide() + dimm::border_half())
+        .with_frame(FrameType::FlatBox)
+        .with_color(Color::BackGround)
+        .with_color_selected(Color::BackGround.lighter())
+        .with_align(Align::Left | Align::Inside)
+        .with_label(&format!(" {}", label));
+      hover_blink!(entry);
+      honk!(col_content).clone().fixed(&mut entry.as_base_widget(), entry.h());
+      entry
+    };
+    // Environment
+    f_make_entry("Environment").emit(tx, Msg::DrawEnv);
+    // Executables
+    if let Ok(str_platform) = std::env::var("GIMG_PLATFORM")
+    && let Ok(platform) = common::Platform::from_str(&str_platform)
+    && platform == common::Platform::WINE
+    {
+      f_make_entry("Executable Configuration").emit(tx, Msg::DrawExecutables);
+    }
+  );
 } // fn: new }}}
-
-// fn: from {{{
-#[allow(dead_code)]
-pub fn from(tx : Sender<Msg>, w : Widget)
-{
-  new(tx, w.x(), w.y())
-} // fn: from }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

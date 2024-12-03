@@ -545,7 +545,7 @@ fn rom_entry(tx: Sender<common::Msg>
     .row()
     .with_size(0, dimm::height_button_wide());
   // Checkbutton
-  let btn_check = shared::fltk::button::rect::radio();
+  let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
   // Include values into shared vector
   vec_radio_path.push((btn_check.clone(), path::PathBuf::from(item.to_owned())));
   row.fixed(&btn_check, dimm::width_button_rec());

@@ -1,23 +1,14 @@
 use fltk::{
-  group::PackType,
-  prelude::WidgetExt,
-  enums::FrameType,
+  prelude::*,
   frame::Frame,
 };
 
-use shared::dimm;
+use shared::column;
 
 // fn: new {{{
-pub fn new(width : i32, height : i32, border : i32)
+pub fn new()
 {
-  let mut frame_base = Frame::default().with_size(width, height);
-  frame_base.set_type(PackType::Vertical);
-  frame_base.set_frame(FrameType::FlatBox);
-
-  Frame::default()
-    .with_size(width - border*2, dimm::height_text())
-    .with_pos(border, height / 2 - dimm::height_text() / 2)
-    .with_label("No game found inside this image");
+  column!(col, Frame::default().with_label("No game found inside this image"););
 } // fn: new }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

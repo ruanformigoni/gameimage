@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-fltk = "^1.3"
+fltk = "^1.4"
+fltk-theme = "0.6.0"
 fltk-evented = "0.5"
 display-info = "0.4.4"
 image = "0.24.8"
