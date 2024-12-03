@@ -2,6 +2,7 @@
 
 use fltk::prelude::*;
 use fltk::enums::*;
+use fltk_theme;
 
 use crate::dimm;
 
@@ -10,6 +11,57 @@ pub mod dialog;
 pub mod progress;
 pub mod separator;
 pub mod frame;
+pub mod macros;
+
+// pub fn theme() {{{
+pub fn theme()
+{
+
+  if let Ok(font) = Font::load_font("/usr/share/fonts/noto/NotoSans-Regular.ttf")
+  {
+    Font::set_font(Font::Helvetica, &font);
+    fltk::app::set_font(Font::Helvetica);
+    fltk::app::set_font_size(12);
+  } // if
+
+  fltk_theme::ColorTheme::new(fltk_theme::color_themes::BLACK_THEME).apply();
+  fltk::app::set_visible_focus(false);
+  fltk::app::set_font_size(dimm::height_text());
+  let set_color = |c: Color, hex: &str|
+  {
+    let r = Color::from_hex_str(hex).unwrap();
+    let r = Color::darker(&r).to_rgb();
+    fltk::app::set_color(c, r.0, r.1, r.2);
+  };
+  let str_black = "#35353A";
+  let str_white = "#eeeeee";
+  set_color(Color::White       , str_white);
+  set_color(Color::Black       , str_black);
+  set_color(Color::ForeGround  , str_white);
+  set_color(Color::Foreground  , str_white);
+  set_color(Color::BackGround  , str_black);
+  set_color(Color::Background  , str_black);
+  set_color(Color::BackGround2 , &Color::from_hex_str(str_black).unwrap().darker().to_hex_str());
+  set_color(Color::Background2 , &Color::from_hex_str(str_black).unwrap().darker().to_hex_str());
+  set_color(Color::Red         , "#F050A0");
+  set_color(Color::Blue        , "#00A0F0");
+  set_color(Color::Green       , "#00FF60");
+  set_color(Color::Yellow      , "#F0F070");
+  set_color(Color::Magenta     , "#D080F0");
+  set_color(Color::Cyan        , "#70D0F0");
+  set_color(Color::DarkRed     , &Color::darker(&Color::DarkRed).to_hex_str());
+  set_color(Color::DarkBlue    , &Color::darker(&Color::DarkBlue).to_hex_str());
+  set_color(Color::DarkGreen   , &Color::darker(&Color::DarkGreen).to_hex_str());
+  set_color(Color::DarkYellow  , &Color::darker(&Color::DarkYellow).to_hex_str());
+  set_color(Color::DarkMagenta , &Color::darker(&Color::DarkMagenta).to_hex_str());
+  set_color(Color::DarkCyan    , &Color::darker(&Color::DarkCyan).to_hex_str());
+  fltk::app::set_frame_color(Color::White);
+  fltk::app::foreground(230,230,230);
+  let color = Color::from_hex_str("#5294e2").unwrap().to_rgb();
+  fltk::app::set_selection_color(color.0, color.1, color.2);
+  fltk::app::set_frame_type(FrameType::BorderBox);
+  fltk_theme::WidgetScheme::new(fltk_theme::SchemeType::Clean).apply();
+} // pub fn theme() }}}
 
 // pub trait WidgetExtExtra {{{
 #[allow(warnings)]
@@ -239,7 +291,7 @@ pub trait SenderExt<T>
 {
   fn send_awake(&self, value: T);
   fn send_activate(&self, value: T);
-} // pub trait SenderExt 
+} // pub trait SenderExt
 
 impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
 {
