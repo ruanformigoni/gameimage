@@ -13,7 +13,7 @@ use clown::clown;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
-use shared::{tabs,rescope,hover_blink,hseparator_fixed,column,row,add,fixed,scroll,hpack};
+use shared::{hover_blink,column,row,add,fixed};
 
 use crate::db;
 use crate::dimm;
