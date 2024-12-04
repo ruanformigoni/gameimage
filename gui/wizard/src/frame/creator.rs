@@ -19,7 +19,7 @@ use lazy_static::lazy_static;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
-use shared::{tabs,rescope,hover_blink,hseparator_fixed,column,row,add,fixed,scroll,hpack};
+use shared::{rescope,hover_blink,column,row,fixed,scroll,hpack};
 
 use crate::gameimage;
 use crate::dimm;
