@@ -21,7 +21,7 @@ use crate::common;
 use crate::log_status;
 use shared::svg;
 use shared::std::PathBufExt;
-use shared::fltk::WidgetExtExtra;
+use shared::{column,row,add,fixed};
 
 // check_version() {{{
 fn check_version() -> anyhow::Result<()>
@@ -46,72 +46,55 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
-  // Project Logo
-  let mut frame_image = Frame::default()
-    .with_size(dimm::height_button_rec()*4, dimm::height_button_rec()*4);
-  frame_image.set_align(Align::Inside | Align::Bottom);
-  frame_image.clone().center_of(&ui.group);
-  frame_image.set_pos(frame_image.x(), frame_image.y() - dimm::height_button_wide() - dimm::height_text());
-  let mut clone_frame_image = frame_image.clone();
-  if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
-  {
-    clone_frame_image.set_image_scaled(Some(image));
-  } // if
-  else
-  {
-    log_status!("Failed to load icon image");
-  } // else
+  column!(col,
+    add!(col, spacer, Frame::default());
+    row!(row,
+      add!(row, spacer, Frame::default());
+      fixed!(row, frame_image, Frame::default(), dimm::height_button_wide()*4);
+      add!(row, spacer, Frame::default());
+    );
+    col.fixed(&row, dimm::height_button_wide()*4);
+    add!(col, spacer, Frame::default());
+    fixed!(col, _label, Frame::default()
+        .with_align(Align::Left | Align::Inside)
+        .with_label("Select The Directory for GameImage's Temporary Files")
+      , dimm::height_text());
+    fixed!(col, input_dir, FileInput::default(), dimm::height_button_wide() + dimm::border_half());
+  );
 
-  let mut input_dir = FileInput::default()
-    .with_size(dimm::width_wizard() - dimm::border()*2, dimm::height_button_wide() + dimm::height_text())
-    .bottom_left_of(&ui.group, 0)
-    .with_align(Align::Top | Align::Left)
-    .with_label("Select The Directory for GameImage's Temporary Files");
+  // Image
+  let mut frame_image = frame_image.clone();
+  frame_image.set_align(Align::Inside | Align::Bottom);
+  frame_image.set_image_scaled(fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok());
+
+  // Input
+  let mut input_dir = input_dir.clone();
   input_dir.set_pos(dimm::border(), input_dir.y());
   input_dir.set_readonly(true);
-
-  // Check if GIMG_DIR exists
-  if let Some(env_dir_build) = env::var("GIMG_DIR").ok()
-  {
-    input_dir.set_value(&env_dir_build);
-  } // if
-
-  // Set input_dir callback
-  let mut clone_output_status = ui.status.clone();
+  input_dir.set_value(&env::var("GIMG_DIR").unwrap_or_default());
   input_dir.set_callback(move |e|
   {
-    let mut path_selected = if let Some(value) = dir_chooser("Select the build directory", "", false)
+    let mut path_selected = match dir_chooser("Select the build directory", "", false)
     {
-      PathBuf::from(value)
-    }
-    else
-    {
-      clone_output_status.set_value("No file selected");
-      return;
-    }; // if
-
+      Some(value) => PathBuf::from(value),
+      None => { log_status!("No file selected"); return; },
+    };
     // Set build dir as chosen dir + /build
     path_selected = path_selected.join("build");
-
     // Update chosen dir in selection bar
     e.set_value(&path_selected.string());
-
     // Set env var to build dir
     env::set_var("GIMG_DIR", &path_selected.string());
   });
 
-  // First frame, no need for prev
-  ui.btn_prev.clone().hide();
-
   // Set callback for next
-  let mut clone_output_status = ui.status.clone();
   let clone_tx = tx.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
     let path_dir_build = match env::var("GIMG_DIR")
     {
       Ok(value) => PathBuf::from(value),
-      Err(e) => { clone_output_status.set_value(&format!("Invalid temporary files directory: {}", e)); return; }
+      Err(e) => { log_status!("Invalid temporary files directory: {}", e); return; }
     }; // if
     // Create build directory
     match std::fs::create_dir_all(&path_dir_build)
