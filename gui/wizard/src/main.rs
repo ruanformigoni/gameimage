@@ -10,7 +10,7 @@ use fltk::{
   app::App,
   window::Window,
   dialog,
-  group::Group,
+  group::Flex,
   button::Button,
   output::Output,
   frame::Frame,
@@ -36,7 +36,7 @@ static GUI: LazyLock<Mutex<Gui>> = LazyLock::new(|| Mutex::new(Gui::new()));
 pub struct Ui
 {
   title: Frame,
-  group: Group,
+  group: Flex,
   btn_prev: Button,
   btn_next: Button,
   status: Output,
@@ -65,6 +65,7 @@ impl Gui
       .with_size(dimm::width_wizard(), dimm::height_wizard())
       .center_screen();
     wind_main.end();
+    wind_main.make_resizable(true);
 
     // Apply theme
     shared::fltk::theme();
@@ -108,7 +109,7 @@ impl Gui
 // fn redraw() {{{
 fn redraw(&mut self, tx: Sender<common::Msg>, msg : Msg)
 {
-  let mut content: Group = fltk::app::widget_from_id("content").unwrap();
+  let mut content: Flex = fltk::app::widget_from_id("content").unwrap();
   content.clear();
   content.begin();
 
@@ -191,10 +192,19 @@ fn init(&mut self)
   self.wind_main.set_callback(f_callback_close.clone());
 
   self.wind_main.begin();
-  frame::common::frame_header("Header");
-  frame::common::frame_footer();
+  frame::common::layout();
   self.wind_main.end();
   self.wind_main.show();
+
+  // Reset window size
+  let mut btn_resize: Button = app::widget_from_id("btn_resize").unwrap();
+  btn_resize.set_callback({
+    let mut wind_main = self.wind_main.clone();
+    move |_|
+    {
+      wind_main.set_size(dimm::width_wizard(), dimm::height_wizard());
+    }}
+  );
 
   let clone_tx = self.tx.clone();
   std::thread::spawn(move ||
@@ -206,9 +216,11 @@ fn init(&mut self)
     } // while
   });
 
-  self.tx.send_awake(Msg::DrawWelcome);
+  self.tx.send_awake(Msg::DrawCreator);
   while self.app.wait()
   {
+    let content: fltk::group::Flex = fltk::app::widget_from_id("content").unwrap();
+    let footer: fltk::group::Flex = fltk::app::widget_from_id("footer").unwrap();
     // Handle messages
     match self.rx.recv()
     {
@@ -219,13 +231,15 @@ fn init(&mut self)
       }
       Some(common::Msg::WindActivate) =>
       {
-        shared::fltk::set_active(self.wind_main.clone(), true);
+        shared::fltk::set_active(content, true);
+        shared::fltk::set_active(footer, true);
         app::flush();
         app::awake();
       }
       Some(common::Msg::WindDeactivate) =>
       {
-        shared::fltk::set_active(self.wind_main.clone(), false);
+        shared::fltk::set_active(content, false);
+        shared::fltk::set_active(footer, false);
         app::flush();
         app::awake();
       }
