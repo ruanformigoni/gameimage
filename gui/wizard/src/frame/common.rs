@@ -29,14 +29,6 @@ pub fn layout()
     col.fixed(&row_header, dimm::height_button_rec());
     hseparator_fixed!(col, dimm::width_wizard() - dimm::border()*2, dimm::border_half());
     tabs!(tab_content,
-      column!(col_content_term,
-        col_content_term.set_frame(fltk::enums::FrameType::FlatBox);
-        col_content_term.set_color(Color::BackGround);
-        frame::term::Term::new_with_id("term_log"
-          , 0
-          , 0, 0
-          , 0, 0);
-      );
       column!(col_content_footer,
         col_content_footer.set_frame(fltk::enums::FrameType::FlatBox);
         col_content_footer.set_color(Color::BackGround);
@@ -56,6 +48,14 @@ pub fn layout()
         );
         col_content_footer.fixed(&footer, dimm::height_button_wide());
         col_content_footer.fixed(&Output::default().with_id("footer_status"), 20);
+      );
+      column!(col_content_term,
+        col_content_term.set_frame(fltk::enums::FrameType::FlatBox);
+        col_content_term.set_color(Color::BackGround);
+        frame::term::Term::new_with_id("term_log"
+          , 0
+          , 0, 0
+          , 0, 0);
       );
     );
     col.add(&tab_content);
