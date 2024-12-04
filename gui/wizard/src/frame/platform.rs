@@ -13,6 +13,7 @@ use clown::clown;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
+use shared::{tabs,rescope,hover_blink,hseparator_fixed,column,row,add,fixed,scroll,hpack};
 
 use crate::db;
 use crate::dimm;
@@ -82,39 +83,34 @@ fn fetch_backend(tx: Sender<common::Msg>
 
 // fn platform_add() {{{
 fn platform_add(tx: Sender<common::Msg>
-  , widget: &fltk::widget::Widget
   , platform: common::Platform
   , is_installed: bool) -> fltk::group::Flex
 {
-  let mut row = fltk::group::Flex::new(widget.x() + dimm::border()
-    , widget.y() + dimm::border()
-    , widget.w() - dimm::border()*2
-    , dimm::height_button_wide()
-    , ""
+  row!(row,
+    row.set_spacing(dimm::border());
+    add!(row, prog, shared::fltk::progress::progress());
+    fixed!(row
+      , btn_platform
+      , if is_installed { shared::fltk::button::rect::arrow_forward() } else {  shared::fltk::button::rect::cloud() }
+      , dimm::width_button_rec()
+    );
   );
-  row.set_type(PackType::Horizontal);
-  row.set_spacing(dimm::border());
-  // Create progress bar
-  let mut prog = shared::fltk::progress::progress()
+  // Configure progress bar
+  let mut prog = prog.clone()
     .with_label(HASH_PLATFORM_DESCR.get(platform.as_str()).unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
-    .with_frame(FrameType::BorderBox)
     .with_color(Color::BackGround)
     .with_color_selected(Color::Blue);
   if is_installed{ prog.set_value(100.0); }
-  // Create start button
-  let btn_platform = if is_installed { shared::fltk::button::rect::arrow_forward() } else {  shared::fltk::button::rect::cloud() }
+  // Configure start button
+  hover_blink!(btn_platform);
+  btn_platform.clone()
     .with_color(if is_installed { Color::Green } else { Color::Blue })
-    .with_focus(false)
     .with_callback(#[clown] move |_|
     {
       if is_installed
       {
-        match PLATFORM.lock()
-        {
-          Ok(mut guard) => *guard = Some(honk!(platform).clone()),
-          Err(e) => log!("Could not lock platform: {}", e),
-        } // match
+        *PLATFORM.lock().unwrap() = Some(honk!(platform).clone());
         tx.send_awake(*HASH_PLATFORM_MSG.get(&platform).unwrap());
       }
       else
@@ -122,17 +118,29 @@ fn platform_add(tx: Sender<common::Msg>
         fetch_backend(tx, platform.clone(), prog.clone());
       } // else
     });
-  row.fixed(&btn_platform, dimm::width_button_rec());
-  row.end();
   row
 } // fn platform_add() }}}
 
 // fn platform_add_wine() {{{
 fn platform_add_wine(tx: Sender<common::Msg>
-  , widget: &fltk::widget::Widget
   , distributions: &HashMap<String,String>
   , mut is_installed: bool) -> fltk::group::Flex
 {
+  column!(col,
+    col.set_spacing(dimm::border());
+    row!(row,
+      row.set_spacing(dimm::border());
+      add!(row, prog, shared::fltk::progress::progress());
+      fixed!(row
+        , btn_fetch
+        , if is_installed { shared::fltk::button::rect::arrow_forward() } else {  shared::fltk::button::rect::cloud() }
+        , dimm::width_button_rec()
+      );
+    );
+    col.fixed(&row, dimm::height_button_wide());
+    fixed!(col, menubutton, fltk::menu::MenuButton::default(), dimm::height_button_wide());
+  );
+
   let dist_wine_db = db::global::read().map(|e| e.dist_wine).unwrap_or(String::from("default"));
   {
     let mut dist_wine_current = DIST_WINE.lock().unwrap();
@@ -141,31 +149,18 @@ fn platform_add_wine(tx: Sender<common::Msg>
     // Check if dropdown menu selection differs from database reference
     is_installed = is_installed && *dist_wine_current == dist_wine_db;
   }
-  // Build column
-  let mut col = fltk::group::Flex::new(widget.x() + dimm::border()
-    , widget.y() + dimm::border()
-    , widget.w() - dimm::border()*2
-    , dimm::height_button_wide()*2 + dimm::border()
-    , ""
-  );
-  col.set_type(PackType::Vertical);
-  col.set_spacing(dimm::border());
-  // Row with platform description and fetch button
-  let mut row = fltk::group::Flex::new(col.x(), col.y(), col.w() , dimm::height_button_wide() , "");
-  row.set_type(PackType::Horizontal);
-  row.set_spacing(dimm::border());
-  // Create progress bar
-  let mut prog = shared::fltk::progress::progress()
+  // Configure progress bar
+  let mut prog = prog.clone()
     .with_label(HASH_PLATFORM_DESCR.get("wine").unwrap_or(&""))
     .with_align(Align::Left | Align::Inside)
     .with_frame(FrameType::BorderBox)
     .with_color(Color::BackGround)
     .with_color_selected(Color::Blue);
   if is_installed{ prog.set_value(100.0); }
-  // Create start button
-  let btn_fetch = if is_installed { shared::fltk::button::rect::arrow_forward() } else { shared::fltk::button::rect::cloud() }
+  // Configure fetch button
+  hover_blink!(btn_fetch);
+  btn_fetch.clone()
     .with_color(if is_installed { Color::Green } else { Color::Blue })
-    .with_focus(false)
     .with_callback(#[clown] move |_|
     {
       if is_installed
@@ -186,11 +181,8 @@ fn platform_add_wine(tx: Sender<common::Msg>
         fetch_backend(tx, common::Platform::Wine, prog.clone());
       } // else
     });
-  row.fixed(&btn_fetch, dimm::width_button_rec());
-  row.end();
-  col.fixed(&row, dimm::height_button_wide());
   // Create distribution dropdown menu
-  let mut menubutton = fltk::menu::MenuButton::default()
+  let mut menubutton = menubutton.clone()
     .with_frame(FrameType::FlatBox)
     .with_color(Color::BackGround.lighter())
     .with_callback(move |e|
@@ -201,24 +193,22 @@ fn platform_add_wine(tx: Sender<common::Msg>
     });
   menubutton.add_choice(&distributions.keys().map(|e| e.clone()).collect::<Vec<String>>().join("|"));
   menubutton.set_label(&DIST_WINE.lock().unwrap().clone());
-  col.fixed(&menubutton, dimm::height_button_wide());
-  col.end();
   col
 } // fn platform_add_wine() }}}
 
 // fn platform_list() {{{
-fn platform_list(tx: Sender<common::Msg>, widget: &fltk::group::Group) -> anyhow::Result<()>
+fn platform_list(tx: Sender<common::Msg>, widget: &fltk::group::Flex) -> anyhow::Result<()>
 {
   let vec_platforms = gameimage::fetch::installed()?;
   let db_fetch = db::fetch::read()?;
   let mut col = fltk::group::Flex::new(widget.x(), widget.y(), widget.w(), widget.h(), "");
   col.set_type(PackType::Vertical);
   col.set_spacing(dimm::border());
-  let row_linux         = platform_add(tx, &col.as_base_widget(), common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
-  let mut row_rpcs3     = platform_add(tx, &col.as_base_widget(), common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
-  let mut row_retroarch = platform_add(tx, &col.as_base_widget(), common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));
-  let mut row_pcsx2     = platform_add(tx, &col.as_base_widget(), common::Platform::Pcsx2, vec_platforms.contains(&common::Platform::Pcsx2));
-  let mut row_wine      = platform_add_wine(tx, &col.as_base_widget(), &db_fetch.wine.layer, vec_platforms.contains(&common::Platform::Wine));
+  let row_linux         = platform_add(tx, common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
+  let mut row_rpcs3     = platform_add(tx, common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
+  let mut row_retroarch = platform_add(tx, common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));
+  let mut row_pcsx2     = platform_add(tx, common::Platform::Pcsx2, vec_platforms.contains(&common::Platform::Pcsx2));
+  let mut row_wine      = platform_add_wine(tx, &db_fetch.wine.layer, vec_platforms.contains(&common::Platform::Wine));
   col.fixed(&row_linux, dimm::height_button_wide());
   col.fixed(&row_rpcs3, dimm::height_button_wide());
   col.fixed(&row_retroarch, dimm::height_button_wide());
