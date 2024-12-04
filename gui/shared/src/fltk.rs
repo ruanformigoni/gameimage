@@ -63,6 +63,19 @@ pub fn theme()
   fltk_theme::WidgetScheme::new(fltk_theme::SchemeType::Clean).apply();
 } // pub fn theme() }}}
 
+// pub fn set_active() {{{
+pub fn set_active(mut widget: impl WidgetExt, make_active: bool)
+{
+  if make_active {  widget.activate(); } else { widget.deactivate(); }
+  if let Some(group) = widget.as_group()
+  {
+    (0..group.children())
+      .filter_map(|e| group.child(e))
+      .for_each(|e| set_active(e.clone(), make_active))
+  } // if
+}
+// pub fn set_active() }}}
+
 // pub trait WidgetExtExtra {{{
 #[allow(warnings)]
 pub trait WidgetExtExtra
@@ -305,15 +318,13 @@ impl<T: 'static + Send + Sync> SenderExt<T> for fltk::app::Sender<T>
 
   fn send_activate(&self, value: T)
   {
-    // Send
-    self.send(value);
     // Activate
     for w in fltk::app::windows().unwrap_or_default()
     {
-      ( 0..w.children() )
-        .into_iter()
-        .for_each(|e| { w.child(e).unwrap().clone().activate() });
+      set_active(w, true);
     } // for
+    // Send
+    self.send(value);
     fltk::app::redraw();
     fltk::app::awake();
   } // send_awake

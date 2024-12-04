@@ -14,9 +14,7 @@ use fltk::{
   button::Button,
   output::Output,
   frame::Frame,
-  enums::{FrameType,Color,Font},
 };
-use fltk_theme::{ColorTheme, color_themes};
 
 use shared::dimm;
 use shared::svg;
@@ -221,17 +219,13 @@ fn init(&mut self)
       }
       Some(common::Msg::WindActivate) =>
       {
-        ( 0..self.wind_main.children() )
-          .into_iter()
-          .for_each(|e| { self.wind_main.child(e).unwrap().clone().activate() });
+        shared::fltk::set_active(self.wind_main.clone(), true);
         app::flush();
         app::awake();
       }
       Some(common::Msg::WindDeactivate) =>
       {
-        ( 0..self.wind_main.children() )
-          .into_iter()
-          .for_each(|e| { self.wind_main.child(e).unwrap().clone().deactivate() });
+        shared::fltk::set_active(self.wind_main.clone(), false);
         app::flush();
         app::awake();
       }

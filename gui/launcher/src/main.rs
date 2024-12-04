@@ -19,7 +19,6 @@ use common::Msg;
 
 use shared::dimm;
 use shared::std::PathBufExt;
-use fltk_theme::{ColorTheme, color_themes};
 use clap::Parser;
 
 // struct: Gui {{{
@@ -121,23 +120,12 @@ fn init(&mut self)
     {
       Some(common::Msg::WindActivate) =>
       {
-        let children = self.wind.children();
-        for i in 0..children {
-          let mut widget = self.wind.child(i).unwrap();
-          widget.activate();
-        }
-        app::flush();
+        shared::fltk::set_active(self.wind.clone(), true);
         app::awake();
       }
       Some(common::Msg::WindDeactivate) =>
       {
-        let children = self.wind.children();
-        for i in 0..children
-        {
-          let mut widget = self.wind.child(i).unwrap();
-          widget.deactivate();
-        }
-        app::flush();
+        shared::fltk::set_active(self.wind.clone(), false);
         app::awake();
       }
       Some(Msg::Quit) =>
@@ -152,16 +140,6 @@ fn init(&mut self)
 } // init() }}}
 
 } // impl: Gui }}}
-
-// fn: theme {{{
-fn theme()
-{
-  // Set starting theme as dark
-  ColorTheme::new(color_themes::BLACK_THEME).apply(); // Start with a default dark theme
-  // Adjust it a bit
-  app::background(42, 46, 50);
-  app::foreground(255, 255, 255);
-} // }}}
 
 // struct Cli {{{
 #[derive(Parser)]
@@ -197,9 +175,6 @@ fn main() -> anyhow::Result<()>
     } // for
     return Ok(());
   } // else if
-
-  // Set theme
-  theme();
 
   // Start GUI
   Gui::new().init();

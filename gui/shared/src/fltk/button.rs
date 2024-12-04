@@ -26,7 +26,7 @@ fn button<T>() -> T
     let (x,y,w,h) = (b.x(),b.y(),b.w(),b.h());
     let c = if ! b.active()
     {
-      b.color().darker().darker()
+      Color::BackGround
     }
     else if b.is_set()
     {
