@@ -126,7 +126,7 @@ fn redraw(&mut self, tx: Sender<common::Msg>, msg : Msg)
     Msg::DrawLinuxIcon => wizard::linux::icon(self.tx, "Select the Application Icon"),
     Msg::DrawLinuxMethod => wizard::linux::method(self.tx, "Select How to Install the Application"),
     Msg::DrawLinuxRom => wizard::linux::rom(self.tx, "Install the Application"),
-    Msg::DrawLinuxDefault(is_update) => wizard::linux::default(self.tx, "Select the Main Binary", is_update),
+    Msg::DrawLinuxDefault => wizard::linux::default(self.tx, "Select the Main Binary"),
     Msg::DrawLinuxCompress => wizard::linux::compress(self.tx, "Compress the Created Package"),
     // Wine
     Msg::DrawWineName => wizard::wine::name(self.tx, "Select the Application Name"),
@@ -216,7 +216,7 @@ fn init(&mut self)
     } // while
   });
 
-  self.tx.send_awake(Msg::DrawCreator);
+  self.tx.send_awake(Msg::DrawWelcome);
   while self.app.wait()
   {
     let content: fltk::group::Flex = fltk::app::widget_from_id("content").unwrap();

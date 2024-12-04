@@ -58,7 +58,7 @@ pub enum Msg
   DrawLinuxIcon,
   DrawLinuxMethod,
   DrawLinuxRom,
-  DrawLinuxDefault(bool),
+  DrawLinuxDefault,
   DrawLinuxCompress,
 
   DrawWineName,
