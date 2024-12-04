@@ -14,19 +14,20 @@ use fltk::{
 };
 
 use clown::clown;
+use lazy_static::lazy_static;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
+use shared::{tabs,rescope,hover_blink,hseparator_fixed,column,row,add,fixed,scroll,hpack};
 
 use crate::gameimage;
 use crate::dimm;
 use crate::common;
 use crate::log;
-use crate::log_status;
 use crate::log_err;
+use crate::log_status;
 use crate::db;
-use lazy_static::lazy_static;
 
 lazy_static!
 {
@@ -42,6 +43,8 @@ fn create_entry(project : db::project::Entry, height: i32)
     .with_color(Color::lighter(&Color::BackGround))
     .with_frame(FrameType::FlatBox)
     .with_size(0, height);
+  row.set_spacing(0);
+  row.set_margins(0, 0, dimm::border_half(), 0);
 
   //
   // Icon
@@ -139,92 +142,79 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
   // Enter the build directory
   log_err!(common::dir_build());
 
-  let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);
+  let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
-  // Configure bottom buttons
-  ui.btn_prev.show();
-  ui.btn_next.show();
-  ui.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
+  row!(row,
+    scroll!(scroll,
+      hpack!(col_projects,
+        col_projects.set_spacing(dimm::border_half());
+      );
+    );
+    row.add(&scroll);
+    column!(col_buttons,
+      fixed!(col_buttons, btn_add, shared::fltk::button::rect::add().with_color(Color::Green), dimm::height_button_rec());
+      fixed!(col_buttons, btn_del, shared::fltk::button::rect::del().with_color(Color::Red), dimm::height_button_rec());
+      fixed!(col_buttons, btn_sel_all, shared::fltk::button::rect::check_all().with_color(Color::Blue), dimm::height_button_rec());
+      col_buttons.add(&Frame::default_fill());
+    );
+    row.fixed(&col_buttons, dimm::width_button_rec());
+  );
 
-  let mut row_content = fltk::group::Flex::default()
-    .with_type(fltk::group::FlexType::Row)
-    .with_size(ui.group.w(), ui.group.h())
-    .with_pos(ui.group.x(), ui.group.y());
-  row_content.set_spacing(dimm::border() / 2);
-
-  let mut scroll = fltk::group::Scroll::default()
-    .with_size(0, row_content.h());
+  // Configure row
+  row.set_spacing(dimm::border_half());
+  // Configure scroll
   scroll.set_type(fltk::group::ScrollType::VerticalAlways);
   scroll.set_scrollbar_size(dimm::border());
-
-  // Fetch entries
+  // Configure bottom buttons
+  ui.btn_prev.clone().emit(tx, common::Msg::DrawWelcome);
+  // Add scroll entries
   let projects = match db::project::list()
   {
     Ok(mut projects) => { projects.sort_by_key(|e| e.get_project()); projects},
     Err(e) => { log_status!("Could not get project list: {}", e); vec![] },
   };
-
-  let mut col_projects = fltk::group::Pack::default_fill()
-    .with_type(fltk::group::PackType::Vertical);
-  col_projects.set_spacing(dimm::border());
-
+  // Configure col resize
   scroll.resize_callback(#[clown] move |_s,x,y,w,_h|
   {
     let mut col = honk!(col_projects).clone();
     col.resize(x,y,w-dimm::border_half()*3,col.h());
   });
 
-  // Process entries if any
-  let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
-  // Select all button
-  let mut row_btn_sel = fltk::group::Flex::default()
-    .with_size(0, dimm::width_checkbutton() + dimm::border()/2)
-    .row()
-    .with_frame(FrameType::FlatBox)
-    .with_color(Color::BackGround.lighter());
-  row_btn_sel.add(&Frame::default().with_label("Select all").with_align(Align::Inside | Align::Left));
-  let mut btn_sel_all = shared::fltk::button::rect::checkbutton();
-  btn_sel_all.set_callback(#[clown] move |e|
-  {
-    honk!(vec_btn).lock().unwrap().iter().for_each(|f| f.0.set_checked(e.is_checked()))
-  });
-  row_btn_sel.fixed(&btn_sel_all, dimm::width_checkbutton());
-  row_btn_sel.end();
-  // Include select all button and projects in the column
-  col_projects.add(&row_btn_sel);
-  for project in &projects
-  {
-    let (row_project, button, project) = match create_entry(project.clone(), dimm::height_button_rec()*4)
+  rescope!(col_projects,
+    // Process entries if any
+    let vec_btn = Arc::new(Mutex::new(Vec::<(button::CheckButton,db::project::Entry)>::new()));
+    // Select all button
+    btn_sel_all.clone().set_callback(#[clown] move |e|
     {
-      Ok(ret) => ret,
-      Err(e) => { log_status!("Could not create entry for project with error: {}", e); continue; },
-    }; // match
-    col_projects.add(&row_project);
-
-    match vec_btn.lock()
+      e.set(!e.is_set());
+      honk!(vec_btn).lock().unwrap().iter().for_each(|f| f.0.set_checked(e.is_set()))
+    });
+    // Include select all button and projects in the column
+    for project in &projects
     {
-      Ok(mut lock) => lock.push((button, project)),
-      Err(e) => log_status!("Could not lock checkbox buttons with error: {}", e),
-    }
-  } // for
+      let (row_project, button, project) = match create_entry(project.clone(), dimm::height_button_rec()*4)
+      {
+        Ok(ret) => ret,
+        Err(e) => { log_status!("Could not create entry for project with error: {}", e); continue; },
+      }; // match
+      col_projects.add(&row_project);
 
-  col_projects.end();
-  scroll.add(&col_projects);
-  scroll.end();
-  row_content.add(&scroll);
-
-  let mut col_buttons = fltk::group::Flex::default_fill()
-    .with_type(fltk::group::FlexType::Column)
-    .with_size(dimm::width_button_rec(), row_content.h());
-  col_buttons.set_spacing(dimm::border());
+      match vec_btn.lock()
+      {
+        Ok(mut lock) => lock.push((button, project)),
+        Err(e) => log_status!("Could not lock checkbox buttons with error: {}", e),
+      }
+    } // for
+  );
 
   // Add new package
-  let mut btn_add = shared::fltk::button::rect::add().with_color(Color::Green);
+  let mut btn_add = btn_add.clone();
+  hover_blink!(btn_add);
   btn_add.emit(tx, common::Msg::DrawPlatform);
-  col_buttons.fixed(&btn_add, dimm::height_button_rec());
 
   // Erase package
-  let mut btn_del = shared::fltk::button::rect::del().with_color(Color::Red);
+  let mut btn_del = btn_del.clone();
+  hover_blink!(btn_del);
   let clone_vec_checkbutton = vec_btn.clone();
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
@@ -238,8 +228,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       clone_tx.send_activate(common::Msg::DrawCreator);
     });
   });
-  col_buttons.fixed(&btn_del, dimm::height_button_rec());
-  row_content.fixed(&col_buttons, dimm::width_button_rec());
 
   // Finish package creation on click next
   let clone_vec_btn = vec_btn.clone();
@@ -290,7 +278,6 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
       clone_tx.send_activate(common::Msg::DrawDesktop);
     });
   });
-  row_content.end();
 }
 // }}}
 
