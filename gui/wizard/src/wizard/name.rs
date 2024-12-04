@@ -13,7 +13,7 @@ use anyhow::anyhow as ah;
 
 use shared::fltk::SenderExt;
 use shared::svg;
-use shared::{rescope,hover_blink,column,row,fixed,scroll,hpack};
+use shared::{column,row,fixed};
 
 use crate::dimm;
 use crate::frame;
