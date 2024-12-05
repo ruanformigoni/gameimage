@@ -355,7 +355,7 @@ icon!(icon_add, ICON_ADD, 24, 24);
 icon!(icon_del, ICON_DEL, 16, 16);
 icon!(icon_joystick, ICON_JOYSTICK, 16, 16);
 icon!(icon_save, ICON_SAVE, 16, 16);
-icon!(icon_cloud, ICON_CLOUD, 16, 16);
+icon!(icon_cloud, ICON_CLOUD, 18, 18);
 icon!(icon_box_heart, ICON_BOX_HEART, 16, 16);
 icon!(icon_folder, ICON_FOLDER, 16, 16);
 icon!(icon_check, ICON_CHECK, 24, 24);

@@ -26,7 +26,7 @@ fn button<T>() -> T
     let (x,y,w,h) = (b.x(),b.y(),b.w(),b.h());
     let c = if ! b.active()
     {
-      Color::BackGround
+      Color::BackGround.lighter()
     }
     else if b.is_set()
     {
@@ -97,7 +97,7 @@ macro_rules! create_buttons
 }
 
 create_buttons!(search, terminal, filter, install , home, back, configure, list, switch, add, del,
-  folder, save, check, cloud, refresh, joystick, arrow_forward, play
+  folder, save, check, check_all, cloud, refresh, joystick, arrow_forward, play, resize_down
 );
 
 pub fn checkbutton() -> fltk::button::CheckButton
@@ -111,8 +111,8 @@ pub fn checkbutton() -> fltk::button::CheckButton
   {
     fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), e.color());
     // -1 on w and h because if is drawn with the same size as the button it leaves a weird border when updated
-    let w = 18;
-    let h = 18;
+    let w = dimm::width_checkbutton();
+    let h = dimm::width_checkbutton();
     let x = e.x();
     let y = e.y() + (e.h() / 2) - (h / 2);
     match e.is_checked()
@@ -127,6 +127,7 @@ pub fn checkbutton() -> fltk::button::CheckButton
       {
         fltk::draw::set_draw_color(Color::BackGround2);
         fltk::draw::draw_rounded_rectf(x, y, w, h, 4);
+        draw::set_draw_color(Color::BackGround2.lighter());
         fltk::draw::draw_rounded_rect(x, y, w, h, 4);
       },
     } // match
