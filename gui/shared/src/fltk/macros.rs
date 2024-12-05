@@ -10,6 +10,28 @@ macro_rules! rescope
 }
 
 #[macro_export]
+macro_rules! group
+{
+  ($col_name:ident, $($body:tt)*) =>
+  {
+    let mut $col_name = fltk::group::Group::default_fill();
+    $($body)*
+    $col_name.end();
+  };
+}
+
+#[macro_export]
+macro_rules! tabs
+{
+  ($col_name:ident, $($body:tt)*) =>
+  {
+    let mut $col_name = fltk::group::Tabs::default_fill();
+    $($body)*
+    $col_name.end();
+  };
+}
+
+#[macro_export]
 macro_rules! hpack
 {
   ($col_name:ident, $($body:tt)*) =>
