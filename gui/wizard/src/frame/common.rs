@@ -7,7 +7,7 @@ use fltk::{
 };
 
 use shared::fltk::WidgetExtExtra;
-use shared::{tabs,rescope,hover_blink,hseparator_fixed,column,row,add,fixed};
+use shared::{tabs,hover_blink,hseparator_fixed,column,row,add,fixed};
 
 use crate::dimm;
 use crate::frame;
@@ -52,10 +52,8 @@ pub fn layout()
       column!(col_content_term,
         col_content_term.set_frame(fltk::enums::FrameType::FlatBox);
         col_content_term.set_color(Color::BackGround);
-        frame::term::Term::new_with_id("term_log"
-          , 0
-          , 0, 0
-          , 0, 0);
+        let term = frame::term::Term::default();
+        term.term.clone().set_id("term_log");
       );
     );
     col.add(&tab_content);

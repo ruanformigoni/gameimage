@@ -16,7 +16,8 @@ use fltk::{
 };
 
 use anyhow::anyhow as ah;
-use shared::fltk::WidgetExtExtra;
+
+use shared::{column,row,add,fixed,hover_blink};
 
 use crate::dimm;
 use crate::common;
@@ -36,7 +37,7 @@ pub struct Term
   // Save button
   #[allow(dead_code)] pub btn_save : fltk::button::Button,
   // Group
-  pub group : fltk::group::Group,
+  pub group : fltk::group::Flex,
 } // struct Term }}}
 
 impl Drop for Term
@@ -53,50 +54,49 @@ impl Drop for Term
 impl Term
 {
 
-// pub fn new() {{{
-pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
+// pub fn default() {{{
+pub fn default() -> Term
 {
-  let group = fltk::group::Group::default()
-    .with_size(width, height)
-    .with_frame(fltk::enums::FrameType::FlatBox)
-    .with_color(Color::BackGround)
-    .with_pos(x,y);
+  row!(row,
+    add!(row, term, SimpleTerminal::default_fill());
+    column!(col_button,
+      fixed!(col_button, btn_save, shared::fltk::button::rect::save(), dimm::height_button_rec());
+      add!(col_button, fill, fltk::frame::Frame::default_fill());
+    );
+    row.fixed(&col_button, dimm::width_button_rec());
+  );
 
-  let mut term = SimpleTerminal::new(border
-    , border
-    , width - dimm::border() - dimm::width_button_rec()
-    , height
-    , "");
-  term.set_pos(x, y);
-  term.set_text_color(Color::White);
+  let mut term = term.clone();
+  term.set_text_color(Color::from_hex_str("#fffffff").unwrap());
   term.set_text_size(dimm::height_text());
   term.wrap_mode(fltk::text::WrapMode::None, 0);
   term.set_history_lines(std::i32::MAX);
   term.set_scrollbar_size(dimm::border());
 
-  let mut clone_term = term.clone();
-  let btn_save = shared::fltk::button::rect::save()
-    .right_of(&term, dimm::border())
-    .with_posy_of(&term)
-    .with_color(Color::Blue)
-    .with_callback (move |_|
+  let mut btn_save = btn_save.clone();
+  btn_save.set_color(Color::Blue);
+  hover_blink!(btn_save);
+  btn_save.set_callback({
+    let mut term = term.clone();
+    move |_|
     {
       let path_file_dest = match file_chooser("Save as...",  "*.txt", ".", true).map(|e| PathBuf::from(e) )
       {
         Some(e) => PathBuf::from(e),
-        None => { clone_term.append("No file selected\n"); return; },
+        None => { term.append("No file selected\n"); return; },
       }; // match
 
       // Open dest file as write
       let mut file_dest = match fs::File::create(path_file_dest.clone())
       {
-        Ok(e) => { clone_term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str()); e },
+        Ok(e) => { term.append(format!("Failed to open file {}", path_file_dest.to_str().unwrap()).as_str()); e },
         Err(e) => { log!("Error to save selected file: {}", e); return; },
       };
 
       // Write to file
-      let _ = writeln!(&mut file_dest, "{}", clone_term.text());
-    });
+      let _ = writeln!(&mut file_dest, "{}", term.text());
+    }
+  });
 
   // Stay at the bottom
   term.set_stay_at_bottom(true);
@@ -116,18 +116,8 @@ pub fn new(border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
     } // while
   });
 
-  group.end();
-
   // Return new term
-  Term{ term, opt_proc_thread: None, tx, btn_save, group }
-} // new() }}}
-
-// pub fn new_with_id() {{{
-pub fn new_with_id(id: &str, border : i32, width : i32, height : i32, x : i32, y : i32) -> Term
-{
-  let mut term = Self::new(border, width, height, x, y);
-  term.term.set_id(id);
-  term
+  Term{ term, opt_proc_thread: None, tx, btn_save, group: row }
 } // new_with_id() }}}
 
 // kill() {{{
