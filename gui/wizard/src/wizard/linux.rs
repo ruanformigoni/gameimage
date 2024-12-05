@@ -306,7 +306,7 @@ fn default_search(query: &str) -> Vec<PathBuf>
   let mut results: Vec<PathBuf> = gameimage::search::search_local("rom")
     .unwrap_or_default()
     .iter()
-    .filter(|e| e.string().to_lowercase().contains(query))
+    .filter(|e| e.string().to_lowercase().contains(&query.to_lowercase()))
     .map(|e| e.clone())
     .collect();
   results.sort_by_key(|k| k.components().count());
@@ -355,7 +355,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       let query = query.clone();
       std::thread::spawn(move ||
       {
-        *RESULTS.lock().unwrap() = default_search(&query.to_lowercase().clone());
+        *RESULTS.lock().unwrap() = default_search(&query);
         tx.send_awake(common::Msg::DrawLinuxDefault);
       });
     } // if
