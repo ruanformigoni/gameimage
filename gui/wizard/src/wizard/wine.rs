@@ -2,6 +2,7 @@
 use std::
 {
   path,
+  path::PathBuf,
   sync::{Arc,Mutex,LazyLock}
 };
 
@@ -12,7 +13,7 @@ use fltk::{
   output,
   frame::Frame,
   dialog,
-  enums::{FrameType,Color,Align},
+  enums::{Color,Align},
 };
 
 use clown::clown;
@@ -22,6 +23,7 @@ use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 use shared::dimm;
+use shared::{rescope,hover_blink,column,row,add,fixed,scroll,hpack};
 
 use crate::log;
 use crate::log_alert;
@@ -139,14 +141,14 @@ pub fn icon(tx: Sender<common::Msg>, title: &str)
 } // }}}
 
 // get_path_db() {{{
-fn get_path_db() -> anyhow::Result<std::path::PathBuf>
+fn get_path_db() -> anyhow::Result<PathBuf>
 {
   let global = db::global::read()?;
   Ok(global.get_project_dir(&global.project)?)
 } // get_path_db() }}}
 
 // get_path_db_executable() {{{
-fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
+fn get_path_db_executable() -> anyhow::Result<PathBuf>
 {
   let mut path_file_db = get_path_db()?;
   path_file_db.push("gameimage.wine.executable.json");
@@ -154,7 +156,7 @@ fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
 } // get_path_db_executable() }}}
 
 // get_path_db_env() {{{
-fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
+fn get_path_db_env() -> anyhow::Result<PathBuf>
 {
   let mut path_file_db = get_path_db()?;
   path_file_db.push("gameimage.env.json");
@@ -162,7 +164,7 @@ fn get_path_db_env() -> anyhow::Result<std::path::PathBuf>
 } // get_path_db_env() }}}
 
 // get_path_db_args() {{{
-fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
+fn get_path_db_args() -> anyhow::Result<PathBuf>
 {
   let mut path_file_db = get_path_db()?;
   path_file_db.push("gameimage.wine.args.json");
@@ -172,96 +174,92 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 // pub fn environment() {{{
 pub fn environment(tx: Sender<common::Msg>, title: &str)
 {
-  let path_file_db = match get_path_db_env()
-  {
-    Ok(e) => e,
-    Err(e) => { log_status!("Could not retrieve path to db file: {}", e); return; }
-  }; // match
-
-  //
-  // Main
-  //
+  // Fetch ui
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-
+  // Layout
+  row!(row,
+    scroll!(scroll,
+      hpack!(col_content,);
+    );
+    column!(col_btn,
+      fixed!(col_btn, btn_add, shared::fltk::button::rect::add(), dimm::height_button_rec());
+      col_btn.add(&Frame::default());
+    );
+    row.fixed(&col_btn, dimm::width_button_rec());
+  );
+  // Buttons
+  hover_blink!(btn_add);
   // Configure footer
   ui.btn_next.clone().hide();
   ui.btn_prev.clone().emit(tx, common::Msg::DrawWineConfigure);
-
-  let frame_content = ui.group.clone();
-
-  // Create scrollbar
-  let mut scroll = shared::fltk::ScrollList::new(
-      frame_content.w() - dimm::border() - dimm::width_button_rec()
-    , frame_content.h()
-    , frame_content.x()
-    , frame_content.y());
-  scroll.set_border(dimm::border(), dimm::border());
-
-  //
+  // Resize content to scroll width
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
+  scroll.resize_callback({
+    let mut col_content = col_content.clone();
+    move |_,x,y,w,_|
+    {
+      col_content.resize(x,y,w-dimm::border_half()*3,col_content.h());
+    }
+  });
   // Create entries
-  //
   let clone_tx = tx.clone();
-  let mut clone_scroll = scroll.clone();
-  let clone_path_file_db = path_file_db.clone();
-  let mut f_make_entry = move |key : String, val : String|
+  let f_make_entry = move |key : String, val : String| -> fltk::group::Pack
   {
+    hpack!(col,
+      col.set_spacing(dimm::border_half());
+      add!(col, output_key, fltk::output::Output::default().with_size(0,dimm::height_button_wide()));
+      row!(row_value,
+        add!(row_value, output_val, fltk::output::Output::default());
+        fixed!(row_value, btn_del, shared::fltk::button::rect::del(), dimm::width_button_rec());
+      );
+      col.add(&row_value.with_size(0, dimm::height_button_rec()));
+      col.add(&shared::fltk::separator::horizontal(col.w()));
+      col.add(&Frame::default().with_size(0, 0));
+    );
+    // Buttons
+    hover_blink!(btn_del);
     // Setup key widget
-    let mut output_key = fltk::output::Output::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::width_button_rec() - dimm::border()*3, dimm::height_button_wide())
-      .with_align(Align::Left | Align::Inside);
-    clone_scroll.add(&mut output_key.as_base_widget());
+    let mut output_key = output_key.clone();
+    output_key.set_align(Align::Left | Align::Inside);
     output_key.set_value(key.as_str());
-    output_key.set_frame(FrameType::BorderBox);
-    output_key.set_text_size(dimm::height_text());
     // Setup val widget
-    let mut output_val = fltk::output::Output::default()
-      .with_size(clone_scroll.widget_ref().w() - dimm::border()*2, dimm::height_button_wide())
-      .with_align(Align::Left | Align::Inside)
-      .with_frame(FrameType::BorderBox);
-    clone_scroll.add(&mut output_val.as_base_widget());
+    let mut output_val = output_val.clone();
+    output_val.set_align(Align::Left | Align::Inside);
     output_val.set_value(val.as_str());
-    output_val.set_text_size(dimm::height_text());
     // Erase button
     let clone_key = key.clone();
     let clone_tx = clone_tx.clone();
-    let clone_path_file_db = clone_path_file_db.clone();
-    let _btn_del = shared::fltk::button::rect::del()
-      .right_of(&output_key, dimm::border())
-      .with_color(Color::Red)
-      .with_callback(move |_|
+    let mut btn_del = btn_del.clone();
+    btn_del.set_color(Color::Red);
+    btn_del.set_callback(move |_|
     {
-      match shared::db::kv::erase(&clone_path_file_db, clone_key.clone())
+      let path_file_db = get_path_db_env().unwrap_or_default();
+      match shared::db::kv::erase(&path_file_db, clone_key.clone())
       {
         Ok(_) => println!("Erased key '{}'", clone_key),
         Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
       } // if
       clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
-    // Separator
-    let sep = Frame::default()
-      .below_of(&output_val, dimm::border())
-      .with_size(clone_scroll.widget_ref().width() - dimm::border()*3, dimm::height_sep())
-      .with_frame(FrameType::FlatBox)
-      .with_color(Color::BackGround.lighter());
-    clone_scroll.add(&mut sep.as_base_widget());
+    col
   };
 
   // Get current database entries
-  scroll.begin();
-  if let Ok(entries) = shared::db::kv::read(&path_file_db)
-  {
-    for (key, val) in entries
+  let path_file_db = get_path_db_env().unwrap_or_default();
+  rescope!(col_content,
+    if let Ok(entries) = shared::db::kv::read(&path_file_db)
     {
-      println!("Key: {} Val: {}", key, val);
-      f_make_entry(key, val);
-    } // for
-  } // if
-  scroll.end();
+      for (key, val) in entries
+      {
+        println!("Key: {} Val: {}", key, val);
+        let group = f_make_entry(key, val);
+        col_content.add(&group);
+      } // for
+    } // if
+  );
 
   // Add var button
-  let mut btn_add = shared::fltk::button::rect::add()
-    .right_of(scroll.widget_ref(), dimm::border())
-    .with_color(Color::Green);
+  let mut btn_add = btn_add.clone().with_color(Color::Green);
   let clone_tx = tx.clone();
   btn_add.set_callback(move |_|
   {
@@ -289,19 +287,23 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
 // fn configure_entry() {{{
 fn configure_entry(tx: Sender<common::Msg>
   , label: &str
-  , f_args: fn() -> Option<Vec<String>>) -> (fltk::group::Row, fltk::frame::Frame, fltk::button::Button)
+  , f_args: fn() -> Option<Vec<String>>) -> fltk::button::Button
 {
-  let mut row = fltk::group::Row::default();
-  // Label
-  let label = Frame::default()
-    .with_label(label)
-    .with_frame(FrameType::BorderBox);
-  row.add(&label);
+  column!(col,
+    col.set_spacing(dimm::border_half());
+    row!(row,
+      row.add(&shared::fltk::frame::bordered()
+        .with_align(Align::Inside | Align::Left)
+        .with_label(&format!(" {}", label)));
+      fixed!(row, btn, &shared::fltk::button::rect::configure(), dimm::width_button_rec());
+    );
+    col.fixed(&row, dimm::height_button_rec());
+    col.fixed(&Frame::default(), 0);
+  );
+  col.resize(col.x(), col.y(), col.w(), dimm::height_button_rec() + dimm::border_half());
   // Button to the right
-  let mut btn = shared::fltk::button::rect::configure()
-    .with_size(dimm::width_button_rec(), dimm::height_button_rec())
-    .with_color(Color::Green);
-  row.fixed(&btn, dimm::width_button_rec());
+  let mut btn = btn.clone().with_color(Color::Green);
+  hover_blink!(btn);
   // Set callback
   btn.set_callback(move |_|
   {
@@ -323,20 +325,30 @@ fn configure_entry(tx: Sender<common::Msg>
     });
   });
   // Return row with label and button
-  row.end();
-  (row, label, btn)
+  btn
 } // fn configure_entry() }}}
 
 // pub fn configure() {{{
 pub fn configure(tx: Sender<common::Msg>, title: &str)
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-  let frame_content = ui.group.clone();
-
-  // Set previous frame
+  // Layout
+  column!(col,
+    scroll!(scroll,
+      hpack!(col_content,);
+    );
+  );
+  // Configure scroll
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
+  scroll.resize_callback({
+    let mut col_content = col_content.clone();
+    move |_,x,y,w,_|
+    {
+      col_content.resize(x,y,w-dimm::border_half()*3,col_content.h());
+    }
+  });
+  // Configure buttons
   ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineIcon);
-
-  // Set next frame
   let clone_tx = tx.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
@@ -371,40 +383,25 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
     clone_tx.send_awake(common::Msg::DrawWineTricks);
   });
 
-  // Create scrollbar
-  let mut col = fltk::group::Column::new(
-      frame_content.x()
-    , frame_content.y()
-    , frame_content.w()
-    , frame_content.h()
-    , ""
+  rescope!(col_content,
+    let _ = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11"
+      , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "dxvk".into()])
+    );
+    let _ = configure_entry(tx.clone(),  "Install VKD3D for directx 12"
+      , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "vkd3d".into()])
+    );
+    let _ = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["install".into(), "wine".into(), "regedit".into()]));
+    let _ = configure_entry(tx.clone(),  "Run add/remove programs", || Some(vec!["install".into(), "wine".into(), "uninstaller".into()]));
+    let _ = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["install".into(), "winetricks".into(), "--gui".into()]));
+    let _ = configure_entry(tx.clone(),  "Run a custom winetricks command" , ||
+      dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), "-f".into(), e])
+    );
+    let _ = configure_entry(tx.clone(),  "Run a custom wine command" , ||
+      dialog::input_default("Enter the wine command to execute", "").map(|e| vec!["install".into(), "wine".into(), e])
+    );
+    let mut btn = configure_entry(tx.clone(),  "Configure environment", || None);
+    btn.emit(tx, common::Msg::DrawWineEnvironment);
   );
-  let (row,_,_) = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11"
-    , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "dxvk".into()])
-  );
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Install VKD3D for directx 12"
-    , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "vkd3d".into()])
-  );
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["install".into(), "wine".into(), "regedit".into()]));
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Run add/remove programs", || Some(vec!["install".into(), "wine".into(), "uninstaller".into()]));
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["install".into(), "winetricks".into(), "--gui".into()]));
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Run a custom winetricks command" , ||
-    dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), "-f".into(), e])
-  );
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,_) = configure_entry(tx.clone(),  "Run a custom wine command" , ||
-    dialog::input_default("Enter the wine command to execute", "").map(|e| vec!["install".into(), "wine".into(), e])
-  );
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  let (row,_,mut btn) = configure_entry(tx.clone(),  "Configure environment", || None);
-  btn.emit(tx, common::Msg::DrawWineEnvironment);
-  col.fixed(&row.as_base_widget(), dimm::height_button_wide());
-  col.end();
 } // fn: configure }}}
 
 // pub fn winetricks() {{{
@@ -412,16 +409,28 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
 {
   static YEAR: LazyLock<Mutex<u32>> = LazyLock::new(|| Mutex::new(2024));
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-  // Create a column for the menu items
-  let mut col = fltk::group::Column::default()
-    .with_pos_of(&ui.group)
-    .with_size(ui.group.w() - dimm::border() - dimm::width_button_rec(), ui.group.h());
+  // Layout
+  row!(row,
+    column!(col,
+      col.fixed(&fltk::frame::Frame::default().with_label("Select the Game Release Year"), dimm::height_text());
+      fixed!(col, menu_year, fltk::menu::MenuButton::default(), dimm::height_button_wide());
+      col.fixed(&fltk::frame::Frame::default().with_label("Recommended Libraries"), dimm::height_text());
+      add!(col, browser, fltk::browser::CheckBrowser::default());
+    );
+    column!(col_btn,
+      fixed!(col_btn, btn_install, shared::fltk::button::rect::install(), dimm::width_button_rec());
+      col_btn.add(&Frame::default());
+    );
+    row.fixed(&col_btn, dimm::width_button_rec());
+  );
+  // Configure buttons
+  hover_blink!(btn_install);
+  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
+  ui.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineRom);
   // Select year
-  col.fixed(&fltk::frame::Frame::default().with_label("Select the Game Release Year"), dimm::height_text());
-  let mut menu_year = fltk::menu::MenuButton::default();
+  let mut menu_year = menu_year.clone();
   for i in 1993..2025 { menu_year.add_choice(&i.to_string()); }
   menu_year.set_label(&YEAR.lock().unwrap().to_string());
-  col.fixed(&menu_year, dimm::height_button_wide());
   menu_year.set_callback(#[clown] |e|
   {
     if let Some(choice) = e.choice()
@@ -433,15 +442,10 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
   });
   // Recommend libraries by year
   let vec_lib = get_recomends_winetricks(*YEAR.lock().unwrap());
-  col.fixed(&fltk::frame::Frame::default().with_label("Recommended Libraries"), dimm::height_text());
-  let mut browser = fltk::browser::CheckBrowser::default();
+  let mut browser = browser.clone();
   for lib in vec_lib { browser.add(lib, true); }
-  col.end();
-  // Thin line divisor
-  shared::fltk::separator::vertical(col.h())
-    .right_of(&col.as_base_widget(), dimm::border() / 2);
   // Install button to the right
-  shared::fltk::button::rect::install()
+  btn_install.clone()
     .right_of(&col.as_base_widget(), dimm::border())
     .with_color(Color::Green)
     .with_callback(move |_|
@@ -457,6 +461,7 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
           .filter(|e| clone_browser.checked(*e as i32))
           .map(|e| clone_browser.text(e as i32).unwrap())
         {
+          log_status!("Installing '{}'", lib);
           if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).chain(vec![lib.as_str()]).collect()) != 0
           {
             log_status!("Command exited with non-zero status");
@@ -465,13 +470,10 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
         tx.send_awake(common::Msg::WindActivate);
       });
     });
-  // Configure buttons
-  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineConfigure);
-  ui.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineRom);
 } // fn: winetricks }}}
 
 // rom_folder() {{{
-fn rom_folder(path_file_item: std::path::PathBuf) -> anyhow::Result<()>
+fn rom_folder(path_file_item: PathBuf) -> anyhow::Result<()>
 {
   // Get executable directory
   let mut path_dir_executable = db::global::get_current_project()?.path_dir_project.join(&path_file_item);
@@ -490,7 +492,7 @@ fn rom_folder(path_file_item: std::path::PathBuf) -> anyhow::Result<()>
 // rom_folder() }}}
 
 // rom_exec() {{{
-fn rom_exec(path_file_item: std::path::PathBuf) -> anyhow::Result<()>
+fn rom_exec(path_file_item: PathBuf) -> anyhow::Result<()>
 {
   // Set the selected binary as default
   gameimage::select::select("rom", &path_file_item)?;
@@ -520,7 +522,7 @@ fn rom_add() -> anyhow::Result<()>
 } // rom_add() }}}
 
 // rom_next() {{{
-fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,std::path::PathBuf)>) -> anyhow::Result<()>
+fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,PathBuf)>) -> anyhow::Result<()>
 {
   // Get selected entry
   let path_file_default =  match vec_radio_path.clone().into_iter().find(|e| e.0.is_toggled())
@@ -536,30 +538,45 @@ fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,std::path::PathBuf)>)
 // rom_entry() {{{
 fn rom_entry(tx: Sender<common::Msg>
   , executable_arguments: &std::collections::HashMap<String, String>
-  , item: &std::path::PathBuf
-  , group: &mut fltk::group::Pack
-  , vec_radio_path: &mut Vec<(fltk::button::RadioButton,std::path::PathBuf)>)
+  , item: &PathBuf
+  , vec_radio_path: &mut Vec<(fltk::button::RadioButton,PathBuf)>)
 {
-  // Create a row
-  let mut row = fltk::group::Flex::default()
-    .row()
-    .with_size(0, dimm::height_button_wide());
+  hpack!(col,
+    col.set_spacing(dimm::border_half());
+    row!(row_fst,
+      let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
+      row_fst.fixed(&btn_check, dimm::width_button_rec());
+      add!(row_fst, output, output::Output::default());
+      fixed!(row_fst, btn_folder, shared::fltk::button::rect::folder(), dimm::width_button_rec());
+      fixed!(row_fst, btn_run, shared::fltk::button::rect::play(), dimm::width_button_rec());
+    );
+    col.add(&row_fst.with_size(0, dimm::height_button_rec()));
+    col.add(&fltk::frame::Frame::default()
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Executable arguments").with_size(0,dimm::height_text()));
+    let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+    col.add(&input_arguments.clone().with_size(0,dimm::height_button_wide()).as_base_widget());
+    let mut btn_selectable = shared::fltk::button::rect::checkbutton()
+      .with_align(Align::Inside | Align::Left)
+      .with_color(Color::BackGround)
+      .with_label(" Make this executable selectable in the launcher");
+    col.add(&btn_selectable.clone().with_size(0, dimm::width_checkbutton()));
+    col.add(&shared::fltk::separator::horizontal(col.w()));
+    col.add(&Frame::default().with_size(0,0));
+  );
+  // Configure buttons
+  hover_blink!(btn_run);
+  hover_blink!(btn_folder);
   // Checkbutton
-  let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
   // Include values into shared vector
-  vec_radio_path.push((btn_check.clone(), path::PathBuf::from(item.to_owned())));
-  row.fixed(&btn_check, dimm::width_button_rec());
+  vec_radio_path.push((btn_check.clone(), PathBuf::from(item.to_owned())));
   // Label with file name
-  let mut output = output::Output::default();
-  let _ = output.insert(&item.string());
-  row.add(&output);
+  let _ = output.clone().insert(&item.string());
   // Button to open file in file manager
   let clone_item = item.clone();
-  let btn_folder = shared::fltk::button::rect::folder()
-    .with_callback(move |_| { let _ = rom_folder(clone_item.clone()); });
-  row.fixed(&btn_folder, dimm::width_button_rec());
+  btn_folder.clone().set_callback(move |_| { let _ = rom_folder(clone_item.clone()); });
   // Button to run the selected wine binary
-  let btn_run = shared::fltk::button::rect::play()
+  btn_run.clone()
     .with_color(Color::Green)
     .with_callback(#[clown] move |_|
     {
@@ -571,21 +588,8 @@ fn rom_entry(tx: Sender<common::Msg>
         tx.send_awake(common::Msg::WindActivate);
       });
     });
-  row.fixed(&btn_run, dimm::width_button_rec());
-  row.end();
-  group.add(&row);
-  // Retrieve or set executable arguments
-  let label_input = fltk::frame::Frame::default()
-    .with_size(0, dimm::height_text())
-    .with_align(Align::Inside | Align::Left)
-    .with_label("Executable arguments");
-  group.add(&label_input);
-  // Arguments input
+  // Configure arguments input
   let clone_item = item.clone();
-  let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default()
-    .with_size(0, dimm::height_button_wide())
-    .with_align(Align::TopLeft)
-    .into();
   input_arguments.on_keyup(move |e|
   {
     let path_file_db_args = get_path_db_args().unwrap_or_default();
@@ -600,23 +604,13 @@ fn rom_entry(tx: Sender<common::Msg>
       Err(e) => log_status!("Could not write to db: {}", e),
     };
   });
-  // Initial value
   if executable_arguments.contains_key(&item.string())
   {
     input_arguments.set_value(executable_arguments[&item.string()].as_str());
   } // if
-  group.add(&input_arguments.as_base_widget());
-  // Checkbutton for "selectable in launcher"
-  let mut btn_selectable = shared::fltk::button::rect::checkbutton()
-    .with_size(0, dimm::height_text()*2)
-    .with_align(Align::Inside | Align::Left)
-    .with_color(Color::BackGround)
-    .with_focus(false)
-    .with_label(" Make this executable selectable in the launcher");
+  // Configure selectable in launcher
   let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
-  // Initial value
   btn_selectable.set_value(shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default().contains_key(&output.value()));
-  // Callback
   btn_selectable.set_callback(move |e|
   {
     if e.value()
@@ -634,88 +628,100 @@ fn rom_entry(tx: Sender<common::Msg>
       } // if
     }
   });
-  group.add(&btn_selectable);
-  // Entry separator
-  let sep = fltk::frame::Frame::default()
-    .with_size(input_arguments.w(), dimm::height_sep())
-    .with_frame(FrameType::BorderBox)
-    .with_color(Color::BackGround.lighter());
-  group.add(&sep);
 } // rom_entry() }}}
+
+// rom_search() {{{
+fn rom_search(query: &str) -> Vec<PathBuf>
+{
+  gameimage::search::search_local("rom")
+    .unwrap_or_default()
+    .iter()
+    .filter(|e| e.string().to_lowercase().contains(&query.to_lowercase()))
+    .map(|e| e.clone())
+    .collect()
+} // rom_search() }}}
 
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
-  static QUERY : std::sync::LazyLock<std::sync::Mutex<String>> = std::sync::LazyLock::new(|| std::sync::Mutex::new(String::new()));
-
+  static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
+  static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
+  // Arguments database
   let path_file_db_args = match get_path_db_args()
   {
     Ok(e) => e,
     Err(e) => { log_status!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
   }; // match
-
+  // Filter installed files by QUERY
+  *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap());
+  // UI
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-
-  // Set previous frame
-  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineTricks);
-
-  let vec_roms: Vec<std::path::PathBuf> = gameimage::search::search_local("rom")
-    .unwrap_or_default()
-    .iter()
-    .filter(|e| e.string().to_lowercase().contains(&QUERY.lock().unwrap().to_lowercase().clone()))
-    .map(|e| e.clone())
-    .collect();
-
-  let (mut col_search, mut input_query) = shared::fltk::search_column(
-      ui.group.x()
-    , ui.group.y()
-    , ui.group.width() - dimm::border() - dimm::width_button_rec()
-    , ui.group.height()
-    , "Input a search term to filter executables, press enter to confirm"
+  // Layout
+  row!(row,
+    column!(col_scroll,
+      let (col_search, mut input_query) = shared::fltk::search_column2(
+        "Input a search term to filter executables, press enter to confirm"
+      );
+      col_search.end();
+      col_scroll.fixed(&col_search, col_search.h());
+      scroll!(scroll,
+        hpack!(col_content,);
+      );
+    );
+    row.add(&col_scroll);
+    column!(col_sidebar,
+      fixed!(col_sidebar, btn_add, shared::fltk::button::rect::add(), dimm::height_button_rec());
+      fixed!(col_sidebar, btn_refresh, shared::fltk::button::rect::refresh(), dimm::height_button_rec());
+    );
+    row.fixed(&col_sidebar, dimm::width_button_rec());
   );
-
+  // Configure buttons
+  hover_blink!(btn_add);
+  hover_blink!(btn_refresh);
+  // Configure scroll
+  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
+  scroll.resize_callback({
+    let mut col_content = col_content.clone();
+    move |_,x,y,w,_|
+    {
+      col_content.resize(x,y,w-dimm::border_half()*3,col_content.h());
+    }
+  });
+  // Configure buttons
+  ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawWineTricks);
   input_query.set_value(&QUERY.lock().unwrap().clone());
   input_query.on_keydown(move |e|
   {
-    if fltk::app::event_key() == fltk::enums::Key::Enter || e.value().is_empty()
+    let mut query = QUERY.lock().unwrap();
+    let key = fltk::app::event_key();
+    if key == fltk::enums::Key::Enter || e.value().is_empty()
     {
-      *QUERY.lock().unwrap() = e.value();
-      tx.send_activate(common::Msg::DrawWineRom);
+      if key != fltk::enums::Key::Enter && query.is_empty() { return; }
+      tx.send_awake(common::Msg::WindDeactivate);
+      *query = e.value();
+      let query = query.clone();
+      std::thread::spawn(move ||
+      {
+        *RESULTS.lock().unwrap() = rom_search(&query);
+        tx.send_awake(common::Msg::DrawWineRom);
+      });
     } // if
   });
   log_err!(input_query.take_focus());
-
-  // Create scrollbar
-  let mut scroll = fltk::group::Scroll::default()
-    .with_size(col_search.w(), 0);
-  scroll.set_type(fltk::group::ScrollType::VerticalAlways);
-  scroll.set_scrollbar_size(dimm::border());
-
   // Insert items in list of currently installed items
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
-
   let hash_argument_executable = match shared::db::kv::read(&path_file_db_args)
   {
     Ok(hash_argument_executable) => hash_argument_executable,
     Err(e) => { log_status!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
   }; // match
-
   // Create a column for the element entries
-  let mut col_entries = fltk::group::Pack::default()
-    .with_pos_of(&scroll)
-    .with_size(scroll.w() - dimm::border()*2 , 0);
-  col_entries.set_spacing(dimm::border());
-  for path in vec_roms
-  {
-    rom_entry(tx.clone(), &hash_argument_executable, &path, &mut col_entries, &mut vec_radio_path.lock().unwrap())
-  } // for
-  col_entries.end();
-
-  scroll.add(&col_entries.as_base_widget());
-  scroll.end();
-  col_search.add(&scroll);
-  col_search.end();
-
+  rescope!(col_content,
+    for path in RESULTS.lock().unwrap().iter()
+    {
+      rom_entry(tx.clone(), &hash_argument_executable, &path, &mut vec_radio_path.lock().unwrap())
+    } // for
+  );
   // Set callbacks for toggle group
   for guard in vec_radio_path.lock().unwrap().iter_mut()
   {
@@ -725,31 +731,20 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       e.toggle(true);
     });
   } // for
-
-  let mut col_sidebar = fltk::group::Column::default()
-    .right_of(&col_search, dimm::border())
-    .with_size(dimm::width_button_rec(), col_search.h());
-  col_sidebar.set_spacing(dimm::border());
-
   // Add new item
   let clone_tx = tx.clone();
-  let btn_add = shared::fltk::button::rect::add()
+  btn_add.clone()
     .with_color(Color::Green)
     .with_callback(move |_|
     {
       clone_tx.send_awake(common::Msg::WindDeactivate);
       std::thread::spawn(move ||{ log_err!(rom_add()); clone_tx.send_activate(common::Msg::DrawWineRom); });
     });
-  col_sidebar.fixed(&btn_add, dimm::height_button_rec());
-
   // Refresh executable list
   let clone_tx = tx.clone();
-  let btn_refresh = shared::fltk::button::rect::refresh()
+  btn_refresh.clone()
     .with_color(Color::Blue)
     .with_callback(move |_| { clone_tx.send_awake(common::Msg::DrawWineRom); });
-  col_sidebar.fixed(&btn_refresh, dimm::height_button_rec());
-  col_sidebar.end();
-
   // Go to next frame iff a default executable was selected
   // ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineCompress);
   let clone_tx = tx.clone();
