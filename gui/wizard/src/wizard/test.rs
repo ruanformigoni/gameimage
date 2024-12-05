@@ -8,6 +8,7 @@ use fltk::{
 use shared::fltk::SenderExt;
 use shared::fltk::WidgetExtExtra;
 use shared::std::PathBufExt;
+use shared::{column,row,fixed,hover_blink};
 
 use crate::gameimage;
 use crate::dimm;
@@ -23,24 +24,27 @@ pub fn test(tx: Sender<common::Msg>
   , msg_next: common::Msg)
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
-
-  // Set previous/next frame
+  // Layout
+  column!(col,
+    let term = frame::term::Term::default();
+    row!(row,
+      row.add(&fltk::frame::Frame::default());
+      fixed!(row, btn_test, shared::fltk::button::wide::default(), dimm::width_button_wide());
+      row.add(&fltk::frame::Frame::default());
+    );
+    col.fixed(&row, dimm::height_button_wide());
+  );
+  // Cofigure buttons
+  hover_blink!(btn_test);
   ui.btn_prev.clone().emit(tx.clone(), msg_prev);
   ui.btn_next.clone().emit(tx.clone(), msg_next);
 
-  let mut term = frame::term::Term::new(dimm::border()
-    , ui.group.w()
-    , ui.group.h() - dimm::border() - dimm::height_button_wide()
-    , ui.group.x()
-    , ui.group.y());
-
   // Add a 'test' button
-  let mut btn_test = shared::fltk::button::wide::default()
-    .below_center_of(&term.group, dimm::border())
+  let clone_tx = tx.clone();
+  let mut term = term.clone();
+  let mut btn_test = btn_test.clone()
     .with_label("Test")
     .with_color(Color::Green);
-
-  let clone_tx = tx.clone();
   btn_test.set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
