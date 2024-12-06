@@ -236,8 +236,8 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
       let path_file_db = get_path_db_env().unwrap_or_default();
       match shared::db::kv::erase(&path_file_db, clone_key.clone())
       {
-        Ok(_) => println!("Erased key '{}'", clone_key),
-        Err(e) => println!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
+        Ok(_) => log_status!("Erased key '{}'", clone_key),
+        Err(e) => log_status!("Failed to erase key '{}' with error '{}'", clone_key, e.to_string()),
       } // if
       clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
@@ -251,7 +251,6 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
     {
       for (key, val) in entries
       {
-        println!("Key: {} Val: {}", key, val);
         let group = f_make_entry(key, val);
         col_content.add(&group);
       } // for
@@ -275,8 +274,8 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
       if key.is_empty() { return; }
       match shared::db::kv::write(&clone_path_file_db, &key, &value)
       {
-        Ok(_) => println!("Set key '{}' with value '{}'", key.clone(), value.clone()),
-        Err(e) => println!("Failed to set key '{}' with error '{}'", key, e.to_string()),
+        Ok(_) => log_status!("Set key '{}' with value '{}'", key.clone(), value.clone()),
+        Err(e) => log_status!("Failed to set key '{}' with error '{}'", key, e.to_string()),
       } // if
       clone_tx.send_awake(common::Msg::DrawWineEnvironment);
     });
@@ -617,14 +616,14 @@ fn rom_entry(tx: Sender<common::Msg>
     {
       if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &output.value(), &"1".to_string())
       {
-        eprintln!("Could not insert key '{}' in db: {}", output.value(), e);
+        log_status!("Could not insert key '{}' in db: {}", output.value(), e);
       } // if
     }
     else
     {
       if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, output.value())
       {
-        eprintln!("Could not remove key '{}' from db: {}", output.value(), e);
+        log_status!("Could not remove key '{}' from db: {}", output.value(), e);
       } // if
     }
   });
