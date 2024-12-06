@@ -8,6 +8,7 @@ use fltk::
 
 use crate::dimm;
 use crate::svg;
+use crate::hover_blink;
 
 #[derive(Clone)]
 pub struct KeyValue
@@ -24,6 +25,11 @@ pub fn key_value() -> KeyValue
       dimm::width_button_wide() * 4 + dimm::border() * 3
     , dimm::height_button_wide() * 3 + dimm::border() * 4
   );
+  // Window should be de-attached from other windows
+  if let Some(mut parent) = wind.parent()
+  {
+    parent.remove(&wind);
+  } // if
   // Window icon
   if let Some(image) = fltk::image::SvgImage::from_data(svg::ICON_GAMEIMAGE).ok()
   {
@@ -52,6 +58,7 @@ pub fn key_value() -> KeyValue
     .with_size(dimm::width_button_wide(), dimm::height_button_wide())
     .below_of(&label_value, dimm::border())
     .with_label("OK");
+  hover_blink!(btn_ok);
   btn_ok.set_pos(wind.w() / 2 - btn_ok.w() / 2, btn_ok.y());
   btn_ok.set_color(Color::Green);
   wind.end();
