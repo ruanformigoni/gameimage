@@ -4,12 +4,14 @@ use fltk::{
   app::Sender,
   browser::MultiBrowser,
   button::Button,
+  group::Flex,
   dialog,
   enums::{FrameType,Color},
 };
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
+use shared::{hover_blink,column,row,add,fixed};
 
 use crate::dimm;
 use crate::common;
@@ -20,7 +22,8 @@ use crate::gameimage;
 // struct Install {{{
 pub struct Install
 {
-  pub frame_list : MultiBrowser,
+  pub col     : Flex,
+  pub list    : MultiBrowser,
   pub btn_add : Button,
   pub btn_del : Button,
 } // struct Install }}}
@@ -38,26 +41,35 @@ pub fn install(tx: Sender<common::Msg>
   // Set previous frame
   ui.btn_prev.clone().emit(tx.clone(), msg_prev);
   ui.btn_next.clone().emit(tx.clone(), msg_next);
-
+  // Layout
+  column!(col,
+    row!(row,
+      add!(row, list, MultiBrowser::default());
+      column!(col_buttons,
+        fixed!(col_buttons, btn_add, shared::fltk::button::rect::add(), dimm::height_button_rec());
+        fixed!(col_buttons, btn_del, shared::fltk::button::rect::del(), dimm::height_button_rec());
+        col_buttons.add(&fltk::frame::Frame::default());
+      );
+      row.fixed(&col_buttons, dimm::width_button_rec());
+    );
+  );
+  // Buttons
+  hover_blink!(btn_add);
+  hover_blink!(btn_del);
   // List of the currently installed items
-  let mut frame_list = MultiBrowser::default()
-    .with_size(ui.group.width() - dimm::border() - dimm::width_button_rec(), ui.group.height())
-    .with_pos_of(&ui.group);
-  frame_list.set_frame(FrameType::BorderBox);
-  frame_list.set_text_size(dimm::height_text());
-
+  let mut list = list.clone();
+  list.set_frame(FrameType::BorderBox);
+  list.set_text_size(dimm::height_text());
   // Insert items in list of currently installed items
   match gameimage::search::search_local(label)
   {
-    Ok(vec_items) => for item in vec_items { frame_list.add(&item.string()); },
+    Ok(vec_items) => for item in vec_items { list.add(&item.string()); },
     Err(e) => log_status!("Could not get items to insert: {}", e),
   }; // match
-
   // Add new item
   let clone_tx = tx.clone();
   let clone_label : String = label.to_string();
-  let btn_add = shared::fltk::button::rect::add()
-    .right_of(&frame_list, dimm::border())
+  let btn_add = btn_add.clone()
     .with_color(Color::Green)
     .with_callback(move |_|
     {
@@ -66,23 +78,18 @@ pub fn install(tx: Sender<common::Msg>
         , "*"
         , dialog::FileChooserType::Multi
         , "Pick one or multiple files");
-
       // Start dialog
       chooser.show();
-
       // Wait for choice(s)
       while chooser.shown() { fltk::app::wait(); } // while
-
       // Check if choice is valid
       if chooser.value(1).is_none()
       {
         log_status!("No file selected");
         return;
       } // if
-
       // Install files
       clone_tx.send_awake(common::Msg::WindDeactivate);
-
       let count = chooser.count()+1;
       let clone_label = clone_label.clone();
       let mut vec_entries : Vec<String> = vec![];
@@ -97,28 +104,23 @@ pub fn install(tx: Sender<common::Msg>
         clone_tx.send_activate(msg_curr);
       });
     });
-
   // Erase package
-  let mut btn_del = shared::fltk::button::rect::del()
-    .below_of(&btn_add, dimm::border())
+  let mut btn_del = btn_del.clone()
     .with_color(Color::Red);
   let mut clone_output_status = ui.status.clone();
   let clone_label = label.to_string();
-  let clone_frame_list = frame_list.clone();
+  let clone_frame_list = list.clone();
   let clone_tx = tx.clone();
   btn_del.set_callback(move |_|
   {
     clone_tx.send_awake(common::Msg::WindDeactivate);
-
     let vec_indices = clone_frame_list.selected_items();
-
     if vec_indices.len() == 0
     {
       clone_output_status.set_value("No item selected for deletion");
       clone_tx.send_awake(common::Msg::WindActivate);
       return;
     } // if
-
     // Remove
     let clone_tx = clone_tx.clone();
     let clone_label = clone_label.clone();
@@ -137,8 +139,7 @@ pub fn install(tx: Sender<common::Msg>
       clone_tx.send_activate(msg_curr);
     }); // std::thread
   }); // set_callback
-
-  (ui, Install{ frame_list, btn_add, btn_del })
+  (ui, Install{ col, list, btn_add, btn_del })
 }
 // }}}
 
