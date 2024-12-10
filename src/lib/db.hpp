@@ -143,7 +143,7 @@ std::expected<V, std::string> Db::value(Ks&&... ks) noexcept
     // Use keys to access nested json elements
     auto f_access_impl = [&]<typename T, typename U>(T& value, U&& u)
     {
-      ns_log::write('i', "Access '{}'"_fmt(u));
+      // ns_log::write('i', "Access '{}'"_fmt(u));
       // Check if json is still valid
       qreturn_if(not value.has_value());
       // Get json database
