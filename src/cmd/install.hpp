@@ -145,10 +145,12 @@ void emulator_install_file(ns_db::ns_build::Metadata& db_metadata, Op const& op,
   // Path to project
   ns_log::write('i', "Copy ", path_file_src, " to ", path_file_dst);
 
-  // Check if src and dst are the same
-  ereturn_if( path_file_src == path_file_dst, "Src and dst are the same for '{}'"_fmt(path_file_src));
-
-  if ( auto ret = ns_fs::ns_path::file_exists<false>(path_file_src); ret._bool )
+  // // Check if src and dst are the same
+  if ( path_file_src == path_file_dst )
+  {
+    ns_log::write('i', "Src and dst are the same for '{}'"_fmt(path_file_src));
+  }
+  else if ( auto ret = ns_fs::ns_path::file_exists<false>(path_file_src); ret._bool )
   {
     ns_log::write('i', "Src file is a regular file with path: '", path_file_src, "'");
     // Update to canonical
@@ -314,41 +316,32 @@ inline void remote(Op const& op, std::vector<std::string> vec_cores)
   auto db_metadata = db_build->find(db_build->project);
   auto db_project = ns_db::ns_project::read();
   ethrow_if(not db_project, "Could not open project database '{}'"_fmt(db_project.error()));
-
   // Core dir
   ethrow_if(db_project->platform != ns_enum::Platform::RETROARCH, "Core install is only available for retroarch" );
   ethrow_if(op != Op::CORE, "Only download of cores is available" );
-
   // Fetch cores / urls
   auto expected_vec_core_url = ns_fetch::fetch_cores();
   ethrow_if(not expected_vec_core_url, expected_vec_core_url.error());
-
-  // Put in a set
-  std::set<std::string> set_cores(vec_cores.begin(), vec_cores.end());
-
   // Install if match
-  for( auto i : *expected_vec_core_url )
+  for( auto [core,url] : *expected_vec_core_url )
   {
-    if ( ! set_cores.contains(i.core) )
-    {
-      ns_log::write('i', "Skip ", i.core);
-      continue;
-    } // if
-
-    fs::path path_file_out = db_metadata.path_dir_project / db_project->path_file_core / i.core;
-    ns_log::write('i', "Install ", i.core, " to ", path_file_out);
-    auto expected_fetch_core = ns_fetch::fetch_file_from_url(path_file_out, i.url);
+    // Skip un-selected core
+    qcontinue_if(std::ranges::find(vec_cores, core) == std::ranges::end(vec_cores));
+    // Check file type
+    econtinue_if (not core.ends_with(".zip"), "Invalid file format, it should be 'zip'");
+    // Create output file path
+    fs::path path_file_zip = db_metadata.path_dir_project / db_project->path_dir_core / core;
+    fs::path path_file_core = db_metadata.path_dir_project / db_project->path_dir_core / fs::path{core}.replace_extension("");
+    ns_log::write('i', "Install ", path_file_zip, " to ", path_file_core);
+    // Download file
+    auto expected_fetch_core = ns_fetch::fetch_file_from_url(path_file_zip, url);
     econtinue_if(not expected_fetch_core, expected_fetch_core.error());
-    // Extract & install
-    if ( i.core.ends_with(".zip") )
-    {
-      // Extract zip
-      ns_zip::extract(path_file_out, path_file_out.parent_path());
-      // Erase zip
-      fs::remove(path_file_out);
-      // Install (file ends with .so.zip, remove the .zip to the get extracted file name)
-      install(op, std::vector<std::string>{path_file_out.replace_extension("")});
-    } // if
+    // Extract zip
+    ns_zip::extract(path_file_zip, path_file_core.parent_path());
+    // Erase zip
+    fs::remove(path_file_zip);
+    // Install (file ends with .so.zip, remove the .zip to the get extracted file name)
+    install(op, std::vector<std::string>{path_file_core});
   } // for
 
 } // remote() }}}
