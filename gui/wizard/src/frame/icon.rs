@@ -15,6 +15,7 @@ use shared::fltk::WidgetExtExtra;
 
 use anyhow::anyhow as ah;
 
+use shared::hover_blink;
 use shared::fltk::SenderExt;
 use shared::std::PathBufExt;
 
@@ -131,6 +132,7 @@ pub fn icon(tx: Sender<common::Msg>
   row.add(&input_icon);
   let mut btn_search = shared::fltk::button::rect::search()
     .with_color(Color::Green);
+  hover_blink!(btn_search);
   row.fixed(&btn_search, dimm::width_button_rec());
   row.end();
   col.fixed(&row, dimm::height_button_wide() + dimm::border()/2);
