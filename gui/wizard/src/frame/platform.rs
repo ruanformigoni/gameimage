@@ -204,11 +204,11 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::group::Flex) -> anyhow:
   let mut col = fltk::group::Flex::new(widget.x(), widget.y(), widget.w(), widget.h(), "");
   col.set_type(PackType::Vertical);
   col.set_spacing(dimm::border());
-  let row_linux         = platform_add(tx, common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
-  let mut row_rpcs3     = platform_add(tx, common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
-  let mut row_retroarch = platform_add(tx, common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));
-  let mut row_pcsx2     = platform_add(tx, common::Platform::Pcsx2, vec_platforms.contains(&common::Platform::Pcsx2));
-  let mut row_wine      = platform_add_wine(tx, &db_fetch.wine.layer, vec_platforms.contains(&common::Platform::Wine));
+  let row_linux     = platform_add(tx, common::Platform::Linux, vec_platforms.contains(&common::Platform::Linux));
+  let row_rpcs3     = platform_add(tx, common::Platform::Rcps3, vec_platforms.contains(&common::Platform::Rcps3));
+  let row_retroarch = platform_add(tx, common::Platform::Retroarch, vec_platforms.contains(&common::Platform::Retroarch));
+  let row_pcsx2     = platform_add(tx, common::Platform::Pcsx2, vec_platforms.contains(&common::Platform::Pcsx2));
+  let row_wine      = platform_add_wine(tx, &db_fetch.wine.layer, vec_platforms.contains(&common::Platform::Wine));
   col.fixed(&row_linux, dimm::height_button_wide());
   col.fixed(&row_rpcs3, dimm::height_button_wide());
   col.fixed(&row_retroarch, dimm::height_button_wide());
@@ -216,10 +216,10 @@ fn platform_list(tx: Sender<common::Msg>, widget: &fltk::group::Flex) -> anyhow:
   col.fixed(&row_wine, dimm::height_button_wide()*2 + dimm::border());
   if ! vec_platforms.contains(&common::Platform::Linux)
   {
-    row_rpcs3.deactivate();
-    row_retroarch.deactivate();
-    row_pcsx2.deactivate();
-    row_wine.deactivate();
+    shared::fltk::set_active(row_rpcs3, false);
+    shared::fltk::set_active(row_retroarch, false);
+    shared::fltk::set_active(row_pcsx2, false);
+    shared::fltk::set_active(row_wine, false);
   } // if
   col.end();
 
