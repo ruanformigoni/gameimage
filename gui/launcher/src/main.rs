@@ -45,7 +45,7 @@ pub fn new() -> Self
     .with_label("GameImage")
     .with_size(dimm::width_launcher(), dimm::height_launcher())
     .center_screen();
-  wind.make_resizable(true);
+  wind.make_resizable(false);
 
   shared::fltk::theme();
 
