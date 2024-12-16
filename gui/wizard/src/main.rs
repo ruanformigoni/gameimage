@@ -97,9 +97,10 @@ impl Gui
       ui.btn_next.set_callback(|_|{});
       ui.btn_next.set_label("Next");
       ui.btn_prev.set_label("Prev");
-      ui.btn_next.show();
       ui.btn_prev.show();
       ui.btn_next.show();
+      ui.btn_prev.activate();
+      ui.btn_next.activate();
       ui
     };
 

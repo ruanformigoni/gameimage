@@ -36,8 +36,8 @@ pub fn finish(tx: Sender<common::Msg>, title: &str)
 
   let mut ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
-  // Hide prev button
-  ui.btn_prev.hide();
+  // Deactivate prev button
+  ui.btn_prev.deactivate();
 
   // Set next button to start over
   ui.btn_next.emit(tx, common::Msg::DrawWelcome);

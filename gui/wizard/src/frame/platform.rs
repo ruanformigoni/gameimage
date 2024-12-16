@@ -234,7 +234,7 @@ pub fn platform(tx: Sender<common::Msg>, title: &str)
   log_err_status!(common::dir_build());
   // Configure buttons
   ui.btn_prev.clone().emit(tx, common::Msg::DrawCreator);
-  ui.btn_next.clone().hide();
+  ui.btn_next.clone().deactivate();
   // List platforms to fetch
   log_err_status!(platform_list(tx, &ui.group));
 }

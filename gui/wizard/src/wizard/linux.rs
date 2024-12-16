@@ -197,7 +197,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   );
   // Configure navigation buttons
   ui.btn_prev.clone().emit(tx.clone(), common::Msg::DrawLinuxMethod);
-  ui.btn_next.clone().hide();
+  ui.btn_next.clone().deactivate();
   // Currently running process
   let arc_process : Arc<Mutex<Option<Arc<Mutex<std::process::Child>>>>> = Arc::new(Mutex::new(None));
   // Field that shows the currently selected file

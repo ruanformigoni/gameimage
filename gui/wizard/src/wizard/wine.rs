@@ -190,7 +190,7 @@ pub fn environment(tx: Sender<common::Msg>, title: &str)
   // Buttons
   hover_blink!(btn_add);
   // Configure footer
-  ui.btn_next.clone().hide();
+  ui.btn_next.clone().deactivate();
   ui.btn_prev.clone().emit(tx, common::Msg::DrawWineConfigure);
   // Resize content to scroll width
   scroll.set_type(fltk::group::ScrollType::VerticalAlways);
