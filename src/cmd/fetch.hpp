@@ -90,7 +90,14 @@ struct fetchlist_layer_ret_t
   // Fetch file
   cpr::Response r = cpr::Download(ofile, url, cpr::ProgressCallback{fetch_callback, reinterpret_cast<intptr_t>(&ofile)});
   // Check for success
-  qreturn_if(r.status_code != 200,  std::unexpected("Failure to fetch file '{}' with code '{}'"_fmt(path_file, r.status_code)));
+  if ( r.status_code != 200 )
+  {
+    // Remove partial file
+    ofile.close();
+    fs::remove(path_file);
+    // Return failure
+    return std::unexpected("Failure to fetch file '{}' with code '{}'"_fmt(path_file, r.status_code));
+  } // if
   // Set to progress 100%
   if ( send_ipc ) { ns_ipc::ipc().send(100); }
   ns_log::write('i', "Download progress: 100%");
