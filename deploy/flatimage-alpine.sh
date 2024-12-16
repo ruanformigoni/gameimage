@@ -154,7 +154,8 @@ chmod +x "$IMAGE"
 "$IMAGE" fim-exec cp -r "$BUILD_DIR"/app /opt/gameimage
 
 # Create novel image layer
-"$IMAGE" fim-commit
+## TODO Remove '|| true' after commit directory erase errors become warnings
+"$IMAGE" fim-commit || true
 
 mv "$IMAGE" "$BUILD_DIR"/gameimage
 
