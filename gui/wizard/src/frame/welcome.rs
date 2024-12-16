@@ -33,7 +33,7 @@ fn check_version() -> anyhow::Result<()>
   }; // match
 
   let version = db_fetch.version;
-  if ! version.starts_with("1.5")
+  if ! version.starts_with("1.6")
   {
     return Err(ah!("error: you should update to version {}", version));
   } // if
