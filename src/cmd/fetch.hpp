@@ -41,20 +41,20 @@ enum class UrlType
 namespace
 {
 
-// struct fetchlist_layer_ret_t {{{
-struct fetchlist_layer_ret_t
+// struct sources_layer_ret_t {{{
+struct sources_layer_ret_t
 {
   fs::path path;
   cpr::Url url;
 }; // }}}
 
-// get_path_fetchlist() {{{
-[[nodiscard]] inline std::expected<fs::path, std::string> get_path_fetchlist()
+// get_path_sources() {{{
+[[nodiscard]] inline std::expected<fs::path, std::string> get_path_sources()
 {
   auto db_build = ns_db::ns_build::read();
   qreturn_if(not db_build, std::unexpected(db_build.error()));
   return db_build->path_dir_build / "fetch.json";
-} // get_path_fetchlist() }}}
+} // get_path_sources() }}}
 
 // fetch_file_from_url() {{{
 [[nodiscard]] inline std::expected<fs::path, std::string> fetch_file_from_url(fs::path const& path_file
@@ -154,14 +154,14 @@ struct fetchlist_layer_ret_t
   return std::nullopt;
 } // }}}
 
-// fetchlist_layer() {{{
-[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer(ns_enum::Platform const& platform)
+// sources_layer() {{{
+[[nodiscard]] inline std::expected<sources_layer_ret_t, std::string> sources_layer(ns_enum::Platform const& platform)
 {
   // Temporary file with fetch list
-  auto opt_path_file_fetchlist = get_path_fetchlist();
-  qreturn_if(not opt_path_file_fetchlist, std::unexpected(opt_path_file_fetchlist.error()));
+  auto opt_path_file_sources = get_path_sources();
+  qreturn_if(not opt_path_file_sources, std::unexpected(opt_path_file_sources.error()));
   // Open file as database
-  auto db_fetch = ns_db::ns_fetch::read(*opt_path_file_fetchlist);
+  auto db_fetch = ns_db::ns_fetch::read(*opt_path_file_sources);
   ethrow_if(not db_fetch, db_fetch.error());
   // Get wine distribution
   auto db_build = ns_db::ns_build::read();
@@ -173,17 +173,17 @@ struct fetchlist_layer_ret_t
   // Show url
   ns_log::write('i', "url to fetch: ", str_url_layer);
   fs::path path_dir_dst = (platform == ns_enum::Platform::LINUX)?
-      opt_path_file_fetchlist->parent_path() / "cache/linux.flatimage"
-    : opt_path_file_fetchlist->parent_path() / "cache/{}.layer"_fmt(ns_enum::to_string_lower(platform));
+      opt_path_file_sources->parent_path() / "cache/linux.flatimage"
+    : opt_path_file_sources->parent_path() / "cache/{}.layer"_fmt(ns_enum::to_string_lower(platform));
   // Create destination / url pair
-  return fetchlist_layer_ret_t { .path = path_dir_dst, .url = cpr::Url(str_url_layer), };
-} // fetchlist_layer() }}}
+  return sources_layer_ret_t { .path = path_dir_dst, .url = cpr::Url(str_url_layer), };
+} // sources_layer() }}}
 
 // fetch_layer() {{{
-[[nodiscard]] inline std::expected<fetchlist_layer_ret_t, std::string> fetch_layer(ns_enum::Platform platform)
+[[nodiscard]] inline std::expected<sources_layer_ret_t, std::string> fetch_layer(ns_enum::Platform platform)
 {
   // Resolve URL
-  auto expected_path_and_url_layer = fetchlist_layer(platform);
+  auto expected_path_and_url_layer = sources_layer(platform);
   qreturn_if(not expected_path_and_url_layer, std::unexpected(expected_path_and_url_layer.error()));
   auto [path_target, url] = *expected_path_and_url_layer;
   // Fetch
@@ -201,37 +201,37 @@ struct fetchlist_layer_ret_t
 inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_cores()
 {
   // Define sources file
-  auto opt_path_file_fetchlist = get_path_fetchlist();
-  qreturn_if(not opt_path_file_fetchlist, std::unexpected(opt_path_file_fetchlist.error()));
+  auto opt_path_file_sources = get_path_sources();
+  qreturn_if(not opt_path_file_sources, std::unexpected(opt_path_file_sources.error()));
   // Fetch from remote
-  if ( auto expected = fetch_file_from_url(*opt_path_file_fetchlist, cpr::Url{URL_FETCH}); not expected)
+  if ( auto expected = fetch_file_from_url(*opt_path_file_sources, cpr::Url{URL_FETCH}); not expected)
   {
     return std::unexpected(expected.error());
   } // if
   // Open as a database
-  auto database = ns_db::ns_fetch::read(*opt_path_file_fetchlist);
+  auto database = ns_db::ns_fetch::read(*opt_path_file_sources);
   ethrow_if(not database, database.error());
   // Return cores
   return database->get_platform(ns_enum::Platform::RETROARCH)->get_cores();
 } // fetch_cores() }}}
 
-// fetchlist() {{{
-inline std::error<std::string> fetchlist()
+// sources() {{{
+inline std::error<std::string> sources()
 {
   // Define sources file
-  auto opt_path_file_fetchlist = get_path_fetchlist();
-  qreturn_if(not opt_path_file_fetchlist, opt_path_file_fetchlist.error());
-  auto expected = fetch_file_from_url(*opt_path_file_fetchlist, cpr::Url{URL_FETCH});
+  auto opt_path_file_sources = get_path_sources();
+  qreturn_if(not opt_path_file_sources, opt_path_file_sources.error());
+  auto expected = fetch_file_from_url(*opt_path_file_sources, cpr::Url{URL_FETCH});
   qreturn_if(not expected, expected.error());
   return std::nullopt;
-} // fetchlist() }}}
+} // sources() }}}
 
 // fetch() {{{
 inline void fetch(ns_enum::Platform platform)
 {
-  std::expected<fetchlist_layer_ret_t, std::string> fetchlist_layer;
-  fetchlist_layer = fetch_layer(platform);
-  ethrow_if(not fetchlist_layer, fetchlist_layer.error());
+  std::expected<sources_layer_ret_t, std::string> sources_layer;
+  sources_layer = fetch_layer(platform);
+  ethrow_if(not sources_layer, sources_layer.error());
 } // fetch() }}}
 
 // installed() {{{
@@ -258,7 +258,7 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
   ns_log::write('i', "Only checking SHA");
 
   // Get layer
-  auto expected_path_and_url_layer = fetchlist_layer(platform);
+  auto expected_path_and_url_layer = sources_layer(platform);
   qreturn_if(expected_path_and_url_layer, expected_path_and_url_layer.error());
 
   // Check sha for layer
@@ -272,7 +272,7 @@ inline std::error<std::string> sha(ns_enum::Platform platform)
 // ipc() {{{
 inline void ipc(ns_enum::Platform platform , ns_enum::IpcQuery entry_ipc_query)
 {
-  auto expected_path_and_url_layer = fetchlist_layer(platform);
+  auto expected_path_and_url_layer = sources_layer(platform);
   ethrow_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
   ns_ipc::ipc().send((entry_ipc_query == ns_enum::IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
 } // ipc() }}}
