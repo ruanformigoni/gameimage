@@ -198,7 +198,7 @@ struct sources_layer_ret_t
 } // anonymous namespace
 
 // fetch_cores() {{{
-inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_cores()
+[[nodiscard]] inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_cores()
 {
   // Define sources file
   auto opt_path_file_sources = get_path_sources();
@@ -216,26 +216,27 @@ inline std::expected<std::vector<ns_db::ns_fetch::CoreUrl>,std::string> fetch_co
 } // fetch_cores() }}}
 
 // sources() {{{
-inline std::error<std::string> sources()
+[[nodiscard]] inline std::expected<void,std::string> sources()
 {
   // Define sources file
   auto opt_path_file_sources = get_path_sources();
-  qreturn_if(not opt_path_file_sources, opt_path_file_sources.error());
+  qreturn_if(not opt_path_file_sources, std::unexpected(opt_path_file_sources.error()));
   auto expected = fetch_file_from_url(*opt_path_file_sources, cpr::Url{URL_FETCH});
-  qreturn_if(not expected, expected.error());
-  return std::nullopt;
+  qreturn_if(not expected, std::unexpected(expected.error()));
+  return {};
 } // sources() }}}
 
 // fetch() {{{
-inline void fetch(ns_enum::Platform platform)
+[[nodiscard]] inline std::expected<void,std::string> fetch(ns_enum::Platform platform)
 {
   std::expected<sources_layer_ret_t, std::string> sources_layer;
   sources_layer = fetch_layer(platform);
-  ethrow_if(not sources_layer, sources_layer.error());
+  qreturn_if(not sources_layer, std::unexpected(sources_layer.error()));
+  return {};
 } // fetch() }}}
 
 // installed() {{{
-inline std::vector<ns_enum::Platform> installed()
+[[nodiscard]] inline std::vector<ns_enum::Platform> installed()
 {
   // Get path to cache directory
   auto db_build = ns_db::ns_build::read();
@@ -251,31 +252,19 @@ inline std::vector<ns_enum::Platform> installed()
 } // installed() }}}
 
 // sha() {{{
-inline std::error<std::string> sha(ns_enum::Platform platform)
+[[nodiscard]] inline std::expected<void,std::string> sha(ns_enum::Platform platform)
 {
   // Log
   ns_log::write('i', "platform: ", ns_enum::to_string_lower(platform));
   ns_log::write('i', "Only checking SHA");
-
   // Get layer
-  auto expected_path_and_url_layer = sources_layer(platform);
-  qreturn_if(expected_path_and_url_layer, expected_path_and_url_layer.error());
-
+  auto path_and_url_layer = ehope(sources_layer(platform));
   // Check sha for layer
-  qreturn_if(not check_file(expected_path_and_url_layer->path, expected_path_and_url_layer->url)
-    , "Failed to check file '{}'"_fmt(expected_path_and_url_layer->path)
+  qreturn_if(not check_file(path_and_url_layer.path, path_and_url_layer.url)
+    , std::unexpected("Failed to check file '{}'"_fmt(path_and_url_layer.path))
   );
-
-  return std::nullopt;
+  return {};
 } // sha() }}}
-
-// ipc() {{{
-inline void ipc(ns_enum::Platform platform , ns_enum::IpcQuery entry_ipc_query)
-{
-  auto expected_path_and_url_layer = sources_layer(platform);
-  ethrow_if(not expected_path_and_url_layer, expected_path_and_url_layer.error());
-  ns_ipc::ipc().send((entry_ipc_query == ns_enum::IpcQuery::FILES)? expected_path_and_url_layer->path.string() : expected_path_and_url_layer->url.str());
-} // ipc() }}}
 
 } // namespace ns_fetch
 

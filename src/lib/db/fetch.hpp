@@ -74,7 +74,7 @@ class Fetch
 // read_impl() {{{
 inline std::expected<Fetch, std::string> read_impl(fs::path const& path_file_db)
 {
-  return ns_db::open<std::expected<Fetch, std::string>>(path_file_db, [&](auto&& db) -> std::expected<Fetch, std::string>
+  return ns_db::from_file<std::expected<Fetch, std::string>>(path_file_db, [&](auto&& db) -> std::expected<Fetch, std::string>
   {
     Fetch fetch;
     // Linux

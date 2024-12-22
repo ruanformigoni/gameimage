@@ -109,7 +109,7 @@ pub fn welcome(tx: Sender<common::Msg>, title: &str)
       Err(e) => log_status!("Error to initialize build directory: {}", e)
     }; // match
     // Fetch fetch list
-    match gameimage::fetch::fetchlist()
+    match gameimage::fetch::sources()
     {
       Ok(code) => log_status!("Fetch exited with code {}", code),
       Err(e) => log_status!("Error to initialize build directory: {}", e)

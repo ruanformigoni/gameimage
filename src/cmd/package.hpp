@@ -87,7 +87,7 @@ inline void package_projects(std::vector<std::string> const& vec_project, ns_db:
 } // package_project() }}}
 
 // package() {{{
-inline void package(std::string const& str_name, std::string const& str_projects)
+inline void package(std::string const& str_name, std::vector<std::string> const& vec_projects)
 {
   // Open databases
   auto db_build = ns_db::ns_build::read();
@@ -105,12 +105,9 @@ inline void package(std::string const& str_name, std::string const& str_projects
     , fs::copy_options::overwrite_existing
   );
 
-  // Get list of projects
-  auto vec_project = ns_vector::from_string(str_projects, ':');
-
   // Get list of platforms
   std::set<ns_enum::Platform> set_platforms = db_build->projects
-    | std::views::filter([&](ns_db::ns_build::Metadata const& e){ return std::ranges::contains(vec_project, e.name); })
+    | std::views::filter([&](ns_db::ns_build::Metadata const& e){ return std::ranges::contains(vec_projects, e.name); })
     | std::views::transform([](ns_db::ns_build::Metadata const& e){ return e.platform; })
     | std::ranges::to<std::set<ns_enum::Platform>>();
 
@@ -134,7 +131,7 @@ inline void package(std::string const& str_name, std::string const& str_projects
   package_platforms(set_platforms, *db_build);
 
   // Include projects
-  package_projects(vec_project, *db_build);
+  package_projects(vec_projects, *db_build);
 
   // Include launcher inside game image
   portal(db_build->path_file_output, "fim-exec", "cp", path_file_launcher_dst, "/fim/static/gameimage-launcher");

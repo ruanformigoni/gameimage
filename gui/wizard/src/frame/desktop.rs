@@ -42,16 +42,8 @@ fn desktop_next(tx: Sender<common::Msg>
     .map_err(|_| ah!("Could not lock path_file_icon"))
     .map(|mut e| e.take())?
     .ok_or(ah!("No icon selected"))?;
-  // Get projects to include
-  let str_name_projects = match frame::creator::PROJECTS.lock()
-  {
-    Ok(guard) => guard,
-    Err(e) => { return Err(ah!("Could not lock PROJECTS: {}", e)); }
-  }; // match
-  // Package projects
-  log!("Projects to include in the image: {}", str_name_projects);
   // Wait for message & check return value
-  if let Err(e) = gameimage::package::package(&str_name, &str_name_projects)
+  if let Err(e) = gameimage::package::package(&str_name, frame::creator::PROJECTS.lock().unwrap().clone())
   {
     return Err(ah!("Could not include projects into the image: {}", e));
   } // match

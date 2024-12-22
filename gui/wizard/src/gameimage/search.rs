@@ -1,5 +1,7 @@
 use anyhow::anyhow as ah;
 
+use serde_json::json;
+
 use crate::log;
 use crate::common;
 use crate::gameimage;
@@ -7,12 +9,12 @@ use crate::gameimage;
 // search() {{{
 fn search(str_type : &str, use_remote : bool) -> anyhow::Result<Vec<std::path::PathBuf>>
 {
-  // Create cmdline
-  let mut args = vec! [ "search" , "--ipc" ];
-  if use_remote { args.push("--remote"); }
-  args.push(str_type);
+  let mut json_args = json!({});
+  json_args["op"] = "search".into();
+  json_args["search"]["op"] = if use_remote { "remote".into() } else { "local".into() };
+  json_args["search"]["query"] = str_type.into();
   // Start backend
-  let (rx_msg, rx_code) = match gameimage::gameimage::gameimage_async(args)
+  let (rx_msg, rx_code) = match gameimage::gameimage::gameimage_async(vec![&json_args.to_string()])
   {
     Ok((rx_msg, rx_code)) => (rx_msg, rx_code),
     Err(e) => return Err(ah!("Could not start gameimage backend: {}", e)),

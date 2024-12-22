@@ -18,6 +18,7 @@ use fltk::{
 
 use clown::clown;
 use anyhow::anyhow as ah;
+use serde_json::json;
 
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
@@ -315,8 +316,12 @@ fn configure_entry(tx: Sender<common::Msg>
     tx.send_awake(common::Msg::WindDeactivate);
     std::thread::spawn(move ||
     {
-      let slices: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-      if gameimage::gameimage::gameimage_sync(slices) != 0
+      let mut json_args = json!({});
+      json_args["op"] = "install".into();
+      json_args["install"]["op"] = "install".into();
+      json_args["install"]["sub_op"] = args_owned.get(0).map(|e| e.clone()).unwrap_or_default().into();
+      json_args["install"]["args"] = args_owned.get(1..).into();
+      if gameimage::gameimage::gameimage_sync(vec![&json_args.to_string()]) != 0
       {
         log_status!("Command exited with non-zero status");
       } // else
@@ -384,19 +389,19 @@ pub fn configure(tx: Sender<common::Msg>, title: &str)
 
   rescope!(col_content,
     let _ = configure_entry(tx.clone(),  "Install DXVK for directx 9/10/11"
-      , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "dxvk".into()])
+      , || Some(vec!["winetricks".into(), "-f".into(), "dxvk".into()])
     );
     let _ = configure_entry(tx.clone(),  "Install VKD3D for directx 12"
-      , || Some(vec!["install".into(), "winetricks".into(), "-f".into(), "vkd3d".into()])
+      , || Some(vec!["winetricks".into(), "-f".into(), "vkd3d".into()])
     );
-    let _ = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["install".into(), "wine".into(), "regedit".into()]));
-    let _ = configure_entry(tx.clone(),  "Run add/remove programs", || Some(vec!["install".into(), "wine".into(), "uninstaller".into()]));
-    let _ = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["install".into(), "winetricks".into(), "--gui".into()]));
+    let _ = configure_entry(tx.clone(),  "Run regedit", || Some(vec!["wine".into(), "regedit".into()]));
+    let _ = configure_entry(tx.clone(),  "Run add/remove programs", || Some(vec!["wine".into(), "uninstaller".into()]));
+    let _ = configure_entry(tx.clone(),  "Run winetricks GUI", || Some(vec!["winetricks".into(), "--gui".into()]));
     let _ = configure_entry(tx.clone(),  "Run a custom winetricks command" , ||
-      dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["install".into(), "winetricks".into(), "-f".into(), e])
+      dialog::input_default("Enter the winetricks command to execute", "").map(|e| vec!["winetricks".into(), "-f".into(), e])
     );
     let _ = configure_entry(tx.clone(),  "Run a custom wine command" , ||
-      dialog::input_default("Enter the wine command to execute", "").map(|e| vec!["install".into(), "wine".into(), e])
+      dialog::input_default("Enter the wine command to execute", "").map(|e| vec!["wine".into(), e])
     );
     let mut btn = configure_entry(tx.clone(),  "Configure environment", || None);
     btn.emit(tx, common::Msg::DrawWineEnvironment);
@@ -450,7 +455,6 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
     .with_callback(move |_|
     {
       // Function to get all checked items
-      let vec_cmd: Vec<String> = vec!["install".into(), "winetricks".into(), "-f".into(), "-q".into()];
       tx.send_awake(common::Msg::WindDeactivate);
       let clone_browser = browser.clone();
       std::thread::spawn(move ||
@@ -461,7 +465,12 @@ pub fn winetricks(tx: Sender<common::Msg>, title: &str)
           .map(|e| clone_browser.text(e as i32).unwrap())
         {
           log_status!("Installing '{}'", lib);
-          if gameimage::gameimage::gameimage_sync(vec_cmd.iter().map(|e| e.as_str()).chain(vec![lib.as_str()]).collect()) != 0
+          let mut json_args = json!({});
+          json_args["op"] = "install".into();
+          json_args["install"]["op"] = "install".into();
+          json_args["install"]["sub_op"] = "winetricks".into();
+          json_args["install"]["args"] = vec!["-f", "-q", lib.as_str()].into();
+          if gameimage::gameimage::gameimage_sync(vec![&json_args.to_string()]) != 0
           {
             log_status!("Command exited with non-zero status");
           } // else

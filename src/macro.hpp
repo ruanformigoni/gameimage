@@ -88,6 +88,10 @@
 #define dlog_if(cond, msg) \
   if ( (cond) ) { ns_log::write('d', msg); }
 
+// Expected
+#define elog_unexpected(expr) \
+  if ( auto value = expr; not expr.has_value() ) { ns_log::write('e', expr.error()); }
+
 // Error log
 #define elogerror(expr) \
   if ( auto error = expr ) { ns_log::write('e', *error); }

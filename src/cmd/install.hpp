@@ -243,8 +243,6 @@ inline void emulator(fs::path const& path_file_image
   } // switch
 } // emulator() }}}
 
-} // anonymous namespace
-
 // icon() {{{
 inline void icon(ns_db::ns_build::Metadata& db_metadata, std::string str_file_icon)
 {
@@ -270,6 +268,8 @@ inline void icon(ns_db::ns_build::Metadata& db_metadata, std::string str_file_ic
   ns_db::ns_project::write(*db_project);
 } // icon() }}}
 
+} // anonymous namespace
+
 // remove() {{{
 template<typename R>
 void remove(Op const& op, fs::path const& path_dir_project, R&& files)
@@ -292,6 +292,12 @@ inline void install(Op op, std::vector<std::string> args)
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Could not open build database '{}'"_fmt(db_build.error()));
   auto db_metadata = db_build->find(db_build->project);
+
+  if ( op == ns_enum::Op::ICON)
+  {
+    ns_install::icon(db_metadata, args.at(0));
+    return;
+  } // if
 
   // Install based on platform
   switch(db_metadata.platform)

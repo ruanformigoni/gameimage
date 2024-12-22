@@ -103,7 +103,7 @@ std::vector<std::string> wine_args(fs::path const& path_dir_self, fs::path const
   fs::path path_file_args = path_dir_self / "gameimage.wine.args.json";
 
   // Query if the executable has any arguments
-  auto expected_arguments = ns_db::open<std::string>(path_file_args, [&](auto&& db)
+  auto expected_arguments = ns_db::from_file<std::string>(path_file_args, [&](auto&& db)
   {
     return db.template value<std::string>(path_file_executable);
   }, ns_db::Mode::READ);
@@ -124,7 +124,7 @@ void env(fs::path const& path_dir_self)
   fs::path path_file_env = path_dir_self / "gameimage.env.json";
 
   // Set variables
-  std::ignore = ns_db::open(path_file_env, [&](auto&& db)
+  std::ignore = ns_db::from_file(path_file_env, [&](auto&& db)
   {
     for(auto&& e : db.keys())
     {

@@ -10,6 +10,9 @@
 
 #include "common.hpp"
 #include "enum.hpp"
+#include "macro.hpp"
+
+#include "std/variant.hpp"
 
 #include "cmd/fetch.hpp"
 #include "cmd/init.hpp"
@@ -31,119 +34,63 @@
 // Start logging
 INITIALIZE_EASYLOGGINGPP
 
-// fetch() {{{
-void fetch(ns_parser::Parser const& parser)
-{
-  ns_enum::IpcQuery entry_ipc_query = parser.contains("--ipc")?
-      ns_enum::from_string<ns_enum::IpcQuery>(*parser.optional("--ipc"))
-    : ns_enum::IpcQuery::NONE;
-
-  if ( parser.optional("--fetchlist")  )
-  {
-    auto error = ns_fetch::fetchlist();
-    elog_if(error, *error);
-    return;
-  } // if
-
-  if ( entry_ipc_query == ns_enum::IpcQuery::INSTALLED )
-  {
-    // Get installed platforms
-    auto vec_platform = ns_fetch::installed();
-    // Send platforms
-    std::ranges::for_each(vec_platform | std::views::transform([](auto&& e){ return ns_enum::to_string_lower(e); })
-      , [&](auto&& e) { ns_ipc::ipc().send(e); }
-    );
-    return;
-  } // if
-
-  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(parser["--platform"]);
-
-  if ( parser.contains("--sha") )
-  {
-    auto error = ns_fetch::sha(platform);
-    elog_if(error, *error);
-    return;
-  } // if
-
-  if ( entry_ipc_query != ns_enum::IpcQuery::NONE )
-  {
-    ns_fetch::ipc(platform, entry_ipc_query);
-    return;
-  } // if
-
-  ns_fetch::fetch(platform);
-} // fetch() }}}
-
 // init() {{{
-void init(ns_parser::Parser const& parser)
+void init(ns_parser::Init const& parser)
 {
-  if ( parser.contains("--build") )
+  switch(parser.op)
   {
-    ns_init::build(parser["--build"]);
-  } // if
-  else
-  {
-    ns_init::project(parser.optional("--name").value()
-      , parser.optional("--platform").value()
-    );
-  } // else
+    case ns_parser::OpInit::BUILD: ns_init::build(parser.path_dir_build.value()); break;
+    case ns_parser::OpInit::PROJECT: ns_init::project(parser.name.value(), parser.platform.value()); break;
+  };
 } // init() }}}
 
-// project() {{{
-void project(ns_parser::Parser const& parser)
+// fetch() {{{
+void fetch(ns_parser::Fetch const& parser)
 {
-  auto op = ns_enum::from_string<ns_project::Op>(parser["op"]);
-  std::error<std::string> error = std::nullopt;
-  switch( op )
+  switch(parser.op)
   {
-    case ns_project::Op::SET: error =  ns_project::set(parser["project"]); break;
-    case ns_project::Op::DEL: error =  ns_project::del(parser["project"]); break;
+    case ns_parser::OpFetch::SOURCES: elog_unexpected(ns_fetch::sources()); break;
+    case ns_parser::OpFetch::INSTALLED:
+    {
+      // Get installed platforms
+      auto vec_platform = ns_fetch::installed();
+      // Send platforms
+      std::ranges::for_each(vec_platform | std::views::transform([](auto&& e){ return ns_enum::to_string_lower(e); })
+        , [&](auto&& e) { ns_ipc::ipc().send(e); }
+      );
+    } // if
+    break;
+    case ns_parser::OpFetch::SHA: elog_unexpected(ns_fetch::sha(parser.platform.value())); break;
+    case ns_parser::OpFetch::FETCH: elog_unexpected(ns_fetch::fetch(parser.platform.value())); break;
+  } // Switch
+} // fetch() }}}
+
+// project() {{{
+void project(ns_parser::Project const& parser)
+{
+  switch( parser.op )
+  {
+    case ns_parser::OpProject::SET: elog_unexpected(ns_project::set(parser.name)); break;
+    case ns_parser::OpProject::DEL: elog_unexpected(ns_project::del(parser.name)); break;
   } // switch
-  ethrow_if(error, *error);
 } // project() }}}
 
 // install() {{{
-void install(ns_parser::Parser const& parser)
+void install(ns_parser::Install const& parser)
 {
-  auto args{parser.remaining()};
-
-  // Check for op
-  "No option was specified"_throw_if([&]{ return args.empty(); });
-
+  // Read database
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Error to open build database '{}'"_fmt(db_build.error()));
   auto db_metadata = db_build->find(db_build->project);
-
-  ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());
-  args.erase(args.begin());
-
-  // Install icon
-  if ( op == ns_enum::Op::ICON )
+  // Get parsed elements
+  auto [op, sub_op, args] = parser;
+  // Execute selected operation
+  switch(op)
   {
-    // Check if has icon path
-    "No file name specified for icon"_throw_if([&]{ return args.empty(); });
-    // Create icon
-    ns_install::icon(db_metadata, args.front());
-    return;
-  } // if
-
-  // Install item from the remote
-  if ( parser.contains("--remote") )
-  {
-    ns_install::remote(op, args);
-    return;
-  } // if
-
-  // Remove item
-  if ( parser.contains("--remove") )
-  {
-    ns_install::remove(op, db_metadata.path_dir_project, args);
-    return;
-  }
-
-  // Install item
-  ns_install::install(op, args);
-
+    case ns_parser::OpInstall::INSTALL: ns_install::install(sub_op, args); break;
+    case ns_parser::OpInstall::REMOTE: ns_install::remote(sub_op, args); break;
+    case ns_parser::OpInstall::REMOVE: ns_install::remove(sub_op, db_metadata.path_dir_project, args); break;
+  };
 } // install() }}}
 
 // compress() {{{
@@ -153,34 +100,19 @@ void compress()
 } // compress() }}}
 
 // search() {{{
-void search(ns_parser::Parser const& parser)
+void search(ns_parser::Search const& parser)
 {
-  if ( parser.contains("--remote") )
+  switch (parser.op)
   {
-    ns_search::search_remote(parser.optional("query"));
-    return;
-  } // if
-
-  ns_search::search_local(parser.optional("query"));
+    case ns_parser::OpSearch::REMOTE: ns_search::search_remote(parser.query); break;
+    case ns_parser::OpSearch::LOCAL: ns_search::search_local(parser.query); break;
+  } // switch
 } // search() }}}
 
 // select() {{{
-void select(ns_parser::Parser const& parser)
+void select(ns_parser::Select const& parser)
 {
-  auto args{parser.remaining()};
-
-  // Check for op
-  "No option was specified"_throw_if([&]{ return args.empty(); });
-
-  // Parse operation
-  ns_enum::Op op = ns_enum::from_string<ns_enum::Op>(args.front());
-  args.erase(args.begin());
-
-  // Check for args
-  "No argument was passed for the select command"_throw_if([&]{ return args.empty(); });
-
-  // Select
-  ns_select::select(op, args.front());
+  ns_select::select(parser.op, parser.path_file_target);
 } // select() }}}
 
 // test() {{{
@@ -190,114 +122,91 @@ void test()
 } // test() }}}
 
 // desktop() {{{
-void desktop(ns_parser::Parser const& parser)
+void desktop(ns_parser::Desktop const& parser)
 {
-  ns_desktop::Op op = ns_enum::from_string<ns_desktop::Op>(parser.used_subparser_name().value());
-
-  switch(op)
+  switch(parser.op)
   {
-    case ns_desktop::Op::ICON:
-    {
-      ns_desktop::icon(parser["path"]);
-      break;
-    }
-    case ns_desktop::Op::SETUP:
-    {
-      ns_desktop::desktop(parser["name"], parser["items"]);
-      break;
-    }
+    case ns_parser::OpDesktop::ICON: ns_desktop::icon(parser.path_file_icon.value()); break;
+    case ns_parser::OpDesktop::SETUP: ns_desktop::desktop(parser.name.value(), parser.items.value()); break;
   }
 } // desktop() }}}
 
 // package() {{{
-void package(ns_parser::Parser const& parser)
+void package(ns_parser::Package const& parser)
 {
-  ns_package::package(parser["name"], parser["projects"]);
+  ns_package::package(parser.name, parser.projects);
 } // package() }}}
+
+// parse() {{{
+int parse(int argc, char** argv)
+{
+  // Parse arguments
+  auto parsed = ns_parser::parse(argc, argv);
+  ereturn_if(not parsed, parsed.error(), EXIT_FAILURE);
+  // Call functions
+  if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Fetch>(parsed.value()) )
+  {
+    fetch(cmd.value());
+  } // if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Init>(parsed.value()) )
+  {
+    init(cmd.value());
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Project>(parsed.value()) )
+  {
+    project(cmd.value());
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Install>(parsed.value()) )
+  {
+    install(cmd.value());
+  } // else if
+  else if ( ns_variant::get_if_holds_alternative<ns_parser::Compress>(parsed.value()) )
+  {
+    compress();
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Search>(parsed.value()) )
+  {
+    search(cmd.value());
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Select>(parsed.value()) )
+  {
+    select(cmd.value());
+  } // else if
+  else if ( ns_variant::get_if_holds_alternative<ns_parser::Test>(parsed.value()) )
+  {
+    test();
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Desktop>(parsed.value()) )
+  {
+    desktop(cmd.value());
+  } // else if
+  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Package>(parsed.value()) )
+  {
+    package(cmd.value());
+  } // else if
+  return EXIT_SUCCESS;
+} // parse() }}}
 
 // main() {{{
 int main(int argc, char** argv)
 {
-
   // Init log
   ns_log::init(argc, argv, "gameimage.log");
-
   // Set layers directory if possible
-  auto db_build = ns_db::ns_build::read();
-  if ( db_build.has_value() )
+  if (auto db_build = ns_db::ns_build::read(); db_build.has_value() )
   {
     ns_env::set("FIM_DIRS_LAYER", db_build->path_dir_cache, ns_env::Replace::Y);
   } // if
-
-  // Parse args
-  ns_parser::Parser parser("GameImage", "Create portable single-file games that work across linux distributions");
-
-  parser.add_subparser(std::make_unique<ns_parser::Fetch>()   );
-  parser.add_subparser(std::make_unique<ns_parser::Init>()    );
-  parser.add_subparser(std::make_unique<ns_parser::Project>() );
-  parser.add_subparser(std::make_unique<ns_parser::Install>() );
-  parser.add_subparser(std::make_unique<ns_parser::Compress>());
-  parser.add_subparser(std::make_unique<ns_parser::Search>()  );
-  parser.add_subparser(std::make_unique<ns_parser::Select>()  );
-  parser.add_subparser(std::make_unique<ns_parser::Test>()    );
-  parser.add_subparser(std::make_unique<ns_parser::Desktop>() );
-  parser.add_subparser(std::make_unique<ns_parser::Package>() );
-
-  // Parse args
+  // Parse commands
   try
   {
-    parser.parse_args(argc, argv);
+    return parse(argc, argv);
   } // try
   catch(std::exception const& e)
   {
-    // Get selected subparser if any
-    if ( auto subparser = parser.used_subparser() )
-    {
-      ns_log::write('i', subparser->get().help());
-    }
-    else
-    {
-      ns_log::write('i', parser.help());
-    } // else
-    ns_log::write('e', e.what());
+    std::cerr << "Exception: " << e.what() << '\n';
     return EXIT_FAILURE;
   } // catch
-
-  // Get selected subparser if any
-  auto subparser = parser.used_subparser();
-
-  if ( ! subparser )
-  {
-    ns_log::write('i', parser.help());
-    return EXIT_FAILURE;
-  } // if
-
-
-  // Execute selected stage
-  try
-  {
-    switch(subparser->get().enum_stage())
-    {
-      case ns_enum::Stage::FETCH    : fetch(*subparser); break;
-      case ns_enum::Stage::INIT     : init(*subparser); break;
-      case ns_enum::Stage::PROJECT  : project(*subparser); break;
-      case ns_enum::Stage::INSTALL  : install(*subparser); break;
-      case ns_enum::Stage::COMPRESS : compress(); break;
-      case ns_enum::Stage::SEARCH   : search(*subparser); break;
-      case ns_enum::Stage::SELECT   : select(*subparser); break;
-      case ns_enum::Stage::TEST     : test(); break;
-      case ns_enum::Stage::DESKTOP  : desktop(*subparser); break;
-      case ns_enum::Stage::PACKAGE  : package(*subparser); break;
-    } // switch
-  } // try
-  catch(std::exception const& e)
-  {
-    ns_log::write('i', subparser->get().help());
-    ns_log::write('e', e.what());
-    return EXIT_FAILURE;
-  } // catch
-
-  return EXIT_SUCCESS;
 }
 // }}}
 

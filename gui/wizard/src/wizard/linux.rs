@@ -5,6 +5,8 @@ use std::
   os::unix::fs::PermissionsExt,
 };
 
+use serde_json::json;
+
 use std::io::Write;
 
 use fltk::
@@ -270,10 +272,13 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     // The dispatch command kills the previous process in the terminal
     let mut clone_input_cmd = clone_input_cmd.clone();
 
+    let mut json_args = json!({});
+    json_args["op"] = "install".into();
+    json_args["install"]["op"] = "install".into();
+    json_args["install"]["sub_op"] = "rom".into();
+    json_args["install"]["args"] = vec![str_choice.clone()].into();
     match clone_term.dispatch(vec![&crate::gameimage::gameimage::binary().unwrap_or_default().string()
-      , "install"
-      , "rom"
-      , str_choice.as_str()]
+      , &json_args.to_string()]
       , |_| {})
     {
       Ok(arc_child) =>

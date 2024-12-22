@@ -32,7 +32,7 @@ pub fn compress_next(tx: Sender<common::Msg>, term: frame::term::Term)
   let mut term = term.clone();
   std::thread::spawn(move ||
   {
-    let handle = term.dispatch(vec![&backend.string(), "compress"], |_| {});
+    let handle = term.dispatch(vec![&backend.string(), r#"{ "op": "compress" }"#], |_| {});
     match handle
     {
       Ok(handle) => log_err!(handle.lock().unwrap().wait().map(|_|{})),

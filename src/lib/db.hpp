@@ -132,9 +132,9 @@ inline bool Db::empty() const noexcept
 template<typename V, IsString... Ks>
 std::expected<V, std::string> Db::value(Ks&&... ks) noexcept
 {
-  json_t& json = data();
   if constexpr ( sizeof...(ks) == 0 )
   {
+    json_t& json = data();
     return ( json.is_string() )? std::expected<V,std::string>(std::string{json})
       : std::unexpected("Json element is not a string");
   } // if
@@ -157,14 +157,21 @@ std::expected<V, std::string> Db::value(Ks&&... ks) noexcept
     {
       ( f_access_impl(value, std::forward<U>(u)), ... );
     }; // f_access
-    std::expected<std::reference_wrapper<json_t>,std::string> expected_json = std::reference_wrapper(json);
+    std::expected<std::reference_wrapper<json_t>,std::string> expected_json = std::reference_wrapper(data());
     f_access(expected_json, std::forward<Ks>(ks)...);
     // Check if access was successful
-    qreturn_if(not expected_json, std::unexpected(expected_json.error()));
     // Return a novel db with a non-owning view over the accessed data or use to create a type V
     if constexpr ( std::same_as<V,Db> )
     {
-      return Db{*expected_json};
+      return Db{expected_json->get()};
+    } // if
+    else if constexpr ( ns_concept::IsVector<V> )
+    {
+      json_t json = expected_json->get();
+      qreturn_if(not json.is_array(), std::unexpected("Tried to create array with non-array entry"));
+      return std::ranges::subrange(json.begin(), json.end())
+        | std::views::transform([](auto&& e){ return typename std::remove_cvref_t<V>::value_type(e); })
+        | std::ranges::to<V>();
     } // if
     else
     {
@@ -266,9 +273,9 @@ inline std::ostream& operator<<(std::ostream& os, Db const& db)
   return os;
 } // operator<< }}}
 
-// open() {{{
+// from_file() {{{
 template<typename Ret = void>
-auto open(IsString auto&& t, auto&& f, Mode mode) -> std::expected<Ret, std::string>
+auto from_file(IsString auto&& t, auto&& f, Mode mode) -> std::expected<Ret, std::string>
 {
   fs::path path_file_db{ns_string::to_string(t)};
   // Parse a file
@@ -325,7 +332,31 @@ auto open(IsString auto&& t, auto&& f, Mode mode) -> std::expected<Ret, std::str
     return ret;
   } // else
 
-} // function: open }}}
+} // function: from_file }}}
+
+// from_string() {{{
+template<typename Ret = void, ns_concept::AsString S>
+auto from_string(S&& s, auto&& f) -> std::expected<Ret, std::string>
+{
+  // Create json object
+  json_t json;
+  // Create empty json
+  json = json_t::parse(ns_string::to_string(s));
+  // Create DB
+  Db db = Db(std::reference_wrapper(json));
+  // Access
+  if constexpr ( std::same_as<Ret,void> )
+  {
+    f(db);
+    return std::expected<void,std::string>{};
+  } // if
+  else
+  {
+    auto ret = f(db);
+    return ret;
+  } // else
+
+} // function: from_string }}}
 
 } // namespace ns_db
 

@@ -38,20 +38,18 @@ inline void build(fs::path path_dir_build)
 } // function: build }}}
 
 // project() {{{
-inline void project(std::string const& str_name, std::string const& str_platform)
+inline void project(std::string const& str_name, ns_enum::Platform const& platform)
 {
   // Read build database
   auto db_build = ns_db::ns_build::read();
   ethrow_if(not db_build, "Could not read build database");
-  // Determine platform
-  ns_enum::Platform platform = ns_enum::from_string<ns_enum::Platform>(str_platform);
   // Create project dir and return an absolute path to it
   fs::path path_dir_project_root  = ns_fs::ns_path::dir_create<true>(db_build->path_dir_build / str_name)._ret;
   // The actual project files are nested in /opt/gameimage-games, because that's the final path
   // inside the container
   fs::path path_dir_project = ns_fs::ns_path::dir_create<true>(db_build->path_dir_build / str_name / "opt" / "gameimage-games" / str_name)._ret;
   // Log
-  ns_log::write('i', "platform              :", str_platform);
+  ns_log::write('i', "platform              :", ns_enum::to_string_lower(platform));
   ns_log::write('i', "image                 :", db_build->path_file_image);
   ns_log::write('i', "path_dir_project_root :", path_dir_project_root);
   ns_log::write('i', "path_dir_project      :", path_dir_project);

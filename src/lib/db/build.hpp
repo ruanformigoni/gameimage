@@ -60,7 +60,7 @@ inline void init_impl(fs::path const& path_dir_build)
   fs::create_directories(path_dir_build);
   // Create database
   fs::path path_file_database = path_dir_build / "gameimage.json";
-  std::ignore = ns_db::open(path_file_database, [&](ns_db::Db& db)
+  std::ignore = ns_db::from_file(path_file_database, [&](ns_db::Db& db)
   {
     // build dir
     db("path_dir_build") = path_dir_build;
@@ -87,7 +87,7 @@ inline void init_impl(fs::path const& path_dir_build)
 // read_impl() {{{
 std::expected<Build,std::string> read_impl(fs::path path_file_db)
 {
-  return ns_db::open<std::expected<Build,std::string>>(path_file_db, [&](auto&& db) -> std::expected<Build,std::string>
+  return ns_db::from_file<std::expected<Build,std::string>>(path_file_db, [&](auto&& db) -> std::expected<Build,std::string>
   {
     Build build(path_file_db);
     build.project          = ehope(db.template value<std::string>("project"));
@@ -114,7 +114,7 @@ std::expected<Build,std::string> read_impl(fs::path path_file_db)
 // write_impl() {{{
 void write_impl(Build const& build)
 {
-  std::ignore = ns_db::open(build.path_file_db, [&](auto&& db)
+  std::ignore = ns_db::from_file(build.path_file_db, [&](auto&& db)
   {
     db("project") = build.project;
     db("path_dir_build") = build.path_dir_build;

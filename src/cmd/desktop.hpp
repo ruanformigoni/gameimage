@@ -24,6 +24,8 @@ namespace
 
 namespace fs = std::filesystem;
 
+}
+
 enum class IntegrationItems
 {
   MIMETYPE,
@@ -31,7 +33,6 @@ enum class IntegrationItems
   ICON
 };
 
-}
 
 // icon() {{{
 inline void icon(fs::path const& path_file_icon)
@@ -49,7 +50,7 @@ inline void icon(fs::path const& path_file_icon)
 } // icon() }}}
 
 // desktop() {{{
-inline void desktop(std::string str_name, std::string str_items)
+inline void desktop(std::string str_name, std::vector<IntegrationItems> vec_items)
 {
   // Open databases
   auto db_build = ns_db::ns_build::read();
@@ -59,20 +60,13 @@ inline void desktop(std::string str_name, std::string str_items)
   // Check if output file exists
   db_build->path_file_output = ns_fs::ns_path::file_exists<true>(db_build->path_file_output)._ret;
 
-  // Validate items
-  auto vec_items = ns_vector::from_string<std::vector<IntegrationItems>>(str_items
-    , ','
-    , [](auto&& e){ return ns_enum::from_string<IntegrationItems>(e); }
-  );
-  throw_if(vec_items.empty(), "No integration items available");
-
   // Path to project
   fs::path path_dir_build = db_build->path_dir_build;
   fs::path path_file_desktop = path_dir_build / "desktop.json";
   fs::path path_file_icon = ns_fs::ns_path::file_exists<true>(path_dir_build / "desktop.png")._ret;
 
   // Create application data
-  std::ignore = ns_db::open(path_file_desktop
+  std::ignore = ns_db::from_file(path_file_desktop
   , [&](auto&& db)
   {
     db("name") = str_name;

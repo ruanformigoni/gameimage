@@ -5,6 +5,8 @@ use fltk::{
   enums::Color,
 };
 
+use serde_json::json;
+
 use shared::fltk::SenderExt;
 use shared::fltk::WidgetExtExtra;
 use shared::std::PathBufExt;
@@ -53,7 +55,9 @@ pub fn test(tx: Sender<common::Msg>
       Ok(backend) => backend,
       Err(e) => { log_alert!("Error to execute backend: {}", e); return; }
     };
-    let _ = term.dispatch(vec![&backend.string(), "test"], move |_|
+    let mut json_args = json!({});
+    json_args["op"] = "test".into();
+    let _ = term.dispatch(vec![&backend.string(), &json_args.to_string()], move |_|
     {
       clone_tx.send_awake(common::Msg::WindActivate);
     });

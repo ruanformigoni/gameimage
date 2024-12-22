@@ -31,7 +31,7 @@ use crate::db;
 
 lazy_static!
 {
-  pub static ref PROJECTS: Mutex<String> = Mutex::new(String::new());
+  pub static ref PROJECTS: Mutex<Vec<String>> = Mutex::new(vec![]);
 }
 
 // fn create_entry() {{{
@@ -262,18 +262,11 @@ pub fn creator(tx: Sender<common::Msg>, title: &str)
     {
       // Vector of checkbuttons
       let vec_btn = clone_vec_checkbutton.lock().unwrap();
-      // Transform projects in a ':' separated string to send to the backend
-      let str_name_projects = vec_btn.iter()
+      // Save projects in current state
+      *PROJECTS.lock().unwrap() = vec_btn.iter()
         .filter(|e| e.0.is_checked())
         .map(|e| e.1.get_project())
-        .collect::<Vec<String>>()
-        .join(":");
-      // Update projects list
-      match PROJECTS.lock()
-      {
-        Ok(mut guard) => *guard = str_name_projects.clone(),
-        Err(e) => log_status!("Could not lock PROJECTS: {}", e),
-      }; // match
+        .collect::<Vec<String>>();
       // Refresh
       clone_tx.send_activate(common::Msg::DrawDesktop);
     });
