@@ -152,7 +152,7 @@ fn get_path_db() -> anyhow::Result<PathBuf>
 fn get_path_db_executable() -> anyhow::Result<PathBuf>
 {
   let mut path_file_db = get_path_db()?;
-  path_file_db.push("gameimage.wine.executable.json");
+  path_file_db.push("gameimage.executable.json");
   Ok(path_file_db)
 } // get_path_db_executable() }}}
 
@@ -168,9 +168,17 @@ fn get_path_db_env() -> anyhow::Result<PathBuf>
 fn get_path_db_args() -> anyhow::Result<PathBuf>
 {
   let mut path_file_db = get_path_db()?;
-  path_file_db.push("gameimage.wine.args.json");
+  path_file_db.push("gameimage.args.json");
   Ok(path_file_db)
 } // get_path_db_args() }}}
+
+// get_path_db_alias() {{{
+fn get_path_db_alias() -> anyhow::Result<PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.alias.json");
+  Ok(path_file_db)
+} // get_path_db_alias() }}}
 
 // pub fn environment() {{{
 pub fn environment(tx: Sender<common::Msg>, title: &str)
@@ -543,9 +551,30 @@ fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,PathBuf)>) -> anyhow:
   Ok(())
 } // rom_next() }}}
 
+// rom_db {{{
+fn rom_db(input: fltk_evented::Listener<fltk::input::Input>
+  , path_file_db: PathBuf
+  , item: PathBuf)
+{
+  input.clone().on_keyup(move |e|
+  {
+    if e.value().trim().is_empty()
+    {
+      let _ = shared::db::kv::erase(&path_file_db, item.string());
+      return;
+    }; // if
+    match shared::db::kv::write(&path_file_db, &item.string(), &e.value())
+    {
+      Ok(()) => (),
+      Err(e) => log_status!("Could not write to db: {}", e),
+    };
+  });
+} // rom_db }}}
+
 // rom_entry() {{{
 fn rom_entry(tx: Sender<common::Msg>
   , executable_arguments: &std::collections::HashMap<String, String>
+  , executable_alias: &std::collections::HashMap<String, String>
   , item: &PathBuf
   , vec_radio_path: &mut Vec<(fltk::button::RadioButton,PathBuf)>)
 {
@@ -565,6 +594,12 @@ fn rom_entry(tx: Sender<common::Msg>
     );
     let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
     col.fixed(&input_arguments.clone().as_base_widget(), dimm::height_button_wide());
+    col.fixed(&fltk::frame::Frame::default()
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Executable alias"), dimm::height_text()
+    );
+    let mut input_alias : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+    col.fixed(&input_alias.clone().as_base_widget(), dimm::height_button_wide());
     let mut btn_selectable = shared::fltk::button::rect::checkbutton()
       .with_align(Align::Inside | Align::Left)
       .with_color(Color::BackGround)
@@ -573,7 +608,7 @@ fn rom_entry(tx: Sender<common::Msg>
     col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
   );
   col.resize(col.x(),col.y(),col.w()
-    , dimm::height_button_wide()*2+dimm::height_text()+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*5
+    , dimm::height_button_wide()*3+dimm::height_text()*2+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*7
   );
   // Configure buttons
   hover_blink!(btn_run);
@@ -600,24 +635,15 @@ fn rom_entry(tx: Sender<common::Msg>
       });
     });
   // Configure arguments input
-  let clone_item = item.clone();
-  input_arguments.on_keyup(move |e|
-  {
-    let path_file_db_args = get_path_db_args().unwrap_or_default();
-    if e.value().trim().is_empty()
-    {
-      let _ = shared::db::kv::erase(&path_file_db_args, clone_item.string());
-      return;
-    }; // if
-    match shared::db::kv::write(&path_file_db_args, &clone_item.string(), &e.value())
-    {
-      Ok(()) => (),
-      Err(e) => log_status!("Could not write to db: {}", e),
-    };
-  });
+  rom_db(input_arguments.clone(), get_path_db_args().unwrap_or_default(), item.clone());
   if executable_arguments.contains_key(&item.string())
   {
     input_arguments.set_value(executable_arguments[&item.string()].as_str());
+  } // if
+  rom_db(input_alias.clone(), get_path_db_alias().unwrap_or_default(), item.clone());
+  if executable_alias.contains_key(&item.string())
+  {
+    input_alias.set_value(executable_alias[&item.string()].as_str());
   } // if
   // Configure selectable in launcher
   let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
@@ -657,12 +683,6 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
-  // Arguments database
-  let path_file_db_args = match get_path_db_args()
-  {
-    Ok(e) => e,
-    Err(e) => { log_status!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
-  }; // match
   // Filter installed files by QUERY
   *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap());
   // UI
@@ -721,16 +741,18 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   log_err!(input_query.take_focus());
   // Insert items in list of currently installed items
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
-  let hash_argument_executable = match shared::db::kv::read(&path_file_db_args)
-  {
-    Ok(hash_argument_executable) => hash_argument_executable,
-    Err(e) => { log_status!("Could not read input args: {}", e); shared::db::kv::Kv::default() }
-  }; // match
+  // Arguments database
+  let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
   // Create a column for the element entries
   rescope!(col_content,
     for path in RESULTS.lock().unwrap().iter()
     {
-      rom_entry(tx.clone(), &hash_argument_executable, &path, &mut vec_radio_path.lock().unwrap())
+      rom_entry(tx.clone()
+        , &hash_executable_arguments
+        , &hash_executable_alias
+        , &path
+        , &mut vec_radio_path.lock().unwrap())
     } // for
   );
   // Set callbacks for toggle group
