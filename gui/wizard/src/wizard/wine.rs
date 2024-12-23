@@ -549,7 +549,7 @@ fn rom_entry(tx: Sender<common::Msg>
   , item: &PathBuf
   , vec_radio_path: &mut Vec<(fltk::button::RadioButton,PathBuf)>)
 {
-  hpack!(col,
+  column!(col,
     col.set_spacing(dimm::border_half());
     row!(row_fst,
       let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
@@ -558,19 +558,22 @@ fn rom_entry(tx: Sender<common::Msg>
       fixed!(row_fst, btn_folder, shared::fltk::button::rect::folder(), dimm::width_button_rec());
       fixed!(row_fst, btn_run, shared::fltk::button::rect::play(), dimm::width_button_rec());
     );
-    col.add(&row_fst.with_size(0, dimm::height_button_rec()));
-    col.add(&fltk::frame::Frame::default()
+    col.fixed(&row_fst.clone(), dimm::height_button_wide());
+    col.fixed(&fltk::frame::Frame::default()
       .with_align(Align::Inside | Align::Left)
-      .with_label("Executable arguments").with_size(0,dimm::height_text()));
+      .with_label("Executable arguments"), dimm::height_text()
+    );
     let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
-    col.add(&input_arguments.clone().with_size(0,dimm::height_button_wide()).as_base_widget());
+    col.fixed(&input_arguments.clone().as_base_widget(), dimm::height_button_wide());
     let mut btn_selectable = shared::fltk::button::rect::checkbutton()
       .with_align(Align::Inside | Align::Left)
       .with_color(Color::BackGround)
       .with_label(" Make this executable selectable in the launcher");
-    col.add(&btn_selectable.clone().with_size(0, dimm::width_checkbutton()));
-    col.add(&shared::fltk::separator::horizontal(col.w()));
-    col.add(&Frame::default().with_size(0,0));
+    col.fixed(&btn_selectable.clone(), dimm::width_checkbutton());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+  );
+  col.resize(col.x(),col.y(),col.w()
+    , dimm::height_button_wide()*2+dimm::height_text()+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*5
   );
   // Configure buttons
   hover_blink!(btn_run);
