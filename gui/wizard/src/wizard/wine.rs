@@ -714,7 +714,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       std::thread::spawn(move ||
       {
         *RESULTS.lock().unwrap() = rom_search(&query);
-        tx.send_awake(common::Msg::DrawWineRom);
+        tx.send_activate(common::Msg::DrawWineRom);
       });
     } // if
   });
