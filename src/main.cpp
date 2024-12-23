@@ -7,12 +7,11 @@
 #include <matchit.h>
 #include <magic_enum/magic_enum.hpp>
 #include <easylogging++.h>
+#include <variant>
 
 #include "common.hpp"
 #include "enum.hpp"
 #include "macro.hpp"
-
-#include "std/variant.hpp"
 
 #include "cmd/fetch.hpp"
 #include "cmd/init.hpp"
@@ -144,45 +143,45 @@ int parse(int argc, char** argv)
   auto parsed = ns_parser::parse(argc, argv);
   ereturn_if(not parsed, parsed.error(), EXIT_FAILURE);
   // Call functions
-  if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Fetch>(parsed.value()) )
+  if ( auto* cmd = std::get_if<ns_parser::Fetch>(&parsed.value()) )
   {
-    fetch(cmd.value());
+    fetch(*cmd);
   } // if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Init>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Init>(&parsed.value()) )
   {
-    init(cmd.value());
+    init(*cmd);
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Project>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Project>(&parsed.value()) )
   {
-    project(cmd.value());
+    project(*cmd);
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Install>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Install>(&parsed.value()) )
   {
-    install(cmd.value());
+    install(*cmd);
   } // else if
-  else if ( ns_variant::get_if_holds_alternative<ns_parser::Compress>(parsed.value()) )
+  else if ( std::get_if<ns_parser::Compress>(&parsed.value()) )
   {
     compress();
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Search>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Search>(&parsed.value()) )
   {
-    search(cmd.value());
+    search(*cmd);
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Select>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Select>(&parsed.value()) )
   {
-    select(cmd.value());
+    select(*cmd);
   } // else if
-  else if ( ns_variant::get_if_holds_alternative<ns_parser::Test>(parsed.value()) )
+  else if ( std::get_if<ns_parser::Test>(&parsed.value()) )
   {
     test();
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Desktop>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Desktop>(&parsed.value()) )
   {
-    desktop(cmd.value());
+    desktop(*cmd);
   } // else if
-  else if ( auto cmd = ns_variant::get_if_holds_alternative<ns_parser::Package>(parsed.value()) )
+  else if ( auto* cmd = std::get_if<ns_parser::Package>(&parsed.value()) )
   {
-    package(cmd.value());
+    package(*cmd);
   } // else if
   return EXIT_SUCCESS;
 } // parse() }}}
