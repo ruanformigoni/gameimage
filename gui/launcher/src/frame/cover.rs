@@ -1,99 +1,27 @@
 use std::env;
-use std::sync::Mutex;
 
 use fltk::prelude::*;
 use fltk::{
   app::Sender,
-  group::Flex,
   enums,
   frame::Frame,
   image::SharedImage,
 };
 
-use anyhow::anyhow as ah;
-
 use shared::dimm;
-use shared::std::PathBufExt;
 use shared::fltk::WidgetExtExtra;
 use shared::fltk::SenderExt;
-use shared::{hover_blink,column,row,add,fixed};
+use shared::{hover_blink,column,row,fixed};
 
-use crate::db;
 use crate::common;
 use crate::games;
 use common::Msg;
 
-// fn: get_path_db_executable() {{{
-fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
-{
-  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
-  path_db.push("gameimage.wine.executable.json");
-
-  Ok(path_db)
-} // fn: get_path_db_executable() }}}
-
-// fn: get_default_executable() {{{
-fn get_default_executable() -> anyhow::Result<std::path::PathBuf>
-{
-  let path_file_db = std::path::PathBuf::from(std::env::var("GIMG_LAUNCHER_ROOT")? + "/gameimage.json");
-  let db_project = db::project::read(&path_file_db)?;
-  Ok(db_project.path_file_rom.ok_or(ah!("Could not read path_file_rom"))?.into())
-} // fn: get_default_executable()}}}
-
-// fn: new_menu_entries() {{{
-fn new_menu_entries(frame: Flex) -> anyhow::Result<()>
-{
-  // Keep track of the currently selected item
-  static PATH_CURRENT_EXECUTABLE : once_cell::sync::Lazy<Mutex<Option<std::path::PathBuf>>>
-    = once_cell::sync::Lazy::new(|| Mutex::new(None));
-  // Open database
-  let path_file_db_executable = get_path_db_executable()?;
-  // Executable selection menu
-  let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
-  // Return if there are no executables selected
-  if db_executables.len() == 0 { return Ok(()); } // if
-  // Get the default executable
-  let path_default_executable = get_default_executable()?.string();
-  // Add menu entries for executable selection
-  let mut btn_executable = fltk::menu::Choice::default()
-    .with_size(frame.w(), dimm::height_button_rec())
-    .top_left_of(&frame, 0)
-    .with_frame(enums::FrameType::BorderBox)
-    .with_focus(false);
-  for executable in db_executables.keys().into_iter().chain(vec![path_default_executable.clone()].iter())
-  {
-    if executable.is_empty() { continue; }
-    btn_executable.add(&executable
-    , fltk::enums::Shortcut::None
-    , fltk::menu::MenuFlag::Normal
-    , |e|
-    {
-      let path_file_executable : std::path::PathBuf = e.item_pathname(None).unwrap_or(String::new()).into();
-      std::env::set_var("GIMG_LAUNCHER_EXECUTABLE", &path_file_executable);
-      match PATH_CURRENT_EXECUTABLE.lock()
-      {
-        Ok(mut guard) => *guard = Some(path_file_executable),
-        Err(e) => eprintln!("Could not lock PATH_CURRENT_EXECUTABLE: {}", e),
-      } // if
-    });
-  } // for
-  // Set default entry or use existing
-  match PATH_CURRENT_EXECUTABLE.lock()
-  {
-    Ok(guard) => match guard.clone()
-    {
-      Some(value) => { btn_executable.set_item(&btn_executable.find_item(&value.string()).unwrap()); },
-      None => { btn_executable.set_item(&btn_executable.find_item(&path_default_executable).unwrap()); },
-    },
-    Err(e) => { eprintln!("{}", e); },
-  } // match
-
-  Ok(())
-} // fn: new_menu_entries() }}}
-
 // fn: new {{{
 pub fn new(tx : Sender<Msg>)
 {
+  let show_btn_game: bool = games::games().map(|e| e.len() > 1).unwrap_or(false);
+  let show_btn_executable: bool = crate::frame::selector_executable::get_menu_entries().map(|e| e.0.len() > 1).unwrap_or(false);
   // Layout
   let mut frame_background = Frame::default_fill();
   if let Ok(env_image_launcher) = env::var("GIMG_LAUNCHER_IMG")
@@ -112,9 +40,21 @@ pub fn new(tx : Sender<Msg>)
     row!(row,
       row.set_margin(dimm::border_half());
       fixed!(row, btn_menu, shared::fltk::button::rect::list(), dimm::width_button_rec());
-      add!(row, _spacer, Frame::default());
-      fixed!(row, btn_switch, shared::fltk::button::rect::switch(), dimm::width_button_rec());
-      add!(row, _spacer, Frame::default());
+      if show_btn_game
+      {
+        row.add(&Frame::default());
+        fixed!(row, btn_game, shared::fltk::button::rect::joystick(), dimm::width_button_rec());
+        btn_game.clone().emit(tx, Msg::DrawSelectorGame);
+        hover_blink!(btn_game);
+      } // if
+      if show_btn_executable
+      {
+        row.add(&Frame::default());
+        fixed!(row, btn_executable, shared::fltk::button::rect::switch(), dimm::width_button_rec());
+        btn_executable.clone().emit(tx, Msg::DrawSelectorExecutable);
+        hover_blink!(btn_executable);
+      } // if
+      row.add(&Frame::default());
       fixed!(row, btn_play, shared::fltk::button::rect::play().with_color(enums::Color::Blue), dimm::width_button_rec());
     );
     col.fixed(&row, dimm::height_button_rec() + dimm::border());
@@ -139,17 +79,8 @@ pub fn new(tx : Sender<Msg>)
 
   // Button left aligned
   btn_menu.clone().emit(tx, Msg::DrawMenu);
-  btn_switch.clone().emit(tx, Msg::DrawSelector);
-  btn_switch.clone().hide();
   hover_blink!(btn_menu);
-  hover_blink!(btn_switch);
   hover_blink!(btn_play);
-
-  // Only show switch button in case there is more than one game
-  if let Ok(vec_entry) = games::games() && vec_entry.len() > 1
-  {
-    btn_switch.clone().show();
-  } // if
 
   // Button right aligned
   let clone_tx = tx.clone();
@@ -178,12 +109,6 @@ pub fn new(tx : Sender<Msg>)
       clone_tx.send_activate(Msg::DrawCover);
     });
   });
-
-  match new_menu_entries(col.clone())
-  {
-    Ok(()) => (),
-    Err(e) => eprintln!("{}", e),
-  };
 } // fn: new }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :

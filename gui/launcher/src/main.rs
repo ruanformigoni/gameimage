@@ -79,8 +79,9 @@ fn redraw(&mut self, msg: Msg)
   match Some(msg)
   {
     Some(Msg::DrawCover) => frame::cover::new(self.tx),
-    Some(Msg::DrawSelector) => frame::selector::new(self.tx),
-    Some(Msg::DrawExecutables) => frame::menu::executables::new(self.tx),
+    Some(Msg::DrawSelectorGame) => frame::selector_game::new(self.tx),
+    Some(Msg::DrawSelectorExecutable) => frame::selector_executable::new(self.tx),
+    Some(Msg::DrawEnablerExecutable) => frame::menu::enabler_executable::new(self.tx),
     Some(Msg::DrawEnv) => frame::menu::environment::new(self.tx),
     Some(Msg::DrawMenu) => frame::menu::new(self.tx),
     _ => (),
@@ -105,7 +106,7 @@ fn init(&mut self)
   else
   {
     // Create initial cover frame
-    self.tx.send(common::Msg::DrawCover);
+    self.tx.send(common::Msg::DrawEnablerExecutable);
     // Select the first game as the current
     games::select(vec_games.first().unwrap());
   } // else

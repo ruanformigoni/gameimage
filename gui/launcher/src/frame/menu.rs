@@ -14,7 +14,7 @@ use fltk::prelude::ButtonExt;
 
 use crate::common;
 
-pub mod executables;
+pub mod enabler_executable;
 pub mod environment;
 
 // fn: new {{{
@@ -65,7 +65,7 @@ pub fn new(tx : Sender<Msg>)
     && let Ok(platform) = common::Platform::from_str(&str_platform)
     && platform == common::Platform::WINE
     {
-      f_make_entry("Executable Configuration").emit(tx, Msg::DrawExecutables);
+      f_make_entry("Executable Configuration").emit(tx, Msg::DrawEnablerExecutable);
     }
   );
 } // fn: new }}}

@@ -5,9 +5,10 @@ use anyhow::anyhow as ah;
 pub enum Msg
 {
   DrawCover,
-  DrawSelector,
+  DrawSelectorGame,
+  DrawSelectorExecutable,
   DrawEnv,
-  DrawExecutables,
+  DrawEnablerExecutable,
   DrawMenu,
   WindActivate,
   WindDeactivate,

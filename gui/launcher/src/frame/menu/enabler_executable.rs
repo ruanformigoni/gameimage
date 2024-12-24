@@ -60,7 +60,7 @@ fn find_executables() -> anyhow::Result<Vec<std::path::PathBuf>>
 fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
 {
   let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
-  path_db.push("gameimage.wine.executable.json");
+  path_db.push("gameimage.executable.json");
   Ok(path_db)
 } // get_path_db_executable() }}}
 
@@ -68,13 +68,21 @@ fn get_path_db_executable() -> anyhow::Result<std::path::PathBuf>
 fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 {
   let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
-  path_db.push("gameimage.wine.args.json");
+  path_db.push("gameimage.args.json");
   Ok(path_db)
 } // get_path_db_args() }}}
 
+// get_path_db_alias() {{{
+fn get_path_db_alias() -> anyhow::Result<std::path::PathBuf>
+{
+  let mut path_db : std::path::PathBuf = std::env::var("GIMG_LAUNCHER_ROOT")?.into();
+  path_db.push("gameimage.alias.json");
+  Ok(path_db)
+} // get_path_db_alias() }}}
+
 // fn: new_layout_entry {{{
 fn new_layout_entry(str_output: &str, is_use: bool)
-  -> (output::Output,button::CheckButton,fltk_evented::Listener<fltk::input::Input>)
+  -> (output::Output,button::CheckButton,fltk_evented::Listener<fltk::input::Input>,fltk_evented::Listener<fltk::input::Input>)
 {
   column!(col,
     col.set_spacing(dimm::border_half());
@@ -113,22 +121,28 @@ fn new_layout_entry(str_output: &str, is_use: bool)
       col_args.fixed(&input_arguments.as_base_widget(), dimm::height_button_wide());
     );
     col.fixed(&col_args.clone(), shared::fit_to_children_height!(col_args));
+    column!(col_alias,
+      col_alias.fixed(&Frame::default().with_label("Alias").with_align(Align::Inside | Align::Left) , dimm::height_text());
+      let input_alias : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+      col_alias.fixed(&input_alias.as_base_widget(), dimm::height_button_wide());
+    );
+    col.fixed(&col_alias.clone(), shared::fit_to_children_height!(col_alias));
     col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
     col.fixed(&Frame::default(), 0);
   );
   shared::fit_to_children_height!(col);
-  (output_executable, btn_use, input_arguments)
+  (output_executable, btn_use, input_arguments, input_alias)
 } // fn: new_layout_entry }}}
 
 // fn: new_callback {{{
 fn new_callback(output: output::Output
   , mut btn_use: button::CheckButton
-  , mut input: fltk_evented::Listener<fltk::input::Input>
+  , mut input_args: fltk_evented::Listener<fltk::input::Input>
+  , mut input_alias: fltk_evented::Listener<fltk::input::Input>
   , key: String
   , path_file_db_executable: std::path::PathBuf)
 {
   // Setup 'use button' callback
-  let clone_output_executable = output.clone();
   btn_use.set_callback({
     let output = output.clone();
     let path_file_db_executable = path_file_db_executable.clone();
@@ -147,17 +161,13 @@ fn new_callback(output: output::Output
     } // fn
   });
 
-  let path_file_db_args = match get_path_db_args()
-  {
-    Ok(e) => e,
-    Err(e) => { eprintln!("Could not retrieve path to db file: {}", e); std::path::PathBuf::default() }
-  }; // match
-
+  let path_file_db_args = get_path_db_args().unwrap_or_default();
   if let Ok(db) = shared::db::kv::read(&path_file_db_args) && db.contains_key(&key)
   {
-    let _ = input.insert(&db[&key]);
+    let _ = input_args.insert(&db[&key]);
   } // if
-  input.on_keyup(move |e|
+  let clone_output_executable = output.clone();
+  input_args.on_keyup(move |e|
   {
     if e.value().is_empty()
     {
@@ -166,6 +176,24 @@ fn new_callback(output: output::Output
       return;
     } // if
     shared::db::kv::write(&path_file_db_args, &clone_output_executable.value(), &e.value())
+      .map_err(|e| eprintln!("{}",e)).ok();
+  });
+
+  let path_file_db_alias = get_path_db_alias().unwrap_or_default();
+  if let Ok(db) = shared::db::kv::read(&path_file_db_alias) && db.contains_key(&key)
+  {
+    let _ = input_alias.insert(&db[&key]);
+  } // if
+  let clone_output_executable = output.clone();
+  input_alias.on_keyup(move |e|
+  {
+    if e.value().is_empty()
+    {
+      shared::db::kv::erase(&path_file_db_alias, clone_output_executable.value())
+        .map_err(|e| eprintln!("{}",e)).ok();
+      return;
+    } // if
+    shared::db::kv::write(&path_file_db_alias, &clone_output_executable.value(), &e.value())
       .map_err(|e| eprintln!("{}",e)).ok();
   });
 
@@ -218,10 +246,10 @@ pub fn new(tx : Sender<Msg>)
     let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
     move |key : String|
     {
-      let (output,btn,input) = new_layout_entry(key.as_str()
+      let (output,btn,input_args,input_alias) = new_layout_entry(key.as_str()
         , db_executables.contains_key(key.as_str())
       );
-      new_callback(output, btn, input, key, path_file_db_executable);
+      new_callback(output, btn, input_args, input_alias, key, path_file_db_executable);
     }
   };
   rescope!(col_scroll,

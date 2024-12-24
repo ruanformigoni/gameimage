@@ -96,11 +96,11 @@ void db_files_copy(ns_db::ns_project::Project& db_project
   } // for
 } // db_files_copy() }}}
 
-// wine_args() {{{
-std::vector<std::string> wine_args(fs::path const& path_dir_self, fs::path const& path_file_executable)
+// args() {{{
+std::vector<std::string> args(fs::path const& path_dir_self, fs::path const& path_file_executable)
 {
   // Standard path for wine args list
-  fs::path path_file_args = path_dir_self / "gameimage.wine.args.json";
+  fs::path path_file_args = path_dir_self / "gameimage.args.json";
 
   // Query if the executable has any arguments
   auto expected_arguments = ns_db::from_file<std::string>(path_file_args, [&](auto&& db)
@@ -115,7 +115,7 @@ std::vector<std::string> wine_args(fs::path const& path_dir_self, fs::path const
 
   // Split arguments by space
   return ns_string::split(*expected_arguments, ' ');
-} // wine_args() }}}
+} // args() }}}
 
 // env() {{{
 void env(fs::path const& path_dir_self)
@@ -193,7 +193,7 @@ void boot_wine(ns_db::ns_project::Project& db_project, fs::path const& path_dir_
   // Start application
   (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_WINE"))
     .with_piped_outputs()
-    .with_args(path_file_rom, wine_args(path_dir_self, path_file_rom_relative))
+    .with_args(path_file_rom, args(path_dir_self, path_file_rom_relative))
     .spawn()
     .wait();
 } // boot_wine() }}}
