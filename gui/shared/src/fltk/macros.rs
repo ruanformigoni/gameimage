@@ -1,4 +1,25 @@
 #[macro_export]
+macro_rules! fit_to_children_height
+{
+  ($widget:ident) =>
+  {
+    {
+      let parent = $widget.parent().unwrap();
+      let spacing = $widget.spacing();
+      let height = $widget.bounds()
+        .iter()
+        .map(|e| e.3).sum::<i32>() + (($widget.children()-1) * spacing);
+      $widget.resize($widget.x()
+        , $widget.y()
+        , $widget.w()
+        , height.min(parent.h()).min($widget.height())
+      );
+      height
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! rescope
 {
   ($row_name:ident, $($body:tt)*) =>

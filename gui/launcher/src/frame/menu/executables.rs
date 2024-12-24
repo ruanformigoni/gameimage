@@ -13,7 +13,7 @@ use anyhow::anyhow as ah;
 use shared::dimm;
 use shared::std::PathBufExt;
 use shared::std::OsStrExt;
-use shared::{fixed,row,column,hpack,scroll,hover_blink,hseparator,hseparator_fixed,rescope};
+use shared::{fixed,row,column,hpack,scroll,hover_blink,rescope};
 
 use crate::common::Msg;
 
@@ -73,46 +73,50 @@ fn get_path_db_args() -> anyhow::Result<std::path::PathBuf>
 } // get_path_db_args() }}}
 
 // fn: new_layout_entry {{{
-fn new_layout_entry(mut col: group::Pack, str_output: &str, is_use: bool)
+fn new_layout_entry(str_output: &str, is_use: bool)
   -> (output::Output,button::CheckButton,fltk_evented::Listener<fltk::input::Input>)
 {
-  row!(row,
-    row.resize(row.x(), row.y(), 0, dimm::height_button_rec() + dimm::height_text());
-    column!(col_output,
-      fixed!(col_output
-        , label
-        , Frame::default().with_label("Executable").with_align(Align::Inside | Align::Left)
-        , dimm::height_text()
+  column!(col,
+    col.set_spacing(dimm::border_half());
+    // 'Executable' / 'Use' row
+    row!(row,
+      // Executable label and output field
+      column!(col_output,
+        col_output.set_spacing(dimm::border_half());
+        fixed!(col_output
+          , label
+          , Frame::default().with_label("Executable").with_align(Align::Inside | Align::Left)
+          , dimm::height_text()
+        );
+        fixed!(col_output, output_executable, output::Output::default(), dimm::height_button_rec());
+        let _ = output_executable.clone().insert(str_output);
       );
-      fixed!(col_output, output_executable, output::Output::default(), dimm::height_button_rec());
-      let _ = output_executable.clone().insert(str_output);
-    );
-    row.add(&col_output);
-    column!(col_btn,
-      fixed!(col_btn
-        , label
-        , Frame::default().with_label("Use").with_align(Align::Inside | Align::Left)
-        , dimm::height_text()
+      row.add(&col_output);
+      // 'Use' label and button
+      column!(col_btn,
+        col_btn.set_spacing(dimm::border_half());
+        fixed!(col_btn
+          , label
+          , Frame::default().with_label("Use").with_align(Align::Inside | Align::Left)
+          , dimm::height_text()
+        );
+        fixed!(col_btn, btn_use, shared::fltk::button::rect::checkmark::<fltk::button::CheckButton>(), dimm::height_button_rec());
+        btn_use.clone().set_value(is_use);
       );
-      fixed!(col_btn, btn_use, shared::fltk::button::rect::checkmark::<fltk::button::CheckButton>(), dimm::height_button_rec());
-      btn_use.clone().set_value(is_use);
+      row.fixed(&col_btn, dimm::width_button_rec());
     );
-    row.fixed(&col_btn, dimm::width_button_rec());
-  );
-  col.add(&row);
-  column!(col_input,
-    fixed!(col_input
-      , label
-      , Frame::default().with_label("Arguments").with_align(Align::Inside | Align::Left)
-      , dimm::height_text()
+    col.fixed(&row, dimm::height_button_rec() + dimm::height_text() + dimm::border_half());
+    // 'Arguments' label and input field
+    column!(col_args,
+      col_args.fixed(&Frame::default().with_label("Arguments").with_align(Align::Inside | Align::Left) , dimm::height_text());
+      let input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+      col_args.fixed(&input_arguments.as_base_widget(), dimm::height_button_wide());
     );
-    let input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
-    col_input.fixed(&input_arguments.as_base_widget(), dimm::height_button_wide());
+    col.fixed(&col_args.clone(), shared::fit_to_children_height!(col_args));
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+    col.fixed(&Frame::default(), 0);
   );
-  col_input.resize(col_input.x(), col_input.y(), 0, dimm::height_button_wide() + dimm::height_text());
-  col.add(&col_input);
-  hseparator!(col, row.w());
-
+  shared::fit_to_children_height!(col);
   (output_executable, btn_use, input_arguments)
 } // fn: new_layout_entry }}}
 
@@ -180,13 +184,12 @@ pub fn new(tx : Sender<Msg>)
   column!(col,
     col.set_margin(dimm::border_half());
     fixed!(col, frame_title, Frame::default(), dimm::height_text());
-    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
     scroll!(scroll,
       hpack!(col_scroll,);
-      col_scroll.set_spacing(dimm::border());
-      col_scroll.set_size(0,0);
+      col_scroll.set_spacing(0);
     );
-    hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
     column!(col_bottom,
       row!(row_bottom,
         fixed!(row_bottom, btn_back, &shared::fltk::button::rect::back(), dimm::width_button_rec());
@@ -213,10 +216,9 @@ pub fn new(tx : Sender<Msg>)
   {
     let path_file_db_executable = path_file_db_executable.clone();
     let db_executables = shared::db::kv::read(&path_file_db_executable).unwrap_or_default();
-    move |col: group::Pack, key : String|
+    move |key : String|
     {
-      let (output,btn,input) = new_layout_entry(col.clone()
-        , key.as_str()
+      let (output,btn,input) = new_layout_entry(key.as_str()
         , db_executables.contains_key(key.as_str())
       );
       new_callback(output, btn, input, key, path_file_db_executable);
@@ -225,7 +227,7 @@ pub fn new(tx : Sender<Msg>)
   rescope!(col_scroll,
     let mut vec_executables = find_executables().unwrap_or_default();
     vec_executables.sort();
-    vec_executables.iter().for_each(|e| f_make_entry.clone()(col_scroll.clone(), e.string()));
+    vec_executables.iter().for_each(|e| f_make_entry.clone()(e.string()));
   );
   // Configure buttons
   let mut btn_home = btn_home.clone();
