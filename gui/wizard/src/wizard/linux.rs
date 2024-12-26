@@ -397,99 +397,101 @@ fn default_entry(tx: Sender<common::Msg>
   , vec_radio_path: &mut Vec<(fltk::button::RadioButton,PathBuf)>)
 {
   column!(col,
-  col.set_spacing(dimm::border_half());
-  row!(row_fst,
-    let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
-    row_fst.fixed(&btn_check, dimm::width_button_rec());
-    add!(row_fst, output, output::Output::default());
-    fixed!(row_fst, btn_folder, shared::fltk::button::rect::folder(), dimm::width_button_rec());
-    fixed!(row_fst, btn_run, shared::fltk::button::rect::play(), dimm::width_button_rec());
+    col.set_spacing(dimm::border_half());
+    row!(row_fst,
+      let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
+      row_fst.fixed(&btn_check, dimm::width_button_rec());
+      add!(row_fst, output, output::Output::default());
+      fixed!(row_fst, btn_folder, shared::fltk::button::rect::folder(), dimm::width_button_rec());
+      fixed!(row_fst, btn_run, shared::fltk::button::rect::play(), dimm::width_button_rec());
+    );
+    col.fixed(&row_fst.clone(), dimm::height_button_wide());
+    col.fixed(&fltk::frame::Frame::default()
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Executable arguments"), dimm::height_text()
+    );
+    let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+    col.fixed(&input_arguments.clone().as_base_widget(), dimm::height_button_wide());
+    col.fixed(&fltk::frame::Frame::default()
+      .with_align(Align::Inside | Align::Left)
+      .with_label("Executable alias"), dimm::height_text()
+    );
+    let mut input_alias : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+    col.fixed(&input_alias.clone().as_base_widget(), dimm::height_button_wide());
+    let mut btn_selectable = shared::fltk::button::rect::checkbutton()
+      .with_align(Align::Inside | Align::Left)
+      .with_color(Color::BackGround)
+      .with_label(" Make this executable selectable in the launcher");
+    col.fixed(&btn_selectable.clone(), dimm::width_checkbutton());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
   );
-  col.fixed(&row_fst.clone(), dimm::height_button_wide());
-  col.fixed(&fltk::frame::Frame::default()
-    .with_align(Align::Inside | Align::Left)
-    .with_label("Executable arguments"), dimm::height_text()
+  col.resize(col.x(),col.y(),col.w()
+    , dimm::height_button_wide()*3+dimm::height_text()*2+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*7
   );
-  let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
-  col.fixed(&input_arguments.clone().as_base_widget(), dimm::height_button_wide());
-  col.fixed(&fltk::frame::Frame::default()
-    .with_align(Align::Inside | Align::Left)
-    .with_label("Executable alias"), dimm::height_text()
-  );
-  let mut input_alias : fltk_evented::Listener<_> = fltk::input::Input::default().into();
-  col.fixed(&input_alias.clone().as_base_widget(), dimm::height_button_wide());
-  let mut btn_selectable = shared::fltk::button::rect::checkbutton()
-    .with_align(Align::Inside | Align::Left)
-    .with_color(Color::BackGround)
-    .with_label(" Make this executable selectable in the launcher");
-  col.fixed(&btn_selectable.clone(), dimm::width_checkbutton());
-  col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
-);
-col.resize(col.x(),col.y(),col.w()
-  , dimm::height_button_wide()*3+dimm::height_text()*2+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*7
-);
-// Configure buttons
-hover_blink!(btn_run);
-hover_blink!(btn_folder);
-// Checkbutton
-// Include values into shared vector
-vec_radio_path.push((btn_check.clone(), PathBuf::from(item.to_owned())));
-// Label with file name
-let _ = output.clone().insert(&item.string());
-// Button to open file in file manager
-let clone_item = item.clone();
-btn_folder.clone().set_callback(move |_| { let _ = default_folder(clone_item.clone()); });
-// Button to run the selected binary
-btn_run.clone()
-  .with_color(Color::Green)
-  .with_callback(#[clown] move |_|
-  {
-    let item = honk!(item).clone();
-    tx.send_awake(common::Msg::WindDeactivate);
-    std::thread::spawn(#[clown] move ||
+  // Configure buttons
+  hover_blink!(btn_run);
+  hover_blink!(btn_folder);
+  // Checkbutton
+  // Include values into shared vector
+  vec_radio_path.push((btn_check.clone(), PathBuf::from(item.to_owned())));
+  // Label with file name
+  let _ = output.clone().insert(&item.string());
+  // Button to open file in file manager
+  let clone_item = item.clone();
+  btn_folder.clone().set_callback(move |_| { let _ = default_folder(clone_item.clone()); });
+  // Button to run the selected binary
+  btn_run.clone()
+    .with_color(Color::Green)
+    .with_callback(#[clown] move |_|
     {
-      log_err_status!(default_play(&item));
-      tx.send_awake(common::Msg::WindActivate);
+      let item = honk!(item).clone();
+      tx.send_awake(common::Msg::WindDeactivate);
+      std::thread::spawn(#[clown] move ||
+      {
+        log_err_status!(default_play(&item));
+        tx.send_awake(common::Msg::WindActivate);
+      });
     });
+  // Configure arguments input
+  default_db(input_arguments.clone(), get_path_db_args().unwrap_or_default(), item.clone());
+  if executable_arguments.contains_key(&item.string())
+  {
+    input_arguments.set_value(executable_arguments[&item.string()].as_str());
+  } // if
+  default_db(input_alias.clone(), get_path_db_alias().unwrap_or_default(), item.clone());
+  if executable_alias.contains_key(&item.string())
+  {
+    input_alias.set_value(executable_alias[&item.string()].as_str());
+  } // if
+  // Configure selectable in launcher
+  let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
+  btn_selectable.set_value(shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default().contains_key(&output.value()));
+  btn_selectable.set_callback(move |e|
+  {
+    if e.value()
+    {
+      if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &output.value(), &"1".to_string())
+      {
+        log_status!("Could not insert key '{}' in db: {}", output.value(), e);
+      } // if
+    }
+    else
+    {
+      if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, output.value())
+      {
+        log_status!("Could not remove key '{}' from db: {}", output.value(), e);
+      } // if
+    }
   });
-// Configure arguments input
-default_db(input_arguments.clone(), get_path_db_args().unwrap_or_default(), item.clone());
-if executable_arguments.contains_key(&item.string())
-{
-  input_arguments.set_value(executable_arguments[&item.string()].as_str());
-} // if
-default_db(input_alias.clone(), get_path_db_alias().unwrap_or_default(), item.clone());
-if executable_alias.contains_key(&item.string())
-{
-  input_alias.set_value(executable_alias[&item.string()].as_str());
-} // if
-// Configure selectable in launcher
-let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
-btn_selectable.set_value(shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default().contains_key(&output.value()));
-btn_selectable.set_callback(move |e|
-{
-  if e.value()
-  {
-    if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &output.value(), &"1".to_string())
-    {
-      log_status!("Could not insert key '{}' in db: {}", output.value(), e);
-    } // if
-  }
-  else
-  {
-    if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, output.value())
-    {
-      log_status!("Could not remove key '{}' from db: {}", output.value(), e);
-    } // if
-  }
-});
 } // fn default_entry() }}}
 
 // fn default() {{{
 pub fn default(tx: Sender<common::Msg>, title: &str)
 {
+  const COUNT_ITEM_PER_PAGE: usize = 20;
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
+  static PAGE : LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
   // Update results if empty
   if RESULTS.lock().unwrap().is_empty()
   {
@@ -513,6 +515,18 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       scroll.add(&col_entries);
     );
     col.add(&scroll);
+    let (col_paginator, mut input_page) = shared::fltk::paginator::paginator(|| { PAGE.lock().unwrap().clone() }
+    , move |value|
+    {
+      tx.send_awake(common::Msg::WindDeactivate);
+      std::thread::spawn(move ||
+      {
+        *PAGE.lock().unwrap() = value;
+        tx.send_activate(common::Msg::DrawLinuxDefault);
+      });
+    },
+    || { RESULTS.lock().unwrap().len() / COUNT_ITEM_PER_PAGE });
+    col.fixed(&col_paginator, col_paginator.h());
   );
   // Configure buttons
   ui.btn_prev.clone().emit(tx, common::Msg::DrawLinuxMethod);
@@ -550,7 +564,10 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
   // Create a column for the element entries
   rescope!(col_entries,
-    for rom in RESULTS.lock().unwrap().iter()
+    let results = RESULTS.lock().unwrap();
+    let start = (PAGE.lock().unwrap().clone() * COUNT_ITEM_PER_PAGE).min(results.len());
+    let end = (start + COUNT_ITEM_PER_PAGE).min(results.len());
+    for rom in results.clone().drain(start..end)
     {
       default_entry(tx.clone()
         , &hash_executable_arguments

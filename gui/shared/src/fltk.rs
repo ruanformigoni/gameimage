@@ -13,6 +13,7 @@ pub mod progress;
 pub mod separator;
 pub mod frame;
 pub mod macros;
+pub mod paginator;
 
 // pub fn theme() {{{
 pub fn theme()

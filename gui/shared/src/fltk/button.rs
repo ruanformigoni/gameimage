@@ -101,7 +101,7 @@ macro_rules! create_buttons
 }
 
 create_buttons!(search, terminal, filter, install , home, back, configure, list, switch, add, del,
-  folder, save, check, check_all, cloud, refresh, joystick, arrow_forward, play, resize_down
+  folder, save, check, check_all, cloud, refresh, joystick, arrow_backward, arrow_forward, play, resize_down
 );
 
 pub fn checkbutton() -> fltk::button::CheckButton
