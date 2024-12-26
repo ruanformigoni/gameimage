@@ -1,5 +1,6 @@
 use std::
 {
+  path,
   sync::{Arc,Mutex,LazyLock},
   path::PathBuf,
   os::unix::fs::PermissionsExt,
@@ -294,6 +295,57 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   }); // set_callback
 } // }}}
 
+// get_path_db() {{{
+fn get_path_db() -> anyhow::Result<PathBuf>
+{
+  let global = db::global::read()?;
+  Ok(global.get_project_dir(&global.project)?)
+} // get_path_db() }}}
+
+// get_path_db_executable() {{{
+fn get_path_db_executable() -> anyhow::Result<PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.executable.json");
+  Ok(path_file_db)
+} // get_path_db_executable() }}}
+
+// get_path_db_args() {{{
+fn get_path_db_args() -> anyhow::Result<PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.args.json");
+  Ok(path_file_db)
+} // get_path_db_args() }}}
+
+// get_path_db_alias() {{{
+fn get_path_db_alias() -> anyhow::Result<PathBuf>
+{
+  let mut path_file_db = get_path_db()?;
+  path_file_db.push("gameimage.alias.json");
+  Ok(path_file_db)
+} // get_path_db_alias() }}}
+
+// default_db {{{
+fn default_db(input: fltk_evented::Listener<fltk::input::Input>
+  , path_file_db: PathBuf
+  , item: PathBuf)
+{
+  input.clone().on_keyup(move |e|
+  {
+    if e.value().trim().is_empty()
+    {
+      let _ = shared::db::kv::erase(&path_file_db, item.string());
+      return;
+    }; // if
+    match shared::db::kv::write(&path_file_db, &item.string(), &e.value())
+    {
+      Ok(()) => (),
+      Err(e) => log_status!("Could not write to db: {}", e),
+    };
+  });
+} // default_db }}}
+
 // fn default_play() {{{
 fn default_play(path_file_item: &std::path::PathBuf) -> anyhow::Result<()>
 {
@@ -318,13 +370,131 @@ fn default_search(query: &str) -> Vec<PathBuf>
   results
 } // fn default_search() }}}
 
-// default() {{{
+// fn default_folder() {{{
+fn default_folder(path_file_item: PathBuf) -> anyhow::Result<()>
+{
+  // Get executable directory
+  let mut path_dir_executable = db::global::get_current_project()?.path_dir_project.join(&path_file_item);
+  // Get executable directory
+  if ! path_dir_executable.pop() { log_status!("Could not open executable: {}", path_dir_executable.string()); } // if
+  log_status!("Open '{}'", path_dir_executable.string());
+  // Open with xdg-open
+  let _ = std::process::Command::new("fim_portal")
+      .stderr(std::process::Stdio::inherit())
+      .stdout(std::process::Stdio::inherit())
+      .arg("xdg-open")
+      .arg(&path_dir_executable.string())
+      .spawn();
+  Ok(())
+}
+// default_folder() }}}
+
+// fn default_entry() {{{
+fn default_entry(tx: Sender<common::Msg>
+  , executable_arguments: &std::collections::HashMap<String, String>
+  , executable_alias: &std::collections::HashMap<String, String>
+  , item: &PathBuf
+  , vec_radio_path: &mut Vec<(fltk::button::RadioButton,PathBuf)>)
+{
+  column!(col,
+  col.set_spacing(dimm::border_half());
+  row!(row_fst,
+    let btn_check = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
+    row_fst.fixed(&btn_check, dimm::width_button_rec());
+    add!(row_fst, output, output::Output::default());
+    fixed!(row_fst, btn_folder, shared::fltk::button::rect::folder(), dimm::width_button_rec());
+    fixed!(row_fst, btn_run, shared::fltk::button::rect::play(), dimm::width_button_rec());
+  );
+  col.fixed(&row_fst.clone(), dimm::height_button_wide());
+  col.fixed(&fltk::frame::Frame::default()
+    .with_align(Align::Inside | Align::Left)
+    .with_label("Executable arguments"), dimm::height_text()
+  );
+  let mut input_arguments : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+  col.fixed(&input_arguments.clone().as_base_widget(), dimm::height_button_wide());
+  col.fixed(&fltk::frame::Frame::default()
+    .with_align(Align::Inside | Align::Left)
+    .with_label("Executable alias"), dimm::height_text()
+  );
+  let mut input_alias : fltk_evented::Listener<_> = fltk::input::Input::default().into();
+  col.fixed(&input_alias.clone().as_base_widget(), dimm::height_button_wide());
+  let mut btn_selectable = shared::fltk::button::rect::checkbutton()
+    .with_align(Align::Inside | Align::Left)
+    .with_color(Color::BackGround)
+    .with_label(" Make this executable selectable in the launcher");
+  col.fixed(&btn_selectable.clone(), dimm::width_checkbutton());
+  col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+);
+col.resize(col.x(),col.y(),col.w()
+  , dimm::height_button_wide()*3+dimm::height_text()*2+dimm::width_checkbutton()+dimm::height_sep()+dimm::border_half()*7
+);
+// Configure buttons
+hover_blink!(btn_run);
+hover_blink!(btn_folder);
+// Checkbutton
+// Include values into shared vector
+vec_radio_path.push((btn_check.clone(), PathBuf::from(item.to_owned())));
+// Label with file name
+let _ = output.clone().insert(&item.string());
+// Button to open file in file manager
+let clone_item = item.clone();
+btn_folder.clone().set_callback(move |_| { let _ = default_folder(clone_item.clone()); });
+// Button to run the selected binary
+btn_run.clone()
+  .with_color(Color::Green)
+  .with_callback(#[clown] move |_|
+  {
+    let item = honk!(item).clone();
+    tx.send_awake(common::Msg::WindDeactivate);
+    std::thread::spawn(#[clown] move ||
+    {
+      log_err_status!(default_play(&item));
+      tx.send_awake(common::Msg::WindActivate);
+    });
+  });
+// Configure arguments input
+default_db(input_arguments.clone(), get_path_db_args().unwrap_or_default(), item.clone());
+if executable_arguments.contains_key(&item.string())
+{
+  input_arguments.set_value(executable_arguments[&item.string()].as_str());
+} // if
+default_db(input_alias.clone(), get_path_db_alias().unwrap_or_default(), item.clone());
+if executable_alias.contains_key(&item.string())
+{
+  input_alias.set_value(executable_alias[&item.string()].as_str());
+} // if
+// Configure selectable in launcher
+let clone_path_file_db_executable = get_path_db_executable().unwrap_or_default();
+btn_selectable.set_value(shared::db::kv::read(&clone_path_file_db_executable).unwrap_or_default().contains_key(&output.value()));
+btn_selectable.set_callback(move |e|
+{
+  if e.value()
+  {
+    if let Err(e) = shared::db::kv::write(&clone_path_file_db_executable, &output.value(), &"1".to_string())
+    {
+      log_status!("Could not insert key '{}' in db: {}", output.value(), e);
+    } // if
+  }
+  else
+  {
+    if let Err(e) = shared::db::kv::erase(&clone_path_file_db_executable, output.value())
+    {
+      log_status!("Could not remove key '{}' from db: {}", output.value(), e);
+    } // if
+  }
+});
+} // fn default_entry() }}}
+
+// fn default() {{{
 pub fn default(tx: Sender<common::Msg>, title: &str)
 {
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
-  // Update results
-  *RESULTS.lock().unwrap() = default_search(&QUERY.lock().unwrap().clone());
+  // Update results if empty
+  if RESULTS.lock().unwrap().is_empty()
+  {
+    *RESULTS.lock().unwrap() = default_search(&QUERY.lock().unwrap().clone());
+  } // if
   // Refresh GUI
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
   // Create layout
@@ -361,7 +531,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       std::thread::spawn(move ||
       {
         *RESULTS.lock().unwrap() = default_search(&query);
-        tx.send_awake(common::Msg::DrawLinuxDefault);
+        tx.send_activate(common::Msg::DrawLinuxDefault);
       });
     } // if
   });
@@ -375,48 +545,20 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       col_entries.resize(x,y,w-dimm::border_half()*3,col_entries.h());
     }
   });
+  // Arguments database
+  let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
+  // Create a column for the element entries
   rescope!(col_entries,
-    // Insert items in scroll list
     for rom in RESULTS.lock().unwrap().iter()
     {
-      // Create a row
-      let mut row = fltk::group::Flex::default()
-        .with_size(0, dimm::height_button_wide());
-      row.set_type(fltk::group::FlexType::Row);
-      // Checkbutton
-      let btn_radio = shared::fltk::button::rect::checkmark::<fltk::button::RadioButton>();
-      row.fixed(&btn_radio, dimm::width_button_rec());
-      // Rom name
-      let mut frame_label = output::Output::default()
-        .with_frame(fltk::enums::FrameType::BorderBox);
-      let _ = frame_label.insert(&rom.string());
-      row.add(&frame_label);
-      // Play button
-      let btn_play = shared::fltk::button::rect::play()
-        .with_color(Color::Green)
-        .with_callback(#[clown] move |_|
-        {
-          let rom = honk!(rom).clone();
-          tx.send_awake(common::Msg::WindDeactivate);
-          std::thread::spawn(#[clown] move ||
-          {
-            log_err_status!(default_play(&rom));
-            tx.send_awake(common::Msg::WindActivate);
-          });
-        });
-      hover_blink!(btn_play);
-      row.fixed(&btn_play, dimm::width_button_rec());
-      // Insert in vec
-      match arc_items.lock()
-      {
-        Ok(mut guard) => guard.push((btn_radio, rom.clone())),
-        Err(e) => log_status!("Could not save items to list with error {}", e),
-      }; // match
-      row.end();
-      col_entries.add(&row);
+      default_entry(tx.clone()
+        , &hash_executable_arguments
+        , &hash_executable_alias
+        , &rom
+        , &mut arc_items.lock().unwrap());
     } // for
   );
-
   // Set callbacks for toggle group
   for guard in arc_items.lock().unwrap().iter_mut()
   {
@@ -426,24 +568,20 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       e.toggle(true);
     });
   } // for
-
   let clone_arc_items = arc_items.clone();
   let clone_tx = tx.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
     // Get the vector
     let vec_items = clone_arc_items.lock().unwrap();
-
     // Get the selected button label (it contains the path to the default binary)
     let path_file_rom = match vec_items.iter().find(|x| x.0.is_set() )
     {
       Some(value) => value.1.clone(),
       None => { log_alert!("No file selected!"); return; },
     }; // match
-
     // Select rom
     log_err_status!(gameimage::select::select("rom", &path_file_rom));
-
     // Draw test
     clone_tx.send_awake(common::Msg::DrawLinuxCompress);
   });

@@ -149,7 +149,15 @@ void boot_linux(ns_db::ns_project::Project& db_project, fs::path const& path_dir
   fs::current_path(path_dir_self);
 
   // Create full path to rom
+  fs::path path_file_rom_relative = db_project.path_file_rom;
   fs::path path_file_rom = path_dir_self / db_project.path_file_rom;
+
+  // If GIMG_LAUNCHER_EXECUTABLE is defined, use it instead
+  if ( const char* var = ns_env::get("GIMG_LAUNCHER_EXECUTABLE"); var != nullptr )
+  {
+    path_file_rom_relative = var;
+    path_file_rom = path_dir_self / path_file_rom_relative;
+  } // if
 
   // Include exec and read permissions (allow to fail)
   lec(fs::permissions, path_file_rom
@@ -163,9 +171,10 @@ void boot_linux(ns_db::ns_project::Project& db_project, fs::path const& path_dir
 
   auto optional_path_file_bash = ns_subprocess::search_path("bash");
   ereturn_if (not optional_path_file_bash, "Could not find bash");
-  (void) ns_subprocess::Subprocess(*optional_path_file_bash)
+  std::ignore = ns_subprocess::Subprocess(*optional_path_file_bash)
     .with_piped_outputs()
     .with_args("-c", R"("{}" "$@")"_fmt(path_file_rom))
+    .with_args("--", args(path_dir_self, path_file_rom_relative))
     .spawn()
     .wait();
 } // boot_linux() }}}
@@ -191,7 +200,7 @@ void boot_wine(ns_db::ns_project::Project& db_project, fs::path const& path_dir_
   fs::current_path(ns_fs::ns_path::dir_exists<true>(path_file_rom.parent_path())._ret);
 
   // Start application
-  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_WINE"))
+  std::ignore = ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_WINE"))
     .with_piped_outputs()
     .with_args(path_file_rom, args(path_dir_self, path_file_rom_relative))
     .spawn()
@@ -205,7 +214,7 @@ void boot_retroarch(ns_db::ns_project::Project& db_project, fs::path const& path
   db_files_copy(db_project, ns_enum::Op::BIOS, path_dir_self, (get_xdg_config_home() / "retroarch/system"));
 
   // Start application
-  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RETROARCH"))
+  std::ignore = ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RETROARCH"))
     .with_piped_outputs()
     .with_args("-L", path_dir_self / db_project.path_file_core, path_dir_self / db_project.path_file_rom)
     .spawn()
@@ -219,7 +228,7 @@ void boot_pcsx2(ns_db::ns_project::Project& db_project, fs::path const& path_dir
   db_files_copy(db_project, ns_enum::Op::BIOS, path_dir_self, ( get_xdg_config_home() / "PCSX2/bios"));
 
   // Start application
-  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_PCSX2"))
+  std::ignore = ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_PCSX2"))
     .with_piped_outputs()
     .with_args("--", path_dir_self / db_project.path_file_rom)
     .spawn()
@@ -229,7 +238,7 @@ void boot_pcsx2(ns_db::ns_project::Project& db_project, fs::path const& path_dir
 // boot_rpcs3() {{{
 void boot_rpcs3(ns_db::ns_project::Project& db_project, fs::path const& path_dir_self)
 {
-  (void) ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RPCS3"))
+  std::ignore = ns_subprocess::Subprocess(ns_env::get_or_throw("FIM_BINARY_RPCS3"))
     .with_piped_outputs()
     .with_args("--allow-any-location", "--no-gui", "--", path_dir_self / db_project.path_file_rom)
     .spawn()
