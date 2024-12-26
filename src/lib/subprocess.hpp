@@ -146,7 +146,7 @@ Subprocess::Subprocess(T&& t)
 // Subprocess::~Subprocess {{{
 inline Subprocess::~Subprocess()
 {
-  (void) this->wait();
+  std::ignore = this->wait();
 } // Subprocess::~Subprocess }}}
 
 // env_clear() {{{
@@ -160,7 +160,7 @@ inline Subprocess& Subprocess::env_clear()
 template<ns_concept::AsString K, ns_concept::AsString V>
 Subprocess& Subprocess::with_var(K&& k, V&& v)
 {
-  (void) rm_var(k);
+  std::ignore = rm_var(k);
   m_env.push_back("{}={}"_fmt(k,v));
   return *this;
 } // with_var() }}}
@@ -253,7 +253,7 @@ Subprocess& Subprocess::with_env(T&& t)
       auto parts = ns_vector::from_string(entry, '=');
       econtinue_if(parts.size() < 2, "Entry '{}' is not valid"_fmt(entry));
       std::string key = parts.front();
-      (void) this->rm_var(key);
+      std::ignore = this->rm_var(key);
     } // for
   };
 

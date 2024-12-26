@@ -132,7 +132,7 @@ inline decltype(auto) compress()
   // Execute portal
   auto f_portal = []<typename... Args>(Args&&... args)
   {
-    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
       .with_piped_outputs()
       .with_args(std::forward<Args>(args)...)
       .spawn()

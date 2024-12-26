@@ -78,7 +78,7 @@ inline void resize(fs::path const& path_file_src
 
   // Resize image and crop to fit dimensions
   ereturn_if(not optional_path_file_magick, "Could not find magick binary");
-  (void) ns_subprocess::Subprocess(*optional_path_file_magick)
+  std::ignore = ns_subprocess::Subprocess(*optional_path_file_magick)
     .with_piped_outputs()
     .with_args(path_file_src, "-resize", "{0}x{1}^"_fmt(width, height))
     .with_args("-gravity","center","-crop","{0}x{1}+0+0"_fmt(width, height),"+repage", path_file_dst)

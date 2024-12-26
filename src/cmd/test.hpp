@@ -20,7 +20,7 @@ inline decltype(auto) test()
   auto db_metadata = db_build->find(db_build->project);
 
   // Start application
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+  std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
     .with_args(db_build->path_file_image, "fim-exec", db_metadata.path_dir_project / "boot")
     .spawn()

@@ -90,7 +90,7 @@ inline void wine(fs::path const& path_file_image,
   // Set callbacks for wine/winetricks
   auto f_wine = [&]<typename T>(T&& t)
   {
-    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
       .with_piped_outputs()
       .with_args(path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", std::forward<T>(t))
       .spawn()
@@ -99,7 +99,7 @@ inline void wine(fs::path const& path_file_image,
 
   auto f_winetricks = [&]<typename T>(T&& t)
   {
-    (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+    std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
       .with_piped_outputs()
       .with_args(path_file_image, "fim-exec", "/opt/wine/bin/wine.sh", "winetricks", std::forward<T>(t))
       .spawn()
@@ -130,7 +130,7 @@ inline void linux(fs::path const& path_file_image
   lec(fs::create_directories, path_dir_linux);
 
   // Run selected file
-  (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+  std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
     .with_piped_outputs()
     .with_args(path_file_image, "fim-exec", "env", "HOME={}"_fmt(path_dir_linux.c_str()), args)
     .spawn()
@@ -229,7 +229,7 @@ inline void emulator(fs::path const& path_file_image
   {
     case Op::GUI:
     {
-      (void) ns_subprocess::Subprocess("/fim/static/fim_portal")
+      std::ignore = ns_subprocess::Subprocess("/fim/static/fim_portal")
         .with_piped_outputs()
         .with_args(path_file_image, "fim-exec", "/opt/rpcs3/boot")
         .spawn()
