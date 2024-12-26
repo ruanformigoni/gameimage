@@ -5,6 +5,8 @@ use fltk::{
 
 use crate::fltk::WidgetExtExtra;
 
+const RADIUS: i32 = 3;
+
 fn button<T>() -> T
   where T : Clone
   + Send
@@ -37,7 +39,7 @@ fn button<T>() -> T
       b.color()
     };
     draw::set_draw_color(c);
-    draw::draw_rounded_rectf(x, y, w, h, 3);
+    draw::draw_rounded_rectf(x, y, w, h, RADIUS);
     if let Some(mut image) = b.image() {
       let img_w = image.width();
       let img_h = image.height();
@@ -68,6 +70,8 @@ pub fn default() -> fltk::button::Button
 
 pub mod rect
 {
+
+const RADIUS: i32 = 3;
 
 use fltk::{
   draw,
@@ -160,14 +164,16 @@ pub fn checkmark<T>() -> T
     {
       true =>
       {
-        fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::Green);
+        draw::set_draw_color(Color::Blue);
+        draw::draw_rounded_rectf(e.x(), e.y(), e.w(), e.h(), RADIUS);
         fltk::image::SvgImage::from_data(&svg::with_size::icon_box_selected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
       },
       false =>
       {
-        fltk::draw::draw_rect_fill(e.x(), e.y(), e.w(), e.h(), Color::BackGround.lighter());
+        draw::set_draw_color(Color::BackGround.lighter());
+        draw::draw_rounded_rectf(e.x(), e.y(), e.w(), e.h(), RADIUS);
         fltk::image::SvgImage::from_data(&svg::with_size::icon_box_deselected(dimm::width_button_rec(), dimm::height_button_rec()))
           .unwrap()
           .draw(e.x(), e.y(), e.w(), e.h());
