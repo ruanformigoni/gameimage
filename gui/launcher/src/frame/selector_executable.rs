@@ -5,6 +5,7 @@ use fltk::{
   app::Sender,
   frame::Frame,
   enums,
+  group,
 };
 
 use anyhow::anyhow as ah;
@@ -12,7 +13,7 @@ use anyhow::anyhow as ah;
 use shared::dimm;
 use shared::fltk::WidgetExtExtra;
 use shared::std::PathBufExt;
-use shared::{fixed,hover_blink,hseparator_fixed,column,row,rescope};
+use shared::{fixed,hover_blink,hseparator_fixed,column,hpack,scroll,row,rescope};
 
 use common::Msg;
 
@@ -71,8 +72,10 @@ pub fn new(tx : Sender<Msg>)
     col.set_margin(dimm::border_half());
     fixed!(col, frame_title, Frame::default(), dimm::height_text());
     hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
-    column!(col_content, );
-    col_content.set_spacing(dimm::border_half());
+    scroll!(scroll_content,
+      hpack!(col_content, );
+      col_content.set_spacing(dimm::border_half());
+    );
     hseparator_fixed!(col, col.w() - dimm::border()*2, dimm::border_half());
     column!(col_bottom,
       row!(row_bottom,
@@ -85,6 +88,12 @@ pub fn new(tx : Sender<Msg>)
   // Title
   let mut frame_title = frame_title.clone();
   frame_title.set_label("Executable Selection");
+  // Auto resize column to scroll width
+  scroll_content.resize_callback({let mut c = col_content.clone(); move |_,_,_,w,_|
+  {
+    c.resize(c.x(),c.y(),w-dimm::border_half()*3,c.h());
+  }});
+  scroll_content.set_type(group::ScrollType::VerticalAlways);
   // Footer button
   let mut btn_back = btn_back.clone();
   btn_back.emit(tx, Msg::DrawCover);
@@ -134,7 +143,7 @@ pub fn new(tx : Sender<Msg>)
         hover_blink!(btn);
         row_entry.add(&btn);
       );
-      col_content.fixed(&row_entry, dimm::height_button_wide() + dimm::border_half());
+      row_entry.resize(row_entry.x(), row_entry.y(), row_entry.w(), dimm::height_button_wide() + dimm::border_half());
     } // for
   );
 } // fn: new }}}
