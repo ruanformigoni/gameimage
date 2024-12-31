@@ -7,7 +7,7 @@ use fltk::{
 use crate::{dimm,column,row,hover_blink};
 
 // pub fn paginator() {{{
-pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> fltk::group::Flex
+pub fn paginator<F,G,H>(mut get_page: F, mut set_page: G, mut count_pages: H) -> fltk::group::Flex
   where F: Clone + FnMut() -> usize,
         G: 'static + Clone + FnMut(usize),
         H: 'static + Clone + FnMut() -> usize
@@ -23,7 +23,7 @@ pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> fltk::group
         row_pages.fixed(&frame::Frame::default().with_label("/"), dimm::border());
         let mut output_pages = output::Output::default(); 
         row_pages.fixed(&output_pages, dimm::width_button_rec());
-        let _ = output_pages.insert(&count_pages.clone()().to_string());
+        let _ = output_pages.insert(&count_pages().to_string());
       );
       row.fixed(&row_pages, dimm::width_button_rec()*2 + dimm::border());
       row.add(&frame::Frame::default());
@@ -34,11 +34,13 @@ pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> fltk::group
   );
   // Adjust size
   col.resize(col.x(), col.y(), col.w(), dimm::height_button_wide());
+  // Check for bounds
+  if get_page() > count_pages() { set_page(0); } // if
   // Configure hover
   hover_blink!(btn_prev);
   hover_blink!(btn_next);
   // Configure callback
-  input_page.set_value(&get_page.clone()().to_string());
+  input_page.set_value(&get_page().to_string());
   input_page.on_keydown({
     let mut set_page = set_page.clone();
     move |e|
@@ -71,7 +73,7 @@ pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> fltk::group
     move |_|
     {
       let value = input_page.value().parse::<usize>().unwrap_or_default();
-      set_page((value + 1).min(count_pages.clone()()));
+      set_page((value + 1).min(count_pages()));
     }
   });
   col

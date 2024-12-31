@@ -382,6 +382,33 @@ fn default_search(query: &str) -> Vec<PathBuf>
   results
 } // fn default_search() }}}
 
+// fn default_modified() {{{
+fn default_modified() -> Vec<PathBuf>
+{
+  let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_use = shared::db::kv::read(&get_path_db_executable().unwrap_or_default()).unwrap_or_default();
+  let mut results: Vec<PathBuf> = hash_executable_arguments.keys()
+    .chain(hash_executable_alias.keys())
+    .chain(hash_executable_use.keys())
+    .map(|e| PathBuf::from(e))
+    .collect();
+  results.sort_by(|a, b|
+  {
+    let a_components = a.components().count();
+    let b_components = b.components().count();
+    if a_components == b_components
+    {
+      a.string().len().cmp(&b.string().len())
+    } // if
+    else
+    {
+      a_components.cmp(&b_components)
+    } // else
+  });
+  results
+} // fn default_modified() }}}
+
 // fn default_folder() {{{
 fn default_folder(path_file_item: PathBuf) -> anyhow::Result<()>
 {
@@ -504,8 +531,10 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
   static PAGE : LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
+  static SELECTED : LazyLock<Mutex<PathBuf>> = LazyLock::new(|| Mutex::new(PathBuf::default()));
+  static SHOW_SELECTED : LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
   // Update results if empty
-  if RESULTS.lock().unwrap().is_empty()
+  if RESULTS.lock().unwrap().is_empty() && ! *SHOW_SELECTED.lock().unwrap()
   {
     *RESULTS.lock().unwrap() = default_search(&QUERY.lock().unwrap().clone());
   } // if
@@ -518,6 +547,12 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       "Input a search term to filter executables, press enter to confirm"
     );
     col.fixed(&col_search, dimm::height_button_wide() + dimm::height_text() + dimm::border());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+    let mut btn_show_selected = shared::fltk::button::rect::checkbutton()
+      .with_align(Align::Inside | Align::Left)
+      .with_color(Color::BackGround)
+      .with_label(" Only show modified entries");
+    col.fixed(&btn_show_selected, dimm::width_checkbutton() + dimm::border());
     col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
     scroll!(scroll,
       scroll.set_type(fltk::group::ScrollType::VerticalAlways);
@@ -577,10 +612,12 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   // Arguments database
   let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
   let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
+  // Reset page if out of bounds
+  let page = PAGE.lock().unwrap();
   // Create a column for the element entries
   rescope!(col_entries,
     let results = RESULTS.lock().unwrap();
-    let start = (PAGE.lock().unwrap().clone() * COUNT_ITEM_PER_PAGE).min(results.len());
+    let start = (*page * COUNT_ITEM_PER_PAGE).min(results.len());
     let end = (start + COUNT_ITEM_PER_PAGE).min(results.len());
     for rom in results.clone().drain(start..end)
     {
@@ -592,14 +629,45 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     } // for
   );
   // Set callbacks for toggle group
-  for guard in arc_items.lock().unwrap().iter_mut()
+  for (btn,path) in arc_items.lock().unwrap().iter_mut()
   {
-    guard.0.set_callback(#[clown] move |e|
+    if *SELECTED.lock().unwrap() == path.clone()
+    {
+      btn.set_value(true);
+    } // if
+    btn.set_callback(#[clown] move |e|
     {
       for i in honk!(arc_items).lock().unwrap().iter_mut() { i.0.toggle(false); }
+      *SELECTED.lock().unwrap() = honk!(path).clone();
       e.toggle(true);
     });
   } // for
+  // Configure 'show selected' button
+  btn_show_selected.set_value(*SHOW_SELECTED.lock().unwrap());
+  btn_show_selected.set_callback(move |e|
+  {
+    // Only display modified items
+    if e.is_checked()
+    {
+      // Get modified entries
+      let mut results = default_modified();
+      // Get selected entry
+      let selected = SELECTED.lock().unwrap().to_path_buf();
+      if ! results.contains(&selected) && selected.components().count() > 0 { results.push(selected); } // if
+      // Update results
+      *RESULTS.lock().unwrap() = results;
+      *SHOW_SELECTED.lock().unwrap() = true;
+      tx.send_activate(common::Msg::DrawLinuxDefault);
+    } // if
+    // Display all items
+    else
+    {
+      *RESULTS.lock().unwrap() = default_search(&QUERY.lock().unwrap().clone());
+      *SHOW_SELECTED.lock().unwrap() = false;
+      tx.send_activate(common::Msg::DrawLinuxDefault);
+    } // else
+  });
+  // Configure next button
   let clone_arc_items = arc_items.clone();
   let clone_tx = tx.clone();
   ui.btn_next.clone().set_callback(move |_|
