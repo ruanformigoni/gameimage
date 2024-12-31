@@ -366,7 +366,19 @@ fn default_search(query: &str) -> Vec<PathBuf>
     .filter(|e| e.string().to_lowercase().contains(&query.to_lowercase()))
     .map(|e| e.clone())
     .collect();
-  results.sort_by_key(|k| k.components().count());
+  results.sort_by(|a, b|
+  {
+    let a_components = a.components().count();
+    let b_components = b.components().count();
+    if a_components == b_components
+    {
+      a.string().len().cmp(&b.string().len())
+    } // if
+    else
+    {
+      a_components.cmp(&b_components)
+    } // else
+  });
   results
 } // fn default_search() }}}
 
@@ -506,6 +518,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       "Input a search term to filter executables, press enter to confirm"
     );
     col.fixed(&col_search, dimm::height_button_wide() + dimm::height_text() + dimm::border());
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
     scroll!(scroll,
       scroll.set_type(fltk::group::ScrollType::VerticalAlways);
       scroll.set_scrollbar_size(dimm::border());
@@ -515,17 +528,19 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
       scroll.add(&col_entries);
     );
     col.add(&scroll);
-    let (col_paginator, mut input_page) = shared::fltk::paginator::paginator(|| { PAGE.lock().unwrap().clone() }
-    , move |value|
-    {
-      tx.send_awake(common::Msg::WindDeactivate);
-      std::thread::spawn(move ||
+    col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+    let col_paginator = shared::fltk::paginator::paginator(|| { PAGE.lock().unwrap().clone() }
+      , move |value|
       {
-        *PAGE.lock().unwrap() = value;
-        tx.send_activate(common::Msg::DrawLinuxDefault);
-      });
-    },
-    || { RESULTS.lock().unwrap().len() / COUNT_ITEM_PER_PAGE });
+        tx.send_awake(common::Msg::WindDeactivate);
+        std::thread::spawn(move ||
+        {
+          *PAGE.lock().unwrap() = value;
+          tx.send_activate(common::Msg::DrawLinuxDefault);
+        });
+      },
+      || { RESULTS.lock().unwrap().len() / COUNT_ITEM_PER_PAGE }
+    );
     col.fixed(&col_paginator, col_paginator.h());
   );
   // Configure buttons

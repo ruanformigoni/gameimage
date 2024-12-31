@@ -7,7 +7,7 @@ use fltk::{
 use crate::{dimm,column,row,hover_blink};
 
 // pub fn paginator() {{{
-pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> (fltk::group::Flex, fltk_evented::Listener<fltk::input::Input>)
+pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> fltk::group::Flex
   where F: Clone + FnMut() -> usize,
         G: 'static + Clone + FnMut(usize),
         H: 'static + Clone + FnMut() -> usize
@@ -74,7 +74,7 @@ pub fn paginator<F,G,H>(get_page: F, set_page: G, count_pages: H) -> (fltk::grou
       set_page((value + 1).min(count_pages.clone()()));
     }
   });
-  (col, input_page)
+  col
 } // pub fn paginator() }}}
 
 // vim: set expandtab fdm=marker ts=2 sw=2 tw=100 et :
