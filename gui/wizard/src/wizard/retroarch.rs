@@ -5,7 +5,7 @@ use fltk::{
   browser::MultiBrowser,
   dialog,
   output,
-  enums::{FrameType,Color,Align},
+  enums::{Color,Align},
 };
 
 use clown::clown;

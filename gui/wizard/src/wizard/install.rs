@@ -3,8 +3,6 @@ use fltk::prelude::*;
 use fltk::{
   app::Sender,
   browser::MultiBrowser,
-  button::Button,
-  group::Flex,
   dialog,
   enums::{FrameType,Color},
 };
@@ -19,22 +17,13 @@ use shared::std::PathBufExt;
 use crate::log_status;
 use crate::gameimage;
 
-// struct Install {{{
-pub struct Install
-{
-  pub col     : Flex,
-  pub list    : MultiBrowser,
-  pub btn_add : Button,
-  pub btn_del : Button,
-} // struct Install }}}
-
 // pub fn install() {{{
 pub fn install(tx: Sender<common::Msg>
   , title: &str
   , label: &str
   , msg_prev: common::Msg
   , msg_curr: common::Msg
-  , msg_next: common::Msg) -> ( crate::Ui, Install )
+  , msg_next: common::Msg) -> crate::Ui
 {
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
 
@@ -69,7 +58,7 @@ pub fn install(tx: Sender<common::Msg>
   // Add new item
   let clone_tx = tx.clone();
   let clone_label : String = label.to_string();
-  let btn_add = btn_add.clone()
+  let _ = btn_add.clone()
     .with_color(Color::Green)
     .with_callback(move |_|
     {
@@ -139,7 +128,7 @@ pub fn install(tx: Sender<common::Msg>
       clone_tx.send_activate(msg_curr);
     }); // std::thread
   }); // set_callback
-  (ui, Install{ col, list, btn_add, btn_del })
+  ui
 }
 // }}}
 
