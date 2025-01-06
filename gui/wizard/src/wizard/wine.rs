@@ -719,7 +719,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   static SELECTED : LazyLock<Mutex<PathBuf>> = LazyLock::new(|| Mutex::new(PathBuf::default()));
   static SHOW_SELECTED : LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
   // Update results if empty
-  if RESULTS.lock().unwrap().is_empty() && ! *SHOW_SELECTED.lock().unwrap()
+  if ! *SHOW_SELECTED.lock().unwrap()
   {
     *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap());
   } // if
