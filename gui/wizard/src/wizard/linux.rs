@@ -392,6 +392,10 @@ fn default_modified() -> Vec<PathBuf>
     .chain(hash_executable_use.keys())
     .map(|e| PathBuf::from(e))
     .collect();
+  // Remove duplicate values
+  results.sort();
+  results.dedup();
+  // Sort by number of components, if is equal, sort by string length
   results.sort_by(|a, b|
   {
     let a_components = a.components().count();
@@ -667,20 +671,23 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
     } // else
   });
   // Configure next button
-  let clone_arc_items = arc_items.clone();
   let clone_tx = tx.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
-    // Get the vector
-    let vec_items = clone_arc_items.lock().unwrap();
-    // Get the selected button label (it contains the path to the default binary)
-    let path_file_rom = match vec_items.iter().find(|x| x.0.is_set() )
+    // Get selected executable
+    let selected = SELECTED.lock().unwrap();
+    // Check if is not empty
+    if selected.components().count() == 0
     {
-      Some(value) => value.1.clone(),
-      None => { log_alert!("No file selected!"); return; },
-    }; // match
+      log_alert!("No file path was selected!");
+      return;
+    } // if
     // Select rom
-    log_err_status!(gameimage::select::select("rom", &path_file_rom));
+    if let Err(e) = gameimage::select::select("rom", &selected)
+    {
+      log_status!("{}", e);
+      return;
+    } // if
     // Draw test
     clone_tx.send_awake(common::Msg::DrawLinuxCompress);
   });
