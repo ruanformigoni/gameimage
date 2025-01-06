@@ -538,16 +538,8 @@ fn rom_add() -> anyhow::Result<()>
 } // rom_add() }}}
 
 // rom_next() {{{
-fn rom_next(vec_radio_path: Vec<(fltk::button::RadioButton,PathBuf)>) -> anyhow::Result<()>
+fn rom_next(path_file_default: &PathBuf) -> anyhow::Result<()>
 {
-  // Get selected entry
-  let path_file_default =  match vec_radio_path.clone().into_iter().find(|e| e.0.is_toggled())
-  {
-    Some(entry) => entry.1,
-    None => return Err(ah!("You must selected the default executable before continuing")),
-  }; // if
-  // Set the selected binary as default
-  gameimage::select::select("rom", &path_file_default)?;
   Ok(())
 } // rom_next() }}}
 
@@ -692,6 +684,37 @@ fn rom_search(query: &str) -> Vec<PathBuf>
   results
 } // rom_search() }}}
 
+// rom_modified() {{{
+fn rom_modified() -> Vec<PathBuf>
+{
+  let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
+  let hash_executable_use = shared::db::kv::read(&get_path_db_executable().unwrap_or_default()).unwrap_or_default();
+  let mut results: Vec<PathBuf> = hash_executable_arguments.keys()
+    .chain(hash_executable_alias.keys())
+    .chain(hash_executable_use.keys())
+    .map(|e| PathBuf::from(e))
+    .collect();
+  // Remove duplicate values
+  results.sort();
+  results.dedup();
+  // Sort by number of components, if is equal, sort by string length
+  results.sort_by(|a, b|
+  {
+    let a_components = a.components().count();
+    let b_components = b.components().count();
+    if a_components == b_components
+    {
+      a.string().len().cmp(&b.string().len())
+    } // if
+    else
+    {
+      a_components.cmp(&b_components)
+    } // else
+  });
+  results
+} // rom_modified() }}}
+
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
@@ -699,6 +722,7 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
   static PAGE : LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
+  static SELECTED : LazyLock<Mutex<PathBuf>> = LazyLock::new(|| Mutex::new(PathBuf::default()));
   static SHOW_SELECTED : LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
   // Update results if empty
   if RESULTS.lock().unwrap().is_empty() && ! *SHOW_SELECTED.lock().unwrap()
@@ -715,6 +739,12 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       );
       col_search.end();
       col.fixed(&col_search, col_search.h());
+      col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+      let mut btn_show_selected = shared::fltk::button::rect::checkbutton()
+        .with_align(Align::Inside | Align::Left)
+        .with_color(Color::BackGround)
+        .with_label(" Only show modified entries");
+      col.fixed(&btn_show_selected, dimm::width_checkbutton() + dimm::border());
       col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
       scroll!(scroll,
         hpack!(col_content,);
@@ -773,6 +803,31 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
       });
     } // if
   });
+  // Configure 'show selected' button
+  btn_show_selected.set_value(*SHOW_SELECTED.lock().unwrap());
+  btn_show_selected.set_callback(move |e|
+  {
+    // Only display modified items
+    if e.is_checked()
+    {
+      // Get modified entries
+      let mut results = rom_modified();
+      // Get selected entry
+      let selected = SELECTED.lock().unwrap().to_path_buf();
+      if ! results.contains(&selected) && selected.components().count() > 0 { results.push(selected); } // if
+      // Update results
+      *RESULTS.lock().unwrap() = results;
+      *SHOW_SELECTED.lock().unwrap() = true;
+      tx.send_activate(common::Msg::DrawWineRom);
+    } // if
+    // Display all items
+    else
+    {
+      *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap().clone());
+      *SHOW_SELECTED.lock().unwrap() = false;
+      tx.send_activate(common::Msg::DrawWineRom);
+    } // else
+  });
   log_err!(input_query.take_focus());
   // Insert items in list of currently installed items
   let vec_radio_path = Arc::new(Mutex::new(Vec::<(button::RadioButton, path::PathBuf)>::new()));
@@ -796,11 +851,16 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     } // for
   );
   // Set callbacks for toggle group
-  for guard in vec_radio_path.lock().unwrap().iter_mut()
+  for (btn, path) in vec_radio_path.lock().unwrap().iter_mut()
   {
-    guard.0.set_callback(#[clown] move |e|
+    if *SELECTED.lock().unwrap() == path.clone()
+    {
+      btn.set_value(true);
+    } // if
+    btn.set_callback(#[clown] move |e|
     {
       for i in honk!(vec_radio_path).lock().unwrap().iter_mut() { i.0.toggle(false); }
+      *SELECTED.lock().unwrap() = honk!(path).clone();
       e.toggle(true);
     });
   } // for
@@ -819,16 +879,22 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
     .with_color(Color::Blue)
     .with_callback(move |_| { clone_tx.send_awake(common::Msg::DrawWineRom); });
   // Go to next frame iff a default executable was selected
-  // ret_frame_footer.btn_next.clone().emit(tx.clone(), common::Msg::DrawWineCompress);
   let clone_tx = tx.clone();
-  let clone_vec_radio_path = vec_radio_path.clone();
   ui.btn_next.clone().set_callback(move |_|
   {
-    if let Err(e) = rom_next(clone_vec_radio_path.lock().unwrap().clone())
+    // Get selected executable
+    let selected = SELECTED.lock().unwrap();
+    // Check if is not empty
+    if selected.components().count() == 0
     {
-      log_alert!("{}", e);
+      log_alert!("No file path was selected!");
       return;
-    } // match
+    } // if
+    if let Err(e) = gameimage::select::select("rom", &selected)
+    {
+      log_status!("{}", e);
+      return;
+    } // if
     clone_tx.send_awake(common::Msg::DrawWineCompress);
   });
 
