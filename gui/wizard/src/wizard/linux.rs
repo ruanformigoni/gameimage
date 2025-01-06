@@ -611,7 +611,7 @@ pub fn default(tx: Sender<common::Msg>, title: &str)
   // Arguments database
   let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
   let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
-  // Reset page if out of bounds
+  // Get current page
   let page = PAGE.lock().unwrap();
   // Create a column for the element entries
   rescope!(col_entries,
