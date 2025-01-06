@@ -670,36 +670,71 @@ fn rom_entry(tx: Sender<common::Msg>
 // rom_search() {{{
 fn rom_search(query: &str) -> Vec<PathBuf>
 {
-  gameimage::search::search_local("rom")
+  let mut results: Vec<PathBuf> = gameimage::search::search_local("rom")
     .unwrap_or_default()
     .iter()
     .filter(|e| e.string().to_lowercase().contains(&query.to_lowercase()))
     .map(|e| e.clone())
-    .collect()
+    .collect();
+  results.sort_by(|a, b|
+  {
+    let a_components = a.components().count();
+    let b_components = b.components().count();
+    if a_components == b_components
+    {
+      a.string().len().cmp(&b.string().len())
+    } // if
+    else
+    {
+      a_components.cmp(&b_components)
+    } // else
+  });
+  results
 } // rom_search() }}}
 
 // pub fn rom() {{{
 pub fn rom(tx: Sender<common::Msg>, title: &str)
 {
+  const COUNT_ITEM_PER_PAGE: usize = 4;
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
-  // Filter installed files by QUERY
-  *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap());
+  static PAGE : LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
+  static SHOW_SELECTED : LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
+  // Update results if empty
+  if RESULTS.lock().unwrap().is_empty() && ! *SHOW_SELECTED.lock().unwrap()
+  {
+    *RESULTS.lock().unwrap() = rom_search(&QUERY.lock().unwrap());
+  } // if
   // UI
   let ui = crate::GUI.lock().unwrap().ui.clone()(title);
   // Layout
   row!(row,
-    column!(col_scroll,
+    column!(col,
       let (col_search, mut input_query) = shared::fltk::search_column2(
         "Input a search term to filter executables, press enter to confirm"
       );
       col_search.end();
-      col_scroll.fixed(&col_search, col_search.h());
+      col.fixed(&col_search, col_search.h());
+      col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
       scroll!(scroll,
         hpack!(col_content,);
       );
+      col.fixed(&shared::fltk::separator::horizontal(col.w()), dimm::height_sep());
+      let col_paginator = shared::fltk::paginator::paginator(|| { PAGE.lock().unwrap().clone() }
+        , move |value|
+        {
+          tx.send_awake(common::Msg::WindDeactivate);
+          std::thread::spawn(move ||
+          {
+            *PAGE.lock().unwrap() = value;
+            tx.send_activate(common::Msg::DrawWineRom);
+          });
+        },
+        || { RESULTS.lock().unwrap().len() / COUNT_ITEM_PER_PAGE }
+      );
+      col.fixed(&col_paginator, col_paginator.h());
     );
-    row.add(&col_scroll);
+    row.add(&col);
     column!(col_sidebar,
       fixed!(col_sidebar, btn_add, shared::fltk::button::rect::add(), dimm::height_button_rec());
       fixed!(col_sidebar, btn_refresh, shared::fltk::button::rect::refresh(), dimm::height_button_rec());
@@ -744,9 +779,14 @@ pub fn rom(tx: Sender<common::Msg>, title: &str)
   // Arguments database
   let hash_executable_arguments = shared::db::kv::read(&get_path_db_args().unwrap_or_default()).unwrap_or_default();
   let hash_executable_alias = shared::db::kv::read(&get_path_db_alias().unwrap_or_default()).unwrap_or_default();
+  // Get current page
+  let page = PAGE.lock().unwrap();
   // Create a column for the element entries
   rescope!(col_content,
-    for path in RESULTS.lock().unwrap().iter()
+    let results = RESULTS.lock().unwrap();
+    let start = (*page * COUNT_ITEM_PER_PAGE).min(results.len());
+    let end = (start + COUNT_ITEM_PER_PAGE).min(results.len());
+    for path in results.clone().drain(start..end)
     {
       rom_entry(tx.clone()
         , &hash_executable_arguments
