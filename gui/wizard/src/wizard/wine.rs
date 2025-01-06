@@ -537,12 +537,6 @@ fn rom_add() -> anyhow::Result<()>
   Ok(())
 } // rom_add() }}}
 
-// rom_next() {{{
-fn rom_next(path_file_default: &PathBuf) -> anyhow::Result<()>
-{
-  Ok(())
-} // rom_next() }}}
-
 // rom_db {{{
 fn rom_db(input: fltk_evented::Listener<fltk::input::Input>
   , path_file_db: PathBuf
