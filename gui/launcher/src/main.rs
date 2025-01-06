@@ -106,7 +106,7 @@ fn init(&mut self)
   else
   {
     // Create initial cover frame
-    self.tx.send(common::Msg::DrawEnablerExecutable);
+    self.tx.send(common::Msg::DrawCover);
     // Select the first game as the current
     games::select(vec_games.first().unwrap());
   } // else
