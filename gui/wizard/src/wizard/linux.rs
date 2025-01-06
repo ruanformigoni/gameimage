@@ -530,7 +530,7 @@ fn default_entry(tx: Sender<common::Msg>
 // fn default() {{{
 pub fn default(tx: Sender<common::Msg>, title: &str)
 {
-  const COUNT_ITEM_PER_PAGE: usize = 20;
+  const COUNT_ITEM_PER_PAGE: usize = 10;
   static QUERY : LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
   static RESULTS : LazyLock<Mutex<Vec<PathBuf>>> = LazyLock::new(|| Mutex::new(vec![]));
   static PAGE : LazyLock<Mutex<usize>> = LazyLock::new(|| Mutex::new(0));
