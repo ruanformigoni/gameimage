@@ -1,3 +1,6 @@
+<a href="https://discord.gg/JXqnze9gRF"><img src="https://img.shields.io/discord/1332381739385098312?style=flat&logo=discord&label=discord"></img></a>
+<a href="https://github.com/ruanformigoni/gameimage/releases"><img src="https://img.shields.io/github/v/release/ruanformigoni/gameimage?style=flat&logo=github&label=download"></img></a>
+
 <div align="center">
   <img src="doc/img/gameimage.svg"  width="150">
 </div>
